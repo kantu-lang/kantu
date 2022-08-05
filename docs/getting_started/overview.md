@@ -13,6 +13,26 @@ such as letters with diacritics (e.g., "å")
 and characters from different languages (e.g., "あ", "四", "한").
 However, this is currently unsupported.
 
+The following strings are reserved words, and cannot be used as identifiers:
+
+```
+type
+struct
+let
+var
+pub
+priv
+mod
+package
+extern
+trait
+unsafe
+async
+use
+namespace
+_
+```
+
 ## Type Definitions
 
 Some examples:
@@ -120,83 +140,53 @@ Types can also take parameters. For example, `Option` takes one (unnamed) parame
 As another example, LessThanOrEqualTo takes two (unnamed) parameters, both of
 type `Type`.
 
-### Type Definition Shorthand
+### Ergonomics and syntactic sugar
 
-To make life easier, Pamlihu supports 2 types of shorthand notations for
-declaring types:
+1.  If a type has zero parameters, you don't need to declare the type of each
+    variant.
 
-1. If a type has zero parameters, you don't need to declare the type of each
-   variant.
+    For example, in the above example
 
-   For example, in the above example
-
-   ```pamlihu
+    ```pamlihu
     type Bool {
         .true: Bool,
         .false: Bool,
     }
-   ```
+    ```
 
-   could have been rewritten to
+    could be rewritten to
 
-   ```pamlihu
-   type Bool {
-       .true,
-       .false,
-   }
-   ```
+    ```pamlihu
+    type Bool {
+        .true,
+        .false,
+    }
+    ```
 
-   since `Bool` has zero parameters.
+    since `Bool` has zero parameters.
 
-2. If a type has exactly one variant, you can use `struct` notation, which
-   we will illustrate below.
+2.  If a type has exactly one variant, you are allowed to (and encouraged) to
+    use `_` as the variant name.
 
-   Example: We could take
+    For example, in the above example
 
-   ```pamlihu
-   type Quaternion {
-    .quaternion(one: Real, i: Real, j: Real, k: Real),
-   }
-   ```
+    ```pamlihu
+    type Quaternion {
+        .quaternion(one: Real, i: Real, j: Real, k: Real),
+    }
+    ```
 
-   and rewrite it to
+    should be rewritten to
 
-   ```
-   struct Quaternion(one: Real, i: Real, j: Real, k: Real);
-   ```
+    ```pamlihu
+    type Quaternion {
+        ._(one: Real, i: Real, j: Real, k: Real),
+    }
+    ```
 
-   Converting a type from standard notation to `struct` shorthand involves 3 steps:
+    The rationale behind this convention is that it's redundant to
+    specify the variant type if there is only one, so the variant
+    name should be as short as possible, to minimize code verbosity.
 
-   1. Replace `type` with `struct`.
-
-      ```pamlihu
-      // ⚠️ This code is broken--refactoring is in progress.
-      struct Quaternion {
-          .quaternion(one: Real, i: Real, j: Real, k: Real),
-      }
-      ```
-
-   2. Move the variant parameters right after the type name (`Quaternion`, in this case).
-
-      ```pamlihu
-       // ⚠️ This code is broken--refactoring is in progress.
-       struct Quaternion(one: Real, i: Real, j: Real, k: Real) {
-           .quaternion,
-       }
-      ```
-
-   3. Delete the curly braces and the content enclosed by them, and
-      add a semicolon.
-      ```pamlihu
-      // 🎉 Refactoring complete!
-      struct Quaternion(one: Real, i: Real, j: Real, k: Real);
-      ```
-
-   Once you convert to `struct` shorthand, it also becomes easier
-   (or more concise, to be precise) to instantiate members of the type.
-
-   In the above example, we used to have to write
-   `let q = Quaternion.quaternion(1, 1, 1, 1);`.
-
-   But now, we can simply write
-   `let q = Quaternion(1, 1, 1, 1);`
+    Note that `_` is only permitted as a variant name in types with
+    exactly one variant.
