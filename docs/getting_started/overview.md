@@ -249,7 +249,7 @@ have tuple-like or record-like parameter sets.
 
 Values are not permitted to have unnamed tuple-like parameter sets.
 
-## Notation
+## Custom Notation
 
 Example:
 
@@ -270,43 +270,24 @@ However, you are allowed to specify left or right associativity.
 For example:
 
 ```pamlihu
-notation {
-    in: (a: Nat) "+" (b: Nat);
-    out: plus(a, b);
-    associativity: left;
-}
+notation.left_associative (a: Nat) "+" (b: Nat) = plus(a, b);
 
 // Look ma, no parentheses!
 let m = a + b + c;
 ```
 
-You can also declare notation that only applies in certain contexts:
+### Notation rules
 
-```pamlihu
-notation {
-    context: {
-        left_delimiter: "[" (T: Type) "{";
-        right_delimiter: "]";
-    }
-    in: (left: T) "," (right: List(T));
-    out: List.cons(T, left, right);
-    associativity: right;
-}
+1. Operation symbols may not contain whitespace.
+2. Operation symbols may not begin with a digit.
+3. Operation symbols must contain at least one of the following characters:
+   `~!@#$%^&*-+=|\<>/?`. More characters may be added to the list in the
+   future.
+4. No 2 values/types can be adjacent to each other.
+   You need at least one operation symbol in between them.
 
-notation {
-    context: {
-        left_delimiter: "[" (T: Type) "{";
-        right_delimiter: "]";
-    }
-    in: "}";
-    out: List.nil(T);
-}
+   For example, `notation (a: Nat) (b: Nat) ...` is forbidden,
+   because `a` and `b` are directly adjacent.
 
-let x = [Bool {Bool.true,Bool.false,Bool.true,}];
-let y = List.cons(Bool, Bool.true, List.cons(Bool, Bool.false, List.cons(Bool, Bool.true, List.nil(Bool))));
-// x = y
-```
-
-TODO Symbol rules
-
-TODO clarify let = and =?
+   On the other hand, `notation (a: Nat) "+" (b: Nat) ...` is legal,
+   because there is operation symbol (i.e., `+`) in between `a` and `b`.
