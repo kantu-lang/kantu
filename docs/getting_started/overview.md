@@ -199,6 +199,15 @@ variant parameter sets can be.
     Note that `_` is only permitted as a variant name in types with
     exactly one variant.
 
+### Type Restrictions
+
+Types must be [strictly positive](https://cs.stackexchange.com/questions/55646/strict-positivity). TODO Give TLDR explanation.
+
+In all likelihood, most users will not need to read the above article, because they fall into one of two categories:
+
+1. Those who are type theory enthusiasts, and already know what strict positivity is. Therefore, reading the attached article is not necessary.
+2. Those who come from more "mainstream" languages (e.g., Python, Java, JavaScript, TypeScript, Rust, C++, C, C#, Go, Ruby, Swift, etc.). These people will likely define types in a similar way to how they would in the other languages listed above. Those simple kinds of type definitions are almost always strictly positive. Therefore, reading the attached article is (probably) not necessary.
+
 ## Value definitions
 
 Examples:
@@ -248,6 +257,51 @@ Similarly, from definition of "function", it follows that functions must
 have tuple-like or record-like parameter sets.
 
 Values are not permitted to have unnamed tuple-like parameter sets.
+
+### Recursion Restrictions
+
+To prevent infinite recursion,
+Pamlihu forbidens mutual recursion.
+In other words, the only function a
+given function can recursively call is itself.
+
+For example:
+
+**Forbidden:**
+
+```pamlihu
+let f(n: Nat) = match n {
+    .zero => Nat.zero,
+    .successor n_pred => g(n_pred),
+};
+
+let g(n: Nat) = match n {
+    .zero => Nat.zero,
+    .successor n_pred => f(n_pred),
+};
+```
+
+This above example is forbidden because `f` and `g` mutually refer to
+each other.
+
+**Permitted:**
+
+```pamlihu
+let useless_function(n: Nat) = match n {
+    .zero => Nat.zero,
+    .successor n_pred => useless_function(n),
+};
+```
+
+The above example is permitted, because the only function `f`
+recursively calls is `f` itself.
+
+2. For any recursive call, the arguments must be all identical, with the
+   following exceptions:
+
+   1. At least one argument must be a syntactic substructure of the value
+      the value that was passed in. TODO: Clarify this.
+   2. The
 
 ## Custom Notation
 
