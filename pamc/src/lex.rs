@@ -19,6 +19,7 @@ pub enum TokenKind {
     RAngle,
     Colon,
     Comma,
+    Dot,
     At,
     Equal,
     Arrow,
@@ -28,6 +29,7 @@ pub enum TokenKind {
     Fun,
     Forall,
     Exists,
+    Underscore,
 }
 
 #[derive(Clone, Debug)]
@@ -116,6 +118,13 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     kind: TokenKind::Comma,
                 });
                 None
+            } else if c == '.' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Dot,
+                });
+                None
             } else if c == '=' {
                 state.pending_token = Some(Token {
                     start_index: i,
@@ -148,13 +157,15 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             | TokenKind::RAngle
             | TokenKind::Colon
             | TokenKind::Comma
+            | TokenKind::Dot
             | TokenKind::At
             | TokenKind::Arrow
             | TokenKind::Type
             | TokenKind::Let
             | TokenKind::Fun
             | TokenKind::Forall
-            | TokenKind::Exists => unreachable!(),
+            | TokenKind::Exists
+            | TokenKind::Underscore => unreachable!(),
 
             TokenKind::Equal => {
                 if c == '>' {
@@ -177,7 +188,45 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     pending_token.content.push(c);
                     None
                 } else {
-                    state.tokens.push(pending_token.clone());
+                    state.tokens.push(if pending_token.content == "type" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Type,
+                        }
+                    } else if pending_token.content == "let" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Let,
+                        }
+                    } else if pending_token.content == "fun" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Fun,
+                        }
+                    } else if pending_token.content == "forall" || pending_token.content == "∀" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Forall,
+                        }
+                    } else if pending_token.content == "exists" || pending_token.content == "∃" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Exists,
+                        }
+                    } else if pending_token.content == "_" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Underscore,
+                        }
+                    } else {
+                        pending_token.clone()
+                    });
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
@@ -199,6 +248,7 @@ fn is_valid_non_initial_identifier_character(c: char) -> bool {
         && c != '@'
         && c != ':'
         && c != ','
+        && c != '.'
         && does_character_category_permit_it_to_be_used_in_identifier_name(c)
 }
 
@@ -252,13 +302,15 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             | TokenKind::RAngle
             | TokenKind::Colon
             | TokenKind::Comma
+            | TokenKind::Dot
             | TokenKind::At
             | TokenKind::Arrow
             | TokenKind::Type
             | TokenKind::Let
             | TokenKind::Fun
             | TokenKind::Forall
-            | TokenKind::Exists => unreachable!(),
+            | TokenKind::Exists
+            | TokenKind::Underscore => unreachable!(),
 
             TokenKind::Equal => {
                 state.tokens.push(pending_token);
