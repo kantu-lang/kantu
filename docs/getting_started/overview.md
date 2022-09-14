@@ -23,6 +23,7 @@ _ (the underscore)
 ∃ (Unicode existential quantifier symbol)
 
 type
+Type
 let
 fun
 match

@@ -24,7 +24,8 @@ pub enum TokenKind {
     Equal,
     Arrow,
 
-    Type,
+    TypeLowerCase,
+    TypeTitleCase,
     Let,
     Fun,
     Match,
@@ -161,7 +162,8 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             | TokenKind::Dot
             | TokenKind::At
             | TokenKind::Arrow
-            | TokenKind::Type
+            | TokenKind::TypeLowerCase
+            | TokenKind::TypeTitleCase
             | TokenKind::Let
             | TokenKind::Fun
             | TokenKind::Match
@@ -194,7 +196,13 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                         Token {
                             start_index: pending_token.start_index,
                             content: pending_token.content.clone(),
-                            kind: TokenKind::Type,
+                            kind: TokenKind::TypeLowerCase,
+                        }
+                    } else if pending_token.content == "Type" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::TypeTitleCase,
                         }
                     } else if pending_token.content == "let" {
                         Token {
@@ -313,7 +321,8 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             | TokenKind::Dot
             | TokenKind::At
             | TokenKind::Arrow
-            | TokenKind::Type
+            | TokenKind::TypeLowerCase
+            | TokenKind::TypeTitleCase
             | TokenKind::Let
             | TokenKind::Fun
             | TokenKind::Match
