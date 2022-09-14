@@ -17,4 +17,4 @@ equivalent to the English "date" (in the romantic sense of the word).
 ## Guides
 
 - [Language Overview](./docs/getting_started/overview.md)
-- [Syntax Explainer](about:TODOCOMPLETE) - See a syntax feature you don't understand? Paste in some code, and the syntax explainer will describe each syntactic feature.
+- [Syntax Explainer TODO](about:TODOCOMPLETE) - See a syntax feature you don't understand? Paste in some code, and the syntax explainer will describe each syntactic feature.
