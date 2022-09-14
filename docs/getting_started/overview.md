@@ -11,7 +11,7 @@ Identifier names can contain the following characters:
 
 ...with the exception of:
 
-- The characters `@:,()[]{}<>` cannot appear anywhere.
+- The characters `=@:,()[]{}<>` cannot appear anywhere.
 - The characters `0123456789` cannot appear as the first character, but may appear everywhere else.
 - White space cannot appear anywhere.
 
@@ -19,9 +19,13 @@ Additionally, the following strings are reserved words, and cannot be used as id
 
 ```
 _ (the underscore)
+∀ (Unicode universal quantifier symbol)
+∃ (Unicode existential quantifier symbol)
 
 type
 fun
+forall
+exists
 struct
 let
 var
@@ -76,15 +80,31 @@ type List(T: Type) {
     .cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
-// Dependent types 🎉
-
 type Equal(T: Type, x: T, y: T) {
     .refl(T: Type, x: T): Equal(T, x, x),
 }
 
+type Or(L: Type, R: Type) {
+    .inl(L: Type, R: Type, l: L): Or(L, R),
+    .inr(L: Type, R: Type, r: R): Or(L, R),
+}
+
+type False {}
+
+let In = fun In(T: Type, item: T, list: List(T)): Type => match list {
+    List.nil(_T) => False,
+    List.cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
+};
+
+// Dependent types 🎉
+
 type LessThanOrEqualTo(L: Nat, R: Nat) {
     .equal(n: Nat): LessThanOrEqualTo(n, n),
     .step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.successor(b)),
+}
+
+type ListOfEvenNats {
+    .list_of_even_nats(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) => Even(n)): ListOfEvenNats,
 }
 ```
 

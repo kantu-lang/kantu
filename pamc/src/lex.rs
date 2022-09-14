@@ -1,0 +1,276 @@
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Token {
+    pub start_index: usize,
+    pub content: String,
+    pub kind: TokenKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TokenKind {
+    Whitespace,
+    Identifier,
+    LParen,
+    RParen,
+    LSquare,
+    RSquare,
+    LCurly,
+    RCurly,
+    LAngle,
+    RAngle,
+    Colon,
+    Comma,
+    At,
+    Equal,
+    Arrow,
+
+    Type,
+    Let,
+    Fun,
+    Forall,
+    Exists,
+}
+
+#[derive(Clone, Debug)]
+pub enum LexError {
+    UnexpectedEoi,
+    UnexpectedAsciiDigit,
+    UnexpectedCharacter(char),
+}
+
+#[derive(Clone, Debug)]
+struct LexState {
+    tokens: Vec<Token>,
+    pending_token: Option<Token>,
+}
+
+fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
+    match &mut state.pending_token {
+        None => {
+            if c.is_whitespace() {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Whitespace,
+                });
+                None
+            } else if c == '(' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LParen,
+                });
+                None
+            } else if c == ')' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RParen,
+                });
+                None
+            } else if c == '[' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LSquare,
+                });
+                None
+            } else if c == ']' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RSquare,
+                });
+                None
+            } else if c == '{' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LCurly,
+                });
+                None
+            } else if c == '}' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RCurly,
+                });
+                None
+            } else if c == '@' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::At,
+                });
+                None
+            } else if c == ':' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Colon,
+                });
+                None
+            } else if c == ',' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Comma,
+                });
+                None
+            } else if c == '=' {
+                state.pending_token = Some(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Equal,
+                });
+                None
+            } else if c.is_ascii_digit() {
+                Some(LexError::UnexpectedAsciiDigit)
+            } else if does_character_category_permit_it_to_be_used_in_identifier_name(c) {
+                state.pending_token = Some(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Identifier,
+                });
+                None
+            } else {
+                Some(LexError::UnexpectedCharacter(c))
+            }
+        }
+        Some(pending_token) => match pending_token.kind {
+            TokenKind::Whitespace
+            | TokenKind::LParen
+            | TokenKind::RParen
+            | TokenKind::LSquare
+            | TokenKind::RSquare
+            | TokenKind::LCurly
+            | TokenKind::RCurly
+            | TokenKind::LAngle
+            | TokenKind::RAngle
+            | TokenKind::Colon
+            | TokenKind::Comma
+            | TokenKind::At
+            | TokenKind::Arrow
+            | TokenKind::Type
+            | TokenKind::Let
+            | TokenKind::Fun
+            | TokenKind::Forall
+            | TokenKind::Exists => unreachable!(),
+
+            TokenKind::Equal => {
+                if c == '>' {
+                    state.tokens.push(Token {
+                        start_index: pending_token.start_index,
+                        content: "=>".into(),
+                        kind: TokenKind::Arrow,
+                    });
+                    state.pending_token = None;
+                    None
+                } else {
+                    state.tokens.push(pending_token.clone());
+                    state.pending_token = None;
+                    handle_char(state, c, i)
+                }
+            }
+
+            TokenKind::Identifier => {
+                if is_valid_non_initial_identifier_character(c) {
+                    pending_token.content.push(c);
+                    None
+                } else {
+                    state.tokens.push(pending_token.clone());
+                    state.pending_token = None;
+                    handle_char(state, c, i)
+                }
+            }
+        },
+    }
+}
+
+fn is_valid_non_initial_identifier_character(c: char) -> bool {
+    c != '('
+        && c != ')'
+        && c != '['
+        && c != ']'
+        && c != '{'
+        && c != '}'
+        && c != '<'
+        && c != '>'
+        && c != '='
+        && c != '@'
+        && c != ':'
+        && c != ','
+        && does_character_category_permit_it_to_be_used_in_identifier_name(c)
+}
+
+fn does_character_category_permit_it_to_be_used_in_identifier_name(c: char) -> bool {
+    use unicode_general_category::{get_general_category, GeneralCategory};
+    matches!(
+        get_general_category(c),
+        GeneralCategory::ClosePunctuation
+            | GeneralCategory::ConnectorPunctuation
+            | GeneralCategory::CurrencySymbol
+            | GeneralCategory::DashPunctuation
+            | GeneralCategory::DecimalNumber
+            | GeneralCategory::FinalPunctuation
+            | GeneralCategory::InitialPunctuation
+            | GeneralCategory::LetterNumber
+            | GeneralCategory::LowercaseLetter
+            | GeneralCategory::MathSymbol
+            | GeneralCategory::ModifierLetter
+            | GeneralCategory::ModifierSymbol
+            | GeneralCategory::OpenPunctuation
+            | GeneralCategory::OtherLetter
+            | GeneralCategory::OtherNumber
+            | GeneralCategory::OtherPunctuation
+            | GeneralCategory::OtherSymbol
+            | GeneralCategory::TitlecaseLetter
+            | GeneralCategory::UppercaseLetter
+    )
+}
+
+pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
+    let mut state = LexState {
+        tokens: vec![],
+        pending_token: None,
+    };
+    for (i, c) in src.chars().enumerate() {
+        if let Some(err) = handle_char(&mut state, c, i) {
+            return Err(err);
+        }
+    }
+
+    if let Some(pending_token) = state.pending_token {
+        match pending_token.kind {
+            TokenKind::Whitespace
+            | TokenKind::LParen
+            | TokenKind::RParen
+            | TokenKind::LSquare
+            | TokenKind::RSquare
+            | TokenKind::LCurly
+            | TokenKind::RCurly
+            | TokenKind::LAngle
+            | TokenKind::RAngle
+            | TokenKind::Colon
+            | TokenKind::Comma
+            | TokenKind::At
+            | TokenKind::Arrow
+            | TokenKind::Type
+            | TokenKind::Let
+            | TokenKind::Fun
+            | TokenKind::Forall
+            | TokenKind::Exists => unreachable!(),
+
+            TokenKind::Equal => {
+                state.tokens.push(pending_token);
+                state.pending_token = None;
+            }
+
+            TokenKind::Identifier => {
+                state.tokens.push(pending_token);
+                state.pending_token = None;
+            }
+        }
+    }
+
+    Ok(state.tokens)
+}
