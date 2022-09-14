@@ -20,12 +20,9 @@ fn main() {
     let lex_result = pamc::lex::lex(&file_content);
     match lex_result {
         Ok(tokens) => {
-            println!("Success!");
-            for t in &tokens {
-                if t.kind != pamc::lex::TokenKind::Whitespace {
-                    println!("{}        ({:?})", t.content, t.kind);
-                }
-            }
+            println!("Lex success!");
+            let parse_result = pamc::parse::parse_file(tokens);
+            println!("Parse result: {:?}", parse_result);
         }
         Err(err) => {
             println!("Error: {:?}", err);

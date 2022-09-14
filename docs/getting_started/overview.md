@@ -23,11 +23,13 @@ _ (the underscore)
 ∃ (Unicode existential quantifier symbol)
 
 type
+let
 fun
+match
 forall
 exists
+
 struct
-let
 var
 trait
 

@@ -27,6 +27,7 @@ pub enum TokenKind {
     Type,
     Let,
     Fun,
+    Match,
     Forall,
     Exists,
     Underscore,
@@ -163,6 +164,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             | TokenKind::Type
             | TokenKind::Let
             | TokenKind::Fun
+            | TokenKind::Match
             | TokenKind::Forall
             | TokenKind::Exists
             | TokenKind::Underscore => unreachable!(),
@@ -205,6 +207,12 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                             start_index: pending_token.start_index,
                             content: pending_token.content.clone(),
                             kind: TokenKind::Fun,
+                        }
+                    } else if pending_token.content == "match" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Match,
                         }
                     } else if pending_token.content == "forall" || pending_token.content == "∀" {
                         Token {
@@ -308,6 +316,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             | TokenKind::Type
             | TokenKind::Let
             | TokenKind::Fun
+            | TokenKind::Match
             | TokenKind::Forall
             | TokenKind::Exists
             | TokenKind::Underscore => unreachable!(),
