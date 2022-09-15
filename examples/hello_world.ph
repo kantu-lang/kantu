@@ -34,5 +34,5 @@ let map = fun map(T: Type, U: Type, l: List(T), f: forall(v: T) { U }): List(U) 
 let square_all = fun square_all(l: List(Nat)): List(Nat) { map(Nat, Nat, l, square) };
 
 type Exists(T: Type, P: forall(v: T) { Type }) {
-    ._(T: Type, P: forall(v: T) { Type }, v: T, H: P(v)): Exists(T, P),
+    .witness(T: Type, P: forall(v: T) { Type }, v: T, H: P(v)): Exists(T, P),
 }

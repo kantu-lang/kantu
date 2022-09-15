@@ -1063,7 +1063,7 @@ mod accept {
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        TokenKind::Colon => {
+                        TokenKind::Arrow => {
                             *self = UnfinishedMatchCase::AwaitingOutput(
                                 dot_token.clone(),
                                 constructor_name.clone(),
@@ -1127,6 +1127,16 @@ mod accept {
                 },
                 UnfinishedMatchCase::AwaitingOutput(dot_token, constructor_name, params) => {
                     match item {
+                        FinishedStackItem::Token(token) => match token.kind {
+                            TokenKind::Arrow => AcceptResult::Push(
+                                UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                    UnfinishedDelimitedExpression::Empty,
+                                ),
+                            ),
+                            _other_token_kind => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            }
+                        },
                         FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                             match end_delimiter.0.kind {
                                 TokenKind::Comma | TokenKind::RCurly => {
