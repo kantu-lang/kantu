@@ -64,7 +64,7 @@ mod unfinished {
         Params(UnfinishedParams),
         Param(UnfinishedParam),
         Constructor(UnfinishedConstructor),
-        UnfinishedExpression(UnfinishedExpression),
+        UnfinishedDelimitedExpression(UnfinishedDelimitedExpression),
         Fun(UnfinishedFun),
         Match(UnfinishedMatch),
         Forall(UnfinishedForall),
@@ -110,9 +110,9 @@ mod unfinished {
     }
 
     #[derive(Clone, Debug)]
-    pub enum UnfinishedExpression {
+    pub enum UnfinishedDelimitedExpression {
         Empty,
-        Valid(Token, Expression),
+        WaitingForEndDelimiter(Token, Expression),
     }
 
     #[derive(Clone, Debug)]
@@ -170,7 +170,7 @@ mod finished {
             Constructor,
             ExpressionEndDelimiter,
         ),
-        Expression(
+        DelimitedExpression(
             /// First token (".")
             Token,
             Expression,
@@ -184,6 +184,7 @@ mod finished {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
+    /// Can be `,;{})`
     pub struct ExpressionEndDelimiter(pub Token);
 }
 
@@ -199,7 +200,7 @@ mod first_token {
                 FinishedStackItem::Params(token, _) => &token,
                 FinishedStackItem::Param(token, _, _) => &token,
                 FinishedStackItem::Constructor(token, _, _) => &token,
-                FinishedStackItem::Expression(token, _, _) => &token,
+                FinishedStackItem::DelimitedExpression(token, _, _) => &token,
                 FinishedStackItem::UndelimitedExpression(token, _) => &token,
             }
         }
@@ -235,7 +236,9 @@ mod accept {
                 UnfinishedStackItem::Params(params) => params.accept(item),
                 UnfinishedStackItem::Param(param) => param.accept(item),
                 UnfinishedStackItem::Constructor(constructor) => constructor.accept(item),
-                UnfinishedStackItem::UnfinishedExpression(expression) => expression.accept(item),
+                UnfinishedStackItem::UnfinishedDelimitedExpression(expression) => {
+                    expression.accept(item)
+                }
                 UnfinishedStackItem::Fun(fun) => fun.accept(item),
                 UnfinishedStackItem::Match(match_) => match_.accept(item),
                 UnfinishedStackItem::Forall(forall) => forall.accept(item),
@@ -390,14 +393,16 @@ mod accept {
                 },
                 UnfinishedLetStatement::Name(let_kw, name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Equal => AcceptResult::Push(
-                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
-                        ),
+                        TokenKind::Equal => {
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
                         _other_token_kind => {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
                     },
-                    FinishedStackItem::Expression(_, expression, _) => {
+                    FinishedStackItem::DelimitedExpression(_, expression, _) => {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Let(
                             let_kw.clone(),
                             LetStatement {
@@ -487,14 +492,16 @@ mod accept {
                 },
                 UnfinishedParam::Name(first_token, name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Colon => AcceptResult::Push(
-                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
-                        ),
+                        TokenKind::Colon => {
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
                         _other_token_kind => {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
                     },
-                    FinishedStackItem::Expression(_, expression, end_delimiter) => {
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
                             first_token.clone(),
                             Param {
@@ -537,9 +544,11 @@ mod accept {
                                 params: vec![],
                             }))
                         }
-                        TokenKind::Colon => AcceptResult::Push(
-                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
-                        ),
+                        TokenKind::Colon => {
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
                         _other_token_kind => {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
@@ -552,14 +561,16 @@ mod accept {
                 },
                 UnfinishedConstructor::Params(dot, name, params) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Colon => AcceptResult::Push(
-                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
-                        ),
+                        TokenKind::Colon => {
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
                         _other_token_kind => {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
                     },
-                    FinishedStackItem::Expression(_, expression, end_delimiter) => {
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Constructor(
                             dot.clone(),
                             Constructor {
@@ -576,17 +587,19 @@ mod accept {
         }
     }
 
-    impl Accept for UnfinishedExpression {
+    impl Accept for UnfinishedDelimitedExpression {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             match self {
-                UnfinishedExpression::Empty => match item {
+                UnfinishedDelimitedExpression::Empty => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::TypeTitleCase => {
                             let expression = Expression::QuasiIdentifier(QuasiIdentifier {
                                 start_index: token.start_index,
                                 kind: QuasiIdentifierKind::TypeTitleCase,
                             });
-                            *self = UnfinishedExpression::Valid(token, expression);
+                            *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
+                                token, expression,
+                            );
                             AcceptResult::ContinueToNextToken
                         }
                         TokenKind::Underscore => {
@@ -594,7 +607,9 @@ mod accept {
                                 start_index: token.start_index,
                                 kind: QuasiIdentifierKind::Underscore,
                             });
-                            *self = UnfinishedExpression::Valid(token, expression);
+                            *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
+                                token, expression,
+                            );
                             AcceptResult::ContinueToNextToken
                         }
                         TokenKind::Identifier => {
@@ -602,7 +617,9 @@ mod accept {
                                 start_index: token.start_index,
                                 content: token.content.clone(),
                             });
-                            *self = UnfinishedExpression::Valid(token, expression);
+                            *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
+                                token, expression,
+                            );
                             AcceptResult::ContinueToNextToken
                         }
                         TokenKind::Fun => AcceptResult::Push(UnfinishedStackItem::Fun(
@@ -618,20 +635,29 @@ mod accept {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
                     },
-                    FinishedStackItem::Expression(first_token, expression, end_delimiter) => {
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Expression(
+                    FinishedStackItem::DelimitedExpression(
+                        first_token,
+                        expression,
+                        end_delimiter,
+                    ) => AcceptResult::PopAndContinueReducing(
+                        FinishedStackItem::DelimitedExpression(
                             first_token,
                             expression,
                             end_delimiter,
-                        ))
-                    }
+                        ),
+                    ),
                     FinishedStackItem::UndelimitedExpression(first_token, expression) => {
-                        *self = UnfinishedExpression::Valid(first_token, expression);
+                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
+                            first_token,
+                            expression,
+                        );
                         AcceptResult::ContinueToNextToken
                     }
                     other_item => unexpected_finished_item(&other_item),
                 },
-                UnfinishedExpression::Valid(first_token, expression) => unimplemented!(),
+                UnfinishedDelimitedExpression::WaitingForEndDelimiter(first_token, expression) => {
+                    unimplemented!()
+                }
             }
         }
     }
