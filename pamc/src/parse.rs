@@ -62,8 +62,9 @@ mod unfinished {
         Type(UnfinishedTypeStatement),
         Let(UnfinishedLetStatement),
         Params(UnfinishedParams),
+        Param(UnfinishedParam),
         Constructor(UnfinishedConstructor),
-        Expression(UnfinishedExpression),
+        UnfinishedExpression(UnfinishedExpression),
     }
 
     #[derive(Clone, Debug)]
@@ -84,8 +85,6 @@ mod unfinished {
     pub enum UnfinishedLetStatement {
         Keyword(Token),
         Name(Token, Identifier),
-        NameEqual(Token, Identifier),
-        ValueEqual(Token, Identifier, Expression),
     }
 
     #[derive(Clone, Debug)]
@@ -95,24 +94,22 @@ mod unfinished {
     }
 
     #[derive(Clone, Debug)]
+    pub enum UnfinishedParam {
+        Empty,
+        Name(Token, Identifier),
+    }
+
+    #[derive(Clone, Debug)]
     pub enum UnfinishedConstructor {
         Dot(Token),
         Name(Token, Identifier),
         Params(Token, Identifier, Vec<Param>),
     }
-}
 
-mod first_token {
-    use super::*;
-
-    impl FinishedStackItem {
-        pub fn first_token(&self) -> &Token {
-            match self {
-                FinishedStackItem::Token(token) => &token,
-                FinishedStackItem::Type(token, _) => &token,
-                FinishedStackItem::Let(token, _) => &token,
-            }
-        }
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedExpression {
+        Empty,
+        Valid(Expression, Token),
     }
 }
 
@@ -142,12 +139,41 @@ mod finished {
             /// First token
             Token,
             Param,
+            ExpressionEndDelimiter,
         ),
         Constructor(
-            /// First token
+            /// First token (".")
             Token,
             Constructor,
+            ExpressionEndDelimiter,
         ),
+        Expression(
+            /// First token (".")
+            Token,
+            Expression,
+            ExpressionEndDelimiter,
+        ),
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub struct ExpressionEndDelimiter(pub Token);
+}
+
+mod first_token {
+    use super::*;
+
+    impl FinishedStackItem {
+        pub fn first_token(&self) -> &Token {
+            match self {
+                FinishedStackItem::Token(token) => &token,
+                FinishedStackItem::Type(token, _) => &token,
+                FinishedStackItem::Let(token, _) => &token,
+                FinishedStackItem::Params(token, _) => &token,
+                FinishedStackItem::Param(token, _, _) => &token,
+                FinishedStackItem::Constructor(token, _, _) => &token,
+                FinishedStackItem::Expression(token, _, _) => &token,
+            }
+        }
     }
 }
 
@@ -177,6 +203,10 @@ mod accept {
                 UnfinishedStackItem::File(file) => file.accept(item),
                 UnfinishedStackItem::Type(type_) => type_.accept(item),
                 UnfinishedStackItem::Let(let_) => let_.accept(item),
+                UnfinishedStackItem::Params(params) => params.accept(item),
+                UnfinishedStackItem::Param(param) => param.accept(item),
+                UnfinishedStackItem::Constructor(constructor) => constructor.accept(item),
+                UnfinishedStackItem::UnfinishedExpression(expression) => expression.accept(item),
             }
         }
     }
@@ -264,9 +294,9 @@ mod accept {
                 UnfinishedTypeStatement::Constructors(type_kw, name, params, constructors) => {
                     match item {
                         FinishedStackItem::Token(token) => match token.kind {
-                            TokenKind::Identifier => {
-                                AcceptResult::Push(UnfinishedStackItem::Constructor())
-                            }
+                            TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::Constructor(
+                                UnfinishedConstructor::Dot(token),
+                            )),
                             TokenKind::RCurly => {
                                 AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
                                     type_kw.clone(),
@@ -281,9 +311,24 @@ mod accept {
                                 AcceptResult::Error(ParseError::UnexpectedToken(token))
                             }
                         },
-                        FinishedStackItem::Constructor(_, constructor) => {
+                        FinishedStackItem::Constructor(_, constructor, end_delimiter) => {
                             constructors.push(constructor);
-                            AcceptResult::ContinueToNextToken
+                            match end_delimiter.0.kind {
+                                TokenKind::Comma => AcceptResult::ContinueToNextToken,
+                                TokenKind::RCurly => {
+                                    AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
+                                        type_kw.clone(),
+                                        TypeStatement {
+                                            name: name.clone(),
+                                            params: params.clone(),
+                                            constructors: constructors.clone(),
+                                        },
+                                    ))
+                                }
+                                _other_end_delimiter => AcceptResult::Error(
+                                    ParseError::UnexpectedToken(end_delimiter.0),
+                                ),
+                            }
                         }
                         other_item => unexpected_finished_item(&other_item),
                     }
@@ -293,6 +338,115 @@ mod accept {
     }
 
     impl Accept for UnfinishedLetStatement {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            match self {
+                UnfinishedLetStatement::Keyword(let_kw) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Identifier => {
+                            let name = Identifier {
+                                start_index: token.start_index,
+                                content: token.content.clone(),
+                            };
+                            *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedLetStatement::Name(let_kw, name) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Equal => AcceptResult::Push(
+                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
+                        ),
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Expression(_, expression, _) => {
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Let(
+                            let_kw.clone(),
+                            LetStatement {
+                                name: name.clone(),
+                                value: expression,
+                            },
+                        ))
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+            }
+        }
+    }
+
+    impl Accept for UnfinishedParams {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Comma => {
+                        if self.params.is_empty() {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        } else {
+                            AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Empty))
+                        }
+                    }
+                    TokenKind::Identifier => {
+                        let name = Identifier {
+                            start_index: token.start_index,
+                            content: token.content.clone(),
+                        };
+                        AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
+                            token, name,
+                        )))
+                    }
+                    TokenKind::RParen => {
+                        if self.params.is_empty() {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        } else {
+                            AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
+                                self.first_token.clone(),
+                                self.params.clone(),
+                            ))
+                        }
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                },
+                FinishedStackItem::Param(_, param, end_delimiter) => {
+                    self.params.push(param);
+                    match end_delimiter.0.kind {
+                        TokenKind::Comma => {
+                            AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Empty))
+                        }
+                        TokenKind::RParen => {
+                            AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
+                                self.first_token.clone(),
+                                self.params.clone(),
+                            ))
+                        }
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    }
+                }
+                other_item => unexpected_finished_item(&other_item),
+            }
+        }
+    }
+
+    impl Accept for UnfinishedParam {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
+        }
+    }
+
+    impl Accept for UnfinishedConstructor {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!()
+        }
+    }
+
+    impl Accept for UnfinishedExpression {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             unimplemented!()
         }
