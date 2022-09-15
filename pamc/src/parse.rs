@@ -120,6 +120,7 @@ mod unfinished {
         Keyword(Token),
         Name(Token, Identifier),
         Params(Token, Identifier, Vec<Param>),
+        ReturnType(Token, Identifier, Vec<Param>, Expression),
     }
 
     #[derive(Clone, Debug)]
@@ -664,7 +665,94 @@ mod accept {
 
     impl Accept for UnfinishedFun {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match self {
+                UnfinishedFun::Keyword(fun_kw) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Identifier => {
+                            let name = Identifier {
+                                start_index: token.start_index,
+                                content: token.content.clone(),
+                            };
+                            *self = UnfinishedFun::Name(fun_kw.clone(), name);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedFun::Name(fun_kw, name) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LParen => {
+                            AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
+                                first_token: token.clone(),
+                                params: vec![],
+                            }))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Params(_, params) => {
+                        *self = UnfinishedFun::Params(fun_kw.clone(), name.clone(), params);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedFun::Params(fun_kw, name, params) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Colon => {
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                        *self = UnfinishedFun::ReturnType(
+                            fun_kw.clone(),
+                            name.clone(),
+                            params.clone(),
+                            expression,
+                        );
+                        match end_delimiter.0.kind {
+                            TokenKind::LCurly => AcceptResult::Push(
+                                UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                    UnfinishedDelimitedExpression::Empty,
+                                ),
+                            ),
+                            _other_end_delimiter => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                            }
+                        }
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedFun::ReturnType(fun_kw, name, params, return_type) => match item {
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                        match end_delimiter.0.kind {
+                            TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
+                                FinishedStackItem::UndelimitedExpression(
+                                    fun_kw.clone(),
+                                    Expression::Fun(Box::new(Fun {
+                                        name: name.clone(),
+                                        params: params.clone(),
+                                        return_type: return_type.clone(),
+                                        return_value: expression,
+                                    })),
+                                ),
+                            ),
+                            _other_end_delimiter => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                            }
+                        }
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+            }
         }
     }
 
