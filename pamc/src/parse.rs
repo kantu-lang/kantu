@@ -65,6 +65,9 @@ mod unfinished {
         Param(UnfinishedParam),
         Constructor(UnfinishedConstructor),
         UnfinishedExpression(UnfinishedExpression),
+        Fun(UnfinishedFun),
+        Match(UnfinishedMatch),
+        Forall(UnfinishedForall),
     }
 
     #[derive(Clone, Debug)]
@@ -109,7 +112,27 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedExpression {
         Empty,
-        Valid(Expression, Token),
+        Valid(Token, Expression),
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedFun {
+        Keyword(Token),
+        Name(Token, Identifier),
+        Params(Token, Identifier, Vec<Param>),
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedMatch {
+        Keyword(Token),
+        Matchee(Token, Expression),
+        Cases(Token, Expression, Vec<MatchCase>),
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedForall {
+        Keyword(Token),
+        Params(Token, Vec<Param>),
     }
 }
 
@@ -153,6 +176,11 @@ mod finished {
             Expression,
             ExpressionEndDelimiter,
         ),
+        UndelimitedExpression(
+            /// First token (".")
+            Token,
+            Expression,
+        ),
     }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
@@ -172,6 +200,7 @@ mod first_token {
                 FinishedStackItem::Param(token, _, _) => &token,
                 FinishedStackItem::Constructor(token, _, _) => &token,
                 FinishedStackItem::Expression(token, _, _) => &token,
+                FinishedStackItem::UndelimitedExpression(token, _) => &token,
             }
         }
     }
@@ -207,6 +236,9 @@ mod accept {
                 UnfinishedStackItem::Param(param) => param.accept(item),
                 UnfinishedStackItem::Constructor(constructor) => constructor.accept(item),
                 UnfinishedStackItem::UnfinishedExpression(expression) => expression.accept(item),
+                UnfinishedStackItem::Fun(fun) => fun.accept(item),
+                UnfinishedStackItem::Match(match_) => match_.accept(item),
+                UnfinishedStackItem::Forall(forall) => forall.accept(item),
             }
         }
     }
@@ -546,7 +578,79 @@ mod accept {
 
     impl Accept for UnfinishedExpression {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!()
+            match self {
+                UnfinishedExpression::Empty => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::TypeTitleCase => {
+                            let expression = Expression::QuasiIdentifier(QuasiIdentifier {
+                                start_index: token.start_index,
+                                kind: QuasiIdentifierKind::TypeTitleCase,
+                            });
+                            *self = UnfinishedExpression::Valid(token, expression);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        TokenKind::Underscore => {
+                            let expression = Expression::QuasiIdentifier(QuasiIdentifier {
+                                start_index: token.start_index,
+                                kind: QuasiIdentifierKind::Underscore,
+                            });
+                            *self = UnfinishedExpression::Valid(token, expression);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        TokenKind::Identifier => {
+                            let expression = Expression::Identifier(Identifier {
+                                start_index: token.start_index,
+                                content: token.content.clone(),
+                            });
+                            *self = UnfinishedExpression::Valid(token, expression);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        TokenKind::Fun => AcceptResult::Push(UnfinishedStackItem::Fun(
+                            UnfinishedFun::Keyword(token),
+                        )),
+                        TokenKind::Match => AcceptResult::Push(UnfinishedStackItem::Match(
+                            UnfinishedMatch::Keyword(token),
+                        )),
+                        TokenKind::Forall => AcceptResult::Push(UnfinishedStackItem::Forall(
+                            UnfinishedForall::Keyword(token),
+                        )),
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Expression(first_token, expression, end_delimiter) => {
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Expression(
+                            first_token,
+                            expression,
+                            end_delimiter,
+                        ))
+                    }
+                    FinishedStackItem::UndelimitedExpression(first_token, expression) => {
+                        *self = UnfinishedExpression::Valid(first_token, expression);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedExpression::Valid(first_token, expression) => unimplemented!(),
+            }
+        }
+    }
+
+    impl Accept for UnfinishedFun {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
+        }
+    }
+
+    impl Accept for UnfinishedMatch {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
+        }
+    }
+
+    impl Accept for UnfinishedForall {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
         }
     }
 }

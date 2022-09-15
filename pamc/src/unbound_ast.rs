@@ -41,7 +41,7 @@ pub struct LetStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
-    TypeTitleCase(TypeTitleCase),
+    QuasiIdentifier(QuasiIdentifier),
     Identifier(Identifier),
     Dot(Box<Dot>),
     Call(Box<Call>),
@@ -51,8 +51,15 @@ pub enum Expression {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TypeTitleCase {
+pub struct QuasiIdentifier {
     pub start_index: usize,
+    pub kind: QuasiIdentifierKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum QuasiIdentifierKind {
+    TypeTitleCase,
+    Underscore,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
