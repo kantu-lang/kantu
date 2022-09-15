@@ -1,0 +1,97 @@
+file :=
+    | file_item*
+;
+
+file_item* :=
+    | EPSILON
+    | file_item* file_item
+;
+
+file_item :=
+    | type_statement
+    | let_statement
+;
+
+type_statement :=
+    | "type" IDENTIFIER params "{" constructor*_comma_separated "}"
+    | "type" IDENTIFIER "{" constructor*_comma_separated "}
+;
+
+params :=
+    | params_left ")"
+    | params_left "," ")"
+;
+
+params_left :=
+    | "(" parameter
+    | params_left "," parameter
+;
+
+parameter :=
+    | IDENTIFIER ":" expression
+;
+
+constructor*_comma_separated :=
+    | EPSILON
+    | constructor+_comma_separated
+    | constructor+_comma_separated ","
+;
+
+constructor+_comma_separated :=
+    | constructor
+    | constructor+_comma_separated "," constructor
+;
+
+constructor :=
+    | "." IDENTIFIER ":" expression
+    | "." IDENTIFIER params ":" expression
+;
+
+let_statement :=
+    | "let" IDENTIFIER "=" expression ";"
+;
+
+expression :=
+    | "Type"
+    | IDENTIFIER
+    | expression "." IDENTIFIER
+    | expression args
+    | "fun" IDENTIFIER params ":" expression "{" expression "}"
+    | "match" expression "{" case*_comma_separated "}"
+    | "forall" params "{" expression "}"
+;
+
+args :=
+    | args_left ")"
+    | args_left "," ")"
+;
+
+args_left :=
+    | "(" expression
+    | args_left "," expression
+;
+
+case*_comma_separated :=
+    | EPSILON
+    | case+_comma_separated
+    | case+_comma_separated ","
+;
+
+case+_comma_separated :=
+    | case
+    | case+_comma_separated "," case
+;
+
+case :=
+    | "." IDENTIFIER "=>" expression
+    | "." IDENTIFIER case_args "=>" expression
+;
+
+case_args :=
+    | case_args_left ")"
+;
+
+case_args_left :=
+    | "(" IDENTIFIER
+    | case_args_left "," IDENTIFIER
+;

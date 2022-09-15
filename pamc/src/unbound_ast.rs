@@ -43,16 +43,22 @@ pub struct LetStatement {
 pub enum Expression {
     TypeTitleCase(TypeTitleCase),
     Identifier(Identifier),
+    Dot(Box<Dot>),
     Call(Box<Call>),
     Fun(Box<Fun>),
     Match(Box<Match>),
     Forall(Box<Forall>),
-    Exists(Box<Exists>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeTitleCase {
     pub start_index: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Dot {
+    pub left: Expression,
+    pub right: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -84,12 +90,6 @@ pub struct MatchCase {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
-    pub params: Vec<Param>,
-    pub output: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Exists {
     pub params: Vec<Param>,
     pub output: Expression,
 }

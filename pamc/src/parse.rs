@@ -61,6 +61,9 @@ mod unfinished {
         File(Box<UnfinishedFile>),
         Type(UnfinishedTypeStatement),
         Let(UnfinishedLetStatement),
+        Params(UnfinishedParams),
+        Constructor(UnfinishedConstructor),
+        Expression(UnfinishedExpression),
     }
 
     #[derive(Clone, Debug)]
@@ -74,7 +77,7 @@ mod unfinished {
         Keyword(Token),
         Name(Token, Identifier),
         Params(Token, Identifier, Vec<Param>),
-        Constructors(Token, Identifier, Vec<Constructor>),
+        Constructors(Token, Identifier, Vec<Param>, Vec<Constructor>),
     }
 
     #[derive(Clone, Debug)]
@@ -83,6 +86,19 @@ mod unfinished {
         Name(Token, Identifier),
         NameEqual(Token, Identifier),
         ValueEqual(Token, Identifier, Expression),
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct UnfinishedParams {
+        pub first_token: Token,
+        pub params: Vec<Param>,
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedConstructor {
+        Dot(Token),
+        Name(Token, Identifier),
+        Params(Token, Identifier, Vec<Param>),
     }
 }
 
@@ -108,14 +124,29 @@ mod finished {
     pub enum FinishedStackItem {
         Token(Token),
         Type(
-            /// First token
+            /// First token ("type")
             Token,
             TypeStatement,
         ),
         Let(
-            /// First token
+            /// First token ("let")
             Token,
             LetStatement,
+        ),
+        Params(
+            /// First token ("(")
+            Token,
+            Vec<Param>,
+        ),
+        Param(
+            /// First token
+            Token,
+            Param,
+        ),
+        Constructor(
+            /// First token
+            Token,
+            Constructor,
         ),
     }
 }
@@ -134,6 +165,10 @@ mod accept {
         PopAndContinueReducing(FinishedStackItem),
         Push(UnfinishedStackItem),
         Error(ParseError),
+    }
+
+    fn unexpected_finished_item(item: &FinishedStackItem) -> AcceptResult {
+        AcceptResult::Error(ParseError::UnexpectedToken(item.first_token().clone()))
     }
 
     impl Accept for UnfinishedStackItem {
@@ -166,6 +201,7 @@ mod accept {
                     self.items.push(FileItem::Let(let_));
                     AcceptResult::ContinueToNextToken
                 }
+                other_item => unexpected_finished_item(&other_item),
             }
         }
     }
@@ -183,16 +219,82 @@ mod accept {
                             *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
                             AcceptResult::ContinueToNextToken
                         }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
                     },
-                    other => AcceptResult::Error(ParseError::UnexpectedToken(
-                        other.first_token().clone(),
-                    )),
+                    other_item => unexpected_finished_item(&other_item),
                 },
+                UnfinishedTypeStatement::Name(type_kw, name) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LParen => {
+                            AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
+                                first_token: token,
+                                params: vec![],
+                            }))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Params(_, params) => {
+                        *self =
+                            UnfinishedTypeStatement::Params(type_kw.clone(), name.clone(), params);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedTypeStatement::Params(type_kw, name, params) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LCurly => {
+                            *self = UnfinishedTypeStatement::Constructors(
+                                type_kw.clone(),
+                                name.clone(),
+                                params.clone(),
+                                vec![],
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedTypeStatement::Constructors(type_kw, name, params, constructors) => {
+                    match item {
+                        FinishedStackItem::Token(token) => match token.kind {
+                            TokenKind::Identifier => {
+                                AcceptResult::Push(UnfinishedStackItem::Constructor())
+                            }
+                            TokenKind::RCurly => {
+                                AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
+                                    type_kw.clone(),
+                                    TypeStatement {
+                                        name: name.clone(),
+                                        params: params.clone(),
+                                        constructors: constructors.clone(),
+                                    },
+                                ))
+                            }
+                            _other_token_kind => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            }
+                        },
+                        FinishedStackItem::Constructor(_, constructor) => {
+                            constructors.push(constructor);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        other_item => unexpected_finished_item(&other_item),
+                    }
+                }
             }
         }
     }
 
     impl Accept for UnfinishedLetStatement {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {}
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!()
+        }
     }
 }
