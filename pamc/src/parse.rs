@@ -3,6 +3,10 @@ use crate::{
     unbound_ast::*,
 };
 
+// TODO: Check first token location logic.
+// We don't want to give incorrect error messages!
+// (E.g., "Error at index 234" but it's actually at index 864.)
+
 #[derive(Clone, Debug)]
 pub enum ParseError {
     UnexpectedToken(Token),
@@ -883,7 +887,55 @@ mod accept {
 
     impl Accept for UnfinishedForall {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match self {
+                UnfinishedForall::Keyword(forall_kw) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LParen => {
+                            AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
+                                first_token: token.clone(),
+                                params: vec![],
+                            }))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Params(_, params) => {
+                        *self = UnfinishedForall::Params(forall_kw.clone(), params);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedForall::Params(forall_kw, params) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LCurly => {
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                        match end_delimiter.0.kind {
+                            TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
+                                FinishedStackItem::UndelimitedExpression(
+                                    forall_kw.clone(),
+                                    Expression::Forall(Box::new(Forall {
+                                        params: params.clone(),
+                                        output: expression,
+                                    })),
+                                ),
+                            ),
+                            _other_end_delimiter => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                            }
+                        }
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+            }
         }
     }
 
