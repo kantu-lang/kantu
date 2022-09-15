@@ -157,9 +157,13 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedMatchCase {
         Dot(Token),
-        Constructor(Token, Identifier),
-        Params(Token, Identifier, Vec<Identifier>),
+        ConstructorName(Token, Identifier),
+        ParamsInProgress(Token, Identifier, Vec<Identifier>, CurrentlyHasEndingComma),
+        AwaitingOutput(Token, Identifier, Vec<Identifier>),
     }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct CurrentlyHasEndingComma(pub bool);
 }
 
 use finished::*;
@@ -910,7 +914,122 @@ mod accept {
 
     impl Accept for UnfinishedMatchCase {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match self {
+                UnfinishedMatchCase::Dot(dot_token) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Identifier => {
+                            let name = Identifier {
+                                start_index: token.start_index,
+                                content: token.content.clone(),
+                            };
+                            *self = UnfinishedMatchCase::ConstructorName(dot_token.clone(), name);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedMatchCase::ConstructorName(dot_token, constructor_name) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LParen => {
+                            *self = UnfinishedMatchCase::ParamsInProgress(
+                                dot_token.clone(),
+                                constructor_name.clone(),
+                                vec![],
+                                CurrentlyHasEndingComma(false),
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
+                        TokenKind::Colon => {
+                            *self = UnfinishedMatchCase::AwaitingOutput(
+                                dot_token.clone(),
+                                constructor_name.clone(),
+                                vec![],
+                            );
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedMatchCase::ParamsInProgress(
+                    dot_token,
+                    constructor_name,
+                    params,
+                    currently_has_ending_comma,
+                ) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Identifier => {
+                            let can_accept_identifier =
+                                params.is_empty() || currently_has_ending_comma.0;
+                            if can_accept_identifier {
+                                let name = Identifier {
+                                    start_index: token.start_index,
+                                    content: token.content.clone(),
+                                };
+                                params.push(name);
+                                currently_has_ending_comma.0 = false;
+                                AcceptResult::ContinueToNextToken
+                            } else {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            }
+                        }
+                        TokenKind::Comma => {
+                            let can_accept_comma =
+                                !currently_has_ending_comma.0 && !params.is_empty();
+                            if can_accept_comma {
+                                currently_has_ending_comma.0 = true;
+                                AcceptResult::ContinueToNextToken
+                            } else {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            }
+                        }
+                        TokenKind::RParen => {
+                            *self = UnfinishedMatchCase::AwaitingOutput(
+                                dot_token.clone(),
+                                constructor_name.clone(),
+                                params.clone(),
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedMatchCase::AwaitingOutput(dot_token, constructor_name, params) => {
+                    match item {
+                        FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                            match end_delimiter.0.kind {
+                                TokenKind::Comma | TokenKind::RCurly => {
+                                    AcceptResult::PopAndContinueReducing(
+                                        FinishedStackItem::MatchCase(
+                                            dot_token.clone(),
+                                            MatchCase {
+                                                constructor_name: constructor_name.clone(),
+                                                params: params.clone(),
+                                                output: expression,
+                                            },
+                                            end_delimiter,
+                                        ),
+                                    )
+                                }
+                                _other_end_delimiter => AcceptResult::Error(
+                                    ParseError::UnexpectedToken(end_delimiter.0),
+                                ),
+                            }
+                        }
+                        other_item => unexpected_finished_item(&other_item),
+                    }
+                }
+            }
         }
     }
 }

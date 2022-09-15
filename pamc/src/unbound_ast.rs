@@ -90,7 +90,7 @@ pub struct Match {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
-    pub constructor: Identifier,
+    pub constructor_name: Identifier,
     pub params: Vec<Identifier>,
     pub output: Expression,
 }
