@@ -41,6 +41,11 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
                     stack.push(item2);
                     break;
                 }
+                AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
+                    stack.push(item);
+                    finished = new_finished;
+                    continue;
+                }
                 AcceptResult::Error(err) => return Err(err),
             }
         }
@@ -106,7 +111,6 @@ mod unfinished {
 
     #[derive(Clone, Debug)]
     pub enum UnfinishedParam {
-        Empty,
         Name(Token, Identifier),
     }
 
@@ -150,8 +154,10 @@ mod unfinished {
     }
 
     #[derive(Clone, Debug)]
-    pub enum UnfinishedCall {
-        Callee(Token, Expression),
+    pub struct UnfinishedCall {
+        pub first_token: Token,
+        pub callee: Expression,
+        pub args: Vec<Expression>,
     }
 
     #[derive(Clone, Debug)]
@@ -258,6 +264,7 @@ mod accept {
         PopAndContinueReducing(FinishedStackItem),
         Push(UnfinishedStackItem),
         Push2(UnfinishedStackItem, UnfinishedStackItem),
+        PushAndContinueReducingWithNewTop(UnfinishedStackItem, FinishedStackItem),
         Error(ParseError),
     }
 
@@ -462,13 +469,6 @@ mod accept {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Comma => {
-                        if self.params.is_empty() {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        } else {
-                            AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Empty))
-                        }
-                    }
                     TokenKind::Identifier => {
                         let name = Identifier {
                             start_index: token.start_index,
@@ -493,9 +493,7 @@ mod accept {
                 FinishedStackItem::Param(_, param, end_delimiter) => {
                     self.params.push(param);
                     match end_delimiter.0.kind {
-                        TokenKind::Comma => {
-                            AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Empty))
-                        }
+                        TokenKind::Comma => AcceptResult::ContinueToNextToken,
                         TokenKind::RParen => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
                                 self.first_token.clone(),
@@ -515,22 +513,6 @@ mod accept {
     impl Accept for UnfinishedParam {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             match self {
-                UnfinishedParam::Empty => match item {
-                    FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
-                            let name = Identifier {
-                                start_index: token.start_index,
-                                content: token.content.clone(),
-                            };
-                            *self = UnfinishedParam::Name(token, name);
-                            AcceptResult::ContinueToNextToken
-                        }
-                        _other_token_kind => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        }
-                    },
-                    other_item => unexpected_finished_item(&other_item),
-                },
                 UnfinishedParam::Name(first_token, name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Colon => {
@@ -722,12 +704,18 @@ mod accept {
                                 AcceptResult::Push(unfinished)
                             }
                             TokenKind::LParen => {
-                                let unfinished = UnfinishedStackItem::Call(UnfinishedCall::Callee(
-                                    first_token.clone(),
-                                    expression.clone(),
-                                ));
+                                let unfinished = UnfinishedStackItem::Call(UnfinishedCall {
+                                    first_token: first_token.clone(),
+                                    callee: expression.clone(),
+                                    args: vec![],
+                                });
                                 *self = UnfinishedDelimitedExpression::Empty;
-                                AcceptResult::Push(unfinished)
+                                AcceptResult::Push2(
+                                    unfinished,
+                                    UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                        UnfinishedDelimitedExpression::Empty,
+                                    ),
+                                )
                             }
                             _other_token_kind => {
                                 AcceptResult::Error(ParseError::UnexpectedToken(token))
@@ -908,7 +896,41 @@ mod accept {
 
     impl Accept for UnfinishedCall {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match item {
+                FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
+                    self.args.push(expression);
+                    match end_delimiter.0.kind {
+                        TokenKind::Comma => AcceptResult::ContinueToNextToken,
+                        TokenKind::RParen => AcceptResult::PopAndContinueReducing(
+                            FinishedStackItem::UndelimitedExpression(
+                                first_token,
+                                Expression::Call(Box::new(Call {
+                                    callee: self.callee.clone(),
+                                    args: self.args.clone(),
+                                })),
+                            ),
+                        ),
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    }
+                }
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Identifier
+                    | TokenKind::Underscore
+                    | TokenKind::TypeTitleCase
+                    | TokenKind::Fun
+                    | TokenKind::Match
+                    | TokenKind::Forall => AcceptResult::PushAndContinueReducingWithNewTop(
+                        UnfinishedStackItem::UnfinishedDelimitedExpression(
+                            UnfinishedDelimitedExpression::Empty,
+                        ),
+                        FinishedStackItem::Token(token),
+                    ),
+                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                },
+                other_item => unexpected_finished_item(&other_item),
+            }
         }
     }
 
