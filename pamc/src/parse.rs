@@ -36,6 +36,11 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
                     stack.push(item);
                     break;
                 }
+                AcceptResult::Push2(item1, item2) => {
+                    stack.push(item1);
+                    stack.push(item2);
+                    break;
+                }
                 AcceptResult::Error(err) => return Err(err),
             }
         }
@@ -70,6 +75,7 @@ mod unfinished {
         Forall(UnfinishedForall),
         Dot(UnfinishedDot),
         Call(UnfinishedCall),
+        MatchCase(UnfinishedMatchCase),
     }
 
     #[derive(Clone, Debug)]
@@ -128,7 +134,6 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedMatch {
         Keyword(Token),
-        Matchee(Token, Expression),
         Cases(Token, Expression, Vec<MatchCase>),
     }
 
@@ -147,6 +152,13 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedCall {
         Callee(Token, Expression),
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedMatchCase {
+        Dot(Token),
+        Constructor(Token, Identifier),
+        Params(Token, Identifier, Vec<Identifier>),
     }
 }
 
@@ -195,6 +207,12 @@ mod finished {
             Token,
             Expression,
         ),
+        MatchCase(
+            /// First token (".")
+            Token,
+            MatchCase,
+            ExpressionEndDelimiter,
+        ),
     }
 
     #[derive(Clone, Debug, PartialEq, Eq)]
@@ -216,6 +234,7 @@ mod first_token {
                 FinishedStackItem::Constructor(token, _, _) => &token,
                 FinishedStackItem::DelimitedExpression(token, _, _) => &token,
                 FinishedStackItem::UndelimitedExpression(token, _) => &token,
+                FinishedStackItem::MatchCase(token, _, _) => &token,
             }
         }
     }
@@ -234,6 +253,7 @@ mod accept {
         ContinueToNextToken,
         PopAndContinueReducing(FinishedStackItem),
         Push(UnfinishedStackItem),
+        Push2(UnfinishedStackItem, UnfinishedStackItem),
         Error(ParseError),
     }
 
@@ -258,6 +278,7 @@ mod accept {
                 UnfinishedStackItem::Forall(forall) => forall.accept(item),
                 UnfinishedStackItem::Dot(dot) => dot.accept(item),
                 UnfinishedStackItem::Call(call) => call.accept(item),
+                UnfinishedStackItem::MatchCase(match_case) => match_case.accept(item),
             }
         }
     }
@@ -641,9 +662,12 @@ mod accept {
                         TokenKind::Fun => AcceptResult::Push(UnfinishedStackItem::Fun(
                             UnfinishedFun::Keyword(token),
                         )),
-                        TokenKind::Match => AcceptResult::Push(UnfinishedStackItem::Match(
-                            UnfinishedMatch::Keyword(token),
-                        )),
+                        TokenKind::Match => AcceptResult::Push2(
+                            UnfinishedStackItem::Match(UnfinishedMatch::Keyword(token)),
+                            UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ),
+                        ),
                         TokenKind::Forall => AcceptResult::Push(UnfinishedStackItem::Forall(
                             UnfinishedForall::Keyword(token),
                         )),
@@ -807,7 +831,62 @@ mod accept {
 
     impl Accept for UnfinishedMatch {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match self {
+                UnfinishedMatch::Keyword(match_kw) => match item {
+                    FinishedStackItem::DelimitedExpression(
+                        first_token,
+                        expression,
+                        end_delimiter,
+                    ) => match end_delimiter.0.kind {
+                        TokenKind::LCurly => {
+                            *self = UnfinishedMatch::Cases(match_kw.clone(), expression, vec![]);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedMatch::Cases(match_kw, matchee, cases) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::MatchCase(
+                            UnfinishedMatchCase::Dot(token),
+                        )),
+                        TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
+                            FinishedStackItem::UndelimitedExpression(
+                                match_kw.clone(),
+                                Expression::Match(Box::new(Match {
+                                    matchee: matchee.clone(),
+                                    cases: cases.clone(),
+                                })),
+                            ),
+                        ),
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::MatchCase(first_token, case, end_delimiter) => {
+                        cases.push(case);
+                        match end_delimiter.0.kind {
+                            TokenKind::Comma => AcceptResult::ContinueToNextToken,
+                            TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
+                                FinishedStackItem::UndelimitedExpression(
+                                    match_kw.clone(),
+                                    Expression::Match(Box::new(Match {
+                                        matchee: matchee.clone(),
+                                        cases: cases.clone(),
+                                    })),
+                                ),
+                            ),
+                            _other_end_delimiter => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                            }
+                        }
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+            }
         }
     }
 
@@ -824,6 +903,12 @@ mod accept {
     }
 
     impl Accept for UnfinishedCall {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
+        }
+    }
+
+    impl Accept for UnfinishedMatchCase {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             unimplemented!();
         }
