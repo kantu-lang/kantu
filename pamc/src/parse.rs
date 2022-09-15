@@ -350,6 +350,15 @@ mod accept {
                                 params: vec![],
                             }))
                         }
+                        TokenKind::LCurly => {
+                            *self = UnfinishedTypeStatement::Constructors(
+                                type_kw.clone(),
+                                name.clone(),
+                                vec![],
+                                vec![],
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
                         _other_token_kind => {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
