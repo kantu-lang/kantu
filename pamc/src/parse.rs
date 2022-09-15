@@ -436,7 +436,45 @@ mod accept {
 
     impl Accept for UnfinishedParam {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match self {
+                UnfinishedParam::Empty => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Identifier => {
+                            let name = Identifier {
+                                start_index: token.start_index,
+                                content: token.content.clone(),
+                            };
+                            *self = UnfinishedParam::Name(token, name);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedParam::Name(first_token, name) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Colon => AcceptResult::Push(
+                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
+                        ),
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Expression(_, expression, end_delimiter) => {
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
+                            first_token.clone(),
+                            Param {
+                                name: name.clone(),
+                                type_: expression,
+                            },
+                            end_delimiter,
+                        ))
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+            }
         }
     }
 
