@@ -21,6 +21,14 @@ fn main() {
     match lex_result {
         Ok(tokens) => {
             println!("Lex success!");
+            for t in tokens
+                .iter()
+                .filter(|t| t.kind != pamc::lex::TokenKind::Whitespace)
+            {
+                println!("{}        ({:?})", t.content, t.kind);
+            }
+            println!("\n\n\n\n\n\n\n\n\n\n\n\n\n");
+
             let parse_result = pamc::parse::parse_file(tokens);
             println!("Parse result: {:?}", parse_result);
         }

@@ -26,6 +26,7 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
 
     for token in tokens.into_iter().filter(is_not_whitespace) {
         let mut finished = FinishedStackItem::Token(token);
+        let mut TODO_finished_clone = finished.clone();
         while stack.len() >= 1 {
             let top_unfinished = stack.last_mut().unwrap();
             let accept_result = top_unfinished.accept(finished);
@@ -34,6 +35,7 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
                 AcceptResult::PopAndContinueReducing(new_finished) => {
                     stack.pop();
                     finished = new_finished;
+                    TODO_finished_clone = finished.clone();
                     continue;
                 }
                 AcceptResult::Push(item) => {
@@ -48,9 +50,15 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
                 AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
                     stack.push(item);
                     finished = new_finished;
+                    TODO_finished_clone = finished.clone();
                     continue;
                 }
-                AcceptResult::Error(err) => return Err(err),
+                AcceptResult::Error(err) => {
+                    // TODO: Remove debug print.
+                    println!("Stack: {:#?}", stack);
+                    println!("Finished: {:#?}", TODO_finished_clone);
+                    return Err(err);
+                }
             }
         }
     }
@@ -592,6 +600,17 @@ mod accept {
                     FinishedStackItem::Params(_, params) => {
                         *self = UnfinishedConstructor::Params(dot.clone(), name.clone(), params);
                         AcceptResult::ContinueToNextToken
+                    }
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Constructor(
+                            dot.clone(),
+                            Constructor {
+                                name: name.clone(),
+                                params: vec![],
+                                return_type: expression,
+                            },
+                            end_delimiter,
+                        ))
                     }
                     other_item => unexpected_finished_item(&other_item),
                 },
