@@ -17,6 +17,7 @@ pub enum TokenKind {
     RCurly,
     LAngle,
     RAngle,
+    Semicolon,
     Colon,
     Comma,
     Dot,
@@ -106,6 +107,13 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     kind: TokenKind::At,
                 });
                 None
+            } else if c == ';' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Semicolon,
+                });
+                None
             } else if c == ':' {
                 state.tokens.push(Token {
                     start_index: i,
@@ -157,6 +165,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             | TokenKind::RCurly
             | TokenKind::LAngle
             | TokenKind::RAngle
+            | TokenKind::Semicolon
             | TokenKind::Colon
             | TokenKind::Comma
             | TokenKind::Dot
@@ -316,6 +325,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             | TokenKind::RCurly
             | TokenKind::LAngle
             | TokenKind::RAngle
+            | TokenKind::Semicolon
             | TokenKind::Colon
             | TokenKind::Comma
             | TokenKind::Dot

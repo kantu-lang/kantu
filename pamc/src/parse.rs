@@ -68,6 +68,8 @@ mod unfinished {
         Fun(UnfinishedFun),
         Match(UnfinishedMatch),
         Forall(UnfinishedForall),
+        Dot(UnfinishedDot),
+        Call(UnfinishedCall),
     }
 
     #[derive(Clone, Debug)]
@@ -134,6 +136,17 @@ mod unfinished {
     pub enum UnfinishedForall {
         Keyword(Token),
         Params(Token, Vec<Param>),
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct UnfinishedDot {
+        pub first_token: Token,
+        pub left: Expression,
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum UnfinishedCall {
+        Callee(Token, Expression),
     }
 }
 
@@ -243,6 +256,8 @@ mod accept {
                 UnfinishedStackItem::Fun(fun) => fun.accept(item),
                 UnfinishedStackItem::Match(match_) => match_.accept(item),
                 UnfinishedStackItem::Forall(forall) => forall.accept(item),
+                UnfinishedStackItem::Dot(dot) => dot.accept(item),
+                UnfinishedStackItem::Call(call) => call.accept(item),
             }
         }
     }
@@ -657,7 +672,41 @@ mod accept {
                     other_item => unexpected_finished_item(&other_item),
                 },
                 UnfinishedDelimitedExpression::WaitingForEndDelimiter(first_token, expression) => {
-                    unimplemented!()
+                    match item {
+                        FinishedStackItem::Token(token) => match token.kind {
+                            TokenKind::Comma
+                            | TokenKind::Semicolon
+                            | TokenKind::LCurly
+                            | TokenKind::RCurly
+                            | TokenKind::RParen => AcceptResult::PopAndContinueReducing(
+                                FinishedStackItem::DelimitedExpression(
+                                    first_token.clone(),
+                                    expression.clone(),
+                                    ExpressionEndDelimiter(token),
+                                ),
+                            ),
+                            TokenKind::Dot => {
+                                let unfinished = UnfinishedStackItem::Dot(UnfinishedDot {
+                                    first_token: first_token.clone(),
+                                    left: expression.clone(),
+                                });
+                                *self = UnfinishedDelimitedExpression::Empty;
+                                AcceptResult::Push(unfinished)
+                            }
+                            TokenKind::LParen => {
+                                let unfinished = UnfinishedStackItem::Call(UnfinishedCall::Callee(
+                                    first_token.clone(),
+                                    expression.clone(),
+                                ));
+                                *self = UnfinishedDelimitedExpression::Empty;
+                                AcceptResult::Push(unfinished)
+                            }
+                            _other_token_kind => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            }
+                        },
+                        other_item => unexpected_finished_item(&other_item),
+                    }
                 }
             }
         }
@@ -763,6 +812,18 @@ mod accept {
     }
 
     impl Accept for UnfinishedForall {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
+        }
+    }
+
+    impl Accept for UnfinishedDot {
+        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+            unimplemented!();
+        }
+    }
+
+    impl Accept for UnfinishedCall {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             unimplemented!();
         }
