@@ -825,19 +825,18 @@ mod accept {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
             match self {
                 UnfinishedMatch::Keyword(match_kw) => match item {
-                    FinishedStackItem::DelimitedExpression(
-                        first_token,
-                        expression,
-                        end_delimiter,
-                    ) => match end_delimiter.0.kind {
-                        TokenKind::LCurly => {
-                            *self = UnfinishedMatch::Cases(match_kw.clone(), expression, vec![]);
-                            AcceptResult::ContinueToNextToken
+                    FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                        match end_delimiter.0.kind {
+                            TokenKind::LCurly => {
+                                *self =
+                                    UnfinishedMatch::Cases(match_kw.clone(), expression, vec![]);
+                                AcceptResult::ContinueToNextToken
+                            }
+                            _other_end_delimiter => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                            }
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
-                    },
+                    }
                     other_item => unexpected_finished_item(&other_item),
                 },
                 UnfinishedMatch::Cases(match_kw, matchee, cases) => match item {
@@ -858,7 +857,7 @@ mod accept {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
                     },
-                    FinishedStackItem::MatchCase(first_token, case, end_delimiter) => {
+                    FinishedStackItem::MatchCase(_, case, end_delimiter) => {
                         cases.push(case);
                         match end_delimiter.0.kind {
                             TokenKind::Comma => AcceptResult::ContinueToNextToken,
