@@ -480,7 +480,67 @@ mod accept {
 
     impl Accept for UnfinishedConstructor {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!()
+            match self {
+                UnfinishedConstructor::Dot(dot) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Identifier => {
+                            let name = Identifier {
+                                start_index: token.start_index,
+                                content: token.content.clone(),
+                            };
+                            *self = UnfinishedConstructor::Name(dot.clone(), name);
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedConstructor::Name(dot, name) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::LParen => {
+                            AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
+                                first_token: token.clone(),
+                                params: vec![],
+                            }))
+                        }
+                        TokenKind::Colon => AcceptResult::Push(
+                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
+                        ),
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Params(_, params) => {
+                        *self = UnfinishedConstructor::Params(dot.clone(), name.clone(), params);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+                UnfinishedConstructor::Params(dot, name, params) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Colon => AcceptResult::Push(
+                            UnfinishedStackItem::UnfinishedExpression(UnfinishedExpression::Empty),
+                        ),
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Expression(_, expression, end_delimiter) => {
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Constructor(
+                            dot.clone(),
+                            Constructor {
+                                name: name.clone(),
+                                params: params.clone(),
+                                return_type: expression,
+                            },
+                            end_delimiter,
+                        ))
+                    }
+                    other_item => unexpected_finished_item(&other_item),
+                },
+            }
         }
     }
 
