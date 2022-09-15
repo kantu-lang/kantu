@@ -10,6 +10,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub enum ParseError {
     UnexpectedToken(Token),
+    UnexpectedEndOfInput,
 }
 
 pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
@@ -63,7 +64,15 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
         }
     }
 
-    Ok(File(vec![]))
+    if stack.len() != 1 {
+        Err(ParseError::UnexpectedEndOfInput)
+    } else {
+        let top_unfinished = stack.pop().unwrap();
+        match top_unfinished {
+            UnfinishedStackItem::File(file) => Ok(File(file.items)),
+            _ => panic!("The top item on the stack is not a file. This indicates a serious logic error with the parser.")
+        }
+    }
 }
 
 fn is_not_whitespace(token: &Token) -> bool {
