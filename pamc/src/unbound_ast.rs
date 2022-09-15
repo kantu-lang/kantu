@@ -11,6 +11,7 @@ pub enum FileItem {
 pub struct TypeStatement {
     pub name: Identifier,
     pub params: Vec<Param>,
+    pub constructors: Vec<Constructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -26,6 +27,13 @@ pub struct Param {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Constructor {
+    pub name: Identifier,
+    pub params: Vec<Param>,
+    pub return_type: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub name: Identifier,
     pub value: Expression,
@@ -33,12 +41,18 @@ pub struct LetStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
+    TypeTitleCase(TypeTitleCase),
     Identifier(Identifier),
     Call(Box<Call>),
     Fun(Box<Fun>),
     Match(Box<Match>),
     Forall(Box<Forall>),
     Exists(Box<Exists>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeTitleCase {
+    pub start_index: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
