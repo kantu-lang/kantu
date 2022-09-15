@@ -890,7 +890,27 @@ mod accept {
 
     impl Accept for UnfinishedDot {
         fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
-            unimplemented!();
+            match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Identifier => {
+                        let right = Identifier {
+                            start_index: token.start_index,
+                            content: token.content.clone(),
+                        };
+                        AcceptResult::PopAndContinueReducing(
+                            FinishedStackItem::UndelimitedExpression(
+                                self.first_token.clone(),
+                                Expression::Dot(Box::new(Dot {
+                                    left: self.left.clone(),
+                                    right,
+                                })),
+                            ),
+                        )
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                },
+                other_item => unexpected_finished_item(&other_item),
+            }
         }
     }
 
