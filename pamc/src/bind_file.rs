@@ -5,17 +5,16 @@ pub enum BindError {
     DuplicateSymbol(unbound::Identifier, unbound::Identifier),
 }
 
-fn bind_file(file: unbound::File) -> Result<bound::File, BindError> {
+pub fn bind_file(file: unbound::File) -> Result<bound::File, BindError> {
     let mut bound_file = bound::File {
         id: file.id,
         items: Vec::with_capacity(file.items.len()),
     };
     let mut context_stack = ContextStack::singleton_empty();
     for item in file.items {
-        match bind_file_item(item, &mut context_stack) {
-            Ok(bound) => bound_file.items.push(bound),
-            Err(err) => return Err(err),
-        }
+        bound_file
+            .items
+            .push(bind_file_item(item, &mut context_stack)?);
     }
     Ok(bound_file)
 }
@@ -39,7 +38,7 @@ fn bind_type_statement(
     context_stack: &mut ContextStack,
 ) -> Result<bound::TypeStatement, BindError> {
     let type_sid = context_stack.add_to_top(&item.name)?;
-    unimplemented!()
+    unimplemented!();
 }
 
 fn bind_let_statement(
