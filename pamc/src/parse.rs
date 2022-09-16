@@ -18,7 +18,10 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
     let first_token = if let Some(t) = tokens.iter().find(is_not_whitespace_ref) {
         t.clone()
     } else {
-        return Ok(File(vec![]));
+        return Ok(File {
+            id: file_id,
+            items: vec![],
+        });
     };
     let mut stack: Vec<UnfinishedStackItem> =
         vec![UnfinishedStackItem::File(Box::new(UnfinishedFile {
@@ -62,7 +65,10 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
     } else {
         let top_unfinished = stack.pop().unwrap();
         match top_unfinished {
-            UnfinishedStackItem::File(file) => Ok(File(file.items)),
+            UnfinishedStackItem::File(file) => Ok(File {
+                id: file_id,
+                items: file.items,
+            }),
             _ => panic!("The top item on the stack is not a file. This indicates a serious logic error with the parser.")
         }
     }

@@ -22,8 +22,12 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
     pub start: TextPosition,
+    pub symbol_id: SymbolId,
     pub content: String,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SymbolId(pub usize);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
@@ -58,6 +62,7 @@ pub enum Expression {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QuasiIdentifier {
     pub start: TextPosition,
+    pub symbol_id: SymbolId,
     pub kind: QuasiIdentifierKind,
 }
 

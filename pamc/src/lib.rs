@@ -1,3 +1,5 @@
+pub mod bind_symbols;
+pub mod bound_ast;
 pub mod lex;
 pub mod parse;
 pub mod unbound_ast;
