@@ -1,7 +1,9 @@
-use crate::{bound_ast as bound, unbound_ast as unbound};
+use crate::{bound_ast as bound, bound_ast::SymbolId, unbound_ast as unbound};
 
 #[derive(Clone, Debug)]
-pub enum BindError {}
+pub enum BindError {
+    DuplicateSymbol(unbound::Identifier, unbound::Identifier),
+}
 
 /// The returned vector of files has an arbitrary order--it is **NOT**
 /// guaranteed to have the same order as the input vector.
@@ -28,7 +30,7 @@ fn sort_files_by_dependency(files: Vec<unbound::File>) -> Vec<unbound::File> {
 fn bind_file(file: unbound::File, db: &mut SymbolDatabase) -> Result<bound::File, BindError> {
     let mut binder = FileBinder {
         db,
-        context_stack: ContextStack::empty(),
+        context_stack: ContextStack::singleton_empty(),
     };
     binder.bind_file(file)
 }
@@ -66,7 +68,9 @@ impl FileBinder<'_> {
         &mut self,
         item: unbound::TypeStatement,
     ) -> Result<bound::TypeStatement, BindError> {
-        unimplemented!()
+        let type_sid = self.context_stack.add_to_top(&item.name)?;
+        self.db
+            .declare_symbol(type_sid, SymbolSource::Type(item.clone()));
     }
 
     fn bind_let_statement(
@@ -140,16 +144,56 @@ mod symbol_database {
 use context::*;
 mod context {
     use super::*;
+    use rustc_hash::FxHashMap;
 
     #[derive(Clone, Debug)]
     pub struct ContextStack(Vec<Context>);
 
     impl ContextStack {
-        pub fn empty() -> Self {
-            Self(vec![])
+        pub fn singleton_empty() -> Self {
+            Self(vec![Context::empty()])
+        }
+    }
+
+    impl ContextStack {
+        pub fn add_to_top(&mut self, ident: &unbound::Identifier) -> Result<SymbolId, BindError> {
+            let top = self
+                .0
+                .last_mut()
+                .expect("Impossible: ContextStack is empty");
+            top.add(ident)
         }
     }
 
     #[derive(Clone, Debug)]
-    pub struct Context {}
+    pub struct Context {
+        map: FxHashMap<String, (unbound::Identifier, SymbolId)>,
+        lowest_available_id: SymbolId,
+    }
+
+    impl Context {
+        pub fn empty() -> Self {
+            Self {
+                map: FxHashMap::default(),
+                lowest_available_id: SymbolId(0),
+            }
+        }
+    }
+
+    impl Context {
+        pub fn add(&mut self, ident: &unbound::Identifier) -> Result<SymbolId, BindError> {
+            if let Some((existing_ident, _)) = self.map.get(&ident.content) {
+                Err(BindError::DuplicateSymbol(
+                    existing_ident.clone(),
+                    ident.clone(),
+                ))
+            } else {
+                let new_id = self.lowest_available_id;
+                self.lowest_available_id.0 += 1;
+                self.map
+                    .insert(ident.content.clone(), (ident.clone(), new_id));
+                Ok(new_id)
+            }
+        }
+    }
 }

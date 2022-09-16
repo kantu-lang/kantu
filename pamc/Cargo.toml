@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 unicode-general-category = "0.5.1"
+rustc-hash = "1.1.0"
