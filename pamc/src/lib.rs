@@ -1,4 +1,4 @@
-pub mod bind_symbols;
+pub mod bind_file;
 pub mod bound_ast;
 pub mod lex;
 pub mod parse;
