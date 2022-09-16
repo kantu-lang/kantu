@@ -29,7 +29,7 @@ fn main() {
             }
             println!("\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
-            let parse_result = pamc::parse::parse_file(tokens);
+            let parse_result = pamc::parse::parse_file(tokens, pamc::FileId(0));
             println!("Parse result: {:#?}", parse_result);
         }
         Err(err) => {

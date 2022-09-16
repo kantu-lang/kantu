@@ -1,3 +1,5 @@
+use crate::TextPosition;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File(pub Vec<FileItem>);
 
@@ -16,7 +18,7 @@ pub struct TypeStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
-    pub start_index: usize,
+    pub start: TextPosition,
     pub content: String,
 }
 
@@ -52,7 +54,7 @@ pub enum Expression {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QuasiIdentifier {
-    pub start_index: usize,
+    pub start: TextPosition,
     pub kind: QuasiIdentifierKind,
 }
 

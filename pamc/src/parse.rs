@@ -1,6 +1,7 @@
 use crate::{
     lex::{Token, TokenKind},
     unbound_ast::*,
+    FileId, TextPosition,
 };
 
 // TODO: Check first token location logic.
@@ -13,7 +14,7 @@ pub enum ParseError {
     UnexpectedEndOfInput,
 }
 
-pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
+pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseError> {
     let first_token = if let Some(t) = tokens.iter().find(is_not_whitespace_ref) {
         t.clone()
     } else {
@@ -29,7 +30,7 @@ pub fn parse_file(tokens: Vec<Token>) -> Result<File, ParseError> {
         let mut finished = FinishedStackItem::Token(token);
         while stack.len() >= 1 {
             let top_unfinished = stack.last_mut().unwrap();
-            let accept_result = top_unfinished.accept(finished);
+            let accept_result = top_unfinished.accept(finished, file_id);
             match accept_result {
                 AcceptResult::ContinueToNextToken => break,
                 AcceptResult::PopAndContinueReducing(new_finished) => {
@@ -268,7 +269,7 @@ mod accept {
     use super::*;
 
     pub trait Accept {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult;
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult;
     }
 
     #[derive(Clone, Debug)]
@@ -286,29 +287,29 @@ mod accept {
     }
 
     impl Accept for UnfinishedStackItem {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
-                UnfinishedStackItem::File(file) => file.accept(item),
-                UnfinishedStackItem::Type(type_) => type_.accept(item),
-                UnfinishedStackItem::Let(let_) => let_.accept(item),
-                UnfinishedStackItem::Params(params) => params.accept(item),
-                UnfinishedStackItem::Param(param) => param.accept(item),
-                UnfinishedStackItem::Constructor(constructor) => constructor.accept(item),
+                UnfinishedStackItem::File(file) => file.accept(item, file_id),
+                UnfinishedStackItem::Type(type_) => type_.accept(item, file_id),
+                UnfinishedStackItem::Let(let_) => let_.accept(item, file_id),
+                UnfinishedStackItem::Params(params) => params.accept(item, file_id),
+                UnfinishedStackItem::Param(param) => param.accept(item, file_id),
+                UnfinishedStackItem::Constructor(constructor) => constructor.accept(item, file_id),
                 UnfinishedStackItem::UnfinishedDelimitedExpression(expression) => {
-                    expression.accept(item)
+                    expression.accept(item, file_id)
                 }
-                UnfinishedStackItem::Fun(fun) => fun.accept(item),
-                UnfinishedStackItem::Match(match_) => match_.accept(item),
-                UnfinishedStackItem::Forall(forall) => forall.accept(item),
-                UnfinishedStackItem::Dot(dot) => dot.accept(item),
-                UnfinishedStackItem::Call(call) => call.accept(item),
-                UnfinishedStackItem::MatchCase(match_case) => match_case.accept(item),
+                UnfinishedStackItem::Fun(fun) => fun.accept(item, file_id),
+                UnfinishedStackItem::Match(match_) => match_.accept(item, file_id),
+                UnfinishedStackItem::Forall(forall) => forall.accept(item, file_id),
+                UnfinishedStackItem::Dot(dot) => dot.accept(item, file_id),
+                UnfinishedStackItem::Call(call) => call.accept(item, file_id),
+                UnfinishedStackItem::MatchCase(match_case) => match_case.accept(item, file_id),
             }
         }
     }
 
     impl Accept for UnfinishedFile {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::TypeLowerCase => AcceptResult::Push(UnfinishedStackItem::Type(
@@ -333,13 +334,16 @@ mod accept {
     }
 
     impl Accept for UnfinishedTypeStatement {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
                 UnfinishedTypeStatement::Keyword(type_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Identifier => {
                             let name = Identifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 content: token.content.clone(),
                             };
                             *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
@@ -443,13 +447,16 @@ mod accept {
     }
 
     impl Accept for UnfinishedLetStatement {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
                 UnfinishedLetStatement::Keyword(let_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Identifier => {
                             let name = Identifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 content: token.content.clone(),
                             };
                             *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
@@ -488,12 +495,15 @@ mod accept {
     }
 
     impl Accept for UnfinishedParams {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Identifier => {
                         let name = Identifier {
-                            start_index: token.start_index,
+                            start: TextPosition {
+                                file_id,
+                                index: token.start_index,
+                            },
                             content: token.content.clone(),
                         };
                         AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
@@ -533,7 +543,7 @@ mod accept {
     }
 
     impl Accept for UnfinishedParam {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match self {
                 UnfinishedParam::Name(first_token, name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
@@ -563,13 +573,16 @@ mod accept {
     }
 
     impl Accept for UnfinishedConstructor {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
                 UnfinishedConstructor::Dot(dot) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Identifier => {
                             let name = Identifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 content: token.content.clone(),
                             };
                             *self = UnfinishedConstructor::Name(dot.clone(), name);
@@ -644,13 +657,16 @@ mod accept {
     }
 
     impl Accept for UnfinishedDelimitedExpression {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
                 UnfinishedDelimitedExpression::Empty => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::TypeTitleCase => {
                             let expression = Expression::QuasiIdentifier(QuasiIdentifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 kind: QuasiIdentifierKind::TypeTitleCase,
                             });
                             *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -660,7 +676,10 @@ mod accept {
                         }
                         TokenKind::Underscore => {
                             let expression = Expression::QuasiIdentifier(QuasiIdentifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 kind: QuasiIdentifierKind::Underscore,
                             });
                             *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -670,7 +689,10 @@ mod accept {
                         }
                         TokenKind::Identifier => {
                             let expression = Expression::Identifier(Identifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 content: token.content.clone(),
                             });
                             *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -762,13 +784,16 @@ mod accept {
     }
 
     impl Accept for UnfinishedFun {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
                 UnfinishedFun::Keyword(fun_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Identifier => {
                             let name = Identifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 content: token.content.clone(),
                             };
                             *self = UnfinishedFun::Name(fun_kw.clone(), name);
@@ -855,7 +880,7 @@ mod accept {
     }
 
     impl Accept for UnfinishedMatch {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match self {
                 UnfinishedMatch::Keyword(match_kw) => match item {
                     FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
@@ -915,7 +940,7 @@ mod accept {
     }
 
     impl Accept for UnfinishedForall {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match self {
                 UnfinishedForall::Keyword(forall_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
@@ -969,12 +994,15 @@ mod accept {
     }
 
     impl Accept for UnfinishedDot {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Identifier => {
                         let right = Identifier {
-                            start_index: token.start_index,
+                            start: TextPosition {
+                                file_id,
+                                index: token.start_index,
+                            },
                             content: token.content.clone(),
                         };
                         AcceptResult::PopAndContinueReducing(
@@ -995,7 +1023,7 @@ mod accept {
     }
 
     impl Accept for UnfinishedCall {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
                     self.args.push(expression);
@@ -1035,13 +1063,16 @@ mod accept {
     }
 
     impl Accept for UnfinishedMatchCase {
-        fn accept(&mut self, item: FinishedStackItem) -> AcceptResult {
+        fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
                 UnfinishedMatchCase::Dot(dot_token) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Identifier => {
                             let name = Identifier {
-                                start_index: token.start_index,
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
                                 content: token.content.clone(),
                             };
                             *self = UnfinishedMatchCase::ConstructorName(dot_token.clone(), name);
@@ -1092,7 +1123,10 @@ mod accept {
                                 params.is_empty() || currently_has_ending_comma.0;
                             if can_accept_identifier {
                                 let name = Identifier {
-                                    start_index: token.start_index,
+                                    start: TextPosition {
+                                        file_id,
+                                        index: token.start_index,
+                                    },
                                     content: token.content.clone(),
                                 };
                                 params.push(name);
