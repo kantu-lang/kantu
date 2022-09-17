@@ -5,17 +5,43 @@ pub struct SymbolId(pub usize);
 
 #[derive(Clone, Debug)]
 pub struct IdentifierToSymbolMap {
-    map: Vec<SymbolId>,
+    map: Vec<Option<SymbolId>>,
 }
 
 impl IdentifierToSymbolMap {
-    pub fn dense(map: Vec<SymbolId>) -> Self {
-        Self { map }
+    pub fn empty() -> Self {
+        Self { map: Vec::new() }
     }
 }
 
 impl IdentifierToSymbolMap {
-    pub fn get(&self, identifier: NodeId<Identifier>) -> SymbolId {
-        self.map[identifier.raw]
+    pub fn get(&self, identifier_id: NodeId<Identifier>) -> SymbolId {
+        self.try_get(identifier_id).expect(&format!(
+            "Symbol could not be found for {:?}",
+            identifier_id
+        ))
+    }
+
+    pub fn try_get(&self, identifier_id: NodeId<Identifier>) -> Option<SymbolId> {
+        if identifier_id.raw >= self.map.len() {
+            None
+        } else {
+            self.map[identifier_id.raw]
+        }
+    }
+
+    pub fn contains(&self, identifier_id: NodeId<Identifier>) -> bool {
+        self.try_get(identifier_id).is_some()
+    }
+
+    pub fn insert(&mut self, identifier_id: NodeId<Identifier>, symbol_id: SymbolId) -> bool {
+        let is_newly_inserted = !self.contains(identifier_id);
+
+        if identifier_id.raw >= self.map.len() {
+            self.map.resize(identifier_id.raw + 1, None);
+        }
+        self.map[identifier_id.raw] = Some(symbol_id);
+
+        is_newly_inserted
     }
 }

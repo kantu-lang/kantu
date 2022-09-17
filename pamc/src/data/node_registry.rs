@@ -246,3 +246,13 @@ impl NodeRegistry {
         &self.foralls[id.raw]
     }
 }
+
+impl NodeRegistry {
+    pub fn num_of_files(&self) -> usize {
+        self.files.len()
+    }
+
+    pub fn num_of_identifiers(&self) -> usize {
+        self.identifiers.len()
+    }
+}
