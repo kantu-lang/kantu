@@ -1,6 +1,6 @@
 use crate::{
     lex::{Token, TokenKind},
-    unbound_ast::*,
+    unregistered_ast::*,
     FileId, TextPosition,
 };
 

@@ -1,4 +1,4 @@
-use super::*;
+use crate::registered_ast::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NodeId<T> {
@@ -16,7 +16,7 @@ impl<T> NodeId<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Arena {
+pub struct NodeRegistry {
     files: Vec<File>,
     type_statements: Vec<TypeStatement>,
     identifiers: Vec<Identifier>,
@@ -33,7 +33,7 @@ pub struct Arena {
     foralls: Vec<Forall>,
 }
 
-impl Arena {
+impl NodeRegistry {
     pub fn empty() -> Self {
         Self {
             files: Vec::new(),
@@ -54,7 +54,7 @@ impl Arena {
     }
 }
 
-impl Arena {
+impl NodeRegistry {
     pub fn add_file(&mut self, file: File) -> NodeId<File> {
         let id = NodeId::<File>::new(self.files.len());
         self.files.push(file);
@@ -143,7 +143,7 @@ impl Arena {
     }
 }
 
-impl Arena {
+impl NodeRegistry {
     pub fn file(&self, id: NodeId<File>) -> &File {
         &self.files[id.raw]
     }

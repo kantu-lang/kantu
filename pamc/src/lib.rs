@@ -1,7 +1,8 @@
-pub mod arena_ast;
 pub mod lex;
+pub mod node_registry;
 pub mod parse;
-pub mod unbound_ast;
+pub mod registered_ast;
+pub mod unregistered_ast;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileId(pub usize);

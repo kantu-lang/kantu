@@ -1,6 +1,4 @@
-use super::*;
-
-use crate::{FileId, TextPosition};
+use crate::{node_registry::NodeId, FileId, TextPosition};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
