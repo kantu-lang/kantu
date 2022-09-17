@@ -1,5 +1,5 @@
 use crate::data::{
-    identifier_to_symbol_map::{IdentifierToSymbolMap, SymbolId},
+    identifier_to_symbol_map::{IdentifierToSymbolMap, Symbol},
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
 };
@@ -90,21 +90,21 @@ mod context {
     #[derive(Clone, Debug)]
     pub struct Context {
         stack: Vec<ContextFrame>,
-        lowest_available_symbol_id: SymbolId,
+        lowest_available_symbol_id: Symbol,
     }
 
     impl Context {
         pub fn empty() -> Self {
             Context {
                 stack: vec![ContextFrame::empty()],
-                lowest_available_symbol_id: SymbolId(0),
+                lowest_available_symbol_id: Symbol(0),
             }
         }
     }
 
     #[derive(Clone, Debug)]
     struct ContextFrame {
-        map: FxHashMap<String, SymbolId>,
+        map: FxHashMap<String, Symbol>,
     }
 
     impl ContextFrame {
