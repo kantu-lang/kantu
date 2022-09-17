@@ -1,6 +1,6 @@
 use crate::data::registered_ast::*;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct NodeId<T> {
     pub raw: usize,
     _phantom: std::marker::PhantomData<T>,
@@ -15,6 +15,20 @@ impl<T> NodeId<T> {
     }
 }
 
+impl<T> Clone for NodeId<T> {
+    fn clone(&self) -> NodeId<T> {
+        NodeId {
+            raw: self.raw,
+            _phantom: self._phantom,
+        }
+    }
+}
+
+impl<T> Copy for NodeId<T> {}
+
+// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
+// since #[derive] only works if T implements the respective traits.
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NodeRegistry {
     files: Vec<File>,
@@ -23,7 +37,7 @@ pub struct NodeRegistry {
     params: Vec<Param>,
     constructors: Vec<Constructor>,
     let_statements: Vec<LetStatement>,
-    expressions: Vec<Expression>,
+    wrapped_expressions: Vec<WrappedExpression>,
     quasi_identifiers: Vec<QuasiIdentifier>,
     dots: Vec<Dot>,
     calls: Vec<Call>,
@@ -42,7 +56,7 @@ impl NodeRegistry {
             params: Vec::new(),
             constructors: Vec::new(),
             let_statements: Vec::new(),
-            expressions: Vec::new(),
+            wrapped_expressions: Vec::new(),
             quasi_identifiers: Vec::new(),
             dots: Vec::new(),
             calls: Vec::new(),
@@ -55,89 +69,121 @@ impl NodeRegistry {
 }
 
 impl NodeRegistry {
-    pub fn add_file(&mut self, file: File) -> NodeId<File> {
+    pub fn add_file_and_overwrite_its_id(&mut self, mut file: File) -> NodeId<File> {
         let id = NodeId::<File>::new(self.files.len());
+        file.id = id;
         self.files.push(file);
         id
     }
 
-    pub fn add_type_statement(&mut self, type_statement: TypeStatement) -> NodeId<TypeStatement> {
+    pub fn add_type_statement_and_overwrite_its_id(
+        &mut self,
+        mut type_statement: TypeStatement,
+    ) -> NodeId<TypeStatement> {
         let id = NodeId::<TypeStatement>::new(self.type_statements.len());
+        type_statement.id = id;
         self.type_statements.push(type_statement);
         id
     }
 
-    pub fn add_identifier(&mut self, identifier: Identifier) -> NodeId<Identifier> {
+    pub fn add_identifier_and_overwrite_its_id(
+        &mut self,
+        mut identifier: Identifier,
+    ) -> NodeId<Identifier> {
         let id = NodeId::<Identifier>::new(self.identifiers.len());
+        identifier.id = id;
         self.identifiers.push(identifier);
         id
     }
 
-    pub fn add_param(&mut self, param: Param) -> NodeId<Param> {
+    pub fn add_param_and_overwrite_its_id(&mut self, mut param: Param) -> NodeId<Param> {
         let id = NodeId::<Param>::new(self.params.len());
+        param.id = id;
         self.params.push(param);
         id
     }
 
-    pub fn add_constructor(&mut self, constructor: Constructor) -> NodeId<Constructor> {
+    pub fn add_constructor_and_overwrite_its_id(
+        &mut self,
+        mut constructor: Constructor,
+    ) -> NodeId<Constructor> {
         let id = NodeId::<Constructor>::new(self.constructors.len());
+        constructor.id = id;
         self.constructors.push(constructor);
         id
     }
 
-    pub fn add_let_statement(&mut self, let_statement: LetStatement) -> NodeId<LetStatement> {
+    pub fn add_let_statement_and_overwrite_its_id(
+        &mut self,
+        mut let_statement: LetStatement,
+    ) -> NodeId<LetStatement> {
         let id = NodeId::<LetStatement>::new(self.let_statements.len());
+        let_statement.id = id;
         self.let_statements.push(let_statement);
         id
     }
 
-    pub fn add_expression(&mut self, expression: Expression) -> NodeId<Expression> {
-        let id = NodeId::<Expression>::new(self.expressions.len());
-        self.expressions.push(expression);
+    pub fn add_wrapped_expression_and_overwrite_its_id(
+        &mut self,
+        mut wrapped_expression: WrappedExpression,
+    ) -> NodeId<WrappedExpression> {
+        let id = NodeId::<WrappedExpression>::new(self.wrapped_expressions.len());
+        wrapped_expression.id = id;
+        self.wrapped_expressions.push(wrapped_expression);
         id
     }
 
-    pub fn add_quasi_identifier(
+    pub fn add_quasi_identifier_and_overwrite_its_id(
         &mut self,
-        quasi_identifier: QuasiIdentifier,
+        mut quasi_identifier: QuasiIdentifier,
     ) -> NodeId<QuasiIdentifier> {
         let id = NodeId::<QuasiIdentifier>::new(self.quasi_identifiers.len());
+        quasi_identifier.id = id;
         self.quasi_identifiers.push(quasi_identifier);
         id
     }
 
-    pub fn add_dot(&mut self, dot: Dot) -> NodeId<Dot> {
+    pub fn add_dot_and_overwrite_its_id(&mut self, mut dot: Dot) -> NodeId<Dot> {
         let id = NodeId::<Dot>::new(self.dots.len());
+        dot.id = id;
         self.dots.push(dot);
         id
     }
 
-    pub fn add_call(&mut self, call: Call) -> NodeId<Call> {
+    pub fn add_call_and_overwrite_its_id(&mut self, mut call: Call) -> NodeId<Call> {
         let id = NodeId::<Call>::new(self.calls.len());
+        call.id = id;
         self.calls.push(call);
         id
     }
 
-    pub fn add_fun(&mut self, fun: Fun) -> NodeId<Fun> {
+    pub fn add_fun_and_overwrite_its_id(&mut self, mut fun: Fun) -> NodeId<Fun> {
         let id = NodeId::<Fun>::new(self.funs.len());
+        fun.id = id;
         self.funs.push(fun);
         id
     }
 
-    pub fn add_match(&mut self, match_: Match) -> NodeId<Match> {
+    pub fn add_match_and_overwrite_its_id(&mut self, mut match_: Match) -> NodeId<Match> {
         let id = NodeId::<Match>::new(self.matches.len());
+        match_.id = id;
         self.matches.push(match_);
         id
     }
 
-    pub fn add_match_case(&mut self, match_case: MatchCase) -> NodeId<MatchCase> {
+    pub fn add_match_case_and_overwrite_its_id(
+        &mut self,
+        mut match_case: MatchCase,
+    ) -> NodeId<MatchCase> {
         let id = NodeId::<MatchCase>::new(self.match_cases.len());
+        match_case.id = id;
         self.match_cases.push(match_case);
         id
     }
 
-    pub fn add_forall(&mut self, forall: Forall) -> NodeId<Forall> {
+    pub fn add_forall_and_overwrite_its_id(&mut self, mut forall: Forall) -> NodeId<Forall> {
         let id = NodeId::<Forall>::new(self.foralls.len());
+        forall.id = id;
         self.foralls.push(forall);
         id
     }
@@ -168,8 +214,8 @@ impl NodeRegistry {
         &self.let_statements[id.raw]
     }
 
-    pub fn expression(&self, id: NodeId<Expression>) -> &Expression {
-        &self.expressions[id.raw]
+    pub fn wrapped_expression(&self, id: NodeId<WrappedExpression>) -> &WrappedExpression {
+        &self.wrapped_expressions[id.raw]
     }
 
     pub fn quasi_identifier(&self, id: NodeId<QuasiIdentifier>) -> &QuasiIdentifier {

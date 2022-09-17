@@ -32,7 +32,7 @@ pub struct Identifier {
 pub struct Param {
     pub id: NodeId<Self>,
     pub name: Identifier,
-    pub type_: Expression,
+    pub type_: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -40,14 +40,20 @@ pub struct Constructor {
     pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
-    pub return_type: Expression,
+    pub return_type: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub id: NodeId<Self>,
     pub name: Identifier,
-    pub value: Expression,
+    pub value: WrappedExpression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WrappedExpression {
+    pub id: NodeId<Self>,
+    pub expression: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,15 +83,15 @@ pub enum QuasiIdentifierKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId<Self>,
-    pub left: Expression,
+    pub left: WrappedExpression,
     pub right: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
     pub id: NodeId<Self>,
-    pub callee: Expression,
-    pub args: Vec<Expression>,
+    pub callee: WrappedExpression,
+    pub args: Vec<WrappedExpression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -93,14 +99,14 @@ pub struct Fun {
     pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
-    pub return_type: Expression,
-    pub return_value: Expression,
+    pub return_type: WrappedExpression,
+    pub return_value: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match {
     pub id: NodeId<Self>,
-    pub matchee: Expression,
+    pub matchee: WrappedExpression,
     pub cases: Vec<MatchCase>,
 }
 
@@ -109,12 +115,12 @@ pub struct MatchCase {
     pub id: NodeId<Self>,
     pub constructor_name: Identifier,
     pub params: Vec<Identifier>,
-    pub output: Expression,
+    pub output: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
     pub id: NodeId<Self>,
     pub params: Vec<Param>,
-    pub output: Expression,
+    pub output: WrappedExpression,
 }
