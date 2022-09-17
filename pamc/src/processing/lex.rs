@@ -7,6 +7,58 @@ pub enum LexError {
     UnexpectedCharacter(char),
 }
 
+pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
+    let mut state = LexState {
+        tokens: vec![],
+        pending_token: None,
+    };
+    for (i, c) in src.chars().enumerate() {
+        if let Some(err) = handle_char(&mut state, c, i) {
+            return Err(err);
+        }
+    }
+
+    if let Some(pending_token) = state.pending_token {
+        match pending_token.kind {
+            TokenKind::Whitespace
+            | TokenKind::LParen
+            | TokenKind::RParen
+            | TokenKind::LSquare
+            | TokenKind::RSquare
+            | TokenKind::LCurly
+            | TokenKind::RCurly
+            | TokenKind::LAngle
+            | TokenKind::RAngle
+            | TokenKind::Semicolon
+            | TokenKind::Colon
+            | TokenKind::Comma
+            | TokenKind::Dot
+            | TokenKind::At
+            | TokenKind::Arrow
+            | TokenKind::TypeLowerCase
+            | TokenKind::TypeTitleCase
+            | TokenKind::Let
+            | TokenKind::Fun
+            | TokenKind::Match
+            | TokenKind::Forall
+            | TokenKind::Exists
+            | TokenKind::Underscore => unreachable!(),
+
+            TokenKind::Equal => {
+                state.tokens.push(pending_token);
+                state.pending_token = None;
+            }
+
+            TokenKind::Identifier => {
+                state.tokens.push(pending_token);
+                state.pending_token = None;
+            }
+        }
+    }
+
+    Ok(state.tokens)
+}
+
 #[derive(Clone, Debug)]
 struct LexState {
     tokens: Vec<Token>,
@@ -266,56 +318,4 @@ fn does_character_category_permit_it_to_be_used_in_identifier_name(c: char) -> b
             | GeneralCategory::TitlecaseLetter
             | GeneralCategory::UppercaseLetter
     )
-}
-
-pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
-    let mut state = LexState {
-        tokens: vec![],
-        pending_token: None,
-    };
-    for (i, c) in src.chars().enumerate() {
-        if let Some(err) = handle_char(&mut state, c, i) {
-            return Err(err);
-        }
-    }
-
-    if let Some(pending_token) = state.pending_token {
-        match pending_token.kind {
-            TokenKind::Whitespace
-            | TokenKind::LParen
-            | TokenKind::RParen
-            | TokenKind::LSquare
-            | TokenKind::RSquare
-            | TokenKind::LCurly
-            | TokenKind::RCurly
-            | TokenKind::LAngle
-            | TokenKind::RAngle
-            | TokenKind::Semicolon
-            | TokenKind::Colon
-            | TokenKind::Comma
-            | TokenKind::Dot
-            | TokenKind::At
-            | TokenKind::Arrow
-            | TokenKind::TypeLowerCase
-            | TokenKind::TypeTitleCase
-            | TokenKind::Let
-            | TokenKind::Fun
-            | TokenKind::Match
-            | TokenKind::Forall
-            | TokenKind::Exists
-            | TokenKind::Underscore => unreachable!(),
-
-            TokenKind::Equal => {
-                state.tokens.push(pending_token);
-                state.pending_token = None;
-            }
-
-            TokenKind::Identifier => {
-                state.tokens.push(pending_token);
-                state.pending_token = None;
-            }
-        }
-    }
-
-    Ok(state.tokens)
 }
