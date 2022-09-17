@@ -1,3 +1,4 @@
+pub mod identifier_to_symbol_map;
 pub mod node_registry;
 pub mod registered_ast;
 pub mod token;

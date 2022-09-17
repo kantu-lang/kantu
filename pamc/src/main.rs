@@ -41,6 +41,13 @@ fn main() {
                         pamc::processing::register::register_file(&mut registry, file);
                     let file = registry.file(file_node_id);
                     println!("Registered file: {:#?}", file);
+
+                    let identifier_to_symbol_map =
+                        pamc::processing::bind_symbols::bind_symbols_to_identifiers(
+                            &registry,
+                            vec![file_node_id],
+                        );
+                    println!("Identifier-to-symbol map: {:#?}", identifier_to_symbol_map);
                 }
                 Err(err) => {
                     println!("Parse error: {:?}", err);
