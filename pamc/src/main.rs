@@ -27,13 +27,39 @@ fn main() {
             {
                 println!("{}        ({:?})", t.content, t.kind);
             }
-            println!("\n\n\n\n\n\n\n\n\n\n\n\n\n");
+            print_separator();
 
             let parse_result = pamc::processing::parse::parse_file(tokens, pamc::data::FileId(0));
-            println!("Parse result: {:#?}", parse_result);
+            match parse_result {
+                Ok(file) => {
+                    println!("Parse success!");
+                    println!("{:#?}", file);
+                    print_separator();
+
+                    let mut registry = pamc::data::node_registry::NodeRegistry::empty();
+                    let file_node_id =
+                        pamc::processing::register::register_file(&mut registry, file);
+                    let file = registry.file(file_node_id);
+                    println!("Registered file: {:#?}", file);
+                }
+                Err(err) => {
+                    println!("Parse error: {:?}", err);
+                }
+            }
         }
         Err(err) => {
             println!("Error: {:?}", err);
         }
     }
+}
+
+fn print_separator() {
+    println!("\n\n\n\n\n\n\n\n");
+    for _ in 0..64 {
+        for _ in 0..64 {
+            print!("*");
+        }
+        println!();
+    }
+    println!("\n\n\n\n\n\n\n\n");
 }
