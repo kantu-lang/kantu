@@ -74,11 +74,7 @@ pub struct QuasiIdentifier {
     pub kind: QuasiIdentifierKind,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum QuasiIdentifierKind {
-    TypeTitleCase,
-    Underscore,
-}
+pub use crate::data::unregistered_ast::QuasiIdentifierKind;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
