@@ -8,6 +8,7 @@ use rustc_hash::FxHashMap;
 #[derive(Clone, Debug)]
 pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
+    NameClash(NameClashError),
 }
 
 #[derive(Clone, Debug)]
@@ -18,6 +19,18 @@ pub struct CircularFileDependencyError {
 impl From<CircularFileDependencyError> for BindError {
     fn from(error: CircularFileDependencyError) -> Self {
         Self::CircularFileDependency(error)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NameClashError {
+    pub old: Identifier,
+    pub new: Identifier,
+}
+
+impl From<NameClashError> for BindError {
+    fn from(error: NameClashError) -> Self {
+        Self::NameClash(error)
     }
 }
 
@@ -45,12 +58,12 @@ fn sort_by_dependencies(
 }
 
 fn bind_file(
-    (registry, map_builder): (&NodeRegistry, &mut IdentifierToSymbolMap),
+    (registry, map): (&NodeRegistry, &mut IdentifierToSymbolMap),
     file: &File,
 ) -> Result<(), BindError> {
     let mut bind_state = BindState {
         registry,
-        map_builder,
+        map,
         context: Context::empty(),
     };
     for item in &file.items {
@@ -66,21 +79,80 @@ fn bind_type_statement(
     bind_state: &mut BindState,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
-    unimplemented!();
+    add_to_context(bind_state, &type_statement.name);
+
+    bind_state.context.push_frame();
+    for param in &type_statement.params {
+        bind_param(bind_state, param)?;
+    }
+    bind_state.context.pop_frame();
+
+    bind_state.context.push_frame();
+    for constructor in &type_statement.constructors {
+        bind_constructor(bind_state, constructor)?;
+    }
+    bind_state.context.pop_frame();
+
+    Ok(())
+}
+
+fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError> {
+    bind_expression(bind_state, &param.type_);
+    add_to_context(bind_state, &param.name);
+    Ok(())
+}
+
+fn bind_constructor(
+    bind_state: &mut BindState,
+    constructor: &Constructor,
+) -> Result<(), BindError> {
+    add_to_context(bind_state, &constructor.name);
+
+    bind_state.context.push_frame();
+    for param in &constructor.params {
+        bind_param(bind_state, param)?;
+    }
+    bind_expression(bind_state, &constructor.return_type);
+    bind_state.context.pop_frame();
+
+    Ok(())
 }
 
 fn bind_let_statement(
     bind_state: &mut BindState,
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
-    unimplemented!()
+    bind_expression(bind_state, &let_statement.value)?;
+    add_to_context(bind_state, &let_statement.name);
+    Ok(())
+}
+
+fn bind_expression(
+    bind_state: &mut BindState,
+    expression: &WrappedExpression,
+) -> Result<(), BindError> {
+    match expression.expression {
+        _ => unimplemented!(),
+    }
 }
 
 #[derive(Debug)]
 struct BindState<'a> {
     registry: &'a NodeRegistry,
-    map_builder: &'a mut IdentifierToSymbolMap,
+    map: &'a mut IdentifierToSymbolMap,
     context: Context,
+}
+
+fn add_to_context(
+    bind_state: &mut BindState,
+    identifier: &Identifier,
+) -> Result<Symbol, BindError> {
+    if bind_state.map.contains(identifier.id) {
+        panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
+    }
+    let name_symbol = bind_state.context.add(identifier)?;
+    bind_state.map.insert(identifier.id, name_symbol);
+    Ok(name_symbol)
 }
 
 use context::*;
@@ -89,29 +161,42 @@ mod context {
 
     #[derive(Clone, Debug)]
     pub struct Context {
-        stack: Vec<ContextFrame>,
+        stack: Vec<FxHashMap<String, (Identifier, Symbol)>>,
         lowest_available_symbol_id: Symbol,
     }
 
     impl Context {
         pub fn empty() -> Self {
             Context {
-                stack: vec![ContextFrame::empty()],
+                stack: vec![FxHashMap::default()],
                 lowest_available_symbol_id: Symbol(0),
             }
         }
     }
 
-    #[derive(Clone, Debug)]
-    struct ContextFrame {
-        map: FxHashMap<String, Symbol>,
-    }
-
-    impl ContextFrame {
-        fn empty() -> Self {
-            ContextFrame {
-                map: FxHashMap::default(),
+    impl Context {
+        pub fn add(&mut self, identifier: &Identifier) -> Result<Symbol, NameClashError> {
+            let existing_symbol: Option<&(Identifier, Symbol)> = self
+                .stack
+                .iter()
+                .find_map(|frame| frame.get(&identifier.content));
+            if let Some(existing_symbol) = existing_symbol {
+                return Err(NameClashError {
+                    old: existing_symbol.0.clone(),
+                    new: identifier.clone(),
+                });
             }
+            let symbol = self.lowest_available_symbol_id;
+            self.lowest_available_symbol_id.0 += 1;
+            Ok(symbol)
+        }
+
+        pub fn push_frame(&mut self) {
+            self.stack.push(FxHashMap::default());
+        }
+
+        pub fn pop_frame(&mut self) {
+            self.stack.pop();
         }
     }
 }
