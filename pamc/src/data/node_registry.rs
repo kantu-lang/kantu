@@ -1,4 +1,4 @@
-use crate::registered_ast::*;
+use crate::data::registered_ast::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NodeId<T> {

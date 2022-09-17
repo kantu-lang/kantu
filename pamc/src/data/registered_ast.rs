@@ -1,8 +1,9 @@
-use crate::{FileId, TextPosition};
+use crate::data::{node_registry::NodeId, FileId, TextPosition};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
-    pub id: FileId,
+    pub file_id: FileId,
+    pub id: NodeId<Self>,
     pub items: Vec<FileItem>,
 }
 
@@ -14,6 +15,7 @@ pub enum FileItem {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
+    pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
     pub constructors: Vec<Constructor>,
@@ -21,18 +23,21 @@ pub struct TypeStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
+    pub id: NodeId<Self>,
     pub start: TextPosition,
     pub content: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
+    pub id: NodeId<Self>,
     pub name: Identifier,
     pub type_: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constructor {
+    pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
@@ -40,6 +45,7 @@ pub struct Constructor {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
+    pub id: NodeId<Self>,
     pub name: Identifier,
     pub value: Expression,
 }
@@ -57,6 +63,7 @@ pub enum Expression {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QuasiIdentifier {
+    pub id: NodeId<Self>,
     pub start: TextPosition,
     pub kind: QuasiIdentifierKind,
 }
@@ -69,18 +76,21 @@ pub enum QuasiIdentifierKind {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
+    pub id: NodeId<Self>,
     pub left: Expression,
     pub right: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
+    pub id: NodeId<Self>,
     pub callee: Expression,
     pub args: Vec<Expression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
+    pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
@@ -89,12 +99,14 @@ pub struct Fun {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match {
+    pub id: NodeId<Self>,
     pub matchee: Expression,
     pub cases: Vec<MatchCase>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
+    pub id: NodeId<Self>,
     pub constructor_name: Identifier,
     pub params: Vec<Identifier>,
     pub output: Expression,
@@ -102,6 +114,7 @@ pub struct MatchCase {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
+    pub id: NodeId<Self>,
     pub params: Vec<Param>,
     pub output: Expression,
 }

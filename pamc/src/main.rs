@@ -17,19 +17,19 @@ fn main() {
             in_file_path
         );
     };
-    let lex_result = pamc::lex::lex(&file_content);
+    let lex_result = pamc::processing::lex::lex(&file_content);
     match lex_result {
         Ok(tokens) => {
             println!("Lex success!");
             for t in tokens
                 .iter()
-                .filter(|t| t.kind != pamc::lex::TokenKind::Whitespace)
+                .filter(|t| t.kind != pamc::data::token::TokenKind::Whitespace)
             {
                 println!("{}        ({:?})", t.content, t.kind);
             }
             println!("\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
-            let parse_result = pamc::parse::parse_file(tokens, pamc::FileId(0));
+            let parse_result = pamc::processing::parse::parse_file(tokens, pamc::data::FileId(0));
             println!("Parse result: {:#?}", parse_result);
         }
         Err(err) => {

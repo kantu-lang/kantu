@@ -1,5 +1,5 @@
-use crate::{
-    lex::{Token, TokenKind},
+use crate::data::{
+    token::{Token, TokenKind},
     unregistered_ast::*,
     FileId, TextPosition,
 };
