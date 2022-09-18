@@ -16,29 +16,29 @@ pub enum FileItem {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
     pub id: NodeId<Self>,
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub params: Vec<Param>,
     pub constructors: Vec<Constructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Identifier {
+pub struct StandardIdentifier {
     pub id: NodeId<Self>,
     pub start: TextPosition,
-    pub content: String,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
     pub id: NodeId<Self>,
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub type_: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constructor {
     pub id: NodeId<Self>,
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub params: Vec<Param>,
     pub return_type: WrappedExpression,
 }
@@ -46,7 +46,7 @@ pub struct Constructor {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub id: NodeId<Self>,
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub value: WrappedExpression,
 }
 
@@ -58,7 +58,6 @@ pub struct WrappedExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
-    QuasiIdentifier(QuasiIdentifier),
     Identifier(Identifier),
     Dot(Box<Dot>),
     Call(Box<Call>),
@@ -68,19 +67,25 @@ pub enum Expression {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct QuasiIdentifier {
+pub struct Identifier {
     pub id: NodeId<Self>,
     pub start: TextPosition,
-    pub kind: QuasiIdentifierKind,
+    pub name: IdentifierName,
 }
 
-pub use crate::data::unregistered_ast::QuasiIdentifierKind;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IdentifierName {
+    Standard(String),
+    Reserved(ReservedIdentifierName),
+}
+
+pub use crate::data::unregistered_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId<Self>,
     pub left: WrappedExpression,
-    pub right: Identifier,
+    pub right: StandardIdentifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -93,7 +98,7 @@ pub struct Call {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
     pub id: NodeId<Self>,
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub params: Vec<Param>,
     pub return_type: WrappedExpression,
     pub return_value: WrappedExpression,
@@ -109,8 +114,8 @@ pub struct Match {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
     pub id: NodeId<Self>,
-    pub constructor_name: Identifier,
-    pub params: Vec<Identifier>,
+    pub constructor_name: StandardIdentifier,
+    pub params: Vec<StandardIdentifier>,
     pub output: WrappedExpression,
 }
 

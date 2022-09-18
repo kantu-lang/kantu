@@ -14,40 +14,40 @@ pub enum FileItem {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub params: Vec<Param>,
     pub constructors: Vec<Constructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Identifier {
+pub struct StandardIdentifier {
     pub start: TextPosition,
-    pub content: String,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub type_: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constructor {
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub value: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
-    QuasiIdentifier(QuasiIdentifier),
-    Identifier(Identifier),
+    ReservedIdentifier(ReservedIdentifier),
+    StandardIdentifier(StandardIdentifier),
     Dot(Box<Dot>),
     Call(Box<Call>),
     Fun(Box<Fun>),
@@ -56,13 +56,13 @@ pub enum Expression {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct QuasiIdentifier {
+pub struct ReservedIdentifier {
     pub start: TextPosition,
-    pub kind: QuasiIdentifierKind,
+    pub name: ReservedIdentifierName,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum QuasiIdentifierKind {
+pub enum ReservedIdentifierName {
     TypeTitleCase,
     Underscore,
 }
@@ -70,7 +70,7 @@ pub enum QuasiIdentifierKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
     pub left: Expression,
-    pub right: Identifier,
+    pub right: StandardIdentifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -81,7 +81,7 @@ pub struct Call {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
-    pub name: Identifier,
+    pub name: StandardIdentifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
     pub return_value: Expression,
@@ -95,8 +95,8 @@ pub struct Match {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
-    pub constructor_name: Identifier,
-    pub params: Vec<Identifier>,
+    pub constructor_name: StandardIdentifier,
+    pub params: Vec<StandardIdentifier>,
     pub output: Expression,
 }
 

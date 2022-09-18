@@ -36,8 +36,8 @@ pub fn register_type_statement(
     registry: &mut NodeRegistry,
     unregistered: ur::TypeStatement,
 ) -> NodeId<TypeStatement> {
-    let name_id = register_identifier(registry, unregistered.name);
-    let name = registry.identifier(name_id).clone();
+    let name_id = register_standard_identifier(registry, unregistered.name);
+    let name = registry.standard_identifier(name_id).clone();
     let params = unregistered
         .params
         .into_iter()
@@ -62,20 +62,20 @@ pub fn register_type_statement(
     })
 }
 
-pub fn register_identifier(
+pub fn register_standard_identifier(
     registry: &mut NodeRegistry,
-    unregistered: ur::Identifier,
-) -> NodeId<Identifier> {
-    registry.add_identifier_and_overwrite_its_id(Identifier {
+    unregistered: ur::StandardIdentifier,
+) -> NodeId<StandardIdentifier> {
+    registry.add_standard_identifier_and_overwrite_its_id(StandardIdentifier {
         id: dummy_id(),
         start: unregistered.start,
-        content: unregistered.content,
+        name: unregistered.name,
     })
 }
 
 pub fn register_param(registry: &mut NodeRegistry, unregistered: ur::Param) -> NodeId<Param> {
-    let name_id = register_identifier(registry, unregistered.name);
-    let name = registry.identifier(name_id).clone();
+    let name_id = register_standard_identifier(registry, unregistered.name);
+    let name = registry.standard_identifier(name_id).clone();
     let type_id = register_expression(registry, unregistered.type_);
     let type_ = registry.wrapped_expression(type_id).clone();
     registry.add_param_and_overwrite_its_id(Param {
@@ -89,8 +89,8 @@ pub fn register_constructor(
     registry: &mut NodeRegistry,
     unregistered: ur::Constructor,
 ) -> NodeId<Constructor> {
-    let name_id = register_identifier(registry, unregistered.name);
-    let name = registry.identifier(name_id).clone();
+    let name_id = register_standard_identifier(registry, unregistered.name);
+    let name = registry.standard_identifier(name_id).clone();
     let params = unregistered
         .params
         .into_iter()
@@ -113,8 +113,8 @@ pub fn register_let_statement(
     registry: &mut NodeRegistry,
     unregistered: ur::LetStatement,
 ) -> NodeId<LetStatement> {
-    let name_id = register_identifier(registry, unregistered.name);
-    let name = registry.identifier(name_id).clone();
+    let name_id = register_standard_identifier(registry, unregistered.name);
+    let name = registry.standard_identifier(name_id).clone();
     let value_id = register_expression(registry, unregistered.value);
     let value = registry.wrapped_expression(value_id).clone();
     registry.add_let_statement_and_overwrite_its_id(LetStatement {
@@ -129,13 +129,21 @@ pub fn register_expression(
     unregistered: ur::Expression,
 ) -> NodeId<WrappedExpression> {
     let expression = match unregistered {
-        ur::Expression::QuasiIdentifier(unregistered) => {
-            let id = register_quasi_identifier(registry, unregistered);
-            let registered = registry.quasi_identifier(id);
-            Expression::QuasiIdentifier(registered.clone())
+        ur::Expression::ReservedIdentifier(unregistered) => {
+            let id = registry.add_identifier_and_overwrite_its_id(Identifier {
+                id: dummy_id(),
+                start: unregistered.start,
+                name: IdentifierName::Reserved(unregistered.name),
+            });
+            let registered = registry.identifier(id);
+            Expression::Identifier(registered.clone())
         }
-        ur::Expression::Identifier(unregistered) => {
-            let id = register_identifier(registry, unregistered);
+        ur::Expression::StandardIdentifier(unregistered) => {
+            let id = registry.add_identifier_and_overwrite_its_id(Identifier {
+                id: dummy_id(),
+                start: unregistered.start,
+                name: IdentifierName::Standard(unregistered.name),
+            });
             let registered = registry.identifier(id).clone();
             Expression::Identifier(registered)
         }
@@ -171,22 +179,11 @@ pub fn register_expression(
     })
 }
 
-pub fn register_quasi_identifier(
-    registry: &mut NodeRegistry,
-    unregistered: ur::QuasiIdentifier,
-) -> NodeId<QuasiIdentifier> {
-    registry.add_quasi_identifier_and_overwrite_its_id(QuasiIdentifier {
-        id: dummy_id(),
-        start: unregistered.start,
-        kind: unregistered.kind,
-    })
-}
-
 pub fn register_dot(registry: &mut NodeRegistry, unregistered: ur::Dot) -> NodeId<Dot> {
     let left_id = register_expression(registry, unregistered.left);
     let left = registry.wrapped_expression(left_id).clone();
-    let right_id = register_identifier(registry, unregistered.right);
-    let right = registry.identifier(right_id).clone();
+    let right_id = register_standard_identifier(registry, unregistered.right);
+    let right = registry.standard_identifier(right_id).clone();
     registry.add_dot_and_overwrite_its_id(Dot {
         id: dummy_id(),
         left,
@@ -213,8 +210,8 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: ur::Call) -> Nod
 }
 
 pub fn register_fun(registry: &mut NodeRegistry, unregistered: ur::Fun) -> NodeId<Fun> {
-    let name_id = register_identifier(registry, unregistered.name);
-    let name = registry.identifier(name_id).clone();
+    let name_id = register_standard_identifier(registry, unregistered.name);
+    let name = registry.standard_identifier(name_id).clone();
     let params = unregistered
         .params
         .into_iter()
@@ -276,14 +273,14 @@ pub fn register_match_case(
     registry: &mut NodeRegistry,
     unregistered: ur::MatchCase,
 ) -> NodeId<MatchCase> {
-    let constructor_name_id = register_identifier(registry, unregistered.constructor_name);
-    let constructor_name = registry.identifier(constructor_name_id).clone();
+    let constructor_name_id = register_standard_identifier(registry, unregistered.constructor_name);
+    let constructor_name = registry.standard_identifier(constructor_name_id).clone();
     let params = unregistered
         .params
         .into_iter()
         .map(|unregistered| {
-            let id = register_identifier(registry, unregistered);
-            registry.identifier(id).clone()
+            let id = register_standard_identifier(registry, unregistered);
+            registry.standard_identifier(id).clone()
         })
         .collect();
     let output_id = register_expression(registry, unregistered.output);

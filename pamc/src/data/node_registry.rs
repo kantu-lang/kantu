@@ -33,12 +33,12 @@ impl<T> Copy for NodeId<T> {}
 pub struct NodeRegistry {
     files: Vec<File>,
     type_statements: Vec<TypeStatement>,
-    identifiers: Vec<Identifier>,
+    standard_identifiers: Vec<StandardIdentifier>,
     params: Vec<Param>,
     constructors: Vec<Constructor>,
     let_statements: Vec<LetStatement>,
     wrapped_expressions: Vec<WrappedExpression>,
-    quasi_identifiers: Vec<QuasiIdentifier>,
+    identifiers: Vec<Identifier>,
     dots: Vec<Dot>,
     calls: Vec<Call>,
     funs: Vec<Fun>,
@@ -52,12 +52,12 @@ impl NodeRegistry {
         Self {
             files: Vec::new(),
             type_statements: Vec::new(),
-            identifiers: Vec::new(),
+            standard_identifiers: Vec::new(),
             params: Vec::new(),
             constructors: Vec::new(),
             let_statements: Vec::new(),
             wrapped_expressions: Vec::new(),
-            quasi_identifiers: Vec::new(),
+            identifiers: Vec::new(),
             dots: Vec::new(),
             calls: Vec::new(),
             funs: Vec::new(),
@@ -86,13 +86,13 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_identifier_and_overwrite_its_id(
+    pub fn add_standard_identifier_and_overwrite_its_id(
         &mut self,
-        mut identifier: Identifier,
-    ) -> NodeId<Identifier> {
-        let id = NodeId::<Identifier>::new(self.identifiers.len());
+        mut identifier: StandardIdentifier,
+    ) -> NodeId<StandardIdentifier> {
+        let id = NodeId::<StandardIdentifier>::new(self.standard_identifiers.len());
         identifier.id = id;
-        self.identifiers.push(identifier);
+        self.standard_identifiers.push(identifier);
         id
     }
 
@@ -133,13 +133,13 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_quasi_identifier_and_overwrite_its_id(
+    pub fn add_identifier_and_overwrite_its_id(
         &mut self,
-        mut quasi_identifier: QuasiIdentifier,
-    ) -> NodeId<QuasiIdentifier> {
-        let id = NodeId::<QuasiIdentifier>::new(self.quasi_identifiers.len());
+        mut quasi_identifier: Identifier,
+    ) -> NodeId<Identifier> {
+        let id = NodeId::<Identifier>::new(self.identifiers.len());
         quasi_identifier.id = id;
-        self.quasi_identifiers.push(quasi_identifier);
+        self.identifiers.push(quasi_identifier);
         id
     }
 
@@ -198,8 +198,8 @@ impl NodeRegistry {
         &self.type_statements[id.raw]
     }
 
-    pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
-        &self.identifiers[id.raw]
+    pub fn standard_identifier(&self, id: NodeId<StandardIdentifier>) -> &StandardIdentifier {
+        &self.standard_identifiers[id.raw]
     }
 
     pub fn param(&self, id: NodeId<Param>) -> &Param {
@@ -218,8 +218,8 @@ impl NodeRegistry {
         &self.wrapped_expressions[id.raw]
     }
 
-    pub fn quasi_identifier(&self, id: NodeId<QuasiIdentifier>) -> &QuasiIdentifier {
-        &self.quasi_identifiers[id.raw]
+    pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
+        &self.identifiers[id.raw]
     }
 
     pub fn dot(&self, id: NodeId<Dot>) -> &Dot {
@@ -244,15 +244,5 @@ impl NodeRegistry {
 
     pub fn forall(&self, id: NodeId<Forall>) -> &Forall {
         &self.foralls[id.raw]
-    }
-}
-
-impl NodeRegistry {
-    pub fn num_of_files(&self) -> usize {
-        self.files.len()
-    }
-
-    pub fn num_of_identifiers(&self) -> usize {
-        self.identifiers.len()
     }
 }

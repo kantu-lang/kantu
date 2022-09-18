@@ -24,31 +24,13 @@ impl From<CircularFileDependencyError> for BindError {
 
 #[derive(Clone, Debug)]
 pub struct NameClashError {
-    pub old: IdentifierLike,
-    pub new: IdentifierLike,
+    pub old: Identifier,
+    pub new: Identifier,
 }
 
 impl From<NameClashError> for BindError {
     fn from(error: NameClashError) -> Self {
         Self::NameClash(error)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum IdentifierLike {
-    QuasiIdentifier(QuasiIdentifier),
-    Identifier(Identifier),
-}
-
-impl From<QuasiIdentifier> for IdentifierLike {
-    fn from(quasi_identifier: QuasiIdentifier) -> Self {
-        Self::QuasiIdentifier(quasi_identifier)
-    }
-}
-
-impl From<Identifier> for IdentifierLike {
-    fn from(identifier: Identifier) -> Self {
-        Self::Identifier(identifier)
     }
 }
 
