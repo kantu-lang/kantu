@@ -55,7 +55,7 @@ pub fn bind_symbols_to_identifiers(
 
     for file_node_id in file_node_ids {
         let file = registry.file(file_node_id);
-        bind_file((&registry, &mut map), file)?;
+        bind_file(&mut map, file)?;
     }
 
     Ok(map)
@@ -69,12 +69,8 @@ fn sort_by_dependencies(
     Ok(file_node_ids)
 }
 
-fn bind_file(
-    (registry, map): (&NodeRegistry, &mut IdentifierToSymbolMap),
-    file: &File,
-) -> Result<(), BindError> {
+fn bind_file(map: &mut IdentifierToSymbolMap, file: &File) -> Result<(), BindError> {
     let mut bind_state = BindState {
-        registry,
         map,
         context: Context::empty(),
     };
@@ -91,7 +87,7 @@ fn bind_type_statement(
     bind_state: &mut BindState,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
-    define_symbol_and_bind_to_identifier(bind_state, &type_statement.name);
+    define_symbol_and_bind_to_identifier(bind_state, &type_statement.name)?;
 
     bind_state.context.push_frame();
     for param in &type_statement.params {
@@ -109,8 +105,8 @@ fn bind_type_statement(
 }
 
 fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError> {
-    bind_expression(bind_state, &param.type_);
-    define_symbol_and_bind_to_identifier(bind_state, &param.name);
+    bind_expression(bind_state, &param.type_)?;
+    define_symbol_and_bind_to_identifier(bind_state, &param.name)?;
     Ok(())
 }
 
@@ -124,7 +120,7 @@ fn bind_constructor(
     for param in &constructor.params {
         bind_param(bind_state, param)?;
     }
-    bind_expression(bind_state, &constructor.return_type);
+    bind_expression(bind_state, &constructor.return_type)?;
     bind_state.context.pop_frame();
 
     Ok(())
@@ -135,7 +131,7 @@ fn bind_let_statement(
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
     bind_expression(bind_state, &let_statement.value)?;
-    define_symbol_and_bind_to_identifier(bind_state, &let_statement.name);
+    define_symbol_and_bind_to_identifier(bind_state, &let_statement.name)?;
     Ok(())
 }
 
@@ -174,7 +170,7 @@ fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
 
 fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
     bind_state.context.push_frame();
-    define_symbol_and_bind_to_identifier(bind_state, &fun.name);
+    define_symbol_and_bind_to_identifier(bind_state, &fun.name)?;
     for param in &fun.params {
         bind_param(bind_state, param)?;
     }
@@ -214,7 +210,6 @@ fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindEr
 
 #[derive(Debug)]
 struct BindState<'a> {
-    registry: &'a NodeRegistry,
     map: &'a mut IdentifierToSymbolMap,
     context: Context,
 }
