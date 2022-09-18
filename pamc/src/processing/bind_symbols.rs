@@ -24,13 +24,31 @@ impl From<CircularFileDependencyError> for BindError {
 
 #[derive(Clone, Debug)]
 pub struct NameClashError {
-    pub old: Identifier,
-    pub new: Identifier,
+    pub old: IdentifierLike,
+    pub new: IdentifierLike,
 }
 
 impl From<NameClashError> for BindError {
     fn from(error: NameClashError) -> Self {
         Self::NameClash(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IdentifierLike {
+    QuasiIdentifier(QuasiIdentifier),
+    Identifier(Identifier),
+}
+
+impl From<QuasiIdentifier> for IdentifierLike {
+    fn from(quasi_identifier: QuasiIdentifier) -> Self {
+        Self::QuasiIdentifier(quasi_identifier)
+    }
+}
+
+impl From<Identifier> for IdentifierLike {
+    fn from(identifier: Identifier) -> Self {
+        Self::Identifier(identifier)
     }
 }
 
@@ -161,7 +179,7 @@ mod context {
 
     #[derive(Clone, Debug)]
     pub struct Context {
-        stack: Vec<FxHashMap<String, (Identifier, Symbol)>>,
+        stack: Vec<FxHashMap<String, (IdentifierLike, Symbol)>>,
         lowest_available_symbol_id: Symbol,
     }
 
@@ -176,14 +194,14 @@ mod context {
 
     impl Context {
         pub fn add(&mut self, identifier: &Identifier) -> Result<Symbol, NameClashError> {
-            let existing_symbol: Option<&(Identifier, Symbol)> = self
+            let existing_symbol: Option<&(IdentifierLike, Symbol)> = self
                 .stack
                 .iter()
                 .find_map(|frame| frame.get(&identifier.content));
             if let Some(existing_symbol) = existing_symbol {
                 return Err(NameClashError {
                     old: existing_symbol.0.clone(),
-                    new: identifier.clone(),
+                    new: identifier.clone().into(),
                 });
             }
             let symbol = self.lowest_available_symbol_id;
