@@ -42,10 +42,11 @@ fn main() {
                     let file = registry.file(file_node_id);
                     println!("Registered file: {:#?}", file);
 
-                    let bind_result = pamc::processing::bind_symbols::bind_symbols_to_identifiers(
-                        &registry,
-                        vec![file_node_id],
-                    );
+                    let bind_result =
+                        pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
+                            &registry,
+                            vec![file_node_id],
+                        );
                     match bind_result {
                         Ok(map) => {
                             println!("Bind success!");

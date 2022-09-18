@@ -144,12 +144,12 @@ fn bind_expression(
     expression: &WrappedExpression,
 ) -> Result<(), BindError> {
     match &expression.expression {
-        Expression::Identifier(identifier) => bind_identifier(bind_state, identifier),
-        Expression::Dot(dot) => bind_dot(bind_state, dot),
-        Expression::Call(call) => bind_call(bind_state, call),
-        Expression::Fun(fun) => bind_fun(bind_state, fun),
-        Expression::Match(match_) => bind_match(bind_state, match_),
-        Expression::Forall(forall) => bind_forall(bind_state, forall),
+        Expression::Identifier(identifier) => bind_identifier(bind_state, identifier)?,
+        Expression::Dot(dot) => bind_dot(bind_state, dot)?,
+        Expression::Call(call) => bind_call(bind_state, call)?,
+        Expression::Fun(fun) => bind_fun(bind_state, fun)?,
+        Expression::Match(match_) => bind_match(bind_state, match_)?,
+        Expression::Forall(forall) => bind_forall(bind_state, forall)?,
     }
 
     Ok(())
@@ -196,6 +196,17 @@ fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), B
     bind_state.context.push_frame();
     // TODO
     bind_state.context.pop_frame();
+    unimplemented!()
+}
+
+fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindError> {
+    bind_state.context.push_frame();
+    for param in &forall.params {
+        bind_param(bind_state, param)?;
+    }
+    bind_expression(bind_state, &forall.output)?;
+    bind_state.context.pop_frame();
+    Ok(())
 }
 
 #[derive(Debug)]
