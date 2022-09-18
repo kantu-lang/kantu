@@ -8,7 +8,7 @@ pub struct Token {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TokenKind {
     Whitespace,
-    Identifier,
+    StandardIdentifier,
     LParen,
     RParen,
     LSquare,

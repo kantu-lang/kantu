@@ -16,29 +16,22 @@ pub enum FileItem {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
     pub id: NodeId<Self>,
-    pub name: StandardIdentifier,
+    pub name: Identifier,
     pub params: Vec<Param>,
     pub constructors: Vec<Constructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StandardIdentifier {
-    pub id: NodeId<Self>,
-    pub start: TextPosition,
-    pub name: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
     pub id: NodeId<Self>,
-    pub name: StandardIdentifier,
+    pub name: Identifier,
     pub type_: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constructor {
     pub id: NodeId<Self>,
-    pub name: StandardIdentifier,
+    pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: WrappedExpression,
 }
@@ -46,7 +39,7 @@ pub struct Constructor {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub id: NodeId<Self>,
-    pub name: StandardIdentifier,
+    pub name: Identifier,
     pub value: WrappedExpression,
 }
 
@@ -73,19 +66,13 @@ pub struct Identifier {
     pub name: IdentifierName,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum IdentifierName {
-    Standard(String),
-    Reserved(ReservedIdentifierName),
-}
-
-pub use crate::data::unregistered_ast::ReservedIdentifierName;
+pub use crate::data::unregistered_ast::IdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId<Self>,
     pub left: WrappedExpression,
-    pub right: StandardIdentifier,
+    pub right: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -98,7 +85,7 @@ pub struct Call {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
     pub id: NodeId<Self>,
-    pub name: StandardIdentifier,
+    pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: WrappedExpression,
     pub return_value: WrappedExpression,
@@ -114,8 +101,8 @@ pub struct Match {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
     pub id: NodeId<Self>,
-    pub constructor_name: StandardIdentifier,
-    pub params: Vec<StandardIdentifier>,
+    pub constructor_name: Identifier,
+    pub params: Vec<Identifier>,
     pub output: WrappedExpression,
 }
 

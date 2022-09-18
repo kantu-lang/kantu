@@ -49,7 +49,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                 state.pending_token = None;
             }
 
-            TokenKind::Identifier => {
+            TokenKind::StandardIdentifier => {
                 state.tokens.push(pending_token);
                 state.pending_token = None;
             }
@@ -165,7 +165,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                 state.pending_token = Some(Token {
                     start_index: i,
                     content: c.into(),
-                    kind: TokenKind::Identifier,
+                    kind: TokenKind::StandardIdentifier,
                 });
                 None
             } else {
@@ -213,7 +213,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                 }
             }
 
-            TokenKind::Identifier => {
+            TokenKind::StandardIdentifier => {
                 if is_valid_non_initial_identifier_character(c) {
                     pending_token.content.push(c);
                     None

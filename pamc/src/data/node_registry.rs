@@ -33,12 +33,11 @@ impl<T> Copy for NodeId<T> {}
 pub struct NodeRegistry {
     files: Vec<File>,
     type_statements: Vec<TypeStatement>,
-    standard_identifiers: Vec<StandardIdentifier>,
+    identifiers: Vec<Identifier>,
     params: Vec<Param>,
     constructors: Vec<Constructor>,
     let_statements: Vec<LetStatement>,
     wrapped_expressions: Vec<WrappedExpression>,
-    identifiers: Vec<Identifier>,
     dots: Vec<Dot>,
     calls: Vec<Call>,
     funs: Vec<Fun>,
@@ -52,12 +51,11 @@ impl NodeRegistry {
         Self {
             files: Vec::new(),
             type_statements: Vec::new(),
-            standard_identifiers: Vec::new(),
+            identifiers: Vec::new(),
             params: Vec::new(),
             constructors: Vec::new(),
             let_statements: Vec::new(),
             wrapped_expressions: Vec::new(),
-            identifiers: Vec::new(),
             dots: Vec::new(),
             calls: Vec::new(),
             funs: Vec::new(),
@@ -88,11 +86,11 @@ impl NodeRegistry {
 
     pub fn add_standard_identifier_and_overwrite_its_id(
         &mut self,
-        mut identifier: StandardIdentifier,
-    ) -> NodeId<StandardIdentifier> {
-        let id = NodeId::<StandardIdentifier>::new(self.standard_identifiers.len());
+        mut identifier: Identifier,
+    ) -> NodeId<Identifier> {
+        let id = NodeId::<Identifier>::new(self.identifiers.len());
         identifier.id = id;
-        self.standard_identifiers.push(identifier);
+        self.identifiers.push(identifier);
         id
     }
 
@@ -198,8 +196,8 @@ impl NodeRegistry {
         &self.type_statements[id.raw]
     }
 
-    pub fn standard_identifier(&self, id: NodeId<StandardIdentifier>) -> &StandardIdentifier {
-        &self.standard_identifiers[id.raw]
+    pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
+        &self.identifiers[id.raw]
     }
 
     pub fn param(&self, id: NodeId<Param>) -> &Param {
@@ -216,10 +214,6 @@ impl NodeRegistry {
 
     pub fn wrapped_expression(&self, id: NodeId<WrappedExpression>) -> &WrappedExpression {
         &self.wrapped_expressions[id.raw]
-    }
-
-    pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
-        &self.identifiers[id.raw]
     }
 
     pub fn dot(&self, id: NodeId<Dot>) -> &Dot {

@@ -112,15 +112,15 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedTypeStatement {
         Keyword(Token),
-        Name(Token, StandardIdentifier),
-        Params(Token, StandardIdentifier, Vec<Param>),
-        Constructors(Token, StandardIdentifier, Vec<Param>, Vec<Constructor>),
+        Name(Token, Identifier),
+        Params(Token, Identifier, Vec<Param>),
+        Constructors(Token, Identifier, Vec<Param>, Vec<Constructor>),
     }
 
     #[derive(Clone, Debug)]
     pub enum UnfinishedLetStatement {
         Keyword(Token),
-        Name(Token, StandardIdentifier),
+        Name(Token, Identifier),
     }
 
     #[derive(Clone, Debug)]
@@ -131,14 +131,14 @@ mod unfinished {
 
     #[derive(Clone, Debug)]
     pub enum UnfinishedParam {
-        Name(Token, StandardIdentifier),
+        Name(Token, Identifier),
     }
 
     #[derive(Clone, Debug)]
     pub enum UnfinishedConstructor {
         Dot(Token),
-        Name(Token, StandardIdentifier),
-        Params(Token, StandardIdentifier, Vec<Param>),
+        Name(Token, Identifier),
+        Params(Token, Identifier, Vec<Param>),
     }
 
     #[derive(Clone, Debug)]
@@ -150,9 +150,9 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedFun {
         Keyword(Token),
-        Name(Token, StandardIdentifier),
-        Params(Token, StandardIdentifier, Vec<Param>),
-        ReturnType(Token, StandardIdentifier, Vec<Param>, Expression),
+        Name(Token, Identifier),
+        Params(Token, Identifier, Vec<Param>),
+        ReturnType(Token, Identifier, Vec<Param>, Expression),
     }
 
     #[derive(Clone, Debug)]
@@ -183,14 +183,9 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedMatchCase {
         Dot(Token),
-        ConstructorName(Token, StandardIdentifier),
-        ParamsInProgress(
-            Token,
-            StandardIdentifier,
-            Vec<StandardIdentifier>,
-            CurrentlyHasEndingComma,
-        ),
-        AwaitingOutput(Token, StandardIdentifier, Vec<StandardIdentifier>),
+        ConstructorName(Token, Identifier),
+        ParamsInProgress(Token, Identifier, Vec<Identifier>, CurrentlyHasEndingComma),
+        AwaitingOutput(Token, Identifier, Vec<Identifier>),
     }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -349,13 +344,13 @@ mod accept {
             match self {
                 UnfinishedTypeStatement::Keyword(type_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
-                            let name = StandardIdentifier {
+                        TokenKind::StandardIdentifier => {
+                            let name = Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: token.content.clone(),
+                                name: IdentifierName::Standard(token.content.clone()),
                             };
                             *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
                             AcceptResult::ContinueToNextToken
@@ -462,13 +457,13 @@ mod accept {
             match self {
                 UnfinishedLetStatement::Keyword(let_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
-                            let name = StandardIdentifier {
+                        TokenKind::StandardIdentifier => {
+                            let name = Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: token.content.clone(),
+                                name: IdentifierName::Standard(token.content.clone()),
                             };
                             *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
                             AcceptResult::ContinueToNextToken
@@ -509,13 +504,13 @@ mod accept {
         fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Identifier => {
-                        let name = StandardIdentifier {
+                    TokenKind::StandardIdentifier => {
+                        let name = Identifier {
                             start: TextPosition {
                                 file_id,
                                 index: token.start_index,
                             },
-                            name: token.content.clone(),
+                            name: IdentifierName::Standard(token.content.clone()),
                         };
                         AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
                             token, name,
@@ -588,13 +583,13 @@ mod accept {
             match self {
                 UnfinishedConstructor::Dot(dot) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
-                            let name = StandardIdentifier {
+                        TokenKind::StandardIdentifier => {
+                            let name = Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: token.content.clone(),
+                                name: IdentifierName::Standard(token.content.clone()),
                             };
                             *self = UnfinishedConstructor::Name(dot.clone(), name);
                             AcceptResult::ContinueToNextToken
@@ -673,12 +668,14 @@ mod accept {
                 UnfinishedDelimitedExpression::Empty => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::TypeTitleCase => {
-                            let expression = Expression::ReservedIdentifier(ReservedIdentifier {
+                            let expression = Expression::Identifier(Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: ReservedIdentifierName::TypeTitleCase,
+                                name: IdentifierName::Reserved(
+                                    ReservedIdentifierName::TypeTitleCase,
+                                ),
                             });
                             *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
                                 token, expression,
@@ -686,25 +683,25 @@ mod accept {
                             AcceptResult::ContinueToNextToken
                         }
                         TokenKind::Underscore => {
-                            let expression = Expression::ReservedIdentifier(ReservedIdentifier {
+                            let expression = Expression::Identifier(Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: ReservedIdentifierName::Underscore,
+                                name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                             });
                             *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
                                 token, expression,
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        TokenKind::Identifier => {
-                            let expression = Expression::StandardIdentifier(StandardIdentifier {
+                        TokenKind::StandardIdentifier => {
+                            let expression = Expression::Identifier(Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: token.content.clone(),
+                                name: IdentifierName::Standard(token.content.clone()),
                             });
                             *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
                                 token, expression,
@@ -799,13 +796,13 @@ mod accept {
             match self {
                 UnfinishedFun::Keyword(fun_kw) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
-                            let name = StandardIdentifier {
+                        TokenKind::StandardIdentifier => {
+                            let name = Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: token.content.clone(),
+                                name: IdentifierName::Standard(token.content.clone()),
                             };
                             *self = UnfinishedFun::Name(fun_kw.clone(), name);
                             AcceptResult::ContinueToNextToken
@@ -1008,13 +1005,13 @@ mod accept {
         fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Identifier => {
-                        let right = StandardIdentifier {
+                    TokenKind::StandardIdentifier => {
+                        let right = Identifier {
                             start: TextPosition {
                                 file_id,
                                 index: token.start_index,
                             },
-                            name: token.content.clone(),
+                            name: IdentifierName::Standard(token.content.clone()),
                         };
                         AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
@@ -1055,7 +1052,7 @@ mod accept {
                     }
                 }
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Identifier
+                    TokenKind::StandardIdentifier
                     | TokenKind::Underscore
                     | TokenKind::TypeTitleCase
                     | TokenKind::Fun
@@ -1078,13 +1075,13 @@ mod accept {
             match self {
                 UnfinishedMatchCase::Dot(dot_token) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
-                            let name = StandardIdentifier {
+                        TokenKind::StandardIdentifier => {
+                            let name = Identifier {
                                 start: TextPosition {
                                     file_id,
                                     index: token.start_index,
                                 },
-                                name: token.content.clone(),
+                                name: IdentifierName::Standard(token.content.clone()),
                             };
                             *self = UnfinishedMatchCase::ConstructorName(dot_token.clone(), name);
                             AcceptResult::ContinueToNextToken
@@ -1129,16 +1126,16 @@ mod accept {
                     currently_has_ending_comma,
                 ) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Identifier => {
+                        TokenKind::StandardIdentifier => {
                             let can_accept_identifier =
                                 params.is_empty() || currently_has_ending_comma.0;
                             if can_accept_identifier {
-                                let name = StandardIdentifier {
+                                let name = Identifier {
                                     start: TextPosition {
                                         file_id,
                                         index: token.start_index,
                                     },
-                                    name: token.content.clone(),
+                                    name: IdentifierName::Standard(token.content.clone()),
                                 };
                                 params.push(name);
                                 currently_has_ending_comma.0 = false;

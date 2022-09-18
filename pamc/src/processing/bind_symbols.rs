@@ -161,7 +161,7 @@ mod context {
 
     #[derive(Clone, Debug)]
     pub struct Context {
-        stack: Vec<FxHashMap<String, (IdentifierLike, Symbol)>>,
+        stack: Vec<FxHashMap<IdentifierName, (Identifier, Symbol)>>,
         lowest_available_symbol_id: Symbol,
     }
 
@@ -176,10 +176,10 @@ mod context {
 
     impl Context {
         pub fn add(&mut self, identifier: &Identifier) -> Result<Symbol, NameClashError> {
-            let existing_symbol: Option<&(IdentifierLike, Symbol)> = self
+            let existing_symbol: Option<&(Identifier, Symbol)> = self
                 .stack
                 .iter()
-                .find_map(|frame| frame.get(&identifier.content));
+                .find_map(|frame| frame.get(&identifier.name));
             if let Some(existing_symbol) = existing_symbol {
                 return Err(NameClashError {
                     old: existing_symbol.0.clone(),
