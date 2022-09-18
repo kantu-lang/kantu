@@ -9,6 +9,7 @@ use rustc_hash::FxHashMap;
 pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
     NameClash(NameClashError),
+    NameNotFound(NameNotFoundError),
 }
 
 #[derive(Clone, Debug)]
@@ -31,6 +32,17 @@ pub struct NameClashError {
 impl From<NameClashError> for BindError {
     fn from(error: NameClashError) -> Self {
         Self::NameClash(error)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct NameNotFoundError {
+    pub name: IdentifierName,
+}
+
+impl From<NameNotFoundError> for BindError {
+    fn from(error: NameNotFoundError) -> Self {
+        Self::NameNotFound(error)
     }
 }
 
@@ -79,7 +91,7 @@ fn bind_type_statement(
     bind_state: &mut BindState,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
-    add_to_context(bind_state, &type_statement.name);
+    define_symbol_and_bind_to_identifier(bind_state, &type_statement.name);
 
     bind_state.context.push_frame();
     for param in &type_statement.params {
@@ -98,7 +110,7 @@ fn bind_type_statement(
 
 fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError> {
     bind_expression(bind_state, &param.type_);
-    add_to_context(bind_state, &param.name);
+    define_symbol_and_bind_to_identifier(bind_state, &param.name);
     Ok(())
 }
 
@@ -106,7 +118,7 @@ fn bind_constructor(
     bind_state: &mut BindState,
     constructor: &Constructor,
 ) -> Result<(), BindError> {
-    add_to_context(bind_state, &constructor.name);
+    // TODO: Register as constructor of parent in caller of this function.
 
     bind_state.context.push_frame();
     for param in &constructor.params {
@@ -123,7 +135,7 @@ fn bind_let_statement(
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
     bind_expression(bind_state, &let_statement.value)?;
-    add_to_context(bind_state, &let_statement.name);
+    define_symbol_and_bind_to_identifier(bind_state, &let_statement.name);
     Ok(())
 }
 
@@ -131,9 +143,59 @@ fn bind_expression(
     bind_state: &mut BindState,
     expression: &WrappedExpression,
 ) -> Result<(), BindError> {
-    match expression.expression {
-        _ => unimplemented!(),
+    match &expression.expression {
+        Expression::Identifier(identifier) => bind_identifier(bind_state, identifier),
+        Expression::Dot(dot) => bind_dot(bind_state, dot),
+        Expression::Call(call) => bind_call(bind_state, call),
+        Expression::Fun(fun) => bind_fun(bind_state, fun),
+        Expression::Match(match_) => bind_match(bind_state, match_),
+        Expression::Forall(forall) => bind_forall(bind_state, forall),
     }
+
+    Ok(())
+}
+
+fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Result<(), BindError> {
+    lookup_symbol_and_bind_to_identifier(bind_state, identifier)?;
+    Ok(())
+}
+
+fn bind_dot(bind_state: &mut BindState, dot: &Dot) -> Result<(), BindError> {
+    unimplemented!()
+}
+
+fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
+    bind_expression(bind_state, &call.callee)?;
+    for arg in &call.args {
+        bind_expression(bind_state, arg)?;
+    }
+    Ok(())
+}
+
+fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
+    bind_state.context.push_frame();
+    define_symbol_and_bind_to_identifier(bind_state, &fun.name);
+    for param in &fun.params {
+        bind_param(bind_state, param)?;
+    }
+    bind_expression(bind_state, &fun.return_type)?;
+    bind_expression(bind_state, &fun.return_value)?;
+    bind_state.context.pop_frame();
+    Ok(())
+}
+
+fn bind_match(bind_state: &mut BindState, match_: &Match) -> Result<(), BindError> {
+    bind_expression(bind_state, &match_.matchee)?;
+    for case in &match_.cases {
+        bind_match_case(bind_state, case)?;
+    }
+    Ok(())
+}
+
+fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), BindError> {
+    bind_state.context.push_frame();
+    // TODO
+    bind_state.context.pop_frame();
 }
 
 #[derive(Debug)]
@@ -143,7 +205,7 @@ struct BindState<'a> {
     context: Context,
 }
 
-fn add_to_context(
+fn define_symbol_and_bind_to_identifier(
     bind_state: &mut BindState,
     identifier: &Identifier,
 ) -> Result<Symbol, BindError> {
@@ -151,6 +213,18 @@ fn add_to_context(
         panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
     }
     let name_symbol = bind_state.context.add(identifier)?;
+    bind_state.map.insert(identifier.id, name_symbol);
+    Ok(name_symbol)
+}
+
+fn lookup_symbol_and_bind_to_identifier(
+    bind_state: &mut BindState,
+    identifier: &Identifier,
+) -> Result<Symbol, BindError> {
+    if bind_state.map.contains(identifier.id) {
+        panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
+    }
+    let name_symbol = bind_state.context.lookup(identifier)?;
     bind_state.map.insert(identifier.id, name_symbol);
     Ok(name_symbol)
 }
@@ -189,6 +263,20 @@ mod context {
             let symbol = self.lowest_available_symbol_id;
             self.lowest_available_symbol_id.0 += 1;
             Ok(symbol)
+        }
+
+        pub fn lookup(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {
+            let existing_symbol: Option<&(Identifier, Symbol)> = self
+                .stack
+                .iter()
+                .find_map(|frame| frame.get(&identifier.name));
+            if let Some(existing_symbol) = existing_symbol {
+                Ok(existing_symbol.1)
+            } else {
+                Err(NameNotFoundError {
+                    name: identifier.name.clone(),
+                })
+            }
         }
 
         pub fn push_frame(&mut self) {
