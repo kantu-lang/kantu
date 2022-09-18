@@ -194,9 +194,12 @@ fn bind_match(bind_state: &mut BindState, match_: &Match) -> Result<(), BindErro
 
 fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), BindError> {
     bind_state.context.push_frame();
-    // TODO
+    for param in &case.params {
+        define_symbol_and_bind_to_identifier(bind_state, param)?;
+    }
+    bind_expression(bind_state, &case.output)?;
     bind_state.context.pop_frame();
-    unimplemented!()
+    Ok(())
 }
 
 fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindError> {
