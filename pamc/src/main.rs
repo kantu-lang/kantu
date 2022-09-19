@@ -46,6 +46,7 @@ fn main() {
                         pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
                             &registry,
                             vec![file_node_id],
+                            pamc::data::identifier_to_symbol_map::Symbol(0),
                         );
                     match bind_result {
                         Ok(map) => {

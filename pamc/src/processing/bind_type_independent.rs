@@ -49,16 +49,20 @@ impl From<NameNotFoundError> for BindError {
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
+    lowest_available_symbol: Symbol,
 ) -> Result<IdentifierToSymbolMap, BindError> {
     let file_node_ids = sort_by_dependencies(registry, file_node_ids)?;
-    let mut map = IdentifierToSymbolMap::empty();
+    let mut bind_state = BindState {
+        map: IdentifierToSymbolMap::empty(),
+        context: Context::new(lowest_available_symbol),
+    };
 
     for file_node_id in file_node_ids {
         let file = registry.file(file_node_id);
-        bind_file(&mut map, file)?;
+        bind_file(&mut bind_state, file)?;
     }
 
-    Ok(map)
+    Ok(bind_state.map)
 }
 
 fn sort_by_dependencies(
@@ -69,17 +73,15 @@ fn sort_by_dependencies(
     Ok(file_node_ids)
 }
 
-fn bind_file(map: &mut IdentifierToSymbolMap, file: &File) -> Result<(), BindError> {
-    let mut bind_state = BindState {
-        map,
-        context: Context::empty(),
-    };
+fn bind_file(bind_state: &mut BindState, file: &File) -> Result<(), BindError> {
+    bind_state.context.push_frame();
     for item in &file.items {
         match item {
-            FileItem::Type(type_statement) => bind_type_statement(&mut bind_state, type_statement)?,
-            FileItem::Let(let_statement) => bind_let_statement(&mut bind_state, let_statement)?,
+            FileItem::Type(type_statement) => bind_type_statement(bind_state, type_statement)?,
+            FileItem::Let(let_statement) => bind_let_statement(bind_state, let_statement)?,
         }
     }
+    bind_state.context.pop_frame();
     Ok(())
 }
 
@@ -209,8 +211,8 @@ fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindEr
 }
 
 #[derive(Debug)]
-struct BindState<'a> {
-    map: &'a mut IdentifierToSymbolMap,
+struct BindState {
+    map: IdentifierToSymbolMap,
     context: Context,
 }
 
@@ -245,14 +247,14 @@ mod context {
     #[derive(Clone, Debug)]
     pub struct Context {
         stack: Vec<FxHashMap<IdentifierName, (Identifier, Symbol)>>,
-        lowest_available_symbol_id: Symbol,
+        lowest_available_symbol: Symbol,
     }
 
     impl Context {
-        pub fn empty() -> Self {
+        pub fn new(lowest_available_symbol: Symbol) -> Self {
             Context {
-                stack: vec![FxHashMap::default()],
-                lowest_available_symbol_id: Symbol(0),
+                stack: vec![],
+                lowest_available_symbol,
             }
         }
     }
@@ -269,8 +271,12 @@ mod context {
                     new: identifier.clone().into(),
                 });
             }
-            let symbol = self.lowest_available_symbol_id;
-            self.lowest_available_symbol_id.0 += 1;
+            let symbol = self.lowest_available_symbol;
+            self.lowest_available_symbol.0 += 1;
+            self.stack
+                .last_mut()
+                .expect("Error: Context::add was called when the stack was empty.")
+                .insert(identifier.name.clone(), (identifier.clone(), symbol));
             Ok(symbol)
         }
 

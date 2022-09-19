@@ -34,13 +34,13 @@ impl IdentifierToSymbolMap {
         self.try_get(identifier_id).is_some()
     }
 
-    pub fn insert(&mut self, identifier_id: NodeId<Identifier>, symbol_id: Symbol) -> bool {
+    pub fn insert(&mut self, identifier_id: NodeId<Identifier>, symbol: Symbol) -> bool {
         let is_newly_inserted = !self.contains(identifier_id);
 
         if identifier_id.raw >= self.map.len() {
             self.map.resize(identifier_id.raw + 1, None);
         }
-        self.map[identifier_id.raw] = Some(symbol_id);
+        self.map[identifier_id.raw] = Some(symbol);
 
         is_newly_inserted
     }
