@@ -62,7 +62,10 @@ pub enum Expression {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
     pub id: NodeId<Self>,
-    pub start: TextPosition,
+    /// This is `None` if the identifier is either
+    /// 1. a built-in identifier (e.g., `Type`)
+    /// 2. an identifier that appears in compiler-generated expressions
+    pub start: Option<TextPosition>,
     pub name: IdentifierName,
 }
 

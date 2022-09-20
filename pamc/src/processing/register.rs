@@ -68,7 +68,7 @@ pub fn register_identifier(
 ) -> NodeId<Identifier> {
     registry.add_identifier_and_overwrite_its_id(Identifier {
         id: dummy_id(),
-        start: unregistered.start,
+        start: Some(unregistered.start),
         name: unregistered.name,
     })
 }

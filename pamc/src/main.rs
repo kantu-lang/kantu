@@ -29,11 +29,7 @@ fn main() {
             }
             print_separator();
 
-            const RESERVED_IDENTIFIERS_FILE_ID: pamc::data::FileId = pamc::data::FileId(0);
-            let parse_result = pamc::processing::parse::parse_file(
-                tokens,
-                pamc::data::FileId(RESERVED_IDENTIFIERS_FILE_ID.0 + 1),
-            );
+            let parse_result = pamc::processing::parse::parse_file(tokens, pamc::data::FileId(0));
             match parse_result {
                 Ok(file) => {
                     println!("Parse success!");
@@ -44,10 +40,7 @@ fn main() {
                     let type_title_case_id = registry.add_identifier_and_overwrite_its_id(
                         pamc::data::registered_ast::Identifier {
                             id: pamc::data::node_registry::NodeId::new(0),
-                            start: pamc::data::TextPosition {
-                                file_id: RESERVED_IDENTIFIERS_FILE_ID,
-                                index: 0,
-                            },
+                            start: None,
                             name: pamc::data::unregistered_ast::IdentifierName::Reserved(
                                 pamc::data::unregistered_ast::ReservedIdentifierName::TypeTitleCase,
                             ),
