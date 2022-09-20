@@ -242,6 +242,7 @@ impl NodeRegistry {
 }
 
 impl NodeRegistry {
+    // TODO: Delete after we're done debugging.
     pub fn TODO_identifiers(&self) -> &[Identifier] {
         &self.identifiers
     }
