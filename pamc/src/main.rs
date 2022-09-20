@@ -90,6 +90,22 @@ fn main() {
                                 "Identifiers with undefined symbols: {:#?}",
                                 identifiers_with_undefined_symbols
                             );
+                            print_separator();
+
+                            let type_check_result = pamc::processing::type_check::type_check_file(
+                                &registry,
+                                &symbol_db.identifier_symbols,
+                                file,
+                            );
+                            match type_check_result {
+                                Ok(type_map) => {
+                                    println!("Type check success!");
+                                    println!("{:#?}", type_map);
+                                }
+                                Err(err) => {
+                                    println!("Type check error: {:#?}", err);
+                                }
+                            }
                         }
                         Err(e) => {
                             println!("Bind error: {:#?}", e);

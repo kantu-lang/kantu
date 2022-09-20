@@ -2,6 +2,7 @@ pub mod node_registry;
 pub mod registered_ast;
 pub mod symbol_database;
 pub mod token;
+pub mod type_map;
 pub mod unregistered_ast;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
