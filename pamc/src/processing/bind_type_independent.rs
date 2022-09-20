@@ -60,7 +60,7 @@ pub fn bind_symbols_to_identifiers(
         dot_targets: SymbolToDotTargetsMap::empty(),
     };
 
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
 
     for identifier in builtin_identifiers {
         bind_state
@@ -74,7 +74,7 @@ pub fn bind_symbols_to_identifiers(
         bind_file(&mut bind_state, file)?;
     }
 
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
 
     Ok(bind_state.map)
 }
@@ -88,14 +88,14 @@ fn sort_by_dependencies(
 }
 
 fn bind_file(bind_state: &mut BindState, file: &File) -> Result<(), BindError> {
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     for item in &file.items {
         match item {
             FileItem::Type(type_statement) => bind_type_statement(bind_state, type_statement)?,
             FileItem::Let(let_statement) => bind_let_statement(bind_state, let_statement)?,
         }
     }
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
     Ok(())
 }
 
@@ -106,17 +106,17 @@ fn bind_type_statement(
     let name_symbol =
         define_symbol_in_context_and_bind_to_identifier(bind_state, &type_statement.name)?;
 
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     for param in &type_statement.params {
         bind_param(bind_state, param)?;
     }
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
 
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     for constructor in &type_statement.constructors {
         bind_constructor(bind_state, constructor, name_symbol)?;
     }
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
 
     Ok(())
 }
@@ -140,12 +140,12 @@ fn bind_constructor(
         constructor_symbol,
     );
 
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     for param in &constructor.params {
         bind_param(bind_state, param)?;
     }
     bind_expression(bind_state, &constructor.return_type)?;
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
 
     Ok(())
 }
@@ -205,14 +205,14 @@ fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
 }
 
 fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     define_symbol_in_context_and_bind_to_identifier(bind_state, &fun.name)?;
     for param in &fun.params {
         bind_param(bind_state, param)?;
     }
     bind_expression(bind_state, &fun.return_type)?;
     bind_expression(bind_state, &fun.return_value)?;
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
     Ok(())
 }
 
@@ -225,22 +225,22 @@ fn bind_match(bind_state: &mut BindState, match_: &Match) -> Result<(), BindErro
 }
 
 fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), BindError> {
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     for param in &case.params {
         define_symbol_in_context_and_bind_to_identifier(bind_state, param)?;
     }
     bind_expression(bind_state, &case.output)?;
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
     Ok(())
 }
 
 fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindError> {
-    bind_state.context.push_frame();
+    bind_state.context.push_scope();
     for param in &forall.params {
         bind_param(bind_state, param)?;
     }
     bind_expression(bind_state, &forall.output)?;
-    bind_state.context.pop_frame();
+    bind_state.context.pop_scope();
     Ok(())
 }
 
@@ -297,14 +297,14 @@ mod context {
 
     #[derive(Clone, Debug)]
     pub struct Context {
-        stack: Vec<FxHashMap<IdentifierName, (Identifier, Symbol)>>,
+        scope_stack: Vec<FxHashMap<IdentifierName, (Identifier, Symbol)>>,
         lowest_available_symbol: Symbol,
     }
 
     impl Context {
         pub fn new(lowest_available_symbol: Symbol) -> Self {
             Context {
-                stack: vec![],
+                scope_stack: vec![],
                 lowest_available_symbol,
             }
         }
@@ -313,9 +313,9 @@ mod context {
     impl Context {
         pub fn add(&mut self, identifier: &Identifier) -> Result<Symbol, NameClashError> {
             let existing_symbol: Option<&(Identifier, Symbol)> = self
-                .stack
+                .scope_stack
                 .iter()
-                .find_map(|frame| frame.get(&identifier.name));
+                .find_map(|scope| scope.get(&identifier.name));
             if let Some(existing_symbol) = existing_symbol {
                 return Err(NameClashError {
                     old: existing_symbol.0.clone(),
@@ -323,7 +323,7 @@ mod context {
                 });
             }
             let symbol = self.new_symbol();
-            self.stack
+            self.scope_stack
                 .last_mut()
                 .expect("Error: Context::add was called when the stack was empty.")
                 .insert(identifier.name.clone(), (identifier.clone(), symbol));
@@ -338,9 +338,9 @@ mod context {
 
         pub fn lookup(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {
             let existing_symbol: Option<&(Identifier, Symbol)> = self
-                .stack
+                .scope_stack
                 .iter()
-                .find_map(|frame| frame.get(&identifier.name));
+                .find_map(|scope| scope.get(&identifier.name));
             if let Some(existing_symbol) = existing_symbol {
                 Ok(existing_symbol.1)
             } else {
@@ -350,12 +350,12 @@ mod context {
             }
         }
 
-        pub fn push_frame(&mut self) {
-            self.stack.push(FxHashMap::default());
+        pub fn push_scope(&mut self) {
+            self.scope_stack.push(FxHashMap::default());
         }
 
-        pub fn pop_frame(&mut self) {
-            self.stack.pop();
+        pub fn pop_scope(&mut self) {
+            self.scope_stack.pop();
         }
     }
 }
