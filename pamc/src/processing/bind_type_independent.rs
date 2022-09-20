@@ -2,7 +2,8 @@ use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::{
-        IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSourceMap, SymbolToDotTargetsMap,
+        IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource, SymbolSourceMap,
+        SymbolToDotTargetsMap,
     },
 };
 
@@ -109,8 +110,11 @@ fn bind_type_statement(
     bind_state: &mut BindState,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
-    let name_symbol =
-        define_symbol_in_context_and_bind_to_identifier(bind_state, &type_statement.name)?;
+    let name_symbol = define_symbol_in_context_and_bind_to_identifier(
+        bind_state,
+        &type_statement.name,
+        SymbolSource::Type(type_statement.id),
+    )?;
 
     bind_state.context.push_scope();
     for param in &type_statement.params {
@@ -129,7 +133,11 @@ fn bind_type_statement(
 
 fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError> {
     bind_expression(bind_state, &param.type_)?;
-    define_symbol_in_context_and_bind_to_identifier(bind_state, &param.name)?;
+    define_symbol_in_context_and_bind_to_identifier(
+        bind_state,
+        &param.name,
+        SymbolSource::TypedParam(param.id),
+    )?;
     Ok(())
 }
 
@@ -161,7 +169,11 @@ fn bind_let_statement(
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
     bind_expression(bind_state, &let_statement.value)?;
-    define_symbol_in_context_and_bind_to_identifier(bind_state, &let_statement.name)?;
+    define_symbol_in_context_and_bind_to_identifier(
+        bind_state,
+        &let_statement.name,
+        SymbolSource::Let(let_statement.id),
+    )?;
     Ok(())
 }
 
@@ -212,7 +224,11 @@ fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
 
 fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    define_symbol_in_context_and_bind_to_identifier(bind_state, &fun.name)?;
+    define_symbol_in_context_and_bind_to_identifier(
+        bind_state,
+        &fun.name,
+        SymbolSource::Fun(fun.id),
+    )?;
     for param in &fun.params {
         bind_param(bind_state, param)?;
     }
@@ -233,7 +249,11 @@ fn bind_match(bind_state: &mut BindState, match_: &Match) -> Result<(), BindErro
 fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), BindError> {
     bind_state.context.push_scope();
     for param in &case.params {
-        define_symbol_in_context_and_bind_to_identifier(bind_state, param)?;
+        define_symbol_in_context_and_bind_to_identifier(
+            bind_state,
+            param,
+            SymbolSource::UntypedParam(param.id),
+        )?;
     }
     bind_expression(bind_state, &case.output)?;
     bind_state.context.pop_scope();
@@ -261,23 +281,18 @@ struct BindState {
 fn define_symbol_in_context_and_bind_to_identifier(
     bind_state: &mut BindState,
     identifier: &Identifier,
+    source: SymbolSource,
 ) -> Result<Symbol, BindError> {
-    if bind_state.identifier_symbols.contains(identifier.id) {
-        panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
-    }
     let name_symbol = bind_state.context.add(identifier)?;
-    bind_state
-        .identifier_symbols
-        .insert(identifier.id, name_symbol);
+    bind_symbol_to_identifier(bind_state, name_symbol, identifier);
+    define_symbol_source(bind_state, name_symbol, source);
+
     Ok(name_symbol)
 }
 
 fn bind_new_symbol_to_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Symbol {
-    if bind_state.identifier_symbols.contains(identifier.id) {
-        panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
-    }
     let symbol = bind_state.context.new_symbol();
-    bind_state.identifier_symbols.insert(identifier.id, symbol);
+    bind_symbol_to_identifier(bind_state, symbol, identifier);
     symbol
 }
 
@@ -300,6 +315,13 @@ fn lookup_symbol_from_context_and_bind_to_identifier(
         .identifier_symbols
         .insert(identifier.id, name_symbol);
     Ok(name_symbol)
+}
+
+fn define_symbol_source(bind_state: &mut BindState, symbol: Symbol, source: SymbolSource) {
+    if bind_state.symbol_sources.contains_key(&symbol) {
+        panic!("Impossible: Tried to define symbol source for symbol that already had a source defined.");
+    }
+    bind_state.symbol_sources.insert(symbol, source);
 }
 
 use context::*;
