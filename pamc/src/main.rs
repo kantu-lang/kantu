@@ -57,7 +57,10 @@ fn main() {
                         pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
                             &registry,
                             vec![file_node_id],
-                            &[type_title_case_identifier],
+                            &[(
+                                type_title_case_identifier,
+                                pamc::data::symbol_database::SymbolSource::BuiltinTypeTitleCase,
+                            )],
                         );
                     match bind_result {
                         Ok(symbol_db) => {

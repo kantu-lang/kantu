@@ -104,7 +104,7 @@ mod symbol_source {
 
     use rustc_hash::FxHashMap;
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum SymbolSource {
         Type(NodeId<TypeStatement>),
         Constructor(NodeId<Constructor>),
@@ -112,6 +112,7 @@ mod symbol_source {
         UntypedParam(NodeId<Identifier>),
         Let(NodeId<LetStatement>),
         Fun(NodeId<Fun>),
+        BuiltinTypeTitleCase,
     }
 
     pub type SymbolSourceMap = FxHashMap<Symbol, SymbolSource>;

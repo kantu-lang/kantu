@@ -53,7 +53,7 @@ impl From<NameNotFoundError> for BindError {
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
-    builtin_identifiers: &[Identifier],
+    builtin_identifiers: &[(Identifier, SymbolSource)],
 ) -> Result<SymbolDatabase, BindError> {
     let file_node_ids = sort_by_dependencies(registry, file_node_ids)?;
     let mut bind_state = BindState {
@@ -65,11 +65,12 @@ pub fn bind_symbols_to_identifiers(
 
     bind_state.context.push_scope();
 
-    for identifier in builtin_identifiers {
-        bind_state
-            .context
-            .add(identifier)
-            .expect("Error: built-in identifiers vec contains identifiers with name clash");
+    for (identifier, symbol_source) in builtin_identifiers {
+        define_symbol_in_context_and_bind_to_identifier(
+            &mut bind_state,
+            identifier,
+            *symbol_source,
+        )?;
     }
 
     for file_node_id in file_node_ids {
