@@ -70,6 +70,15 @@ fn main() {
                         Ok(map) => {
                             println!("Bind success!");
                             println!("{:#?}", map);
+                            print_separator();
+                            let all_identifiers = registry.TODO_identifiers().to_vec();
+                            let mut unbound_identifiers = vec![];
+                            for identifier in all_identifiers {
+                                if !map.contains(identifier.id) {
+                                    unbound_identifiers.push(identifier);
+                                }
+                            }
+                            println!("Unbound identifiers: {:#?}", unbound_identifiers);
                         }
                         Err(e) => {
                             println!("Bind error: {:#?}", e);

@@ -240,3 +240,9 @@ impl NodeRegistry {
         &self.foralls[id.raw]
     }
 }
+
+impl NodeRegistry {
+    pub fn TODO_identifiers(&self) -> &[Identifier] {
+        &self.identifiers
+    }
+}
