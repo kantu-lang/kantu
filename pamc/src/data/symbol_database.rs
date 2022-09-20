@@ -115,5 +115,7 @@ mod symbol_source {
         BuiltinTypeTitleCase,
     }
 
+    // TODO: Wrap this so end users are not exposed to a third-party
+    // API (i.e., FxHashMap, in this case).
     pub type SymbolSourceMap = FxHashMap<Symbol, SymbolSource>;
 }
