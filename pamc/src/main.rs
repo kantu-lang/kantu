@@ -60,14 +60,14 @@ fn main() {
                             &[type_title_case_identifier],
                         );
                     match bind_result {
-                        Ok(map) => {
+                        Ok(symbol_db) => {
                             println!("Bind success!");
-                            println!("{:#?}", map);
+                            println!("{:#?}", symbol_db.identifier_symbols);
                             print_separator();
                             let all_identifiers = registry.TODO_identifiers().to_vec();
                             let mut unbound_identifiers = vec![];
                             for identifier in all_identifiers {
-                                if !map.contains(identifier.id) {
+                                if !symbol_db.identifier_symbols.contains(identifier.id) {
                                     unbound_identifiers.push(identifier);
                                 }
                             }
