@@ -147,6 +147,11 @@ fn bind_constructor(
     declaring_type_name_symbol: Symbol,
 ) -> Result<(), BindError> {
     let constructor_symbol = bind_new_symbol_to_identifier(bind_state, &constructor.name);
+    define_symbol_source(
+        bind_state,
+        constructor_symbol,
+        SymbolSource::Constructor(constructor.id),
+    );
 
     bind_state.dot_targets.insert(
         declaring_type_name_symbol,

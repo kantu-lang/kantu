@@ -66,12 +66,27 @@ fn main() {
                             print_separator();
                             let all_identifiers = registry.TODO_identifiers().to_vec();
                             let mut unbound_identifiers = vec![];
+                            let mut bound_identifiers = vec![];
                             for identifier in all_identifiers {
                                 if !symbol_db.identifier_symbols.contains(identifier.id) {
                                     unbound_identifiers.push(identifier);
+                                } else {
+                                    bound_identifiers.push(identifier);
                                 }
                             }
                             println!("Unbound identifiers: {:#?}", unbound_identifiers);
+                            print_separator();
+                            let mut identifiers_with_undefined_symbols = vec![];
+                            for identifier in bound_identifiers {
+                                let symbol = symbol_db.identifier_symbols.get(identifier.id);
+                                if !symbol_db.symbol_sources.contains_key(&symbol) {
+                                    identifiers_with_undefined_symbols.push(identifier);
+                                }
+                            }
+                            println!(
+                                "Identifiers with undefined symbols: {:#?}",
+                                identifiers_with_undefined_symbols
+                            );
                         }
                         Err(e) => {
                             println!("Bind error: {:#?}", e);
