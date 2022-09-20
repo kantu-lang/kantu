@@ -10,6 +10,8 @@ pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
     NameClash(NameClashError),
     NameNotFound(NameNotFoundError),
+    UnbindableDotExpressionLhs(NodeId<WrappedExpression>),
+    InvalidDotExpressionRhs(NodeId<Identifier>),
 }
 
 #[derive(Clone, Debug)]
@@ -55,6 +57,7 @@ pub fn bind_symbols_to_identifiers(
     let mut bind_state = BindState {
         map: IdentifierToSymbolMap::empty(),
         context: Context::new(lowest_available_symbol),
+        dot_targets: SymbolToDotTargetsMap::empty(),
     };
 
     for file_node_id in file_node_ids {
@@ -89,7 +92,8 @@ fn bind_type_statement(
     bind_state: &mut BindState,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
-    define_symbol_and_bind_to_identifier(bind_state, &type_statement.name)?;
+    let name_symbol =
+        define_symbol_in_context_and_bind_to_identifier(bind_state, &type_statement.name)?;
 
     bind_state.context.push_frame();
     for param in &type_statement.params {
@@ -99,7 +103,7 @@ fn bind_type_statement(
 
     bind_state.context.push_frame();
     for constructor in &type_statement.constructors {
-        bind_constructor(bind_state, constructor)?;
+        bind_constructor(bind_state, constructor, name_symbol)?;
     }
     bind_state.context.pop_frame();
 
@@ -108,15 +112,22 @@ fn bind_type_statement(
 
 fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError> {
     bind_expression(bind_state, &param.type_)?;
-    define_symbol_and_bind_to_identifier(bind_state, &param.name)?;
+    define_symbol_in_context_and_bind_to_identifier(bind_state, &param.name)?;
     Ok(())
 }
 
 fn bind_constructor(
     bind_state: &mut BindState,
     constructor: &Constructor,
+    declaring_type_name_symbol: Symbol,
 ) -> Result<(), BindError> {
-    // TODO: Register as constructor of parent in caller of this function.
+    let constructor_symbol = bind_new_symbol_to_identifier(bind_state, &constructor.name);
+
+    bind_state.dot_targets.insert(
+        declaring_type_name_symbol,
+        constructor.name.name.clone(),
+        constructor_symbol,
+    );
 
     bind_state.context.push_frame();
     for param in &constructor.params {
@@ -133,7 +144,7 @@ fn bind_let_statement(
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
     bind_expression(bind_state, &let_statement.value)?;
-    define_symbol_and_bind_to_identifier(bind_state, &let_statement.name)?;
+    define_symbol_in_context_and_bind_to_identifier(bind_state, &let_statement.name)?;
     Ok(())
 }
 
@@ -154,12 +165,24 @@ fn bind_expression(
 }
 
 fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Result<(), BindError> {
-    lookup_symbol_and_bind_to_identifier(bind_state, identifier)?;
+    lookup_symbol_from_context_and_bind_to_identifier(bind_state, identifier)?;
     Ok(())
 }
 
 fn bind_dot(bind_state: &mut BindState, dot: &Dot) -> Result<(), BindError> {
-    unimplemented!()
+    bind_expression(bind_state, &dot.left)?;
+    let left_symbol = match &dot.left.expression {
+        Expression::Identifier(identifier) => bind_state.map.get(identifier.id),
+        Expression::Dot(dot) => bind_state.map.get(dot.right.id),
+        _ => return Err(BindError::UnbindableDotExpressionLhs(dot.left.id)),
+    };
+    let right_symbol = if let Some(s) = bind_state.dot_targets.get(left_symbol, &dot.right.name) {
+        s
+    } else {
+        return Err(BindError::InvalidDotExpressionRhs(dot.right.id));
+    };
+    bind_symbol_to_identifier(bind_state, right_symbol, &dot.right);
+    Ok(())
 }
 
 fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
@@ -172,7 +195,7 @@ fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
 
 fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
     bind_state.context.push_frame();
-    define_symbol_and_bind_to_identifier(bind_state, &fun.name)?;
+    define_symbol_in_context_and_bind_to_identifier(bind_state, &fun.name)?;
     for param in &fun.params {
         bind_param(bind_state, param)?;
     }
@@ -193,7 +216,7 @@ fn bind_match(bind_state: &mut BindState, match_: &Match) -> Result<(), BindErro
 fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), BindError> {
     bind_state.context.push_frame();
     for param in &case.params {
-        define_symbol_and_bind_to_identifier(bind_state, param)?;
+        define_symbol_in_context_and_bind_to_identifier(bind_state, param)?;
     }
     bind_expression(bind_state, &case.output)?;
     bind_state.context.pop_frame();
@@ -214,9 +237,10 @@ fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindEr
 struct BindState {
     map: IdentifierToSymbolMap,
     context: Context,
+    dot_targets: SymbolToDotTargetsMap,
 }
 
-fn define_symbol_and_bind_to_identifier(
+fn define_symbol_in_context_and_bind_to_identifier(
     bind_state: &mut BindState,
     identifier: &Identifier,
 ) -> Result<Symbol, BindError> {
@@ -228,7 +252,23 @@ fn define_symbol_and_bind_to_identifier(
     Ok(name_symbol)
 }
 
-fn lookup_symbol_and_bind_to_identifier(
+fn bind_new_symbol_to_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Symbol {
+    if bind_state.map.contains(identifier.id) {
+        panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
+    }
+    let symbol = bind_state.context.new_symbol();
+    bind_state.map.insert(identifier.id, symbol);
+    symbol
+}
+
+fn bind_symbol_to_identifier(bind_state: &mut BindState, symbol: Symbol, identifier: &Identifier) {
+    if bind_state.map.contains(identifier.id) {
+        panic!("Impossible: Tried to assign symbol to identifier that already had a symbol assigned to it.");
+    }
+    bind_state.map.insert(identifier.id, symbol);
+}
+
+fn lookup_symbol_from_context_and_bind_to_identifier(
     bind_state: &mut BindState,
     identifier: &Identifier,
 ) -> Result<Symbol, BindError> {
@@ -271,13 +311,18 @@ mod context {
                     new: identifier.clone().into(),
                 });
             }
-            let symbol = self.lowest_available_symbol;
-            self.lowest_available_symbol.0 += 1;
+            let symbol = self.new_symbol();
             self.stack
                 .last_mut()
                 .expect("Error: Context::add was called when the stack was empty.")
                 .insert(identifier.name.clone(), (identifier.clone(), symbol));
             Ok(symbol)
+        }
+
+        pub fn new_symbol(&mut self) -> Symbol {
+            let symbol = self.lowest_available_symbol;
+            self.lowest_available_symbol.0 += 1;
+            symbol
         }
 
         pub fn lookup(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {
@@ -300,6 +345,44 @@ mod context {
 
         pub fn pop_frame(&mut self) {
             self.stack.pop();
+        }
+    }
+}
+
+use dot_targets::*;
+mod dot_targets {
+    use super::*;
+
+    #[derive(Clone, Debug)]
+    pub struct SymbolToDotTargetsMap(FxHashMap<Symbol, FxHashMap<IdentifierName, Symbol>>);
+
+    impl SymbolToDotTargetsMap {
+        pub fn empty() -> Self {
+            SymbolToDotTargetsMap(FxHashMap::default())
+        }
+    }
+
+    impl SymbolToDotTargetsMap {
+        pub fn insert(
+            &mut self,
+            symbol: Symbol,
+            target_name: IdentifierName,
+            target_symbol: Symbol,
+        ) {
+            if let Some(targets) = self.0.get_mut(&symbol) {
+                targets.insert(target_name, target_symbol);
+            } else {
+                let mut targets = FxHashMap::default();
+                targets.insert(target_name, target_symbol);
+                self.0.insert(symbol, targets);
+            }
+        }
+
+        pub fn get(&self, symbol: Symbol, target_name: &IdentifierName) -> Option<Symbol> {
+            self.0
+                .get(&symbol)
+                .and_then(|targets| targets.get(target_name))
+                .copied()
         }
     }
 }
