@@ -243,6 +243,7 @@ impl NodeRegistry {
 
 impl NodeRegistry {
     // TODO: Delete after we're done debugging.
+    #[allow(non_snake_case)]
     pub fn TODO_identifiers(&self) -> &[Identifier] {
         &self.identifiers
     }
