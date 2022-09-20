@@ -26,6 +26,12 @@ impl<T> Clone for NodeId<T> {
 
 impl<T> Copy for NodeId<T> {}
 
+impl<T> std::hash::Hash for NodeId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.raw.hash(state);
+    }
+}
+
 // TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
 // since #[derive] only works if T implements the respective traits.
 
