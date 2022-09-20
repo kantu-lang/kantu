@@ -29,7 +29,11 @@ fn main() {
             }
             print_separator();
 
-            let parse_result = pamc::processing::parse::parse_file(tokens, pamc::data::FileId(0));
+            const RESERVED_IDENTIFIERS_FILE_ID: pamc::data::FileId = pamc::data::FileId(0);
+            let parse_result = pamc::processing::parse::parse_file(
+                tokens,
+                pamc::data::FileId(RESERVED_IDENTIFIERS_FILE_ID.0 + 1),
+            );
             match parse_result {
                 Ok(file) => {
                     println!("Parse success!");
@@ -37,6 +41,20 @@ fn main() {
                     print_separator();
 
                     let mut registry = pamc::data::node_registry::NodeRegistry::empty();
+                    let type_title_case_id = registry.add_identifier_and_overwrite_its_id(
+                        pamc::data::registered_ast::Identifier {
+                            id: pamc::data::node_registry::NodeId::new(0),
+                            start: pamc::data::TextPosition {
+                                file_id: RESERVED_IDENTIFIERS_FILE_ID,
+                                index: 0,
+                            },
+                            name: pamc::data::unregistered_ast::IdentifierName::Reserved(
+                                pamc::data::unregistered_ast::ReservedIdentifierName::TypeTitleCase,
+                            ),
+                        },
+                    );
+                    let type_title_case_identifier =
+                        registry.identifier(type_title_case_id).clone();
                     let file_node_id =
                         pamc::processing::register::register_file(&mut registry, file);
                     let file = registry.file(file_node_id);
@@ -46,7 +64,7 @@ fn main() {
                         pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
                             &registry,
                             vec![file_node_id],
-                            pamc::data::identifier_to_symbol_map::Symbol(0),
+                            &[type_title_case_identifier],
                         );
                     match bind_result {
                         Ok(map) => {

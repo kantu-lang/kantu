@@ -51,19 +51,30 @@ impl From<NameNotFoundError> for BindError {
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
-    lowest_available_symbol: Symbol,
+    builtin_identifiers: &[Identifier],
 ) -> Result<IdentifierToSymbolMap, BindError> {
     let file_node_ids = sort_by_dependencies(registry, file_node_ids)?;
     let mut bind_state = BindState {
         map: IdentifierToSymbolMap::empty(),
-        context: Context::new(lowest_available_symbol),
+        context: Context::new(Symbol(0)),
         dot_targets: SymbolToDotTargetsMap::empty(),
     };
+
+    bind_state.context.push_frame();
+
+    for identifier in builtin_identifiers {
+        bind_state
+            .context
+            .add(identifier)
+            .expect("Error: built-in identifiers vec contains identifiers with name clash");
+    }
 
     for file_node_id in file_node_ids {
         let file = registry.file(file_node_id);
         bind_file(&mut bind_state, file)?;
     }
+
+    bind_state.context.pop_frame();
 
     Ok(bind_state.map)
 }
