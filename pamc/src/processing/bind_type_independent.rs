@@ -7,6 +7,8 @@ use crate::data::{
     },
 };
 
+// TODO: Forbid fun return type from using the fun it declares.
+
 #[derive(Clone, Debug)]
 pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
