@@ -93,9 +93,7 @@ fn main() {
                             print_separator();
 
                             let type_check_result = pamc::processing::type_check::type_check_file(
-                                &registry,
-                                &symbol_db.identifier_symbols,
-                                file,
+                                &registry, &symbol_db, file,
                             );
                             match type_check_result {
                                 Ok(type_map) => {

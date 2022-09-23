@@ -36,3 +36,57 @@ let square_all = fun square_all(l: List(Nat)): List(Nat) { map(Nat, Nat, l, squa
 type Exists(T: Type, P: forall(v: T) { Type }) {
     .witness(T: Type, P: forall(v: T) { Type }, v: T, H: P(v)): Exists(T, P),
 }
+
+type Eq(T: Type, x: T, y: T) {
+    .Refl(T: Type, z: T): Eq(T, z, z),
+}
+
+let plus_S = fun plus_S_(a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
+    match a {
+        .O => Eq.Refl(Nat.S(b)),
+        .S(a') =>
+            match plus_S_(a', b) {
+                .Refl(_c) => Eq.Refl(Nat.S(Nat.S(plus(a', b)))),
+            },
+    }
+};
+
+let plus_O = fun plus_O_(n: Nat): Eq(plus(n, Nat.O), n) {
+    match n {
+        .O => Eq.Refl(Nat.O),
+        .S(n') =>
+            match plus_O_(n') {
+                .Refl(_n) => Eq.Refl(Nat.S(plus(n', Nat.O))),
+            },
+    }
+};
+
+let plus_comm = fun plus_comm_(a: Nat, b: Nat): Eq(plus(a, b), plus(b, a)) {
+    match a {
+        .O =>
+            match b {
+                .O => Eq.Refl(Nat.O),
+                .S(b') =>
+                    match plus_O(b') {
+                        .Refl(_b) => Eq.Refl(plus(b', Nat.O)),
+                    },
+            },
+        .S(a') =>
+            match b {
+                .O =>
+                    match plus_O(a') {
+                        .Refl(_a) => Eq.Refl(Nat.S(plus(a', Nat.O))),
+                    },
+                .S(b') =>
+                    match plus_S(a', b') {
+                        .Refl(_c) =>
+                            match plus_S(b', a') {
+                                .Refl(_d) =>
+                                    match plus_comm_(a', b') {
+                                        .Refl(_e) => Eq.Refl(Nat.S(Nat.S(plus(a', b')))),
+                                    },
+                            },
+                    },
+            },
+    }
+};
