@@ -18,7 +18,7 @@ pub struct TypeStatement {
     pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
-    pub constructors: Vec<Constructor>,
+    pub variants: Vec<Variant>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,7 +30,7 @@ pub struct Param {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Constructor {
+pub struct Variant {
     pub id: NodeId<Self>,
     pub name: Identifier,
     pub params: Vec<Param>,
@@ -105,7 +105,7 @@ pub struct Match {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
     pub id: NodeId<Self>,
-    pub constructor_name: Identifier,
+    pub variant_name: Identifier,
     pub params: Vec<Identifier>,
     pub output: WrappedExpression,
 }

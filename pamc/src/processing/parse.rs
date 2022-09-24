@@ -93,7 +93,7 @@ mod unfinished {
         Let(UnfinishedLetStatement),
         Params(UnfinishedParams),
         Param(UnfinishedParam),
-        Constructor(UnfinishedConstructor),
+        Variant(UnfinishedVariant),
         UnfinishedDelimitedExpression(UnfinishedDelimitedExpression),
         Fun(UnfinishedFun),
         Match(UnfinishedMatch),
@@ -114,7 +114,7 @@ mod unfinished {
         Keyword(Token),
         Name(Token, Identifier),
         Params(Token, Identifier, Vec<Param>),
-        Constructors(Token, Identifier, Vec<Param>, Vec<Constructor>),
+        Variants(Token, Identifier, Vec<Param>, Vec<Variant>),
     }
 
     #[derive(Clone, Debug)]
@@ -137,7 +137,7 @@ mod unfinished {
     }
 
     #[derive(Clone, Debug)]
-    pub enum UnfinishedConstructor {
+    pub enum UnfinishedVariant {
         Dot(Token),
         Name(Token, Identifier),
         Params(Token, Identifier, Vec<Param>),
@@ -185,7 +185,7 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub enum UnfinishedMatchCase {
         Dot(Token),
-        ConstructorName(Token, Identifier),
+        VariantName(Token, Identifier),
         ParamsInProgress(Token, Identifier, Vec<Identifier>, CurrentlyHasEndingComma),
         AwaitingOutput(Token, Identifier, Vec<Identifier>),
     }
@@ -222,10 +222,10 @@ mod finished {
             Param,
             ExpressionEndDelimiter,
         ),
-        Constructor(
+        Variant(
             /// First token (".")
             Token,
-            Constructor,
+            Variant,
             ExpressionEndDelimiter,
         ),
         DelimitedExpression(
@@ -263,7 +263,7 @@ mod first_token {
                 FinishedStackItem::Let(token, _) => &token,
                 FinishedStackItem::Params(token, _) => &token,
                 FinishedStackItem::Param(token, _, _) => &token,
-                FinishedStackItem::Constructor(token, _, _) => &token,
+                FinishedStackItem::Variant(token, _, _) => &token,
                 FinishedStackItem::DelimitedExpression(token, _, _) => &token,
                 FinishedStackItem::UndelimitedExpression(token, _) => &token,
                 FinishedStackItem::MatchCase(token, _, _) => &token,
@@ -302,7 +302,7 @@ mod accept {
                 UnfinishedStackItem::Let(let_) => let_.accept(item, file_id),
                 UnfinishedStackItem::Params(params) => params.accept(item, file_id),
                 UnfinishedStackItem::Param(param) => param.accept(item, file_id),
-                UnfinishedStackItem::Constructor(constructor) => constructor.accept(item, file_id),
+                UnfinishedStackItem::Variant(variant) => variant.accept(item, file_id),
                 UnfinishedStackItem::UnfinishedDelimitedExpression(expression) => {
                     expression.accept(item, file_id)
                 }
@@ -374,7 +374,7 @@ mod accept {
                             }))
                         }
                         TokenKind::LCurly => {
-                            *self = UnfinishedTypeStatement::Constructors(
+                            *self = UnfinishedTypeStatement::Variants(
                                 type_kw.clone(),
                                 name.clone(),
                                 vec![],
@@ -396,7 +396,7 @@ mod accept {
                 UnfinishedTypeStatement::Params(type_kw, name, params) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::LCurly => {
-                            *self = UnfinishedTypeStatement::Constructors(
+                            *self = UnfinishedTypeStatement::Variants(
                                 type_kw.clone(),
                                 name.clone(),
                                 params.clone(),
@@ -410,48 +410,46 @@ mod accept {
                     },
                     other_item => unexpected_finished_item(&other_item),
                 },
-                UnfinishedTypeStatement::Constructors(type_kw, name, params, constructors) => {
-                    match item {
-                        FinishedStackItem::Token(token) => match token.kind {
-                            TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::Constructor(
-                                UnfinishedConstructor::Dot(token),
-                            )),
+                UnfinishedTypeStatement::Variants(type_kw, name, params, variants) => match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::Variant(
+                            UnfinishedVariant::Dot(token),
+                        )),
+                        TokenKind::RCurly => {
+                            AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
+                                type_kw.clone(),
+                                TypeStatement {
+                                    name: name.clone(),
+                                    params: params.clone(),
+                                    variants: variants.clone(),
+                                },
+                            ))
+                        }
+                        _other_token_kind => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    },
+                    FinishedStackItem::Variant(_, variant, end_delimiter) => {
+                        variants.push(variant);
+                        match end_delimiter.0.kind {
+                            TokenKind::Comma => AcceptResult::ContinueToNextToken,
                             TokenKind::RCurly => {
                                 AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
                                     type_kw.clone(),
                                     TypeStatement {
                                         name: name.clone(),
                                         params: params.clone(),
-                                        constructors: constructors.clone(),
+                                        variants: variants.clone(),
                                     },
                                 ))
                             }
-                            _other_token_kind => {
-                                AcceptResult::Error(ParseError::UnexpectedToken(token))
-                            }
-                        },
-                        FinishedStackItem::Constructor(_, constructor, end_delimiter) => {
-                            constructors.push(constructor);
-                            match end_delimiter.0.kind {
-                                TokenKind::Comma => AcceptResult::ContinueToNextToken,
-                                TokenKind::RCurly => {
-                                    AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
-                                        type_kw.clone(),
-                                        TypeStatement {
-                                            name: name.clone(),
-                                            params: params.clone(),
-                                            constructors: constructors.clone(),
-                                        },
-                                    ))
-                                }
-                                _other_end_delimiter => AcceptResult::Error(
-                                    ParseError::UnexpectedToken(end_delimiter.0),
-                                ),
+                            _other_end_delimiter => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
                             }
                         }
-                        other_item => unexpected_finished_item(&other_item),
                     }
-                }
+                    other_item => unexpected_finished_item(&other_item),
+                },
             }
         }
     }
@@ -594,10 +592,10 @@ mod accept {
         }
     }
 
-    impl Accept for UnfinishedConstructor {
+    impl Accept for UnfinishedVariant {
         fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match self {
-                UnfinishedConstructor::Dot(dot) => match item {
+                UnfinishedVariant::Dot(dot) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::StandardIdentifier => {
                             let name = Identifier {
@@ -607,7 +605,7 @@ mod accept {
                                 },
                                 name: IdentifierName::Standard(token.content.clone()),
                             };
-                            *self = UnfinishedConstructor::Name(dot.clone(), name);
+                            *self = UnfinishedVariant::Name(dot.clone(), name);
                             AcceptResult::ContinueToNextToken
                         }
                         _other_token_kind => {
@@ -616,7 +614,7 @@ mod accept {
                     },
                     other_item => unexpected_finished_item(&other_item),
                 },
-                UnfinishedConstructor::Name(dot, name) => match item {
+                UnfinishedVariant::Name(dot, name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::LParen => {
                             AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
@@ -636,13 +634,13 @@ mod accept {
                         }
                     },
                     FinishedStackItem::Params(_, params) => {
-                        *self = UnfinishedConstructor::Params(dot.clone(), name.clone(), params);
+                        *self = UnfinishedVariant::Params(dot.clone(), name.clone(), params);
                         AcceptResult::ContinueToNextToken
                     }
                     FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Constructor(
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Variant(
                             dot.clone(),
-                            Constructor {
+                            Variant {
                                 name: name.clone(),
                                 params: vec![],
                                 return_type: expression,
@@ -652,7 +650,7 @@ mod accept {
                     }
                     other_item => unexpected_finished_item(&other_item),
                 },
-                UnfinishedConstructor::Params(dot, name, params) => match item {
+                UnfinishedVariant::Params(dot, name, params) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Colon => {
                             AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -664,9 +662,9 @@ mod accept {
                         }
                     },
                     FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Constructor(
+                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Variant(
                             dot.clone(),
-                            Constructor {
+                            Variant {
                                 name: name.clone(),
                                 params: params.clone(),
                                 return_type: expression,
@@ -1105,7 +1103,7 @@ mod accept {
                                 },
                                 name: IdentifierName::Standard(token.content.clone()),
                             };
-                            *self = UnfinishedMatchCase::ConstructorName(dot_token.clone(), name);
+                            *self = UnfinishedMatchCase::VariantName(dot_token.clone(), name);
                             AcceptResult::ContinueToNextToken
                         }
                         _other_token_kind => {
@@ -1114,12 +1112,12 @@ mod accept {
                     },
                     other_item => unexpected_finished_item(&other_item),
                 },
-                UnfinishedMatchCase::ConstructorName(dot_token, constructor_name) => match item {
+                UnfinishedMatchCase::VariantName(dot_token, variant_name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::LParen => {
                             *self = UnfinishedMatchCase::ParamsInProgress(
                                 dot_token.clone(),
-                                constructor_name.clone(),
+                                variant_name.clone(),
                                 vec![],
                                 CurrentlyHasEndingComma(false),
                             );
@@ -1128,7 +1126,7 @@ mod accept {
                         TokenKind::FatArrow => {
                             *self = UnfinishedMatchCase::AwaitingOutput(
                                 dot_token.clone(),
-                                constructor_name.clone(),
+                                variant_name.clone(),
                                 vec![],
                             );
                             AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -1143,7 +1141,7 @@ mod accept {
                 },
                 UnfinishedMatchCase::ParamsInProgress(
                     dot_token,
-                    constructor_name,
+                    variant_name,
                     params,
                     currently_has_ending_comma,
                 ) => match item {
@@ -1179,7 +1177,7 @@ mod accept {
                         TokenKind::RParen => {
                             *self = UnfinishedMatchCase::AwaitingOutput(
                                 dot_token.clone(),
-                                constructor_name.clone(),
+                                variant_name.clone(),
                                 params.clone(),
                             );
                             AcceptResult::ContinueToNextToken
@@ -1190,7 +1188,7 @@ mod accept {
                     },
                     other_item => unexpected_finished_item(&other_item),
                 },
-                UnfinishedMatchCase::AwaitingOutput(dot_token, constructor_name, params) => {
+                UnfinishedMatchCase::AwaitingOutput(dot_token, variant_name, params) => {
                     match item {
                         FinishedStackItem::Token(token) => match token.kind {
                             TokenKind::FatArrow => AcceptResult::Push(
@@ -1209,7 +1207,7 @@ mod accept {
                                         FinishedStackItem::MatchCase(
                                             dot_token.clone(),
                                             MatchCase {
-                                                constructor_name: constructor_name.clone(),
+                                                variant_name: variant_name.clone(),
                                                 params: params.clone(),
                                                 output: expression,
                                             },

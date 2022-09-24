@@ -125,8 +125,8 @@ fn bind_type_statement(
         SymbolSource::Type(type_statement.id),
     )?;
 
-    for constructor in &type_statement.constructors {
-        bind_constructor(bind_state, constructor, name_symbol)?;
+    for variant in &type_statement.variants {
+        bind_variant(bind_state, variant, name_symbol)?;
     }
 
     Ok(())
@@ -142,29 +142,29 @@ fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError
     Ok(())
 }
 
-fn bind_constructor(
+fn bind_variant(
     bind_state: &mut BindState,
-    constructor: &Constructor,
+    variant: &Variant,
     declaring_type_name_symbol: Symbol,
 ) -> Result<(), BindError> {
-    let constructor_symbol = bind_new_symbol_to_identifier(bind_state, &constructor.name);
+    let variant_symbol = bind_new_symbol_to_identifier(bind_state, &variant.name);
     define_symbol_source(
         bind_state,
-        constructor_symbol,
-        SymbolSource::Constructor(constructor.id),
+        variant_symbol,
+        SymbolSource::Variant(variant.id),
     );
 
     bind_state.dot_targets.insert(
         declaring_type_name_symbol,
-        constructor.name.name.clone(),
-        constructor_symbol,
+        variant.name.name.clone(),
+        variant_symbol,
     );
 
     bind_state.context.push_scope();
-    for param in &constructor.params {
+    for param in &variant.params {
         bind_param(bind_state, param)?;
     }
-    bind_expression(bind_state, &constructor.return_type)?;
+    bind_expression(bind_state, &variant.return_type)?;
     bind_state.context.pop_scope();
 
     Ok(())

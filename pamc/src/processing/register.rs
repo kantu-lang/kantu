@@ -46,19 +46,19 @@ pub fn register_type_statement(
             registry.param(id).clone()
         })
         .collect();
-    let constructors = unregistered
-        .constructors
+    let variants = unregistered
+        .variants
         .into_iter()
-        .map(|unregistered_constructor| {
-            let id = register_constructor(registry, unregistered_constructor);
-            registry.constructor(id).clone()
+        .map(|unregistered_variant| {
+            let id = register_variant(registry, unregistered_variant);
+            registry.variant(id).clone()
         })
         .collect();
     registry.add_type_statement_and_overwrite_its_id(TypeStatement {
         id: dummy_id(),
         name,
         params,
-        constructors,
+        variants,
     })
 }
 
@@ -86,10 +86,7 @@ pub fn register_param(registry: &mut NodeRegistry, unregistered: ur::Param) -> N
     })
 }
 
-pub fn register_constructor(
-    registry: &mut NodeRegistry,
-    unregistered: ur::Constructor,
-) -> NodeId<Constructor> {
+pub fn register_variant(registry: &mut NodeRegistry, unregistered: ur::Variant) -> NodeId<Variant> {
     let name_id = register_identifier(registry, unregistered.name);
     let name = registry.identifier(name_id).clone();
     let params = unregistered
@@ -102,7 +99,7 @@ pub fn register_constructor(
         .collect();
     let return_type_id = register_expression(registry, unregistered.return_type);
     let return_type = registry.wrapped_expression(return_type_id).clone();
-    registry.add_constructor_and_overwrite_its_id(Constructor {
+    registry.add_variant_and_overwrite_its_id(Variant {
         id: dummy_id(),
         name,
         params,
@@ -261,8 +258,8 @@ pub fn register_match_case(
     registry: &mut NodeRegistry,
     unregistered: ur::MatchCase,
 ) -> NodeId<MatchCase> {
-    let constructor_name_id = register_identifier(registry, unregistered.constructor_name);
-    let constructor_name = registry.identifier(constructor_name_id).clone();
+    let variant_name_id = register_identifier(registry, unregistered.variant_name);
+    let variant_name = registry.identifier(variant_name_id).clone();
     let params = unregistered
         .params
         .into_iter()
@@ -275,7 +272,7 @@ pub fn register_match_case(
     let output = registry.wrapped_expression(output_id).clone();
     registry.add_match_case_and_overwrite_its_id(MatchCase {
         id: dummy_id(),
-        constructor_name,
+        variant_name,
         params,
         output,
     })

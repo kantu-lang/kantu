@@ -41,7 +41,7 @@ pub struct NodeRegistry {
     type_statements: Vec<TypeStatement>,
     identifiers: Vec<Identifier>,
     params: Vec<Param>,
-    constructors: Vec<Constructor>,
+    variants: Vec<Variant>,
     let_statements: Vec<LetStatement>,
     wrapped_expressions: Vec<WrappedExpression>,
     dots: Vec<Dot>,
@@ -59,7 +59,7 @@ impl NodeRegistry {
             type_statements: Vec::new(),
             identifiers: Vec::new(),
             params: Vec::new(),
-            constructors: Vec::new(),
+            variants: Vec::new(),
             let_statements: Vec::new(),
             wrapped_expressions: Vec::new(),
             dots: Vec::new(),
@@ -107,13 +107,10 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_constructor_and_overwrite_its_id(
-        &mut self,
-        mut constructor: Constructor,
-    ) -> NodeId<Constructor> {
-        let id = NodeId::<Constructor>::new(self.constructors.len());
-        constructor.id = id;
-        self.constructors.push(constructor);
+    pub fn add_variant_and_overwrite_its_id(&mut self, mut variant: Variant) -> NodeId<Variant> {
+        let id = NodeId::<Variant>::new(self.variants.len());
+        variant.id = id;
+        self.variants.push(variant);
         id
     }
 
@@ -210,8 +207,8 @@ impl NodeRegistry {
         &self.params[id.raw]
     }
 
-    pub fn constructor(&self, id: NodeId<Constructor>) -> &Constructor {
-        &self.constructors[id.raw]
+    pub fn variant(&self, id: NodeId<Variant>) -> &Variant {
+        &self.variants[id.raw]
     }
 
     pub fn let_statement(&self, id: NodeId<LetStatement>) -> &LetStatement {

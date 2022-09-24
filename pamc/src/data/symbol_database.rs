@@ -107,7 +107,7 @@ mod symbol_source {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum SymbolSource {
         Type(NodeId<TypeStatement>),
-        Constructor(NodeId<Constructor>),
+        Variant(NodeId<Variant>),
         TypedParam(NodeId<Param>),
         UntypedParam(NodeId<Identifier>),
         Let(NodeId<LetStatement>),

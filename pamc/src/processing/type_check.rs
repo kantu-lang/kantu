@@ -37,8 +37,8 @@ fn type_check_type_statement(
     state: &mut TypeCheckState,
     type_statement: &TypeStatement,
 ) -> Result<(), TypeError> {
-    for constructor in &type_statement.constructors {
-        type_check_constructor(state, constructor)?;
+    for variant in &type_statement.variants {
+        type_check_variant(state, variant)?;
     }
     Ok(())
 }
@@ -51,11 +51,8 @@ fn type_check_let_statement(
     Ok(())
 }
 
-fn type_check_constructor(
-    state: &mut TypeCheckState,
-    constructor: &Constructor,
-) -> Result<(), TypeError> {
-    for param in &constructor.params {
+fn type_check_variant(state: &mut TypeCheckState, variant: &Variant) -> Result<(), TypeError> {
+    for param in &variant.params {
         type_check_param(state, param)?;
     }
     Ok(())

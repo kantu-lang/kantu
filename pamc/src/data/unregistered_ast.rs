@@ -16,7 +16,7 @@ pub enum FileItem {
 pub struct TypeStatement {
     pub name: Identifier,
     pub params: Vec<Param>,
-    pub constructors: Vec<Constructor>,
+    pub variants: Vec<Variant>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,7 +27,7 @@ pub struct Param {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Constructor {
+pub struct Variant {
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
@@ -95,7 +95,7 @@ pub struct Match {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
-    pub constructor_name: Identifier,
+    pub variant_name: Identifier,
     pub params: Vec<Identifier>,
     pub output: Expression,
 }
