@@ -80,6 +80,7 @@ pub fn register_param(registry: &mut NodeRegistry, unregistered: ur::Param) -> N
     let type_ = registry.wrapped_expression(type_id).clone();
     registry.add_param_and_overwrite_its_id(Param {
         id: dummy_id(),
+        is_dashed: unregistered.is_dashed,
         name,
         type_,
     })

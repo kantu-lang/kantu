@@ -126,12 +126,14 @@ mod unfinished {
     #[derive(Clone, Debug)]
     pub struct UnfinishedParams {
         pub first_token: Token,
+        pub maximum_dashed_params_allowed: usize,
+        pub pending_dash: Option<Token>,
         pub params: Vec<Param>,
     }
 
     #[derive(Clone, Debug)]
     pub enum UnfinishedParam {
-        Name(Token, Identifier),
+        Name(Token, bool, Identifier),
     }
 
     #[derive(Clone, Debug)]
@@ -366,6 +368,8 @@ mod accept {
                         TokenKind::LParen => {
                             AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                                 first_token: token,
+                                maximum_dashed_params_allowed: 0,
+                                pending_dash: None,
                                 params: vec![],
                             }))
                         }
@@ -504,6 +508,15 @@ mod accept {
         fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
             match item {
                 FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Dash => {
+                        if self.maximum_dashed_params_allowed == 0 || self.pending_dash.is_some() {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        } else {
+                            self.maximum_dashed_params_allowed -= 1;
+                            self.pending_dash = Some(token);
+                            AcceptResult::ContinueToNextToken
+                        }
+                    }
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             start: TextPosition {
@@ -512,12 +525,14 @@ mod accept {
                             },
                             name: IdentifierName::Standard(token.content.clone()),
                         };
+                        let is_dashed = self.pending_dash.is_some();
+                        self.pending_dash = None;
                         AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
-                            token, name,
+                            token, is_dashed, name,
                         )))
                     }
                     TokenKind::RParen => {
-                        if self.params.is_empty() {
+                        if self.params.is_empty() || self.pending_dash.is_some() {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         } else {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
@@ -551,7 +566,7 @@ mod accept {
     impl Accept for UnfinishedParam {
         fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match self {
-                UnfinishedParam::Name(first_token, name) => match item {
+                UnfinishedParam::Name(first_token, is_dashed, name) => match item {
                     FinishedStackItem::Token(token) => match token.kind {
                         TokenKind::Colon => {
                             AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -566,6 +581,7 @@ mod accept {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
                             first_token.clone(),
                             Param {
+                                is_dashed: *is_dashed,
                                 name: name.clone(),
                                 type_: expression,
                             },
@@ -605,6 +621,8 @@ mod accept {
                         TokenKind::LParen => {
                             AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                                 first_token: token.clone(),
+                                maximum_dashed_params_allowed: 0,
+                                pending_dash: None,
                                 params: vec![],
                             }))
                         }
@@ -818,6 +836,8 @@ mod accept {
                         TokenKind::LParen => {
                             AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                                 first_token: token.clone(),
+                                maximum_dashed_params_allowed: 1,
+                                pending_dash: None,
                                 params: vec![],
                             }))
                         }
@@ -955,6 +975,8 @@ mod accept {
                         TokenKind::LParen => {
                             AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                                 first_token: token.clone(),
+                                maximum_dashed_params_allowed: 0,
+                                pending_dash: None,
                                 params: vec![],
                             }))
                         }
@@ -1103,7 +1125,7 @@ mod accept {
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        TokenKind::Arrow => {
+                        TokenKind::FatArrow => {
                             *self = UnfinishedMatchCase::AwaitingOutput(
                                 dot_token.clone(),
                                 constructor_name.clone(),
@@ -1171,7 +1193,7 @@ mod accept {
                 UnfinishedMatchCase::AwaitingOutput(dot_token, constructor_name, params) => {
                     match item {
                         FinishedStackItem::Token(token) => match token.kind {
-                            TokenKind::Arrow => AcceptResult::Push(
+                            TokenKind::FatArrow => AcceptResult::Push(
                                 UnfinishedStackItem::UnfinishedDelimitedExpression(
                                     UnfinishedDelimitedExpression::Empty,
                                 ),

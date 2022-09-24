@@ -23,7 +23,8 @@ pub enum TokenKind {
     Dot,
     At,
     Equal,
-    Arrow,
+    Dash,
+    FatArrow,
 
     TypeLowerCase,
     TypeTitleCase,

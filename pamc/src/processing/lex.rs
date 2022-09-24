@@ -34,7 +34,8 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             | TokenKind::Comma
             | TokenKind::Dot
             | TokenKind::At
-            | TokenKind::Arrow
+            | TokenKind::Dash
+            | TokenKind::FatArrow
             | TokenKind::TypeLowerCase
             | TokenKind::TypeTitleCase
             | TokenKind::Let
@@ -117,13 +118,6 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     kind: TokenKind::RCurly,
                 });
                 None
-            } else if c == '@' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::At,
-                });
-                None
             } else if c == ';' {
                 state.tokens.push(Token {
                     start_index: i,
@@ -152,11 +146,25 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     kind: TokenKind::Dot,
                 });
                 None
+            } else if c == '@' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::At,
+                });
+                None
             } else if c == '=' {
                 state.pending_token = Some(Token {
                     start_index: i,
                     content: c.into(),
                     kind: TokenKind::Equal,
+                });
+                None
+            } else if c == '-' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Dash,
                 });
                 None
             } else if c.is_ascii_digit() {
@@ -187,7 +195,8 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             | TokenKind::Comma
             | TokenKind::Dot
             | TokenKind::At
-            | TokenKind::Arrow
+            | TokenKind::Dash
+            | TokenKind::FatArrow
             | TokenKind::TypeLowerCase
             | TokenKind::TypeTitleCase
             | TokenKind::Let
@@ -202,7 +211,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     state.tokens.push(Token {
                         start_index: pending_token.start_index,
                         content: "=>".into(),
-                        kind: TokenKind::Arrow,
+                        kind: TokenKind::FatArrow,
                     });
                     state.pending_token = None;
                     None

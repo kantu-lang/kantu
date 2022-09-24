@@ -24,6 +24,7 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
     pub id: NodeId<Self>,
+    pub is_dashed: bool,
     pub name: Identifier,
     pub type_: WrappedExpression,
 }

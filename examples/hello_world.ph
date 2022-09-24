@@ -8,14 +8,14 @@ type List(T: Type) {
     .Cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
-let plus = fun plus(a: Nat, b: Nat): Nat {
+let plus = fun plus(-a: Nat, b: Nat): Nat {
     match a {
         .O => b,
         .S(a_pred) => Nat.S(plus(a_pred, b)),
     }
 };
 
-let mult = fun mult(a: Nat, b: Nat): Nat {
+let mult = fun mult(-a: Nat, b: Nat): Nat {
     match a {
         .O => Nat.O,
         .S(a_pred) => plus(b, mult(a_pred, b)),
@@ -24,7 +24,7 @@ let mult = fun mult(a: Nat, b: Nat): Nat {
 
 let square = fun square(a: Nat): Nat { mult(a, a) };
 
-let map = fun map(T: Type, U: Type, l: List(T), f: forall(v: T) { U }): List(U) {
+let map = fun map(T: Type, U: Type, -l: List(T), f: forall(v: T) { U }): List(U) {
     match l {
         .Nil(_T) => List.Nil(U),
         .Cons(_T, car, cdr) => List.Cons(U, f(car), map(T, U, cdr, f)),
@@ -41,7 +41,7 @@ type Eq(T: Type, x: T, y: T) {
     .Refl(T: Type, z: T): Eq(T, z, z),
 }
 
-let plus_S = fun plus_S_(a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
+let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
     match a {
         .O => Eq.Refl(Nat.S(b)),
         .S(a') =>
@@ -51,7 +51,7 @@ let plus_S = fun plus_S_(a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat
     }
 };
 
-let plus_O = fun plus_O_(n: Nat): Eq(plus(n, Nat.O), n) {
+let plus_O = fun plus_O_(-n: Nat): Eq(plus(n, Nat.O), n) {
     match n {
         .O => Eq.Refl(Nat.O),
         .S(n') =>
@@ -61,7 +61,7 @@ let plus_O = fun plus_O_(n: Nat): Eq(plus(n, Nat.O), n) {
     }
 };
 
-let plus_comm = fun plus_comm_(a: Nat, b: Nat): Eq(plus(a, b), plus(b, a)) {
+let plus_comm = fun plus_comm_(-a: Nat, b: Nat): Eq(plus(a, b), plus(b, a)) {
     match a {
         .O =>
             match b {
