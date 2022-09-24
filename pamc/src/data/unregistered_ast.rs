@@ -84,7 +84,7 @@ pub struct Fun {
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
-    pub return_value: Expression,
+    pub body: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

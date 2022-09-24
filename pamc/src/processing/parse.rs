@@ -892,7 +892,7 @@ mod accept {
                                         name: name.clone(),
                                         params: params.clone(),
                                         return_type: return_type.clone(),
-                                        return_value: expression,
+                                        body: expression,
                                     })),
                                 ),
                             ),

@@ -210,14 +210,14 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: ur::Fun) -> NodeI
         .collect();
     let return_type_id = register_expression(registry, unregistered.return_type);
     let return_type = registry.wrapped_expression(return_type_id).clone();
-    let return_value_id = register_expression(registry, unregistered.return_value);
-    let return_value = registry.wrapped_expression(return_value_id).clone();
+    let body_id = register_expression(registry, unregistered.body);
+    let body = registry.wrapped_expression(body_id).clone();
     registry.add_fun_and_overwrite_its_id(Fun {
         id: dummy_id(),
         name,
         params,
         return_type,
-        return_value,
+        body,
     })
 }
 

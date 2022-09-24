@@ -92,7 +92,7 @@ pub struct Fun {
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: WrappedExpression,
-    pub return_value: WrappedExpression,
+    pub body: WrappedExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

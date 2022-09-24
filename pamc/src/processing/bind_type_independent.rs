@@ -113,23 +113,21 @@ fn bind_type_statement(
     bind_state: &mut BindState,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
-    let name_symbol = define_symbol_in_context_and_bind_to_identifier(
-        bind_state,
-        &type_statement.name,
-        SymbolSource::Type(type_statement.id),
-    )?;
-
     bind_state.context.push_scope();
     for param in &type_statement.params {
         bind_param(bind_state, param)?;
     }
     bind_state.context.pop_scope();
 
-    bind_state.context.push_scope();
+    let name_symbol = define_symbol_in_context_and_bind_to_identifier(
+        bind_state,
+        &type_statement.name,
+        SymbolSource::Type(type_statement.id),
+    )?;
+
     for constructor in &type_statement.constructors {
         bind_constructor(bind_state, constructor, name_symbol)?;
     }
-    bind_state.context.pop_scope();
 
     Ok(())
 }
@@ -232,16 +230,16 @@ fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
 
 fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
     bind_state.context.push_scope();
+    for param in &fun.params {
+        bind_param(bind_state, param)?;
+    }
+    bind_expression(bind_state, &fun.return_type)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
         &fun.name,
         SymbolSource::Fun(fun.id),
     )?;
-    for param in &fun.params {
-        bind_param(bind_state, param)?;
-    }
-    bind_expression(bind_state, &fun.return_type)?;
-    bind_expression(bind_state, &fun.return_value)?;
+    bind_expression(bind_state, &fun.body)?;
     bind_state.context.pop_scope();
     Ok(())
 }
