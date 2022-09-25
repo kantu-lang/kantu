@@ -3,3 +3,4 @@ pub mod lex;
 pub mod parse;
 pub mod register;
 pub mod type_check;
+pub mod validate_fun_recursion;

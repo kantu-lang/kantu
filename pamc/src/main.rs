@@ -92,16 +92,29 @@ fn main() {
                             );
                             print_separator();
 
-                            let type_check_result = pamc::processing::type_check::type_check_file(
-                                &registry, &symbol_db, file,
+                            let rec_validation_result = pamc::processing::validate_fun_recursion::validate_fun_recursion_in_file(
+                                &symbol_db,
+                                file,
                             );
-                            match type_check_result {
-                                Ok(type_map) => {
-                                    println!("Type check success!");
-                                    println!("{:#?}", type_map);
+                            match rec_validation_result {
+                                Ok(()) => {
+                                    println!("Recursion validation success!");
+                                    let type_check_result =
+                                        pamc::processing::type_check::type_check_file(
+                                            &registry, &symbol_db, file,
+                                        );
+                                    match type_check_result {
+                                        Ok(type_map) => {
+                                            println!("Type check success!");
+                                            println!("{:#?}", type_map);
+                                        }
+                                        Err(err) => {
+                                            println!("Type check error: {:#?}", err);
+                                        }
+                                    }
                                 }
                                 Err(err) => {
-                                    println!("Type check error: {:#?}", err);
+                                    println!("Recursion validation error: {:#?}", err);
                                 }
                             }
                         }
