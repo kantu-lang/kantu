@@ -41,4 +41,11 @@ let fun3 = fun x(a: U, b: U): U { U.U };
 let fun4 = fun x(a: U, b: U,): U { U.U };
 
 let call1 = fun1(U.U);
-let call2 = fun1(U.U,);
+let call2 = fun2(U.U,);
+let call3 = fun3(U.U, U.U);
+let call4 = fun4(U.U, U.U,);
+
+let forall1 = forall(a: U) { U };
+let forall2 = forall(a: U,) { U };
+let forall3 = forall(a: U, b: U) { U };
+let forall4 = forall(a: U, b: U,) { U };

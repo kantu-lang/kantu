@@ -1053,13 +1053,13 @@ mod accept {
     impl Accept for UnfinishedCall {
         fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
             match item {
-                FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
+                FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     self.args.push(expression);
                     match end_delimiter.0.kind {
                         TokenKind::Comma => AcceptResult::ContinueToNextToken,
                         TokenKind::RParen => AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
-                                first_token,
+                                self.first_token.clone(),
                                 Expression::Call(Box::new(Call {
                                     callee: self.callee.clone(),
                                     args: self.args.clone(),
@@ -1082,6 +1082,15 @@ mod accept {
                             UnfinishedDelimitedExpression::Empty,
                         ),
                         FinishedStackItem::Token(token),
+                    ),
+                    TokenKind::RParen => AcceptResult::PopAndContinueReducing(
+                        FinishedStackItem::UndelimitedExpression(
+                            self.first_token.clone(),
+                            Expression::Call(Box::new(Call {
+                                callee: self.callee.clone(),
+                                args: self.args.clone(),
+                            })),
+                        ),
                     ),
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
