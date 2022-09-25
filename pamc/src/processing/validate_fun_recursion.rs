@@ -2,9 +2,16 @@ use crate::data::{node_registry::NodeId, registered_ast::*, symbol_database::Sym
 
 #[derive(Clone, Debug)]
 pub enum IllegalFunRecursionError {
-    RecursiveReferenceWasNotDirectCall(NodeId<Identifier>),
-    NonSubstructPassedToDecreasingParam(NodeId<Identifier>, NodeId<WrappedExpression>),
-    CannotRecursivelyCallFunctionWithoutDecreasingParam(NodeId<Identifier>),
+    RecursiveReferenceWasNotDirectCall {
+        reference: NodeId<Identifier>,
+    },
+    NonSubstructPassedToDecreasingParam {
+        callee: NodeId<Identifier>,
+        arg: NodeId<WrappedExpression>,
+    },
+    CannotRecursivelyCallFunctionWithoutDecreasingParam {
+        reference: NodeId<Identifier>,
+    },
 }
 
 pub fn validate_fun_recursion_in_file(
@@ -70,7 +77,9 @@ fn validate_fun_recursion_in_expression(
         Expression::Identifier(identifier) => {
             if state.reference_restriction(identifier.id).is_some() {
                 return Err(
-                    IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall(identifier.id),
+                    IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
+                        reference: identifier.id,
+                    },
                 );
             }
             Ok(())
@@ -89,10 +98,10 @@ fn validate_fun_recursion_in_expression(
                                 if *arg_position < call.args.len() {
                                     let expected_substruct = &call.args[*arg_position];
                                     let err = Err(
-                                        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam(
-                                            callee_identifier.id,
-                                            expected_substruct.id,
-                                        ),
+                                        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
+                                          callee: callee_identifier.id,
+                                          arg: expected_substruct.id,
+                                        },
                                     );
                                     match &expected_substruct.expression {
                                         Expression::Identifier(expected_substruct_identifier) => {
@@ -107,9 +116,9 @@ fn validate_fun_recursion_in_expression(
                                     }
                                 }
                             }
-                            ReferenceRestriction::CannotCall {..}=> return Err(IllegalFunRecursionError::CannotRecursivelyCallFunctionWithoutDecreasingParam(
-                                callee_identifier.id,
-                            )),
+                            ReferenceRestriction::CannotCall {..}=> return Err(IllegalFunRecursionError::CannotRecursivelyCallFunctionWithoutDecreasingParam {
+                                reference: callee_identifier.id,
+                            }),
                         }
                         true
                     } else {
