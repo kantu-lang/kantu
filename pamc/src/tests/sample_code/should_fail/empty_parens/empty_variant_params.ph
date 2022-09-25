@@ -1,0 +1,3 @@
+type Foo {
+    .F(): Foo,
+}

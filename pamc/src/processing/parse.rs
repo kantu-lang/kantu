@@ -1184,12 +1184,16 @@ mod accept {
                             }
                         }
                         TokenKind::RParen => {
-                            *self = UnfinishedMatchCase::AwaitingOutput(
-                                dot_token.clone(),
-                                variant_name.clone(),
-                                params.clone(),
-                            );
-                            AcceptResult::ContinueToNextToken
+                            if params.len() == 0 {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            } else {
+                                *self = UnfinishedMatchCase::AwaitingOutput(
+                                    dot_token.clone(),
+                                    variant_name.clone(),
+                                    params.clone(),
+                                );
+                                AcceptResult::ContinueToNextToken
+                            }
                         }
                         _other_token_kind => {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
