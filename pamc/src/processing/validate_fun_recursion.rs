@@ -1,8 +1,4 @@
-use crate::data::{
-    node_registry::NodeId,
-    registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase},
-};
+use crate::data::{node_registry::NodeId, registered_ast::*, symbol_database::SymbolDatabase};
 
 #[derive(Clone, Debug)]
 pub enum IllegalFunRecursionError {
@@ -52,7 +48,7 @@ fn validate_fun_recursion_in_param(
     symbol_db: &SymbolDatabase,
     param: &Param,
 ) -> Result<(), IllegalFunRecursionError> {
-    let mut state = ValidateFunRecursionState::new(symbol_db);
+    let mut state = ValidationState::new(symbol_db);
     validate_fun_recursion_in_expression(&mut state, &param.type_)?;
     Ok(())
 }
@@ -61,13 +57,13 @@ fn validate_fun_recursion_in_let_statement(
     symbol_db: &SymbolDatabase,
     let_statement: &LetStatement,
 ) -> Result<(), IllegalFunRecursionError> {
-    let mut state = ValidateFunRecursionState::new(symbol_db);
+    let mut state = ValidationState::new(symbol_db);
     validate_fun_recursion_in_expression(&mut state, &let_statement.value)?;
     Ok(())
 }
 
 fn validate_fun_recursion_in_expression(
-    state: &mut ValidateFunRecursionState,
+    state: &mut ValidationState,
     expression: &WrappedExpression,
 ) -> Result<(), IllegalFunRecursionError> {
     match &expression.expression {
@@ -195,6 +191,7 @@ fn validate_fun_recursion_in_expression(
 use state::*;
 mod state {
     use super::*;
+    use crate::data::symbol_database::Symbol;
 
     #[derive(Clone, Debug, PartialEq, Eq)]
     pub enum ReferenceRestriction {
@@ -209,22 +206,25 @@ mod state {
         },
     }
 
+    // The "real" logic is all implemented in `SymbolicState`--this
+    // is just a thin wrapper that converts identifier node IDs to
+    // symbols, so the consumer won't have to deal with symbols.
     #[derive(Clone, Debug)]
-    pub struct ValidateFunRecursionState<'a> {
+    pub struct ValidationState<'a> {
         symbol_db: &'a SymbolDatabase,
         internal: SymbolicState,
     }
 
-    impl ValidateFunRecursionState<'_> {
-        pub fn new(symbol_db: &SymbolDatabase) -> ValidateFunRecursionState {
-            ValidateFunRecursionState {
+    impl ValidationState<'_> {
+        pub fn new(symbol_db: &SymbolDatabase) -> ValidationState {
+            ValidationState {
                 symbol_db,
                 internal: SymbolicState::empty(),
             }
         }
     }
 
-    impl ValidateFunRecursionState<'_> {
+    impl ValidationState<'_> {
         pub fn reference_restriction(
             &self,
             referent: NodeId<Identifier>,
@@ -255,7 +255,41 @@ mod state {
         pub fn pop_reference_restriction(&mut self) {
             self.internal.pop_reference_restriction()
         }
+    }
 
+    impl ValidationState<'_> {
+        pub fn create_must_call_with_substruct_restriction(
+            &self,
+            fun_name: NodeId<Identifier>,
+            param_position: usize,
+            param_name: NodeId<Identifier>,
+        ) -> ReferenceRestriction {
+            let fun_symbol = self.symbol_db.identifier_symbols.get(fun_name);
+            let param_symbol = self.symbol_db.identifier_symbols.get(param_name);
+            ReferenceRestriction::MustCallWithSubstruct {
+                restricted_referent: fun_symbol,
+                arg_position: param_position,
+                superstruct: param_symbol,
+                substructs: vec![],
+            }
+        }
+
+        pub fn create_cannot_call_restriction(
+            &self,
+            fun_name: NodeId<Identifier>,
+        ) -> ReferenceRestriction {
+            let fun_symbol = self.symbol_db.identifier_symbols.get(fun_name);
+            ReferenceRestriction::CannotCall {
+                restricted_referent: fun_symbol,
+            }
+        }
+    }
+
+    pub trait Push<T> {
+        fn push(&mut self, value: T);
+    }
+
+    impl ValidationState<'_> {
         pub fn matchee_substructs_mut(
             &mut self,
             matchee: NodeId<Identifier>,
@@ -284,128 +318,102 @@ mod state {
         }
     }
 
-    pub trait Push<T> {
-        fn push(&mut self, value: T);
-    }
+    // This is where the "real" logic is implemented.
+    use symbolic_state::*;
+    mod symbolic_state {
+        use super::*;
 
-    impl ValidateFunRecursionState<'_> {
-        pub fn create_must_call_with_substruct_restriction(
-            &self,
-            fun_name: NodeId<Identifier>,
-            param_position: usize,
-            param_name: NodeId<Identifier>,
-        ) -> ReferenceRestriction {
-            let fun_symbol = self.symbol_db.identifier_symbols.get(fun_name);
-            let param_symbol = self.symbol_db.identifier_symbols.get(param_name);
-            ReferenceRestriction::MustCallWithSubstruct {
-                restricted_referent: fun_symbol,
-                arg_position: param_position,
-                superstruct: param_symbol,
-                substructs: vec![],
-            }
+        #[derive(Clone, Debug)]
+        pub struct SymbolicState {
+            restrictions: Vec<ReferenceRestriction>,
         }
 
-        pub fn create_cannot_call_restriction(
-            &self,
-            fun_name: NodeId<Identifier>,
-        ) -> ReferenceRestriction {
-            let fun_symbol = self.symbol_db.identifier_symbols.get(fun_name);
-            ReferenceRestriction::CannotCall {
-                restricted_referent: fun_symbol,
-            }
-        }
-    }
-
-    #[derive(Clone, Debug)]
-    struct SymbolicState {
-        restrictions: Vec<ReferenceRestriction>,
-    }
-
-    impl SymbolicState {
-        fn empty() -> Self {
-            Self {
-                restrictions: Vec::new(),
-            }
-        }
-    }
-
-    impl SymbolicState {
-        pub fn reference_restriction(&self, referent: Symbol) -> Option<&ReferenceRestriction> {
-            for restriction in self.restrictions.iter().rev() {
-                if restriction.restricted_referent() == referent {
-                    return Some(restriction);
+        impl SymbolicState {
+            pub fn empty() -> Self {
+                Self {
+                    restrictions: Vec::new(),
                 }
             }
-            None
         }
 
-        /// Panics if `possible_superstruct` is not a superstruct of any
-        /// reference restriction.
-        pub fn is_substruct_of_restricted_superstruct(
-            &self,
-            possible_substruct: Symbol,
-            possible_superstruct: Symbol,
-        ) -> bool {
-            for restriction in self.restrictions.iter().rev() {
-                match restriction {
-                    ReferenceRestriction::MustCallWithSubstruct {
-                        superstruct,
-                        substructs,
-                        ..
-                    } => {
-                        if *superstruct == possible_superstruct {
-                            return substructs.contains(&possible_substruct);
-                        }
+        impl SymbolicState {
+            pub fn reference_restriction(&self, referent: Symbol) -> Option<&ReferenceRestriction> {
+                for restriction in self.restrictions.iter().rev() {
+                    if restriction.restricted_referent() == referent {
+                        return Some(restriction);
                     }
-                    ReferenceRestriction::CannotCall { .. } => {}
                 }
+                None
             }
 
-            panic!(
-                "No superstruct restriction found for {:?}",
-                possible_superstruct
-            );
-        }
-
-        pub fn push_reference_restriction(&mut self, restriction: ReferenceRestriction) {
-            self.restrictions.push(restriction);
-        }
-
-        pub fn pop_reference_restriction(&mut self) {
-            self.restrictions
-                .pop()
-                .expect("Error: Tried to pop an empty reference restriction stack.");
-        }
-
-        pub fn matchee_substructs_mut(&mut self, matchee: Symbol) -> Option<&mut Vec<Symbol>> {
-            for restriction in self.restrictions.iter_mut().rev() {
-                match restriction {
-                    ReferenceRestriction::MustCallWithSubstruct {
-                        superstruct,
-                        substructs,
-                        ..
-                    } => {
-                        if *superstruct == matchee || substructs.contains(&matchee) {
-                            return Some(substructs);
+            /// Panics if `possible_superstruct` is not a superstruct of any
+            /// reference restriction.
+            pub fn is_substruct_of_restricted_superstruct(
+                &self,
+                possible_substruct: Symbol,
+                possible_superstruct: Symbol,
+            ) -> bool {
+                for restriction in self.restrictions.iter().rev() {
+                    match restriction {
+                        ReferenceRestriction::MustCallWithSubstruct {
+                            superstruct,
+                            substructs,
+                            ..
+                        } => {
+                            if *superstruct == possible_superstruct {
+                                return substructs.contains(&possible_substruct);
+                            }
                         }
+                        ReferenceRestriction::CannotCall { .. } => {}
                     }
-                    ReferenceRestriction::CannotCall { .. } => {}
                 }
-            }
-            None
-        }
-    }
 
-    impl ReferenceRestriction {
-        fn restricted_referent(&self) -> Symbol {
-            match self {
-                ReferenceRestriction::MustCallWithSubstruct {
-                    restricted_referent,
-                    ..
-                } => *restricted_referent,
-                ReferenceRestriction::CannotCall {
-                    restricted_referent,
-                } => *restricted_referent,
+                panic!(
+                    "No superstruct restriction found for {:?}",
+                    possible_superstruct
+                );
+            }
+
+            pub fn push_reference_restriction(&mut self, restriction: ReferenceRestriction) {
+                self.restrictions.push(restriction);
+            }
+
+            pub fn pop_reference_restriction(&mut self) {
+                self.restrictions
+                    .pop()
+                    .expect("Error: Tried to pop an empty reference restriction stack.");
+            }
+
+            pub fn matchee_substructs_mut(&mut self, matchee: Symbol) -> Option<&mut Vec<Symbol>> {
+                for restriction in self.restrictions.iter_mut().rev() {
+                    match restriction {
+                        ReferenceRestriction::MustCallWithSubstruct {
+                            superstruct,
+                            substructs,
+                            ..
+                        } => {
+                            if *superstruct == matchee || substructs.contains(&matchee) {
+                                return Some(substructs);
+                            }
+                        }
+                        ReferenceRestriction::CannotCall { .. } => {}
+                    }
+                }
+                None
+            }
+        }
+
+        impl ReferenceRestriction {
+            fn restricted_referent(&self) -> Symbol {
+                match self {
+                    ReferenceRestriction::MustCallWithSubstruct {
+                        restricted_referent,
+                        ..
+                    } => *restricted_referent,
+                    ReferenceRestriction::CannotCall {
+                        restricted_referent,
+                    } => *restricted_referent,
+                }
             }
         }
     }
