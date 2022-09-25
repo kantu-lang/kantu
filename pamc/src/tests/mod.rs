@@ -8,8 +8,12 @@ use crate::{
 
 #[test]
 fn hello_world() {
-    let file_id = FileId(0);
     let src = include_str!("sample_code/hello_world.ph");
+    expect_success(src);
+}
+
+fn expect_success(src: &str) {
+    let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let mut registry = NodeRegistry::empty();
