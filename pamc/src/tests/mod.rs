@@ -11,7 +11,7 @@ mod should_succeed {
 
     #[test]
     fn hello_world() {
-        let src = include_str!("sample_code/hello_world.ph");
+        let src = include_str!("sample_code/should_succeed/hello_world.ph");
         expect_success(src);
     }
 
