@@ -127,7 +127,7 @@ mod should_fail {
 
     #[test]
     fn rec_fun_same_param() {
-        let src = include_str!("sample_code/should_fail/rec_fun_same_param.ph");
+        let src = include_str!("sample_code/should_fail/illegal_recursion/rec_fun_same_param.ph");
         let file_id = FileId(0);
         let tokens = lex(src).expect("Lexing failed");
         let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -162,7 +162,8 @@ mod should_fail {
 
     #[test]
     fn rec_fun_non_substruct() {
-        let src = include_str!("sample_code/should_fail/rec_fun_non_substruct.ph");
+        let src =
+            include_str!("sample_code/should_fail/illegal_recursion/rec_fun_non_substruct.ph");
         let file_id = FileId(0);
         let tokens = lex(src).expect("Lexing failed");
         let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -197,7 +198,7 @@ mod should_fail {
 
     #[test]
     fn rec_fun_non_ident() {
-        let src = include_str!("sample_code/should_fail/rec_fun_non_ident.ph");
+        let src = include_str!("sample_code/should_fail/illegal_recursion/rec_fun_non_ident.ph");
         let file_id = FileId(0);
         let tokens = lex(src).expect("Lexing failed");
         let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -232,7 +233,9 @@ mod should_fail {
 
     #[test]
     fn rec_fun_no_decreasing_param() {
-        let src = include_str!("sample_code/should_fail/rec_fun_no_decreasing_param.ph");
+        let src = include_str!(
+            "sample_code/should_fail/illegal_recursion/rec_fun_no_decreasing_param.ph"
+        );
         let file_id = FileId(0);
         let tokens = lex(src).expect("Lexing failed");
         let file = parse_file(tokens, file_id).expect("Parsing failed");
