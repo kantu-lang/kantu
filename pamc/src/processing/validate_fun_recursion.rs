@@ -1,4 +1,8 @@
-use crate::data::{node_registry::NodeId, registered_ast::*, symbol_database::SymbolDatabase};
+use crate::data::{
+    node_registry::NodeId,
+    registered_ast::*,
+    symbol_database::{Symbol, SymbolDatabase},
+};
 
 #[derive(Clone, Debug)]
 pub enum IllegalFunRecursionError {
@@ -141,17 +145,13 @@ fn validate_fun_recursion_in_expression(
             let decreasing_param_position_and_decreasing_param =
                 fun.params.iter().enumerate().find(|(_i, p)| p.is_dashed);
             let reference_restriction = match decreasing_param_position_and_decreasing_param {
-                Some((param_position, decreasing_param)) => {
-                    ReferenceRestriction::MustCallWithSubstruct {
-                        restricted_referent: fun.name.id,
-                        arg_position: param_position,
-                        superstruct: decreasing_param.name.id,
-                        substructs: vec![],
-                    }
-                }
-                None => ReferenceRestriction::CannotCall {
-                    restricted_referent: fun.name.id,
-                },
+                Some((param_position, decreasing_param)) => state
+                    .create_must_call_with_substruct_restriction(
+                        fun.name.id,
+                        param_position,
+                        decreasing_param.name.id,
+                    ),
+                None => state.create_cannot_call_restriction(fun.name.id),
             };
 
             state.push_reference_restriction(reference_restriction);
@@ -164,7 +164,9 @@ fn validate_fun_recursion_in_expression(
             validate_fun_recursion_in_expression(state, &match_.matchee)?;
             match &match_.matchee.expression {
                 Expression::Identifier(matchee_identifier) => {
-                    if let Some(substructs) = state.matchee_substructs_mut(matchee_identifier.id) {
+                    if let Some(mut substructs) =
+                        state.matchee_substructs_mut(matchee_identifier.id)
+                    {
                         for case in &match_.cases {
                             for case_param in &case.params {
                                 substructs.push(case_param.id);
@@ -194,17 +196,30 @@ use state::*;
 mod state {
     use super::*;
 
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub enum ReferenceRestriction {
+        MustCallWithSubstruct {
+            restricted_referent: Symbol,
+            superstruct: Symbol,
+            arg_position: usize,
+            substructs: Vec<Symbol>,
+        },
+        CannotCall {
+            restricted_referent: Symbol,
+        },
+    }
+
     #[derive(Clone, Debug)]
     pub struct ValidateFunRecursionState<'a> {
         symbol_db: &'a SymbolDatabase,
-        restrictions: Vec<ReferenceRestriction>,
+        internal: SymbolicState,
     }
 
     impl ValidateFunRecursionState<'_> {
         pub fn new(symbol_db: &SymbolDatabase) -> ValidateFunRecursionState {
             ValidateFunRecursionState {
                 symbol_db,
-                restrictions: vec![],
+                internal: SymbolicState::empty(),
             }
         }
     }
@@ -214,13 +229,110 @@ mod state {
             &self,
             referent: NodeId<Identifier>,
         ) -> Option<&ReferenceRestriction> {
-            let target_symbol = self.symbol_db.identifier_symbols.get(referent);
+            let referent_symbol = self.symbol_db.identifier_symbols.get(referent);
+            self.internal.reference_restriction(referent_symbol)
+        }
+
+        /// Panics if `possible_superstruct` is not a superstruct of any
+        /// reference restriction.
+        pub fn is_substruct_of_restricted_superstruct(
+            &self,
+            possible_substruct: NodeId<Identifier>,
+            possible_superstruct: Symbol,
+        ) -> bool {
+            let possible_substruct_symbol =
+                self.symbol_db.identifier_symbols.get(possible_substruct);
+            self.internal.is_substruct_of_restricted_superstruct(
+                possible_substruct_symbol,
+                possible_superstruct,
+            )
+        }
+
+        pub fn push_reference_restriction(&mut self, restriction: ReferenceRestriction) {
+            self.internal.push_reference_restriction(restriction)
+        }
+
+        pub fn pop_reference_restriction(&mut self) {
+            self.internal.pop_reference_restriction()
+        }
+
+        pub fn matchee_substructs_mut(
+            &mut self,
+            matchee: NodeId<Identifier>,
+        ) -> Option<impl Push<NodeId<Identifier>> + '_> {
+            struct PushAndConvertToSymbol<'a> {
+                symbol_db: &'a SymbolDatabase,
+                symbols: &'a mut Vec<Symbol>,
+            }
+
+            impl Push<NodeId<Identifier>> for PushAndConvertToSymbol<'_> {
+                fn push(&mut self, item: NodeId<Identifier>) {
+                    self.symbols
+                        .push(self.symbol_db.identifier_symbols.get(item))
+                }
+            }
+
+            let matchee_symbol = self.symbol_db.identifier_symbols.get(matchee);
+            if let Some(substruct_symbols) = self.internal.matchee_substructs_mut(matchee_symbol) {
+                Some(PushAndConvertToSymbol {
+                    symbol_db: &self.symbol_db,
+                    symbols: substruct_symbols,
+                })
+            } else {
+                None
+            }
+        }
+    }
+
+    pub trait Push<T> {
+        fn push(&mut self, value: T);
+    }
+
+    impl ValidateFunRecursionState<'_> {
+        pub fn create_must_call_with_substruct_restriction(
+            &self,
+            fun_name: NodeId<Identifier>,
+            param_position: usize,
+            param_name: NodeId<Identifier>,
+        ) -> ReferenceRestriction {
+            let fun_symbol = self.symbol_db.identifier_symbols.get(fun_name);
+            let param_symbol = self.symbol_db.identifier_symbols.get(param_name);
+            ReferenceRestriction::MustCallWithSubstruct {
+                restricted_referent: fun_symbol,
+                arg_position: param_position,
+                superstruct: param_symbol,
+                substructs: vec![],
+            }
+        }
+
+        pub fn create_cannot_call_restriction(
+            &self,
+            fun_name: NodeId<Identifier>,
+        ) -> ReferenceRestriction {
+            let fun_symbol = self.symbol_db.identifier_symbols.get(fun_name);
+            ReferenceRestriction::CannotCall {
+                restricted_referent: fun_symbol,
+            }
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    struct SymbolicState {
+        restrictions: Vec<ReferenceRestriction>,
+    }
+
+    impl SymbolicState {
+        fn empty() -> Self {
+            Self {
+                restrictions: Vec::new(),
+            }
+        }
+    }
+
+    impl SymbolicState {
+        pub fn reference_restriction(&self, referent: Symbol) -> Option<&ReferenceRestriction> {
             for restriction in self.restrictions.iter().rev() {
-                let restricted_symbol = self
-                    .symbol_db
-                    .identifier_symbols
-                    .get(restriction.restricted_referent());
-                if restricted_symbol == target_symbol {
+                if restriction.restricted_referent() == referent {
                     return Some(restriction);
                 }
             }
@@ -231,13 +343,9 @@ mod state {
         /// reference restriction.
         pub fn is_substruct_of_restricted_superstruct(
             &self,
-            possible_substruct: NodeId<Identifier>,
-            possible_superstruct: NodeId<Identifier>,
+            possible_substruct: Symbol,
+            possible_superstruct: Symbol,
         ) -> bool {
-            let possible_substruct_symbol =
-                self.symbol_db.identifier_symbols.get(possible_substruct);
-            let possible_superstruct_symbol =
-                self.symbol_db.identifier_symbols.get(possible_superstruct);
             for restriction in self.restrictions.iter().rev() {
                 match restriction {
                     ReferenceRestriction::MustCallWithSubstruct {
@@ -245,14 +353,8 @@ mod state {
                         substructs,
                         ..
                     } => {
-                        let superstruct_symbol =
-                            self.symbol_db.identifier_symbols.get(*superstruct);
-                        if superstruct_symbol == possible_superstruct_symbol {
-                            return substructs.iter().any(|substruct| {
-                                let substruct_symbol =
-                                    self.symbol_db.identifier_symbols.get(*substruct);
-                                substruct_symbol == possible_substruct_symbol
-                            });
+                        if *superstruct == possible_superstruct {
+                            return substructs.contains(&possible_substruct);
                         }
                     }
                     ReferenceRestriction::CannotCall { .. } => {}
@@ -275,11 +377,7 @@ mod state {
                 .expect("Error: Tried to pop an empty reference restriction stack.");
         }
 
-        pub fn matchee_substructs_mut(
-            &mut self,
-            matchee: NodeId<Identifier>,
-        ) -> Option<&mut Vec<NodeId<Identifier>>> {
-            let matchee_symbol = self.symbol_db.identifier_symbols.get(matchee);
+        pub fn matchee_substructs_mut(&mut self, matchee: Symbol) -> Option<&mut Vec<Symbol>> {
             for restriction in self.restrictions.iter_mut().rev() {
                 match restriction {
                     ReferenceRestriction::MustCallWithSubstruct {
@@ -287,15 +385,7 @@ mod state {
                         substructs,
                         ..
                     } => {
-                        let superstruct_symbol =
-                            self.symbol_db.identifier_symbols.get(*superstruct);
-                        if superstruct_symbol == matchee_symbol
-                            || substructs.iter().any(|substruct| {
-                                let substruct_symbol =
-                                    self.symbol_db.identifier_symbols.get(*substruct);
-                                substruct_symbol == matchee_symbol
-                            })
-                        {
+                        if *superstruct == matchee || substructs.contains(&matchee) {
                             return Some(substructs);
                         }
                     }
@@ -306,21 +396,8 @@ mod state {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq)]
-    pub enum ReferenceRestriction {
-        MustCallWithSubstruct {
-            restricted_referent: NodeId<Identifier>,
-            superstruct: NodeId<Identifier>,
-            arg_position: usize,
-            substructs: Vec<NodeId<Identifier>>,
-        },
-        CannotCall {
-            restricted_referent: NodeId<Identifier>,
-        },
-    }
-
     impl ReferenceRestriction {
-        fn restricted_referent(&self) -> NodeId<Identifier> {
+        fn restricted_referent(&self) -> Symbol {
             match self {
                 ReferenceRestriction::MustCallWithSubstruct {
                     restricted_referent,
