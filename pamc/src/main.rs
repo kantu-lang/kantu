@@ -37,17 +37,6 @@ fn main() {
                     print_separator();
 
                     let mut registry = pamc::data::node_registry::NodeRegistry::empty();
-                    let type_title_case_id = registry.add_identifier_and_overwrite_its_id(
-                        pamc::data::registered_ast::Identifier {
-                            id: pamc::data::node_registry::NodeId::new(0),
-                            start: None,
-                            name: pamc::data::unregistered_ast::IdentifierName::Reserved(
-                                pamc::data::unregistered_ast::ReservedIdentifierName::TypeTitleCase,
-                            ),
-                        },
-                    );
-                    let type_title_case_identifier =
-                        registry.identifier(type_title_case_id).clone();
                     let file_node_id =
                         pamc::processing::register::register_file(&mut registry, file);
                     let file = registry.file(file_node_id);
@@ -57,10 +46,6 @@ fn main() {
                         pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
                             &registry,
                             vec![file_node_id],
-                            &[(
-                                type_title_case_identifier,
-                                pamc::data::symbol_database::SymbolSource::BuiltinTypeTitleCase,
-                            )],
                         );
                     match bind_result {
                         Ok(symbol_db) => {

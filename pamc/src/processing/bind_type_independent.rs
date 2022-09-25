@@ -31,8 +31,8 @@ impl From<CircularFileDependencyError> for BindError {
 
 #[derive(Clone, Debug)]
 pub struct NameClashError {
-    pub old: Identifier,
-    pub new: Identifier,
+    pub old: SymbolSource,
+    pub new: SymbolSource,
 }
 
 impl From<NameClashError> for BindError {
@@ -55,7 +55,6 @@ impl From<NameNotFoundError> for BindError {
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
-    builtin_identifiers: &[(Identifier, SymbolSource)],
 ) -> Result<SymbolDatabase, BindError> {
     let file_node_ids = sort_by_dependencies(registry, file_node_ids)?;
     let mut bind_state = BindState {
@@ -67,12 +66,8 @@ pub fn bind_symbols_to_identifiers(
 
     bind_state.context.push_scope();
 
-    for (identifier, symbol_source) in builtin_identifiers {
-        define_symbol_in_context_and_bind_to_identifier(
-            &mut bind_state,
-            identifier,
-            *symbol_source,
-        )?;
+    for (name, source) in builtin_identifiers() {
+        bind_state.context.add(&name, source)?;
     }
 
     for file_node_id in file_node_ids {
@@ -95,6 +90,13 @@ fn sort_by_dependencies(
 ) -> Result<Vec<NodeId<File>>, CircularFileDependencyError> {
     // TODO (distant): Actually sort, once we support `use` statements.
     Ok(file_node_ids)
+}
+
+fn builtin_identifiers() -> Vec<(IdentifierName, SymbolSource)> {
+    vec![(
+        IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
+        SymbolSource::BuiltinTypeTitleCase,
+    )]
 }
 
 fn bind_file(bind_state: &mut BindState, file: &File) -> Result<(), BindError> {
@@ -287,11 +289,11 @@ struct BindState {
 fn define_symbol_in_context_and_bind_to_identifier(
     bind_state: &mut BindState,
     identifier: &Identifier,
-    source: SymbolSource,
+    src: SymbolSource,
 ) -> Result<Symbol, BindError> {
-    let name_symbol = bind_state.context.add(identifier)?;
+    let name_symbol = bind_state.context.add(&identifier.name, src)?;
     bind_symbol_to_identifier(bind_state, name_symbol, identifier);
-    define_symbol_source(bind_state, name_symbol, source);
+    define_symbol_source(bind_state, name_symbol, src);
 
     Ok(name_symbol)
 }
@@ -338,7 +340,7 @@ mod context {
 
     #[derive(Clone, Debug)]
     pub struct Context {
-        scope_stack: Vec<FxHashMap<IdentifierName, (Identifier, Symbol)>>,
+        scope_stack: Vec<FxHashMap<IdentifierName, (SymbolSource, Symbol)>>,
         lowest_available_symbol: Symbol,
     }
 
@@ -352,22 +354,24 @@ mod context {
     }
 
     impl Context {
-        pub fn add(&mut self, identifier: &Identifier) -> Result<Symbol, NameClashError> {
-            let existing_symbol: Option<&(Identifier, Symbol)> = self
-                .scope_stack
-                .iter()
-                .find_map(|scope| scope.get(&identifier.name));
-            if let Some(existing_symbol) = existing_symbol {
+        pub fn add(
+            &mut self,
+            name: &IdentifierName,
+            src: SymbolSource,
+        ) -> Result<Symbol, NameClashError> {
+            let existing_symbol: Option<&(SymbolSource, Symbol)> =
+                self.scope_stack.iter().find_map(|scope| scope.get(&name));
+            if let Some((existing_symbol_src, _existing_symbol)) = existing_symbol {
                 return Err(NameClashError {
-                    old: existing_symbol.0.clone(),
-                    new: identifier.clone().into(),
+                    old: *existing_symbol_src,
+                    new: src,
                 });
             }
             let symbol = self.new_symbol();
             self.scope_stack
                 .last_mut()
                 .expect("Error: Context::add was called when the stack was empty.")
-                .insert(identifier.name.clone(), (identifier.clone(), symbol));
+                .insert(name.clone(), (src, symbol));
             Ok(symbol)
         }
 
@@ -378,7 +382,7 @@ mod context {
         }
 
         pub fn lookup(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {
-            let existing_symbol: Option<&(Identifier, Symbol)> = self
+            let existing_symbol: Option<&(SymbolSource, Symbol)> = self
                 .scope_stack
                 .iter()
                 .find_map(|scope| scope.get(&identifier.name));

@@ -72,6 +72,8 @@ pub struct Identifier {
 
 pub use crate::data::unregistered_ast::IdentifierName;
 
+pub use crate::data::unregistered_ast::ReservedIdentifierName;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId<Self>,
