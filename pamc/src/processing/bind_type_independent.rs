@@ -289,11 +289,11 @@ struct BindState {
 fn define_symbol_in_context_and_bind_to_identifier(
     bind_state: &mut BindState,
     identifier: &Identifier,
-    src: SymbolSource,
+    source: SymbolSource,
 ) -> Result<Symbol, BindError> {
-    let name_symbol = bind_state.context.add(&identifier.name, src)?;
+    let name_symbol = bind_state.context.add(&identifier.name, source)?;
     bind_symbol_to_identifier(bind_state, name_symbol, identifier);
-    define_symbol_source(bind_state, name_symbol, src);
+    define_symbol_source(bind_state, name_symbol, source);
 
     Ok(name_symbol)
 }
@@ -357,21 +357,21 @@ mod context {
         pub fn add(
             &mut self,
             name: &IdentifierName,
-            src: SymbolSource,
+            source: SymbolSource,
         ) -> Result<Symbol, NameClashError> {
             let existing_symbol: Option<&(SymbolSource, Symbol)> =
                 self.scope_stack.iter().find_map(|scope| scope.get(&name));
-            if let Some((existing_symbol_src, _existing_symbol)) = existing_symbol {
+            if let Some((existing_symbol_source, _existing_symbol)) = existing_symbol {
                 return Err(NameClashError {
-                    old: *existing_symbol_src,
-                    new: src,
+                    old: *existing_symbol_source,
+                    new: source,
                 });
             }
             let symbol = self.new_symbol();
             self.scope_stack
                 .last_mut()
                 .expect("Error: Context::add was called when the stack was empty.")
-                .insert(name.clone(), (src, symbol));
+                .insert(name.clone(), (source, symbol));
             Ok(symbol)
         }
 
