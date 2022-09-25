@@ -9,8 +9,8 @@ pub enum IllegalFunRecursionError {
         callee: NodeId<Identifier>,
         arg: NodeId<WrappedExpression>,
     },
-    CannotRecursivelyCallFunctionWithoutDecreasingParam {
-        reference: NodeId<Identifier>,
+    RecursivelyCalledFunctionWithoutDecreasingParam {
+        callee: NodeId<Identifier>,
     },
 }
 
@@ -116,8 +116,8 @@ fn validate_fun_recursion_in_expression(
                                     }
                                 }
                             }
-                            ReferenceRestriction::CannotCall {..}=> return Err(IllegalFunRecursionError::CannotRecursivelyCallFunctionWithoutDecreasingParam {
-                                reference: callee_identifier.id,
+                            ReferenceRestriction::CannotCall {..}=> return Err(IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
+                                callee: callee_identifier.id,
                             }),
                         }
                         true
