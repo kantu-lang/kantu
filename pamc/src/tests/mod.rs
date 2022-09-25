@@ -15,6 +15,12 @@ mod should_succeed {
         expect_success(src);
     }
 
+    #[test]
+    fn optional_commas() {
+        let src = include_str!("sample_code/should_succeed/optional_commas.ph");
+        expect_success(src);
+    }
+
     fn expect_success(src: &str) {
         let file_id = FileId(0);
         let tokens = lex(src).expect("Lexing failed");
