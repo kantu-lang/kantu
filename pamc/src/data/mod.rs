@@ -5,6 +5,7 @@ pub mod symbol_provider;
 pub mod token;
 pub mod type_map;
 pub mod unregistered_ast;
+pub mod variant_return_type;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileId(pub usize);
