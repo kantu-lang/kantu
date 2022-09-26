@@ -1,3 +1,7 @@
+mod empty_params;
+mod fun_recursion;
+mod scope;
+
 use crate::{
     data::{node_registry::NodeRegistry, symbol_provider::SymbolProvider, FileId},
     processing::{
@@ -14,10 +18,6 @@ use crate::{
     data::{registered_ast::*, token::TokenKind},
     processing::{parse::ParseError, validate_fun_recursion::IllegalFunRecursionError},
 };
-
-mod empty_params;
-mod fun_recursion;
-mod scope;
 
 fn standard_ident_name(name: &str) -> IdentifierName {
     IdentifierName::Standard(name.into())
