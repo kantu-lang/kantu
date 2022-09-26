@@ -1,7 +1,6 @@
 pub mod node_registry;
 pub mod registered_ast;
 pub mod symbol_database;
-pub mod symbol_provider;
 pub mod token;
 pub mod type_map;
 pub mod unregistered_ast;

@@ -5,9 +5,56 @@ pub struct Symbol(pub usize);
 
 #[derive(Clone, Debug)]
 pub struct SymbolDatabase {
+    pub provider: SymbolProvider,
     pub identifier_symbols: IdentifierToSymbolMap,
     pub symbol_dot_targets: SymbolToDotTargetsMap,
     pub symbol_sources: SymbolSourceMap,
+}
+
+pub use symbol_provider::*;
+mod symbol_provider {
+    use super::*;
+
+    #[derive(Clone, Debug)]
+    pub struct SymbolProvider {
+        type0_symbol: Symbol,
+        type1_symbol: Symbol,
+        lowest_available_symbol: Symbol,
+    }
+
+    impl SymbolProvider {
+        pub fn new() -> Self {
+            Self {
+                type0_symbol: Symbol(0),
+                type1_symbol: Symbol(1),
+                lowest_available_symbol: Symbol(2),
+            }
+        }
+    }
+
+    impl Default for SymbolProvider {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl SymbolProvider {
+        pub fn new_symbol(&mut self) -> Symbol {
+            let symbol = self.lowest_available_symbol;
+            self.lowest_available_symbol.0 += 1;
+            symbol
+        }
+    }
+
+    impl SymbolProvider {
+        pub fn type0(&self) -> Symbol {
+            self.type0_symbol
+        }
+
+        pub fn type1(&self) -> Symbol {
+            self.type1_symbol
+        }
+    }
 }
 
 pub use identifier_to_symbol_map::*;

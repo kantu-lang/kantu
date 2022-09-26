@@ -9,9 +9,7 @@ fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFun
     let mut registry = NodeRegistry::empty();
     let file_id = register_file(&mut registry, file);
     let file = registry.file(file_id);
-    let mut provider = SymbolProvider::new();
-    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
-        .expect("Binding failed");
+    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
     let _type_arg_map = extract_variant_type_args_for_file(&symbol_db, file);
     let err = validate_fun_recursion_in_file(&symbol_db, file)
         .expect_err("Fun recursion validation unexpectedly succeeded");

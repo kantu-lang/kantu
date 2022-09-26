@@ -9,9 +9,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(&Expression)) {
     let mut registry = NodeRegistry::empty();
     let file_id = register_file(&mut registry, file);
     let file = registry.file(file_id);
-    let mut provider = SymbolProvider::new();
-    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
-        .expect("Binding failed");
+    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
     let err = extract_variant_type_args_for_file(&symbol_db, file)
         .expect_err("Type arg extraction unexpectedly succeeded");
     let illegal_variant_return_type = &registry.wrapped_expression(err.0).expression;

@@ -6,8 +6,7 @@ fn expect_name_not_found_error(src: &str, expected_unfindable_name: &str) {
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let mut registry = NodeRegistry::empty();
     let file_id = register_file(&mut registry, file);
-    let mut provider = SymbolProvider::new();
-    let err = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
+    let err = bind_symbols_to_identifiers(&registry, vec![file_id])
         .expect_err("Binding unexpectedly succeeded");
     match err {
         BindError::NameNotFound(err) => {

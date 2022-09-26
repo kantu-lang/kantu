@@ -2,10 +2,9 @@ use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::{
-        IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource, SymbolSourceMap,
-        SymbolToDotTargetsMap,
+        IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolProvider, SymbolSource,
+        SymbolSourceMap, SymbolToDotTargetsMap,
     },
-    symbol_provider::SymbolProvider,
 };
 
 // TODO: Forbid fun return type from using the fun it declares.
@@ -56,14 +55,14 @@ impl From<NameNotFoundError> for BindError {
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
-    provider: &mut SymbolProvider,
 ) -> Result<SymbolDatabase, BindError> {
     let file_node_ids = sort_by_dependencies(registry, file_node_ids)?;
-    let builtin_identifiers = get_builtin_identifiers(provider);
+    let mut provider = SymbolProvider::new();
+    let builtin_identifiers = get_builtin_identifiers(&mut provider);
     let mut bind_state = BindState {
         identifier_symbols: IdentifierToSymbolMap::empty(),
         dot_targets: SymbolToDotTargetsMap::empty(),
-        context: Context::new(provider),
+        context: Context::new(&mut provider),
         symbol_sources: SymbolSourceMap::default(),
     };
 
@@ -86,6 +85,7 @@ pub fn bind_symbols_to_identifiers(
         identifier_symbols: bind_state.identifier_symbols,
         symbol_dot_targets: bind_state.dot_targets,
         symbol_sources: bind_state.symbol_sources,
+        provider,
     })
 }
 
@@ -103,7 +103,7 @@ fn get_builtin_identifiers(
     vec![(
         IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
         SymbolSource::BuiltinTypeTitleCase,
-        provider.type_title_case(),
+        provider.type0(),
     )]
 }
 

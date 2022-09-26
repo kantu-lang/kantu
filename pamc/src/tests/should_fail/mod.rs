@@ -4,7 +4,7 @@ mod scope;
 mod variant_return_type;
 
 use crate::{
-    data::{node_registry::NodeRegistry, symbol_provider::SymbolProvider, FileId},
+    data::{node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::{bind_symbols_to_identifiers, BindError},
         extract_variant_type_args::extract_variant_type_args_for_file,
