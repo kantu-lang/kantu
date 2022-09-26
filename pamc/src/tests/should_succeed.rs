@@ -1,12 +1,9 @@
 use crate::{
     data::{node_registry::NodeRegistry, symbol_provider::SymbolProvider, FileId},
     processing::{
-        bind_type_independent::{bind_symbols_to_identifiers, BindError},
-        extract_variant_type_args::extract_variant_type_args_for_file,
-        lex::lex,
-        parse::parse_file,
-        register::register_file,
-        validate_fun_recursion::validate_fun_recursion_in_file,
+        bind_type_independent::bind_symbols_to_identifiers,
+        extract_variant_type_args::extract_variant_type_args_for_file, lex::lex, parse::parse_file,
+        register::register_file, validate_fun_recursion::validate_fun_recursion_in_file,
     },
 };
 
