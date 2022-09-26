@@ -7,9 +7,7 @@ use crate::{
     data::{node_registry::NodeRegistry, symbol_provider::SymbolProvider, FileId},
     processing::{
         bind_type_independent::{bind_symbols_to_identifiers, BindError},
-        extract_variant_type_args::{
-            extract_variant_type_args_for_file, IllegalVariantReturnTypeError,
-        },
+        extract_variant_type_args::extract_variant_type_args_for_file,
         lex::lex,
         parse::parse_file,
         register::register_file,
