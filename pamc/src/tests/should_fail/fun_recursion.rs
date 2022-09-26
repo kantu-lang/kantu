@@ -1,8 +1,8 @@
 use super::*;
 
-#[test]
-fn rec_fun_same_param() {
-    let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_same_param.ph");
+/// The job of `panicker` is to panic if the error is different than the expected
+/// error.
+fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFunRecursionError)) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -14,7 +14,13 @@ fn rec_fun_same_param() {
         .expect("Binding failed");
     let err = validate_fun_recursion_in_file(&symbol_db, file)
         .expect_err("Fun recursion validation unexpectedly succeeded");
-    match err {
+    panicker(&registry, err);
+}
+
+#[test]
+fn rec_fun_same_param() {
+    let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_same_param.ph");
+    expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
             callee: callee_id,
             arg: arg_id,
@@ -33,24 +39,13 @@ fn rec_fun_same_param() {
             );
         }
         _ => panic!("Unexpected error: {:#?}", err),
-    }
+    });
 }
 
 #[test]
 fn rec_fun_non_substruct() {
     let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_non_substruct.ph");
-    let file_id = FileId(0);
-    let tokens = lex(src).expect("Lexing failed");
-    let file = parse_file(tokens, file_id).expect("Parsing failed");
-    let mut registry = NodeRegistry::empty();
-    let file_id = register_file(&mut registry, file);
-    let file = registry.file(file_id);
-    let mut provider = SymbolProvider::new();
-    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
-        .expect("Binding failed");
-    let err = validate_fun_recursion_in_file(&symbol_db, file)
-        .expect_err("Fun recursion validation unexpectedly succeeded");
-    match err {
+    expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
             callee: callee_id,
             arg: arg_id,
@@ -69,24 +64,13 @@ fn rec_fun_non_substruct() {
             );
         }
         _ => panic!("Unexpected error: {:#?}", err),
-    }
+    });
 }
 
 #[test]
 fn rec_fun_non_ident() {
     let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_non_ident.ph");
-    let file_id = FileId(0);
-    let tokens = lex(src).expect("Lexing failed");
-    let file = parse_file(tokens, file_id).expect("Parsing failed");
-    let mut registry = NodeRegistry::empty();
-    let file_id = register_file(&mut registry, file);
-    let file = registry.file(file_id);
-    let mut provider = SymbolProvider::new();
-    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
-        .expect("Binding failed");
-    let err = validate_fun_recursion_in_file(&symbol_db, file)
-        .expect_err("Fun recursion validation unexpectedly succeeded");
-    match err {
+    expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
             callee: callee_id,
             arg: arg_id,
@@ -105,25 +89,14 @@ fn rec_fun_non_ident() {
             );
         }
         _ => panic!("Unexpected error: {:#?}", err),
-    }
+    });
 }
 
 #[test]
 fn rec_fun_no_decreasing_param() {
     let src =
         include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_no_decreasing_param.ph");
-    let file_id = FileId(0);
-    let tokens = lex(src).expect("Lexing failed");
-    let file = parse_file(tokens, file_id).expect("Parsing failed");
-    let mut registry = NodeRegistry::empty();
-    let file_id = register_file(&mut registry, file);
-    let file = registry.file(file_id);
-    let mut provider = SymbolProvider::new();
-    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
-        .expect("Binding failed");
-    let err = validate_fun_recursion_in_file(&symbol_db, file)
-        .expect_err("Fun recursion validation unexpectedly succeeded");
-    match err {
+    expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
             callee: callee_id,
         } => {
@@ -135,5 +108,5 @@ fn rec_fun_no_decreasing_param() {
             );
         }
         _ => panic!("Unexpected error: {:#?}", err),
-    }
+    });
 }
