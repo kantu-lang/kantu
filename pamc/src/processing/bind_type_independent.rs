@@ -5,6 +5,7 @@ use crate::data::{
         IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource, SymbolSourceMap,
         SymbolToDotTargetsMap,
     },
+    symbol_provider::SymbolProvider,
 };
 
 // TODO: Forbid fun return type from using the fun it declares.
@@ -55,19 +56,23 @@ impl From<NameNotFoundError> for BindError {
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
+    provider: &mut SymbolProvider,
 ) -> Result<SymbolDatabase, BindError> {
     let file_node_ids = sort_by_dependencies(registry, file_node_ids)?;
+    let builtin_identifiers = get_builtin_identifiers(provider);
     let mut bind_state = BindState {
         identifier_symbols: IdentifierToSymbolMap::empty(),
         dot_targets: SymbolToDotTargetsMap::empty(),
-        context: Context::new(Symbol(0)),
+        context: Context::new(provider),
         symbol_sources: SymbolSourceMap::default(),
     };
 
     bind_state.context.push_scope();
 
-    for (name, source) in builtin_identifiers() {
-        bind_state.context.add(&name, source)?;
+    for (name, source, symbol) in builtin_identifiers {
+        bind_state
+            .context
+            .assign_symbol_and_add(&name, source, symbol)?;
     }
 
     for file_node_id in file_node_ids {
@@ -92,10 +97,13 @@ fn sort_by_dependencies(
     Ok(file_node_ids)
 }
 
-fn builtin_identifiers() -> Vec<(IdentifierName, SymbolSource)> {
+fn get_builtin_identifiers(
+    provider: &SymbolProvider,
+) -> Vec<(IdentifierName, SymbolSource, Symbol)> {
     vec![(
         IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
         SymbolSource::BuiltinTypeTitleCase,
+        provider.type_title_case(),
     )]
 }
 
@@ -279,11 +287,11 @@ fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindEr
 }
 
 #[derive(Debug)]
-struct BindState {
+struct BindState<'a> {
     identifier_symbols: IdentifierToSymbolMap,
     dot_targets: SymbolToDotTargetsMap,
     symbol_sources: SymbolSourceMap,
-    context: Context,
+    context: Context<'a>,
 }
 
 fn define_symbol_in_context_and_bind_to_identifier(
@@ -291,7 +299,9 @@ fn define_symbol_in_context_and_bind_to_identifier(
     identifier: &Identifier,
     source: SymbolSource,
 ) -> Result<Symbol, BindError> {
-    let name_symbol = bind_state.context.add(&identifier.name, source)?;
+    let name_symbol = bind_state
+        .context
+        .assign_new_symbol_and_add(&identifier.name, source)?;
     bind_symbol_to_identifier(bind_state, name_symbol, identifier);
     define_symbol_source(bind_state, name_symbol, source);
 
@@ -338,23 +348,23 @@ mod context {
 
     use rustc_hash::FxHashMap;
 
-    #[derive(Clone, Debug)]
-    pub struct Context {
+    #[derive(Debug)]
+    pub struct Context<'a> {
         scope_stack: Vec<FxHashMap<IdentifierName, (SymbolSource, Symbol)>>,
-        lowest_available_symbol: Symbol,
+        provider: &'a mut SymbolProvider,
     }
 
-    impl Context {
-        pub fn new(lowest_available_symbol: Symbol) -> Self {
+    impl Context<'_> {
+        pub fn new(provider: &mut SymbolProvider) -> Context {
             Context {
                 scope_stack: vec![],
-                lowest_available_symbol,
+                provider,
             }
         }
     }
 
-    impl Context {
-        pub fn add(
+    impl Context<'_> {
+        pub fn assign_new_symbol_and_add(
             &mut self,
             name: &IdentifierName,
             source: SymbolSource,
@@ -368,6 +378,23 @@ mod context {
                 });
             }
             let symbol = self.new_symbol();
+            self.assign_symbol_and_add(name, source, symbol)
+        }
+
+        pub fn assign_symbol_and_add(
+            &mut self,
+            name: &IdentifierName,
+            source: SymbolSource,
+            symbol: Symbol,
+        ) -> Result<Symbol, NameClashError> {
+            let existing_symbol: Option<&(SymbolSource, Symbol)> =
+                self.scope_stack.iter().find_map(|scope| scope.get(&name));
+            if let Some((existing_symbol_source, _existing_symbol)) = existing_symbol {
+                return Err(NameClashError {
+                    old: *existing_symbol_source,
+                    new: source,
+                });
+            }
             self.scope_stack
                 .last_mut()
                 .expect("Error: Context::add was called when the stack was empty.")
@@ -376,9 +403,7 @@ mod context {
         }
 
         pub fn new_symbol(&mut self) -> Symbol {
-            let symbol = self.lowest_available_symbol;
-            self.lowest_available_symbol.0 += 1;
-            symbol
+            self.provider.new_symbol()
         }
 
         pub fn lookup(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {

@@ -1,5 +1,5 @@
 use crate::{
-    data::{node_registry::NodeRegistry, FileId},
+    data::{node_registry::NodeRegistry, symbol_provider::SymbolProvider, FileId},
     processing::{
         bind_type_independent::{bind_symbols_to_identifiers, BindError},
         lex::lex,
@@ -31,8 +31,9 @@ mod should_succeed {
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
         let file = registry.file(file_id);
-        let symbol_db =
-            bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
+        let mut provider = SymbolProvider::new();
+        let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
+            .expect("Binding failed");
         validate_fun_recursion_in_file(&symbol_db, file).expect("Fun recursion validation failed");
     }
 }
@@ -136,7 +137,8 @@ mod should_fail {
         let file = parse_file(tokens, file_id).expect("Parsing failed");
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
-        let err = bind_symbols_to_identifiers(&registry, vec![file_id])
+        let mut provider = SymbolProvider::new();
+        let err = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
             .expect_err("Binding unexpectedly succeeded");
         match err {
             BindError::NameNotFound(err) => {
@@ -154,7 +156,8 @@ mod should_fail {
         let file = parse_file(tokens, file_id).expect("Parsing failed");
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
-        let err = bind_symbols_to_identifiers(&registry, vec![file_id])
+        let mut provider = SymbolProvider::new();
+        let err = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
             .expect_err("Binding unexpectedly succeeded");
         match err {
             BindError::NameNotFound(err) => {
@@ -172,7 +175,8 @@ mod should_fail {
         let file = parse_file(tokens, file_id).expect("Parsing failed");
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
-        let err = bind_symbols_to_identifiers(&registry, vec![file_id])
+        let mut provider = SymbolProvider::new();
+        let err = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
             .expect_err("Binding unexpectedly succeeded");
         match err {
             BindError::NameNotFound(err) => {
@@ -190,7 +194,8 @@ mod should_fail {
         let file = parse_file(tokens, file_id).expect("Parsing failed");
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
-        let err = bind_symbols_to_identifiers(&registry, vec![file_id])
+        let mut provider = SymbolProvider::new();
+        let err = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
             .expect_err("Binding unexpectedly succeeded");
         match err {
             BindError::NameNotFound(err) => {
@@ -209,8 +214,9 @@ mod should_fail {
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
         let file = registry.file(file_id);
-        let symbol_db =
-            bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
+        let mut provider = SymbolProvider::new();
+        let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
+            .expect("Binding failed");
         let err = validate_fun_recursion_in_file(&symbol_db, file)
             .expect_err("Fun recursion validation unexpectedly succeeded");
         match err {
@@ -245,8 +251,9 @@ mod should_fail {
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
         let file = registry.file(file_id);
-        let symbol_db =
-            bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
+        let mut provider = SymbolProvider::new();
+        let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
+            .expect("Binding failed");
         let err = validate_fun_recursion_in_file(&symbol_db, file)
             .expect_err("Fun recursion validation unexpectedly succeeded");
         match err {
@@ -280,8 +287,9 @@ mod should_fail {
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
         let file = registry.file(file_id);
-        let symbol_db =
-            bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
+        let mut provider = SymbolProvider::new();
+        let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
+            .expect("Binding failed");
         let err = validate_fun_recursion_in_file(&symbol_db, file)
             .expect_err("Fun recursion validation unexpectedly succeeded");
         match err {
@@ -317,8 +325,9 @@ mod should_fail {
         let mut registry = NodeRegistry::empty();
         let file_id = register_file(&mut registry, file);
         let file = registry.file(file_id);
-        let symbol_db =
-            bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
+        let mut provider = SymbolProvider::new();
+        let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id], &mut provider)
+            .expect("Binding failed");
         let err = validate_fun_recursion_in_file(&symbol_db, file)
             .expect_err("Fun recursion validation unexpectedly succeeded");
         match err {
