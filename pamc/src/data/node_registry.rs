@@ -38,6 +38,7 @@ impl<T> std::hash::Hash for NodeId<T> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NodeRegistry {
     files: Vec<File>,
+    wrapped_file_items: Vec<WrappedFileItem>,
     type_statements: Vec<TypeStatement>,
     identifiers: Vec<Identifier>,
     params: Vec<Param>,
@@ -56,6 +57,7 @@ impl NodeRegistry {
     pub fn empty() -> Self {
         Self {
             files: Vec::new(),
+            wrapped_file_items: Vec::new(),
             type_statements: Vec::new(),
             identifiers: Vec::new(),
             params: Vec::new(),
@@ -77,6 +79,16 @@ impl NodeRegistry {
         let id = NodeId::<File>::new(self.files.len());
         file.id = id;
         self.files.push(file);
+        id
+    }
+
+    pub fn add_wrapped_file_item_and_overwrite_its_id(
+        &mut self,
+        mut wrapped_file_item: WrappedFileItem,
+    ) -> NodeId<WrappedFileItem> {
+        let id = NodeId::<WrappedFileItem>::new(self.wrapped_file_items.len());
+        wrapped_file_item.id = id;
+        self.wrapped_file_items.push(wrapped_file_item);
         id
     }
 
@@ -195,6 +207,10 @@ impl NodeRegistry {
         &self.files[id.raw]
     }
 
+    pub fn wrapped_file_item(&self, id: NodeId<WrappedFileItem>) -> &WrappedFileItem {
+        &self.wrapped_file_items[id.raw]
+    }
+
     pub fn type_statement(&self, id: NodeId<TypeStatement>) -> &TypeStatement {
         &self.type_statements[id.raw]
     }
@@ -251,3 +267,5 @@ impl NodeRegistry {
         &self.identifiers
     }
 }
+
+// TODO: Delete anything pertaining to NodeId<TypeStatement> or NodeId<LetStatement>

@@ -18,7 +18,8 @@ pub fn type_check_file(
     symbol_db: &mut SymbolDatabase,
     file_id: NodeId<File>,
 ) -> Result<TypeMap, TypeError> {
-    let file_item_ids = get_file_item_ids(registry, file_id);
+    let file = registry.file(file_id);
+    let file_item_ids = file.item_ids.clone();
     let mut type_map = TypeMap::empty();
     let mut state = TypeCheckState {
         registry,
@@ -26,35 +27,21 @@ pub fn type_check_file(
         type_map: &mut type_map,
         context: TypeCheckContext::empty(),
     };
-    for item in file_item_ids {
-        match item {
-            FileItemId::Type(type_id) => {
-                type_check_type_statement(&mut state, type_id)?;
-            }
-            FileItemId::Let(let_id) => {
-                type_check_let_statement(&mut state, let_id)?;
-            }
-        }
+    for item_id in file_item_ids {
+        type_check_file_item(&mut state, item_id)?;
     }
     Ok(type_map)
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum FileItemId {
-    Type(NodeId<TypeStatement>),
-    Let(NodeId<LetStatement>),
-}
-
-fn get_file_item_ids(registry: &NodeRegistry, file_id: NodeId<File>) -> Vec<FileItemId> {
-    let file = registry.file(file_id);
-    let mut ids = Vec::with_capacity(file.items.len());
-    for item in &file.items {
-        match item {
-            FileItem::Type(type_statement_id) => ids.push(FileItemId::Type(type_statement_id.id)),
-            FileItem::Let(let_statement_id) => ids.push(FileItemId::Let(let_statement_id.id)),
-        }
+fn type_check_file_item(
+    state: &mut TypeCheckState,
+    item_id: NodeId<WrappedFileItem>,
+) -> Result<(), TypeError> {
+    let item = state.registry.wrapped_file_item(item_id);
+    match &item.item {
+        FileItem::Type(type_) => type_check_type_statement(state, type_.id),
+        FileItem::Let(let_) => type_check_let_statement(state, let_.id),
     }
-    ids
 }
 
 fn type_check_type_statement(
@@ -64,10 +51,8 @@ fn type_check_type_statement(
     let variant_ids: Vec<NodeId<Variant>> = state
         .registry
         .type_statement(type_statement_id)
-        .variants
-        .iter()
-        .map(|v| v.id)
-        .collect();
+        .variant_ids
+        .clone();
     for variant_id in variant_ids {
         type_check_variant(state, variant_id)?;
     }
@@ -86,13 +71,7 @@ fn type_check_variant(
     state: &mut TypeCheckState,
     variant: NodeId<Variant>,
 ) -> Result<(), TypeError> {
-    let param_ids: Vec<NodeId<Param>> = state
-        .registry
-        .variant(variant)
-        .params
-        .iter()
-        .map(|p| p.id)
-        .collect();
+    let param_ids: Vec<NodeId<Param>> = state.registry.variant(variant).param_ids.clone();
     for param_id in param_ids {
         type_check_param(state, param_id)?;
     }
@@ -100,7 +79,7 @@ fn type_check_variant(
 }
 
 fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Result<(), TypeError> {
-    let type_id = state.registry.param(param_id).type_.id;
+    let type_id = state.registry.param(param_id).type_id;
     let type_type_id = type_check_expression(state, type_id)?.0;
     let type_type = state.registry.wrapped_expression(type_type_id);
     match &type_type.expression {
@@ -123,7 +102,7 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
         }
     }
 
-    let param_name_id = state.registry.param(param_id).name.id;
+    let param_name_id = state.registry.param(param_id).name_id;
     let param_symbol = state.symbol_db.identifier_symbols.get(param_name_id);
     let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?;
     state.type_map.insert_new(param_symbol, type_normal_form_id);
@@ -142,7 +121,7 @@ fn type_check_expression(
             Ok(type_id)
         }
         Expression::Dot(dot) => {
-            let symbol = state.symbol_db.identifier_symbols.get(dot.right.id);
+            let symbol = state.symbol_db.identifier_symbols.get(dot.right_id);
             let type_id = state.type_map.get(symbol);
             Ok(type_id)
         }

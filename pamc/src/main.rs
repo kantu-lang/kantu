@@ -78,6 +78,7 @@ fn main() {
 
                             let rec_validation_result = pamc::processing::validate_fun_recursion::validate_fun_recursion_in_file(
                                 &symbol_db,
+                                &registry,
                                 registry.file(file_node_id),
                             );
                             match rec_validation_result {

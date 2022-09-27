@@ -27,7 +27,8 @@ fn expect_success(src: &str) {
     let file_id = register_file(&mut registry, file);
     let file = registry.file(file_id);
     let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
-    let _type_arg_map = extract_variant_type_args_for_file(&symbol_db, file)
+    let _type_arg_map = extract_variant_type_args_for_file(&symbol_db, &registry, file)
         .expect("Extracting variant type args failed");
-    validate_fun_recursion_in_file(&symbol_db, file).expect("Fun recursion validation failed");
+    validate_fun_recursion_in_file(&symbol_db, &registry, file)
+        .expect("Fun recursion validation failed");
 }

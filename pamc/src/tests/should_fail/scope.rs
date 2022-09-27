@@ -103,25 +103,32 @@ fn expect_name_clash_error(
         sym_src: SymbolSource,
     ) -> (&IdentifierName, SymbolSourceKind) {
         match sym_src {
-            SymbolSource::Type(type_id) => (
-                &registry.type_statement(type_id).name.name,
-                SymbolSourceKind::Type,
-            ),
-            SymbolSource::Variant(variant_id) => (
-                &registry.variant(variant_id).name.name,
-                SymbolSourceKind::Variant,
-            ),
+            SymbolSource::Type(type_id) => {
+                let name_id = registry.type_statement(type_id).name_id;
+                (&registry.identifier(name_id).name, SymbolSourceKind::Type)
+            }
+            SymbolSource::Variant(variant_id) => {
+                let name_id = registry.variant(variant_id).name_id;
+                (
+                    &registry.identifier(name_id).name,
+                    SymbolSourceKind::Variant,
+                )
+            }
             SymbolSource::TypedParam(param_id) => {
-                (&registry.param(param_id).name.name, SymbolSourceKind::Param)
+                let name_id = registry.param(param_id).name_id;
+                (&registry.identifier(name_id).name, SymbolSourceKind::Param)
             }
             SymbolSource::UntypedParam(param_id) => {
                 (&registry.identifier(param_id).name, SymbolSourceKind::Param)
             }
-            SymbolSource::Let(let_id) => (
-                &registry.let_statement(let_id).name.name,
-                SymbolSourceKind::Let,
-            ),
-            SymbolSource::Fun(fun_id) => (&registry.fun(fun_id).name.name, SymbolSourceKind::Fun),
+            SymbolSource::Let(let_id) => {
+                let name_id = registry.let_statement(let_id).name_id;
+                (&registry.identifier(name_id).name, SymbolSourceKind::Let)
+            }
+            SymbolSource::Fun(fun_id) => {
+                let name_id = registry.fun(fun_id).name_id;
+                (&registry.identifier(name_id).name, SymbolSourceKind::Fun)
+            }
             SymbolSource::BuiltinTypeTitleCase => (
                 &IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                 SymbolSourceKind::BuiltinTypeTitleCase,

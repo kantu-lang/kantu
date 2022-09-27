@@ -76,7 +76,7 @@ pub fn bind_symbols_to_identifiers(
 
     for file_node_id in file_node_ids {
         let file = registry.file(file_node_id);
-        bind_file(&mut bind_state, file)?;
+        bind_file(&mut bind_state, registry, file)?;
     }
 
     bind_state.context.pop_scope();
@@ -107,12 +107,21 @@ fn get_builtin_identifiers(
     )]
 }
 
-fn bind_file(bind_state: &mut BindState, file: &File) -> Result<(), BindError> {
+fn bind_file(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    file: &File,
+) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for item in &file.items {
+    for item_id in &file.item_ids {
+        let item = &registry.wrapped_file_item(*item_id).item;
         match item {
-            FileItem::Type(type_statement) => bind_type_statement(bind_state, type_statement)?,
-            FileItem::Let(let_statement) => bind_let_statement(bind_state, let_statement)?,
+            FileItem::Type(type_statement) => {
+                bind_type_statement(bind_state, registry, type_statement)?
+            }
+            FileItem::Let(let_statement) => {
+                bind_let_statement(bind_state, registry, let_statement)?
+            }
         }
     }
     bind_state.context.pop_scope();
@@ -121,32 +130,42 @@ fn bind_file(bind_state: &mut BindState, file: &File) -> Result<(), BindError> {
 
 fn bind_type_statement(
     bind_state: &mut BindState,
+    registry: &NodeRegistry,
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param in &type_statement.params {
-        bind_param(bind_state, param)?;
+    for param_id in &type_statement.param_ids {
+        let param = registry.param(*param_id);
+        bind_param(bind_state, registry, param)?;
     }
     bind_state.context.pop_scope();
 
     let name_symbol = define_symbol_in_context_and_bind_to_identifier(
         bind_state,
-        &type_statement.name,
+        registry,
+        type_statement.name_id,
         SymbolSource::Type(type_statement.id),
     )?;
 
-    for variant in &type_statement.variants {
-        bind_variant(bind_state, variant, name_symbol)?;
+    for variant_id in &type_statement.variant_ids {
+        let variant = registry.variant(*variant_id);
+        bind_variant(bind_state, registry, variant, name_symbol)?;
     }
 
     Ok(())
 }
 
-fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError> {
-    bind_expression(bind_state, &param.type_)?;
+fn bind_param(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    param: &Param,
+) -> Result<(), BindError> {
+    let type_ = registry.wrapped_expression(param.type_id);
+    bind_expression(bind_state, registry, type_)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
-        &param.name,
+        registry,
+        param.name_id,
         SymbolSource::TypedParam(param.id),
     )?;
     Ok(())
@@ -154,22 +173,26 @@ fn bind_param(bind_state: &mut BindState, param: &Param) -> Result<(), BindError
 
 fn bind_variant(
     bind_state: &mut BindState,
+    registry: &NodeRegistry,
     variant: &Variant,
     declaring_type_name_symbol: Symbol,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param in &variant.params {
-        bind_param(bind_state, param)?;
+    for param_id in &variant.param_ids {
+        let param = registry.param(*param_id);
+        bind_param(bind_state, registry, param)?;
     }
-    bind_expression(bind_state, &variant.return_type)?;
+    let return_type = registry.wrapped_expression(variant.return_type_id);
+    bind_expression(bind_state, registry, return_type)?;
     bind_state.context.pop_scope();
 
-    let variant_symbol = bind_new_symbol_to_identifier(bind_state, &variant.name);
+    let variant_symbol = bind_new_symbol_to_identifier(bind_state, registry, variant.name_id);
     let variant_symbol_source = SymbolSource::Variant(variant.id);
     define_symbol_source(bind_state, variant_symbol, variant_symbol_source);
+    let variant_name: &IdentifierName = &registry.identifier(variant.name_id).name;
     if let Some(existing_symbol) = bind_state
         .dot_targets
-        .get(declaring_type_name_symbol, &variant.name.name)
+        .get(declaring_type_name_symbol, variant_name)
     {
         let old_symbol_source = *bind_state.symbol_sources.get(&existing_symbol).expect("Error: Existing variant symbol does not have a symbol source defined. This indicates a serious logic bug.");
         Err(BindError::NameClash(NameClashError {
@@ -179,7 +202,7 @@ fn bind_variant(
     } else {
         bind_state.dot_targets.insert(
             declaring_type_name_symbol,
-            variant.name.name.clone(),
+            variant_name.clone(),
             variant_symbol,
         );
         Ok(())
@@ -188,12 +211,15 @@ fn bind_variant(
 
 fn bind_let_statement(
     bind_state: &mut BindState,
+    registry: &NodeRegistry,
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
-    bind_expression(bind_state, &let_statement.value)?;
+    let value = registry.wrapped_expression(let_statement.value_id);
+    bind_expression(bind_state, registry, value)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
-        &let_statement.name,
+        registry,
+        let_statement.name_id,
         SymbolSource::Let(let_statement.id),
     )?;
     Ok(())
@@ -201,15 +227,16 @@ fn bind_let_statement(
 
 fn bind_expression(
     bind_state: &mut BindState,
+    registry: &NodeRegistry,
     expression: &WrappedExpression,
 ) -> Result<(), BindError> {
     match &expression.expression {
         Expression::Identifier(identifier) => bind_identifier(bind_state, identifier)?,
-        Expression::Dot(dot) => bind_dot(bind_state, dot)?,
-        Expression::Call(call) => bind_call(bind_state, call)?,
-        Expression::Fun(fun) => bind_fun(bind_state, fun)?,
-        Expression::Match(match_) => bind_match(bind_state, match_)?,
-        Expression::Forall(forall) => bind_forall(bind_state, forall)?,
+        Expression::Dot(dot) => bind_dot(bind_state, registry, dot)?,
+        Expression::Call(call) => bind_call(bind_state, registry, call)?,
+        Expression::Fun(fun) => bind_fun(bind_state, registry, fun)?,
+        Expression::Match(match_) => bind_match(bind_state, registry, match_)?,
+        Expression::Forall(forall) => bind_forall(bind_state, registry, forall)?,
     }
 
     Ok(())
@@ -220,74 +247,112 @@ fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Resul
     Ok(())
 }
 
-fn bind_dot(bind_state: &mut BindState, dot: &Dot) -> Result<(), BindError> {
-    bind_expression(bind_state, &dot.left)?;
-    let left_symbol = match &dot.left.expression {
+fn bind_dot(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    dot: &Dot,
+) -> Result<(), BindError> {
+    let left = registry.wrapped_expression(dot.left_id);
+    let right = registry.identifier(dot.right_id);
+    bind_expression(bind_state, registry, left)?;
+    let left_symbol = match &left.expression {
         Expression::Identifier(identifier) => bind_state.identifier_symbols.get(identifier.id),
-        Expression::Dot(dot) => bind_state.identifier_symbols.get(dot.right.id),
-        _ => return Err(BindError::UnbindableDotExpressionLhs(dot.left.id)),
+        Expression::Dot(dot) => bind_state.identifier_symbols.get(dot.right_id),
+        _ => return Err(BindError::UnbindableDotExpressionLhs(left.id)),
     };
-    let right_symbol = if let Some(s) = bind_state.dot_targets.get(left_symbol, &dot.right.name) {
+    let right_symbol = if let Some(s) = bind_state.dot_targets.get(left_symbol, &right.name) {
         s
     } else {
-        return Err(BindError::InvalidDotExpressionRhs(dot.right.id));
+        return Err(BindError::InvalidDotExpressionRhs(right.id));
     };
-    bind_symbol_to_identifier(bind_state, right_symbol, &dot.right);
+    bind_symbol_to_identifier(bind_state, right_symbol, right);
     Ok(())
 }
 
-fn bind_call(bind_state: &mut BindState, call: &Call) -> Result<(), BindError> {
-    bind_expression(bind_state, &call.callee)?;
-    for arg in &call.args {
-        bind_expression(bind_state, arg)?;
+fn bind_call(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    call: &Call,
+) -> Result<(), BindError> {
+    let callee = registry.wrapped_expression(call.callee_id);
+    bind_expression(bind_state, registry, callee)?;
+    for arg_id in &call.arg_ids {
+        let arg = registry.wrapped_expression(*arg_id);
+        bind_expression(bind_state, registry, arg)?;
     }
     Ok(())
 }
 
-fn bind_fun(bind_state: &mut BindState, fun: &Fun) -> Result<(), BindError> {
+fn bind_fun(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    fun: &Fun,
+) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param in &fun.params {
-        bind_param(bind_state, param)?;
+    for param_id in &fun.param_ids {
+        let param = registry.param(*param_id);
+        bind_param(bind_state, registry, param)?;
     }
-    bind_expression(bind_state, &fun.return_type)?;
+    let return_type = registry.wrapped_expression(fun.return_type_id);
+    bind_expression(bind_state, registry, return_type)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
-        &fun.name,
+        registry,
+        fun.name_id,
         SymbolSource::Fun(fun.id),
     )?;
-    bind_expression(bind_state, &fun.body)?;
+    let body = registry.wrapped_expression(fun.body_id);
+    bind_expression(bind_state, registry, body)?;
     bind_state.context.pop_scope();
     Ok(())
 }
 
-fn bind_match(bind_state: &mut BindState, match_: &Match) -> Result<(), BindError> {
-    bind_expression(bind_state, &match_.matchee)?;
-    for case in &match_.cases {
-        bind_match_case(bind_state, case)?;
+fn bind_match(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    match_: &Match,
+) -> Result<(), BindError> {
+    let matchee = registry.wrapped_expression(match_.matchee_id);
+    bind_expression(bind_state, registry, matchee)?;
+    for case_id in &match_.case_ids {
+        let case = registry.match_case(*case_id);
+        bind_match_case(bind_state, registry, case)?;
     }
     Ok(())
 }
 
-fn bind_match_case(bind_state: &mut BindState, case: &MatchCase) -> Result<(), BindError> {
+fn bind_match_case(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    case: &MatchCase,
+) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param in &case.params {
+    for param_id in case.param_ids.iter().copied() {
         define_symbol_in_context_and_bind_to_identifier(
             bind_state,
-            param,
-            SymbolSource::UntypedParam(param.id),
+            registry,
+            param_id,
+            SymbolSource::UntypedParam(param_id),
         )?;
     }
-    bind_expression(bind_state, &case.output)?;
+    let output = registry.wrapped_expression(case.output_id);
+    bind_expression(bind_state, registry, output)?;
     bind_state.context.pop_scope();
     Ok(())
 }
 
-fn bind_forall(bind_state: &mut BindState, forall: &Forall) -> Result<(), BindError> {
+fn bind_forall(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    forall: &Forall,
+) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param in &forall.params {
-        bind_param(bind_state, param)?;
+    for param_id in &forall.param_ids {
+        let param = registry.param(*param_id);
+        bind_param(bind_state, registry, param)?;
     }
-    bind_expression(bind_state, &forall.output)?;
+    let output = registry.wrapped_expression(forall.output_id);
+    bind_expression(bind_state, registry, output)?;
     bind_state.context.pop_scope();
     Ok(())
 }
@@ -302,9 +367,11 @@ struct BindState<'a> {
 
 fn define_symbol_in_context_and_bind_to_identifier(
     bind_state: &mut BindState,
-    identifier: &Identifier,
+    registry: &NodeRegistry,
+    identifier_id: NodeId<Identifier>,
     source: SymbolSource,
 ) -> Result<Symbol, BindError> {
+    let identifier = registry.identifier(identifier_id);
     let name_symbol = bind_state
         .context
         .assign_new_symbol_and_add(&identifier.name, source)?;
@@ -314,7 +381,12 @@ fn define_symbol_in_context_and_bind_to_identifier(
     Ok(name_symbol)
 }
 
-fn bind_new_symbol_to_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Symbol {
+fn bind_new_symbol_to_identifier(
+    bind_state: &mut BindState,
+    registry: &NodeRegistry,
+    identifier_id: NodeId<Identifier>,
+) -> Symbol {
+    let identifier = registry.identifier(identifier_id);
     let symbol = bind_state.context.new_symbol();
     bind_symbol_to_identifier(bind_state, symbol, identifier);
     symbol
