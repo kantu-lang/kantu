@@ -2,7 +2,7 @@ use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::SymbolDatabase,
-    type_map::{NormalFormId, TypeMap},
+    type_map::{NormalFormNodeId, TypeMap},
 };
 
 #[derive(Clone, Debug)]
@@ -107,7 +107,7 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
 fn type_check_expression(
     state: &mut TypeCheckState,
     id: NodeId<WrappedExpression>,
-) -> Result<NormalFormId, TypeError> {
+) -> Result<NormalFormNodeId, TypeError> {
     match &state.registry.wrapped_expression(id).expression {
         Expression::Identifier(identifier) => {
             let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
@@ -146,7 +146,7 @@ fn type_check_expression(
 fn evaluate_well_typed_expression(
     _state: &mut TypeCheckState,
     _expression: NodeId<WrappedExpression>,
-) -> Result<NormalFormId, TypeError> {
+) -> Result<NormalFormNodeId, TypeError> {
     unimplemented!();
 }
 
@@ -171,7 +171,7 @@ mod context {
     #[derive(Clone, Copy, Debug)]
     pub struct Substitution {
         pub from: Symbol,
-        pub to: NormalFormId,
+        pub to: NormalFormNodeId,
     }
 
     #[derive(Clone, Debug)]
@@ -198,14 +198,14 @@ mod context {
     }
 
     impl TypeCheckContext {
-        pub fn get(&self, symbol: Symbol) -> (NormalFormId, Vec<&[Substitution]>) {
+        pub fn get(&self, symbol: Symbol) -> (NormalFormNodeId, Vec<&[Substitution]>) {
             self.try_get(symbol).expect(&format!(
                 "Tried to get the type of {:?}, but it was not in the type map.",
                 symbol
             ))
         }
 
-        fn try_get(&self, symbol: Symbol) -> Option<(NormalFormId, Vec<&[Substitution]>)> {
+        fn try_get(&self, symbol: Symbol) -> Option<(NormalFormNodeId, Vec<&[Substitution]>)> {
             let mut substitution_list_stack: Vec<&[Substitution]> = vec![];
             for scope in self.stack.iter().rev() {
                 if let Some(type_id) = scope.map.try_get(symbol) {
@@ -216,7 +216,7 @@ mod context {
             None
         }
 
-        pub fn insert_new(&mut self, symbol: Symbol, type_id: NormalFormId) {
+        pub fn insert_new(&mut self, symbol: Symbol, type_id: NormalFormNodeId) {
             if let Some((existing_type_id, substitutions)) = self.try_get(symbol) {
                 panic!("Tried to insert new entry ({:?}, {:?}) into a context, when it already contained the entry ({:?}, {:?} + {} substitutions).", symbol, type_id, symbol, existing_type_id, substitutions.len());
             }
