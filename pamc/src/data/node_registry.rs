@@ -251,5 +251,3 @@ impl NodeRegistry {
         &self.identifiers
     }
 }
-
-// TODO: Delete anything pertaining to NodeId<TypeStatement> or NodeId<LetStatement>
