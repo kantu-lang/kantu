@@ -80,3 +80,19 @@ fn reference_variant_in_variant_param_type() {
     let src = include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_param_type.ph");
     expect_invalid_dot_rhs_error(src, "D");
 }
+
+#[test]
+fn reference_unbindable_dot_lhs() {
+    let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
+    expect_bind_error(src, |err, registry| match err {
+        BindError::UnbindableDotExpressionLhs(lhs_id) => {
+            let invalid_lhs = &registry.wrapped_expression(lhs_id).expression;
+            assert!(
+                matches!(invalid_lhs, Expression::Match(_)),
+                "Unexpected lhs {:?}",
+                invalid_lhs
+            );
+        }
+        _ => panic!("Unexpected error: {:#?}", err),
+    });
+}

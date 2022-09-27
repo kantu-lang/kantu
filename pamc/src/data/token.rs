@@ -9,6 +9,14 @@ pub struct Token {
 pub enum TokenKind {
     Whitespace,
     StandardIdentifier,
+
+    Semicolon,
+    Colon,
+    Comma,
+    Dot,
+    At,
+    Equal,
+    Dash,
     LParen,
     RParen,
     LSquare,
@@ -17,13 +25,7 @@ pub enum TokenKind {
     RCurly,
     LAngle,
     RAngle,
-    Semicolon,
-    Colon,
-    Comma,
-    Dot,
-    At,
-    Equal,
-    Dash,
+
     FatArrow,
 
     TypeLowerCase,

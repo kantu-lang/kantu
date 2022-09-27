@@ -69,56 +69,7 @@ struct LexState {
 fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
     match &mut state.pending_token {
         None => {
-            if c.is_whitespace() {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::Whitespace,
-                });
-                None
-            } else if c == '(' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::LParen,
-                });
-                None
-            } else if c == ')' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::RParen,
-                });
-                None
-            } else if c == '[' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::LSquare,
-                });
-                None
-            } else if c == ']' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::RSquare,
-                });
-                None
-            } else if c == '{' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::LCurly,
-                });
-                None
-            } else if c == '}' {
-                state.tokens.push(Token {
-                    start_index: i,
-                    content: c.into(),
-                    kind: TokenKind::RCurly,
-                });
-                None
-            } else if c == ';' {
+            if c == ';' {
                 state.tokens.push(Token {
                     start_index: i,
                     content: c.into(),
@@ -165,6 +116,69 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     start_index: i,
                     content: c.into(),
                     kind: TokenKind::Dash,
+                });
+                None
+            } else if c == '(' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LParen,
+                });
+                None
+            } else if c == ')' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RParen,
+                });
+                None
+            } else if c == '[' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LSquare,
+                });
+                None
+            } else if c == ']' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RSquare,
+                });
+                None
+            } else if c == '{' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LCurly,
+                });
+                None
+            } else if c == '}' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RCurly,
+                });
+                None
+            } else if c == '<' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::LAngle,
+                });
+                None
+            } else if c == '>' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::RAngle,
+                });
+                None
+            } else if c.is_whitespace() {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Whitespace,
                 });
                 None
             } else if c.is_ascii_digit() {
@@ -287,7 +301,15 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
 }
 
 fn is_valid_non_initial_identifier_character(c: char) -> bool {
-    c != '('
+    !c.is_whitespace()
+        && c != ';'
+        && c != ':'
+        && c != ','
+        && c != '.'
+        && c != '@'
+        && c != '='
+        && c != '-'
+        && c != '('
         && c != ')'
         && c != '['
         && c != ']'
@@ -295,11 +317,6 @@ fn is_valid_non_initial_identifier_character(c: char) -> bool {
         && c != '}'
         && c != '<'
         && c != '>'
-        && c != '='
-        && c != '@'
-        && c != ':'
-        && c != ','
-        && c != '.'
         && does_character_category_permit_it_to_be_used_in_identifier_name(c)
 }
 
