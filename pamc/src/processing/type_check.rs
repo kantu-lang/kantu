@@ -18,6 +18,7 @@ pub fn type_check_file(
     symbol_db: &mut SymbolDatabase,
     file_id: NodeId<File>,
 ) -> Result<TypeMap, TypeError> {
+    let file_item_ids = get_file_item_ids(registry, file_id);
     let mut type_map = TypeMap::empty();
     let mut state = TypeCheckState {
         registry,
@@ -25,47 +26,82 @@ pub fn type_check_file(
         type_map: &mut type_map,
         context: TypeCheckContext::empty(),
     };
-    unimplemented!()
-    // for item in &file.items {
-    //     match item {
-    //         FileItem::Type(type_statement) => {
-    //             type_check_type_statement(&mut state, type_statement)?;
-    //         }
-    //         FileItem::Let(let_statement) => {
-    //             type_check_let_statement(&mut state, let_statement)?;
-    //         }
-    //     }
-    // }
-    // Ok(type_map)
+    for item in file_item_ids {
+        match item {
+            FileItemId::Type(type_id) => {
+                type_check_type_statement(&mut state, type_id)?;
+            }
+            FileItemId::Let(let_id) => {
+                type_check_let_statement(&mut state, let_id)?;
+            }
+        }
+    }
+    Ok(type_map)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FileItemId {
+    Type(NodeId<TypeStatement>),
+    Let(NodeId<LetStatement>),
+}
+
+fn get_file_item_ids(registry: &NodeRegistry, file_id: NodeId<File>) -> Vec<FileItemId> {
+    let file = registry.file(file_id);
+    let mut ids = Vec::with_capacity(file.items.len());
+    for item in &file.items {
+        match item {
+            FileItem::Type(type_statement_id) => ids.push(FileItemId::Type(type_statement_id.id)),
+            FileItem::Let(let_statement_id) => ids.push(FileItemId::Let(let_statement_id.id)),
+        }
+    }
+    ids
 }
 
 fn type_check_type_statement(
     state: &mut TypeCheckState,
-    type_statement: &TypeStatement,
+    type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeError> {
-    for variant in &type_statement.variants {
-        type_check_variant(state, variant)?;
+    let variant_ids: Vec<NodeId<Variant>> = state
+        .registry
+        .type_statement(type_statement_id)
+        .variants
+        .iter()
+        .map(|v| v.id)
+        .collect();
+    for variant_id in variant_ids {
+        type_check_variant(state, variant_id)?;
     }
     Ok(())
 }
 
 fn type_check_let_statement(
-    state: &mut TypeCheckState,
-    let_statement: &LetStatement,
+    _state: &mut TypeCheckState,
+    _let_statement: NodeId<LetStatement>,
 ) -> Result<(), TypeError> {
     // TODO: Actually implement (or remove) type_check_let_statement
     Ok(())
 }
 
-fn type_check_variant(state: &mut TypeCheckState, variant: &Variant) -> Result<(), TypeError> {
-    for param in &variant.params {
-        type_check_param(state, param)?;
+fn type_check_variant(
+    state: &mut TypeCheckState,
+    variant: NodeId<Variant>,
+) -> Result<(), TypeError> {
+    let param_ids: Vec<NodeId<Param>> = state
+        .registry
+        .variant(variant)
+        .params
+        .iter()
+        .map(|p| p.id)
+        .collect();
+    for param_id in param_ids {
+        type_check_param(state, param_id)?;
     }
     Ok(())
 }
 
-fn type_check_param(state: &mut TypeCheckState, param: &Param) -> Result<(), TypeError> {
-    let type_type_id = type_check_expression(state, &param.type_)?.0;
+fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Result<(), TypeError> {
+    let type_id = state.registry.param(param_id).type_.id;
+    let type_type_id = type_check_expression(state, type_id)?.0;
     let type_type = state.registry.wrapped_expression(type_type_id);
     match &type_type.expression {
         Expression::Identifier(identifier) => {
@@ -74,36 +110,37 @@ fn type_check_param(state: &mut TypeCheckState, param: &Param) -> Result<(), Typ
                 || symbol == state.symbol_db.provider.type1_symbol())
             {
                 return Err(TypeError::IllegalParamType {
-                    param: param.id,
+                    param: param_id,
                     type_type: type_type_id,
                 });
             }
         }
         _other_type_type => {
             return Err(TypeError::IllegalParamType {
-                param: param.id,
+                param: param_id,
                 type_type: type_type_id,
             })
         }
     }
 
-    let param_symbol = state.symbol_db.identifier_symbols.get(param.name.id);
-    let type_normal_form = evaluate_well_typed_expression(state, &param.type_)?.0;
-    state.type_map.insert_new(param_symbol, type_normal_form);
+    let param_name_id = state.registry.param(param_id).name.id;
+    let param_symbol = state.symbol_db.identifier_symbols.get(param_name_id);
+    let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?.0;
+    state.type_map.insert_new(param_symbol, type_normal_form_id);
 
     Ok(())
 }
 
 fn type_check_expression(
     state: &mut TypeCheckState,
-    expression: &WrappedExpression,
+    id: NodeId<WrappedExpression>,
 ) -> Result<NormalForm, TypeError> {
     unimplemented!();
 }
 
 fn evaluate_well_typed_expression(
     state: &mut TypeCheckState,
-    expression: &WrappedExpression,
+    expression: NodeId<WrappedExpression>,
 ) -> Result<NormalForm, TypeError> {
     unimplemented!();
 }
