@@ -81,6 +81,81 @@ fn reference_variant_in_variant_param_type() {
     expect_invalid_dot_rhs_error(src, "D");
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SymbolSourceKind {
+    Type,
+    Variant,
+    Param,
+    Let,
+    Fun,
+    BuiltinTypeTitleCase,
+}
+
+fn expect_name_clash_error(
+    src: &str,
+    expected_name: &str,
+    expected_old_kind: SymbolSourceKind,
+    expected_new_kind: SymbolSourceKind,
+) {
+    use crate::data::symbol_database::SymbolSource;
+    fn symbol_name(
+        registry: &NodeRegistry,
+        sym_src: SymbolSource,
+    ) -> (&IdentifierName, SymbolSourceKind) {
+        match sym_src {
+            SymbolSource::Type(type_id) => (
+                &registry.type_statement(type_id).name.name,
+                SymbolSourceKind::Type,
+            ),
+            SymbolSource::Variant(variant_id) => (
+                &registry.variant(variant_id).name.name,
+                SymbolSourceKind::Variant,
+            ),
+            SymbolSource::TypedParam(param_id) => {
+                (&registry.param(param_id).name.name, SymbolSourceKind::Param)
+            }
+            SymbolSource::UntypedParam(param_id) => {
+                (&registry.identifier(param_id).name, SymbolSourceKind::Param)
+            }
+            SymbolSource::Let(let_id) => (
+                &registry.let_statement(let_id).name.name,
+                SymbolSourceKind::Let,
+            ),
+            SymbolSource::Fun(fun_id) => (&registry.fun(fun_id).name.name, SymbolSourceKind::Fun),
+            SymbolSource::BuiltinTypeTitleCase => (
+                &IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
+                SymbolSourceKind::BuiltinTypeTitleCase,
+            ),
+        }
+    }
+
+    expect_bind_error(src, |err, registry| match err {
+        BindError::NameClash(err) => {
+            let (old_name, old_kind) = symbol_name(registry, err.old);
+            assert_eq!(
+                old_name,
+                &standard_ident_name(expected_name),
+                "Unexpected old name"
+            );
+            assert_eq!(old_kind, expected_old_kind, "Unexpected old kind");
+            let (new_name, new_kind) = symbol_name(registry, err.new);
+            assert_eq!(
+                new_name,
+                &standard_ident_name(expected_name),
+                "Unexpected new name"
+            );
+            assert_eq!(new_kind, expected_new_kind, "Unexpected new kind");
+        }
+        _ => panic!("Unexpected error: {:#?}", err),
+    });
+}
+
+#[test]
+fn fun_shadows_own_param() {
+    let src = include_str!("../sample_code/should_fail/scope/fun_shadows_own_param.ph");
+    expect_name_clash_error(src, "g", SymbolSourceKind::Param, SymbolSourceKind::Fun);
+}
+
 #[test]
 fn reference_unbindable_dot_lhs() {
     let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
