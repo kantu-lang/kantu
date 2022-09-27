@@ -109,7 +109,7 @@ fn get_builtin_identifiers(
 
 fn bind_file(bind_state: &mut BindState, file: &File) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for item in &file.items {
+    for item_id in &file.item_ids {
         match item {
             FileItem::Type(type_statement) => bind_type_statement(bind_state, type_statement)?,
             FileItem::Let(let_statement) => bind_let_statement(bind_state, let_statement)?,
