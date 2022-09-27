@@ -25,11 +25,11 @@ pub fn validate_fun_recursion_in_file(
 ) -> Result<(), IllegalFunRecursionError> {
     for item_id in &file.item_ids {
         match item_id {
-            FileItemId::Type(type_id) => {
+            FileItemNodeId::Type(type_id) => {
                 let type_statement = registry.type_statement(*type_id);
                 validate_fun_recursion_in_type_statement(symbol_db, registry, type_statement)?;
             }
-            FileItemId::Let(let_id) => {
+            FileItemNodeId::Let(let_id) => {
                 let let_statement = registry.let_statement(*let_id);
                 validate_fun_recursion_in_let_statement(symbol_db, registry, let_statement)?;
             }

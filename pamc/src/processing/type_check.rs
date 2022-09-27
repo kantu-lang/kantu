@@ -29,10 +29,10 @@ pub fn type_check_file(
     };
     for item_id in file_item_ids {
         match item_id {
-            FileItemId::Type(type_id) => {
+            FileItemNodeId::Type(type_id) => {
                 type_check_type_statement(&mut state, type_id)?;
             }
-            FileItemId::Let(function_id) => {
+            FileItemNodeId::Let(function_id) => {
                 type_check_let_statement(&mut state, function_id)?;
             }
         }

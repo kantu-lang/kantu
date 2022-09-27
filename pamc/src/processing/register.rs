@@ -21,13 +21,16 @@ pub fn register_file(registry: &mut NodeRegistry, unregistered: ur::File) -> Nod
     })
 }
 
-pub fn register_file_item(registry: &mut NodeRegistry, unregistered: ur::FileItem) -> FileItemId {
+pub fn register_file_item(
+    registry: &mut NodeRegistry,
+    unregistered: ur::FileItem,
+) -> FileItemNodeId {
     match unregistered {
         ur::FileItem::Type(unregistered) => {
-            FileItemId::Type(register_type_statement(registry, unregistered))
+            FileItemNodeId::Type(register_type_statement(registry, unregistered))
         }
         ur::FileItem::Let(unregistered) => {
-            FileItemId::Let(register_let_statement(registry, unregistered))
+            FileItemNodeId::Let(register_let_statement(registry, unregistered))
         }
     }
 }
