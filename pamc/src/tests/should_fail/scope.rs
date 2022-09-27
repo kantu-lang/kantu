@@ -157,6 +157,17 @@ fn fun_shadows_own_param() {
 }
 
 #[test]
+fn duplicate_variants() {
+    let src = include_str!("../sample_code/should_fail/scope/duplicate_variants.ph");
+    expect_name_clash_error(
+        src,
+        "F",
+        SymbolSourceKind::Variant,
+        SymbolSourceKind::Variant,
+    );
+}
+
+#[test]
 fn reference_unbindable_dot_lhs() {
     let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
     expect_bind_error(src, |err, registry| match err {

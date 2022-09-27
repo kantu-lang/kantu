@@ -165,18 +165,25 @@ fn bind_variant(
     bind_state.context.pop_scope();
 
     let variant_symbol = bind_new_symbol_to_identifier(bind_state, &variant.name);
-    define_symbol_source(
-        bind_state,
-        variant_symbol,
-        SymbolSource::Variant(variant.id),
-    );
-    bind_state.dot_targets.insert(
-        declaring_type_name_symbol,
-        variant.name.name.clone(),
-        variant_symbol,
-    );
-
-    Ok(())
+    let variant_symbol_source = SymbolSource::Variant(variant.id);
+    define_symbol_source(bind_state, variant_symbol, variant_symbol_source);
+    if let Some(existing_symbol) = bind_state
+        .dot_targets
+        .get(declaring_type_name_symbol, &variant.name.name)
+    {
+        let old_symbol_source = *bind_state.symbol_sources.get(&existing_symbol).expect("Error: Existing variant symbol does not have a symbol source defined. This indicates a serious logic bug.");
+        Err(BindError::NameClash(NameClashError {
+            old: old_symbol_source,
+            new: variant_symbol_source,
+        }))
+    } else {
+        bind_state.dot_targets.insert(
+            declaring_type_name_symbol,
+            variant.name.name.clone(),
+            variant_symbol,
+        );
+        Ok(())
+    }
 }
 
 fn bind_let_statement(
