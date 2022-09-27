@@ -157,25 +157,24 @@ fn bind_variant(
     variant: &Variant,
     declaring_type_name_symbol: Symbol,
 ) -> Result<(), BindError> {
-    let variant_symbol = bind_new_symbol_to_identifier(bind_state, &variant.name);
-    define_symbol_source(
-        bind_state,
-        variant_symbol,
-        SymbolSource::Variant(variant.id),
-    );
-
-    bind_state.dot_targets.insert(
-        declaring_type_name_symbol,
-        variant.name.name.clone(),
-        variant_symbol,
-    );
-
     bind_state.context.push_scope();
     for param in &variant.params {
         bind_param(bind_state, param)?;
     }
     bind_expression(bind_state, &variant.return_type)?;
     bind_state.context.pop_scope();
+
+    let variant_symbol = bind_new_symbol_to_identifier(bind_state, &variant.name);
+    define_symbol_source(
+        bind_state,
+        variant_symbol,
+        SymbolSource::Variant(variant.id),
+    );
+    bind_state.dot_targets.insert(
+        declaring_type_name_symbol,
+        variant.name.name.clone(),
+        variant_symbol,
+    );
 
     Ok(())
 }
