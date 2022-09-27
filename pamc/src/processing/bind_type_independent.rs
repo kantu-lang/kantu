@@ -103,7 +103,7 @@ fn get_builtin_identifiers(
     vec![(
         IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
         SymbolSource::BuiltinTypeTitleCase,
-        provider.type0(),
+        provider.type0_symbol(),
     )]
 }
 

@@ -39,8 +39,7 @@ fn main() {
                     let mut registry = pamc::data::node_registry::NodeRegistry::empty();
                     let file_node_id =
                         pamc::processing::register::register_file(&mut registry, file);
-                    let file = registry.file(file_node_id);
-                    println!("Registered file: {:#?}", file);
+                    println!("Registered file: {:#?}", registry.file(file_node_id));
 
                     let bind_result =
                         pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
@@ -79,14 +78,17 @@ fn main() {
 
                             let rec_validation_result = pamc::processing::validate_fun_recursion::validate_fun_recursion_in_file(
                                 &symbol_db,
-                                file,
+                                registry.file(file_node_id),
                             );
                             match rec_validation_result {
                                 Ok(()) => {
                                     println!("Recursion validation success!");
+                                    let mut symbol_db = symbol_db;
                                     let type_check_result =
                                         pamc::processing::type_check::type_check_file(
-                                            &registry, &symbol_db, file,
+                                            &mut registry,
+                                            &mut symbol_db,
+                                            file_node_id,
                                         );
                                     match type_check_result {
                                         Ok(type_map) => {

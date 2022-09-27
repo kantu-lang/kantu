@@ -47,11 +47,11 @@ mod symbol_provider {
     }
 
     impl SymbolProvider {
-        pub fn type0(&self) -> Symbol {
+        pub fn type0_symbol(&self) -> Symbol {
             self.type0_symbol
         }
 
-        pub fn type1(&self) -> Symbol {
+        pub fn type1_symbol(&self) -> Symbol {
             self.type1_symbol
         }
     }
