@@ -231,7 +231,7 @@ fn bind_expression(
     expression: &WrappedExpression,
 ) -> Result<(), BindError> {
     match &expression.expression {
-        Expression::Identifier(identifier) => bind_identifier(bind_state, registry, identifier)?,
+        Expression::Identifier(identifier) => bind_identifier(bind_state, identifier)?,
         Expression::Dot(dot) => bind_dot(bind_state, registry, dot)?,
         Expression::Call(call) => bind_call(bind_state, registry, call)?,
         Expression::Fun(fun) => bind_fun(bind_state, registry, fun)?,
@@ -242,11 +242,7 @@ fn bind_expression(
     Ok(())
 }
 
-fn bind_identifier(
-    bind_state: &mut BindState,
-    registry: &NodeRegistry,
-    identifier: &Identifier,
-) -> Result<(), BindError> {
+fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Result<(), BindError> {
     lookup_symbol_from_context_and_bind_to_identifier(bind_state, identifier)?;
     Ok(())
 }
@@ -259,9 +255,9 @@ fn bind_dot(
     let left = registry.wrapped_expression(dot.left_id);
     let right = registry.identifier(dot.right_id);
     bind_expression(bind_state, registry, left)?;
-    let left_symbol = match left.expression {
+    let left_symbol = match &left.expression {
         Expression::Identifier(identifier) => bind_state.identifier_symbols.get(identifier.id),
-        Expression::Dot(dot) => bind_state.identifier_symbols.get(right.id),
+        Expression::Dot(dot) => bind_state.identifier_symbols.get(dot.right_id),
         _ => return Err(BindError::UnbindableDotExpressionLhs(left.id)),
     };
     let right_symbol = if let Some(s) = bind_state.dot_targets.get(left_symbol, &right.name) {
