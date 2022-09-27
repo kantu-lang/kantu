@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase},
+    symbol_database::SymbolDatabase,
     type_map::{NormalFormId, TypeMap},
 };
 
@@ -39,8 +39,14 @@ fn type_check_file_item(
 ) -> Result<(), TypeError> {
     let item = state.registry.wrapped_file_item(item_id);
     match &item.item {
-        FileItem::Type(type_) => type_check_type_statement(state, type_.id),
-        FileItem::Let(let_) => type_check_let_statement(state, let_.id),
+        FileItem::Type(type_) => {
+            let type_id = type_.id;
+            type_check_type_statement(state, type_id)
+        }
+        FileItem::Let(let_) => {
+            let let_id = let_.id;
+            type_check_let_statement(state, let_id)
+        }
     }
 }
 
@@ -130,8 +136,8 @@ fn type_check_expression(
 }
 
 fn evaluate_well_typed_expression(
-    state: &mut TypeCheckState,
-    expression: NodeId<WrappedExpression>,
+    _state: &mut TypeCheckState,
+    _expression: NodeId<WrappedExpression>,
 ) -> Result<NormalFormId, TypeError> {
     unimplemented!();
 }
