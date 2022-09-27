@@ -10,7 +10,7 @@ pub struct File {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WrappedFileItem {
     pub id: NodeId<Self>,
-    pub file_item: FileItem,
+    pub item: FileItem,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
