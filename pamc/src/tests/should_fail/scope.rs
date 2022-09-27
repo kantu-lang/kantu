@@ -168,6 +168,36 @@ fn duplicate_variants() {
 }
 
 #[test]
+fn duplicate_type_params() {
+    let src = include_str!("../sample_code/should_fail/scope/duplicate_type_params.ph");
+    expect_name_clash_error(src, "T", SymbolSourceKind::Param, SymbolSourceKind::Param);
+}
+
+#[test]
+fn duplicate_variant_params() {
+    let src = include_str!("../sample_code/should_fail/scope/duplicate_variant_params.ph");
+    expect_name_clash_error(src, "R", SymbolSourceKind::Param, SymbolSourceKind::Param);
+}
+
+#[test]
+fn duplicate_fun_params() {
+    let src = include_str!("../sample_code/should_fail/scope/duplicate_fun_params.ph");
+    expect_name_clash_error(src, "U", SymbolSourceKind::Param, SymbolSourceKind::Param);
+}
+
+#[test]
+fn duplicate_forall_params() {
+    let src = include_str!("../sample_code/should_fail/scope/duplicate_forall_params.ph");
+    expect_name_clash_error(src, "Q", SymbolSourceKind::Param, SymbolSourceKind::Param);
+}
+
+#[test]
+fn duplicate_match_case_params() {
+    let src = include_str!("../sample_code/should_fail/scope/duplicate_match_case_params.ph");
+    expect_name_clash_error(src, "x", SymbolSourceKind::Param, SymbolSourceKind::Param);
+}
+
+#[test]
 fn reference_unbindable_dot_lhs() {
     let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
     expect_bind_error(src, |err, registry| match err {
