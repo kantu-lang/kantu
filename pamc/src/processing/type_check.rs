@@ -2,7 +2,7 @@ use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::{Symbol, SymbolDatabase},
-    type_map::TypeMap,
+    type_map::{NormalFormId, TypeMap},
 };
 
 #[derive(Clone, Debug)]
@@ -125,7 +125,7 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
 
     let param_name_id = state.registry.param(param_id).name.id;
     let param_symbol = state.symbol_db.identifier_symbols.get(param_name_id);
-    let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?.0;
+    let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?;
     state.type_map.insert_new(param_symbol, type_normal_form_id);
 
     Ok(())
@@ -134,19 +134,28 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
 fn type_check_expression(
     state: &mut TypeCheckState,
     id: NodeId<WrappedExpression>,
-) -> Result<NormalForm, TypeError> {
-    unimplemented!();
+) -> Result<NormalFormId, TypeError> {
+    match &state.registry.wrapped_expression(id).expression {
+        Expression::Identifier(identifier) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+            let type_id = state.type_map.get(symbol);
+            Ok(type_id)
+        }
+        Expression::Dot(dot) => {
+            let symbol = state.symbol_db.identifier_symbols.get(dot.right.id);
+            let type_id = state.type_map.get(symbol);
+            Ok(type_id)
+        }
+        _ => unimplemented!(),
+    }
 }
 
 fn evaluate_well_typed_expression(
     state: &mut TypeCheckState,
     expression: NodeId<WrappedExpression>,
-) -> Result<NormalForm, TypeError> {
+) -> Result<NormalFormId, TypeError> {
     unimplemented!();
 }
-
-#[derive(Clone, Copy, Debug)]
-struct NormalForm(NodeId<WrappedExpression>);
 
 #[derive(Debug)]
 struct TypeCheckState<'a> {
