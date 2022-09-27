@@ -4,19 +4,13 @@ use crate::data::{node_registry::NodeId, FileId, TextPosition};
 pub struct File {
     pub file_id: FileId,
     pub id: NodeId<Self>,
-    pub item_ids: Vec<NodeId<WrappedFileItem>>,
+    pub item_ids: Vec<FileItemId>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WrappedFileItem {
-    pub id: NodeId<Self>,
-    pub item: FileItem,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum FileItem {
-    Type(TypeStatement),
-    Let(LetStatement),
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FileItemId {
+    Type(NodeId<TypeStatement>),
+    Let(NodeId<LetStatement>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

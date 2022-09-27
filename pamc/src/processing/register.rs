@@ -21,38 +21,21 @@ pub fn register_file(registry: &mut NodeRegistry, unregistered: ur::File) -> Nod
     })
 }
 
-pub fn register_file_item(
-    registry: &mut NodeRegistry,
-    unregistered: ur::FileItem,
-) -> NodeId<WrappedFileItem> {
+pub fn register_file_item(registry: &mut NodeRegistry, unregistered: ur::FileItem) -> FileItemId {
     match unregistered {
         ur::FileItem::Type(unregistered) => {
-            let registered = convert_unregistered_type_statement_into_registered_one_with_dummy_id(
-                registry,
-                unregistered,
-            );
-            registry.add_wrapped_file_item_and_overwrite_its_id(WrappedFileItem {
-                id: dummy_id(),
-                item: FileItem::Type(registered),
-            })
+            FileItemId::Type(register_type_statement(registry, unregistered))
         }
         ur::FileItem::Let(unregistered) => {
-            let registered = convert_unregistered_let_statement_into_registered_one_with_dummy_id(
-                registry,
-                unregistered,
-            );
-            registry.add_wrapped_file_item_and_overwrite_its_id(WrappedFileItem {
-                id: dummy_id(),
-                item: FileItem::Let(registered),
-            })
+            FileItemId::Let(register_let_statement(registry, unregistered))
         }
     }
 }
 
-pub fn convert_unregistered_type_statement_into_registered_one_with_dummy_id(
+pub fn register_type_statement(
     registry: &mut NodeRegistry,
     unregistered: ur::TypeStatement,
-) -> TypeStatement {
+) -> NodeId<TypeStatement> {
     let name_id = register_identifier(registry, unregistered.name);
     let param_ids = unregistered
         .params
@@ -64,12 +47,12 @@ pub fn convert_unregistered_type_statement_into_registered_one_with_dummy_id(
         .into_iter()
         .map(|unregistered_variant| register_variant(registry, unregistered_variant))
         .collect();
-    TypeStatement {
+    registry.add_type_statement_and_overwrite_its_id(TypeStatement {
         id: dummy_id(),
         name_id,
         param_ids,
         variant_ids,
-    }
+    })
 }
 
 pub fn register_identifier(
@@ -110,17 +93,17 @@ pub fn register_variant(registry: &mut NodeRegistry, unregistered: ur::Variant) 
     })
 }
 
-pub fn convert_unregistered_let_statement_into_registered_one_with_dummy_id(
+pub fn register_let_statement(
     registry: &mut NodeRegistry,
     unregistered: ur::LetStatement,
-) -> LetStatement {
+) -> NodeId<LetStatement> {
     let name_id = register_identifier(registry, unregistered.name);
     let value_id = register_expression(registry, unregistered.value);
-    LetStatement {
+    registry.add_let_statement_and_overwrite_its_id(LetStatement {
         id: dummy_id(),
         name_id,
         value_id,
-    }
+    })
 }
 
 pub fn register_expression(

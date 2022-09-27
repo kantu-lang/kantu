@@ -114,12 +114,13 @@ fn bind_file(
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
     for item_id in &file.item_ids {
-        let item = &registry.wrapped_file_item(*item_id).item;
-        match item {
-            FileItem::Type(type_statement) => {
+        match item_id {
+            FileItemId::Type(type_id) => {
+                let type_statement = registry.type_statement(*type_id);
                 bind_type_statement(bind_state, registry, type_statement)?
             }
-            FileItem::Let(let_statement) => {
+            FileItemId::Let(let_id) => {
+                let let_statement = registry.let_statement(*let_id);
                 bind_let_statement(bind_state, registry, let_statement)?
             }
         }

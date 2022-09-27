@@ -15,8 +15,8 @@ pub fn extract_variant_type_args_for_file(
 ) -> Result<VariantReturnTypeTypeArgsMap, IllegalVariantReturnTypeError> {
     let mut map = VariantReturnTypeTypeArgsMap::empty();
     for item_id in &file.item_ids {
-        let item = &registry.wrapped_file_item(*item_id).item;
-        if let FileItem::Type(type_statement) = item {
+        if let FileItemId::Type(type_id) = item_id {
+            let type_statement = registry.type_statement(*type_id);
             extract_variant_type_args_for_type_statement(
                 symbol_db,
                 registry,

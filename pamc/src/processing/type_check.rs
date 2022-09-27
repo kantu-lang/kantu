@@ -28,26 +28,16 @@ pub fn type_check_file(
         context: TypeCheckContext::empty(),
     };
     for item_id in file_item_ids {
-        type_check_file_item(&mut state, item_id)?;
+        match item_id {
+            FileItemId::Type(type_id) => {
+                type_check_type_statement(&mut state, type_id)?;
+            }
+            FileItemId::Let(function_id) => {
+                type_check_let_statement(&mut state, function_id)?;
+            }
+        }
     }
     Ok(type_map)
-}
-
-fn type_check_file_item(
-    state: &mut TypeCheckState,
-    item_id: NodeId<WrappedFileItem>,
-) -> Result<(), TypeError> {
-    let item = state.registry.wrapped_file_item(item_id);
-    match &item.item {
-        FileItem::Type(type_) => {
-            let type_id = type_.id;
-            type_check_type_statement(state, type_id)
-        }
-        FileItem::Let(let_) => {
-            let let_id = let_.id;
-            type_check_let_statement(state, let_id)
-        }
-    }
 }
 
 fn type_check_type_statement(
