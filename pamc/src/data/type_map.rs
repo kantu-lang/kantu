@@ -32,7 +32,7 @@ impl TypeMap {
         ))
     }
 
-    fn try_get(&self, symbol: Symbol) -> Option<NormalFormId> {
+    pub fn try_get(&self, symbol: Symbol) -> Option<NormalFormId> {
         self.raw.get(&symbol).copied()
     }
 }

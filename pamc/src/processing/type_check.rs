@@ -20,12 +20,10 @@ pub fn type_check_file(
 ) -> Result<TypeMap, TypeError> {
     let file = registry.file(file_id);
     let file_item_ids = file.item_ids.clone();
-    let mut type_map = TypeMap::empty();
     let mut state = TypeCheckState {
         registry,
         symbol_db,
-        type_map: &mut type_map,
-        context: TypeCheckContext::empty(),
+        context: TypeCheckContext::new(),
     };
     for item_id in file_item_ids {
         match item_id {
@@ -37,7 +35,7 @@ pub fn type_check_file(
             }
         }
     }
-    Ok(type_map)
+    Ok(state.context.bottom_type_map())
 }
 
 fn type_check_type_statement(
@@ -101,7 +99,7 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
     let param_name_id = state.registry.param(param_id).name_id;
     let param_symbol = state.symbol_db.identifier_symbols.get(param_name_id);
     let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?;
-    state.type_map.insert_new(param_symbol, type_normal_form_id);
+    state.context.insert_new(param_symbol, type_normal_form_id);
 
     Ok(())
 }
@@ -113,12 +111,32 @@ fn type_check_expression(
     match &state.registry.wrapped_expression(id).expression {
         Expression::Identifier(identifier) => {
             let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
-            let type_id = state.type_map.get(symbol);
+            let (unsubstituted_type_id, substitutions) = state.context.get(symbol);
+            let unnormalized_type_id = apply_substitutions(
+                &mut state.registry,
+                &state.symbol_db,
+                unsubstituted_type_id.0,
+                substitutions
+                    .iter()
+                    .flat_map(std::ops::Deref::deref)
+                    .copied(),
+            );
+            let type_id = evaluate_well_typed_expression(state, unnormalized_type_id)?;
             Ok(type_id)
         }
         Expression::Dot(dot) => {
             let symbol = state.symbol_db.identifier_symbols.get(dot.right_id);
-            let type_id = state.type_map.get(symbol);
+            let (unsubstituted_type_id, substitutions) = state.context.get(symbol);
+            let unnormalized_type_id = apply_substitutions(
+                &mut state.registry,
+                &state.symbol_db,
+                unsubstituted_type_id.0,
+                substitutions
+                    .iter()
+                    .flat_map(std::ops::Deref::deref)
+                    .copied(),
+            );
+            let type_id = evaluate_well_typed_expression(state, unnormalized_type_id)?;
             Ok(type_id)
         }
         _ => unimplemented!(),
@@ -136,15 +154,103 @@ fn evaluate_well_typed_expression(
 struct TypeCheckState<'a> {
     registry: &'a mut NodeRegistry,
     symbol_db: &'a mut SymbolDatabase,
-    type_map: &'a mut TypeMap,
     context: TypeCheckContext,
 }
 
-#[derive(Clone, Debug)]
-struct TypeCheckContext {}
+use context::*;
+mod context {
+    use super::*;
 
-impl TypeCheckContext {
-    fn empty() -> Self {
-        Self {}
+    use crate::data::symbol_database::Symbol;
+
+    #[derive(Clone, Debug)]
+    pub struct TypeCheckContext {
+        stack: Vec<Scope>,
     }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct Substitution {
+        pub from: Symbol,
+        pub to: NormalFormId,
+    }
+
+    #[derive(Clone, Debug)]
+    struct Scope {
+        map: TypeMap,
+        substitutions_applied_to_previous_scopes: Vec<Substitution>,
+    }
+
+    impl Scope {
+        fn new() -> Self {
+            Self {
+                map: TypeMap::empty(),
+                substitutions_applied_to_previous_scopes: Vec::new(),
+            }
+        }
+    }
+
+    impl TypeCheckContext {
+        pub fn new() -> Self {
+            Self {
+                stack: vec![Scope::new()],
+            }
+        }
+    }
+
+    impl TypeCheckContext {
+        pub fn get(&self, symbol: Symbol) -> (NormalFormId, Vec<&[Substitution]>) {
+            self.try_get(symbol).expect(&format!(
+                "Tried to get the type of {:?}, but it was not in the type map.",
+                symbol
+            ))
+        }
+
+        fn try_get(&self, symbol: Symbol) -> Option<(NormalFormId, Vec<&[Substitution]>)> {
+            let mut substitution_list_stack: Vec<&[Substitution]> = vec![];
+            for scope in self.stack.iter().rev() {
+                if let Some(type_id) = scope.map.try_get(symbol) {
+                    return Some((type_id, substitution_list_stack));
+                }
+                substitution_list_stack.push(&scope.substitutions_applied_to_previous_scopes);
+            }
+            None
+        }
+
+        pub fn insert_new(&mut self, symbol: Symbol, type_id: NormalFormId) {
+            if let Some((existing_type_id, substitutions)) = self.try_get(symbol) {
+                panic!("Tried to insert new entry ({:?}, {:?}) into a context, when it already contained the entry ({:?}, {:?} + {} substitutions).", symbol, type_id, symbol, existing_type_id, substitutions.len());
+            }
+            self.stack.last_mut().expect("Error: Tried to insert an entry into a context with an empty stack scope. This indicates a serious logic error.").map.insert_new(symbol, type_id);
+        }
+
+        pub fn bottom_type_map(self) -> TypeMap {
+            self.stack
+                .into_iter()
+                .next()
+                .expect("Error: Tried to get the bottom type map from a context with an empty stack scope. This indicates a serious logic error.")
+                .map
+        }
+    }
+}
+
+fn apply_substitutions(
+    registry: &mut NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    type_id: NodeId<WrappedExpression>,
+    substitutions: impl IntoIterator<Item = Substitution>,
+) -> NodeId<WrappedExpression> {
+    let mut type_id = type_id;
+    for substitution in substitutions {
+        type_id = apply_substitution(registry, symbol_db, type_id, substitution);
+    }
+    type_id
+}
+
+fn apply_substitution(
+    _registry: &mut NodeRegistry,
+    _symbol_db: &SymbolDatabase,
+    _type_id: NodeId<WrappedExpression>,
+    _substitutions: Substitution,
+) -> NodeId<WrappedExpression> {
+    unimplemented!()
 }
