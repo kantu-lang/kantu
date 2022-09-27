@@ -74,3 +74,9 @@ fn reference_variant_in_variant_return_type() {
         include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_return_type.ph");
     expect_invalid_dot_rhs_error(src, "B");
 }
+
+#[test]
+fn reference_variant_in_variant_param_type() {
+    let src = include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_param_type.ph");
+    expect_invalid_dot_rhs_error(src, "D");
+}
