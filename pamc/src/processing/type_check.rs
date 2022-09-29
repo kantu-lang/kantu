@@ -64,6 +64,9 @@ fn type_check_type_statement(
     for variant_id in variant_ids {
         type_check_variant(state, variant_id)?;
     }
+    // We need to add the type for the declared type to the context.
+    // It's either Type or forall() { Type }.
+    unimplemented!();
     Ok(())
 }
 
@@ -84,6 +87,10 @@ fn type_check_variant(
     for param_id in param_ids {
         type_check_param(state, param_id)?;
     }
+    // We need to add the type for the declared variant to the context.
+    // If `variant` is a variant of type T, then the type of `variant` is either
+    // `T` or `forall() { T }`.
+    unimplemented!();
     Ok(())
 }
 
