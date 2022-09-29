@@ -23,7 +23,8 @@ pub fn validate_fun_recursion_in_file(
     registry: &NodeRegistry,
     file: &File,
 ) -> Result<(), IllegalFunRecursionError> {
-    for item_id in &file.item_ids {
+    let item_ids = registry.file_item_list(file.item_list_id);
+    for item_id in item_ids {
         match item_id {
             FileItemNodeId::Type(type_id) => {
                 let type_statement = registry.type_statement(*type_id);
@@ -43,7 +44,8 @@ fn validate_fun_recursion_in_type_statement(
     registry: &NodeRegistry,
     type_statement: &TypeStatement,
 ) -> Result<(), IllegalFunRecursionError> {
-    for variant_id in &type_statement.variant_ids {
+    let variant_ids = registry.variant_list(type_statement.variant_list_id);
+    for variant_id in variant_ids {
         let variant = registry.variant(*variant_id);
         validate_fun_recursion_in_variant(symbol_db, registry, variant)?;
     }
@@ -55,7 +57,8 @@ fn validate_fun_recursion_in_variant(
     registry: &NodeRegistry,
     variant: &Variant,
 ) -> Result<(), IllegalFunRecursionError> {
-    for param_id in &variant.param_ids {
+    let param_ids = registry.param_list(variant.param_list_id);
+    for param_id in param_ids {
         let param = registry.param(*param_id);
         validate_fun_recursion_in_param(symbol_db, registry, param)?;
     }
@@ -112,8 +115,9 @@ fn validate_fun_recursion_in_expression(
                                 superstruct,
                                 ..
                             } => {
-                                if *arg_position < call.arg_ids.len() {
-                                    let expected_substruct =registry.wrapped_expression(call.arg_ids[*arg_position]);
+                                let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+                                if *arg_position < arg_ids.len() {
+                                    let expected_substruct =registry.wrapped_expression(arg_ids[*arg_position]);
                                     let err = Err(
                                         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
                                           callee: callee_identifier.id,
@@ -153,14 +157,16 @@ fn validate_fun_recursion_in_expression(
                 validate_fun_recursion_in_expression(state, registry, callee)?;
             }
 
-            for arg_id in &call.arg_ids {
+            let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+            for arg_id in arg_ids {
                 let arg = registry.wrapped_expression(*arg_id);
                 validate_fun_recursion_in_expression(state, registry, arg)?;
             }
             Ok(())
         }
         Expression::Fun(fun) => {
-            for param_id in &fun.param_ids {
+            let param_ids = registry.param_list(fun.param_list_id);
+            for param_id in param_ids {
                 let param = registry.param(*param_id);
                 let param_type = registry.wrapped_expression(param.type_id);
                 validate_fun_recursion_in_expression(state, registry, param_type)?;
@@ -169,7 +175,7 @@ fn validate_fun_recursion_in_expression(
             validate_fun_recursion_in_expression(state, registry, return_type)?;
 
             let decreasing_param_position_and_decreasing_param =
-                fun.param_ids.iter().enumerate().find(|(_i, param_id)| {
+                param_ids.iter().enumerate().find(|(_i, param_id)| {
                     let param = registry.param(**param_id);
                     param.is_dashed
                 });
@@ -195,14 +201,16 @@ fn validate_fun_recursion_in_expression(
         Expression::Match(match_) => {
             let matchee = registry.wrapped_expression(match_.matchee_id);
             validate_fun_recursion_in_expression(state, registry, matchee)?;
+            let case_ids = registry.match_case_list(match_.case_list_id);
             match &matchee.expression {
                 Expression::Identifier(matchee_identifier) => {
                     if let Some(mut substructs) =
                         state.matchee_substructs_mut(matchee_identifier.id)
                     {
-                        for case_id in &match_.case_ids {
+                        for case_id in case_ids {
                             let case = registry.match_case(*case_id);
-                            for case_param_id in &case.param_ids {
+                            let param_ids = registry.identifier_list(case.param_list_id);
+                            for case_param_id in param_ids {
                                 let case_param = registry.identifier(*case_param_id);
                                 substructs.push(case_param.id);
                             }
@@ -211,7 +219,7 @@ fn validate_fun_recursion_in_expression(
                 }
                 _ => {}
             }
-            for case_id in &match_.case_ids {
+            for case_id in case_ids {
                 let case = registry.match_case(*case_id);
                 let case_output = registry.wrapped_expression(case.output_id);
                 validate_fun_recursion_in_expression(state, registry, case_output)?;
@@ -219,7 +227,8 @@ fn validate_fun_recursion_in_expression(
             Ok(())
         }
         Expression::Forall(forall) => {
-            for param_id in &forall.param_ids {
+            let param_ids = registry.param_list(forall.param_list_id);
+            for param_id in param_ids {
                 let param = registry.param(*param_id);
                 let param_type = registry.wrapped_expression(param.type_id);
                 validate_fun_recursion_in_expression(state, registry, param_type)?;

@@ -113,7 +113,8 @@ fn bind_file(
     file: &File,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for item_id in &file.item_ids {
+    let item_ids = registry.file_item_list(file.item_list_id);
+    for item_id in item_ids {
         match item_id {
             FileItemNodeId::Type(type_id) => {
                 let type_statement = registry.type_statement(*type_id);
@@ -135,7 +136,8 @@ fn bind_type_statement(
     type_statement: &TypeStatement,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param_id in &type_statement.param_ids {
+    let param_ids = registry.param_list(type_statement.param_list_id);
+    for param_id in param_ids {
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }
@@ -148,7 +150,8 @@ fn bind_type_statement(
         SymbolSource::Type(type_statement.id),
     )?;
 
-    for variant_id in &type_statement.variant_ids {
+    let variant_ids = registry.variant_list(type_statement.variant_list_id);
+    for variant_id in variant_ids {
         let variant = registry.variant(*variant_id);
         bind_variant(bind_state, registry, variant, name_symbol)?;
     }
@@ -179,7 +182,8 @@ fn bind_variant(
     declaring_type_name_symbol: Symbol,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param_id in &variant.param_ids {
+    let param_ids = registry.param_list(variant.param_list_id);
+    for param_id in param_ids {
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }
@@ -277,7 +281,8 @@ fn bind_call(
 ) -> Result<(), BindError> {
     let callee = registry.wrapped_expression(call.callee_id);
     bind_expression(bind_state, registry, callee)?;
-    for arg_id in &call.arg_ids {
+    let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+    for arg_id in arg_ids {
         let arg = registry.wrapped_expression(*arg_id);
         bind_expression(bind_state, registry, arg)?;
     }
@@ -290,7 +295,8 @@ fn bind_fun(
     fun: &Fun,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param_id in &fun.param_ids {
+    let param_ids = registry.param_list(fun.param_list_id);
+    for param_id in param_ids {
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }
@@ -315,7 +321,8 @@ fn bind_match(
 ) -> Result<(), BindError> {
     let matchee = registry.wrapped_expression(match_.matchee_id);
     bind_expression(bind_state, registry, matchee)?;
-    for case_id in &match_.case_ids {
+    let case_ids = registry.match_case_list(match_.case_list_id);
+    for case_id in case_ids {
         let case = registry.match_case(*case_id);
         bind_match_case(bind_state, registry, case)?;
     }
@@ -328,7 +335,8 @@ fn bind_match_case(
     case: &MatchCase,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param_id in case.param_ids.iter().copied() {
+    let param_ids = registry.identifier_list(case.param_list_id);
+    for param_id in param_ids.iter().copied() {
         define_symbol_in_context_and_bind_to_identifier(
             bind_state,
             registry,
@@ -348,7 +356,8 @@ fn bind_forall(
     forall: &Forall,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
-    for param_id in &forall.param_ids {
+    let param_ids = registry.param_list(forall.param_list_id);
+    for param_id in param_ids {
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }

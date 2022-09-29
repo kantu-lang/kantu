@@ -32,6 +32,44 @@ impl<T> std::hash::Hash for NodeId<T> {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FileItemNodeId {
+    Type(NodeId<TypeStatement>),
+    Let(NodeId<LetStatement>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct ListId<T> {
+    pub start: usize,
+    pub len: usize,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> ListId<T> {
+    pub fn new(start: usize, len: usize) -> Self {
+        Self {
+            start,
+            len,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> Clone for ListId<T> {
+    fn clone(&self) -> ListId<T> {
+        Self::new(self.start, self.len)
+    }
+}
+
+impl<T> Copy for ListId<T> {}
+
+impl<T> std::hash::Hash for ListId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.start.hash(state);
+        self.len.hash(state);
+    }
+}
+
 // TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
 // since #[derive] only works if T implements the respective traits.
 
@@ -50,6 +88,13 @@ pub struct NodeRegistry {
     matches: Vec<Match>,
     match_cases: Vec<MatchCase>,
     foralls: Vec<Forall>,
+
+    file_item_lists: Vec<FileItemNodeId>,
+    param_lists: Vec<NodeId<Param>>,
+    variant_lists: Vec<NodeId<Variant>>,
+    match_case_lists: Vec<NodeId<MatchCase>>,
+    identifier_lists: Vec<NodeId<Identifier>>,
+    wrapped_expression_lists: Vec<NodeId<WrappedExpression>>,
 }
 
 impl NodeRegistry {
@@ -68,6 +113,13 @@ impl NodeRegistry {
             matches: Vec::new(),
             match_cases: Vec::new(),
             foralls: Vec::new(),
+
+            file_item_lists: Vec::new(),
+            param_lists: Vec::new(),
+            variant_lists: Vec::new(),
+            match_case_lists: Vec::new(),
+            identifier_lists: Vec::new(),
+            wrapped_expression_lists: Vec::new(),
         }
     }
 }
@@ -241,6 +293,91 @@ impl NodeRegistry {
 
     pub fn forall(&self, id: NodeId<Forall>) -> &Forall {
         &self.foralls[id.raw]
+    }
+}
+
+impl NodeRegistry {
+    pub fn add_file_item_list(&mut self, mut list: Vec<FileItemNodeId>) -> ListId<FileItemNodeId> {
+        let id = ListId::<FileItemNodeId>::new(self.file_item_lists.len(), list.len());
+        self.file_item_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_param_list(&mut self, mut list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
+        let id = ListId::<NodeId<Param>>::new(self.param_lists.len(), list.len());
+        self.param_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_variant_list(&mut self, mut list: Vec<NodeId<Variant>>) -> ListId<NodeId<Variant>> {
+        let id = ListId::<NodeId<Variant>>::new(self.variant_lists.len(), list.len());
+        self.variant_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_match_case_list(
+        &mut self,
+        mut list: Vec<NodeId<MatchCase>>,
+    ) -> ListId<NodeId<MatchCase>> {
+        let id = ListId::<NodeId<MatchCase>>::new(self.match_case_lists.len(), list.len());
+        self.match_case_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_identifier_list(
+        &mut self,
+        mut list: Vec<NodeId<Identifier>>,
+    ) -> ListId<NodeId<Identifier>> {
+        let id = ListId::<NodeId<Identifier>>::new(self.identifier_lists.len(), list.len());
+        self.identifier_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_wrapped_expression_list(
+        &mut self,
+        mut list: Vec<NodeId<WrappedExpression>>,
+    ) -> ListId<NodeId<WrappedExpression>> {
+        let id = ListId::<NodeId<WrappedExpression>>::new(
+            self.wrapped_expression_lists.len(),
+            list.len(),
+        );
+        self.wrapped_expression_lists.append(&mut list);
+        id
+    }
+}
+
+impl NodeRegistry {
+    pub fn file_item_list(&self, id: ListId<FileItemNodeId>) -> &[FileItemNodeId] {
+        let end = id.start + id.len;
+        &self.file_item_lists[id.start..end]
+    }
+
+    pub fn param_list(&self, id: ListId<NodeId<Param>>) -> &[NodeId<Param>] {
+        let end = id.start + id.len;
+        &self.param_lists[id.start..end]
+    }
+
+    pub fn variant_list(&self, id: ListId<NodeId<Variant>>) -> &[NodeId<Variant>] {
+        let end = id.start + id.len;
+        &self.variant_lists[id.start..end]
+    }
+
+    pub fn match_case_list(&self, id: ListId<NodeId<MatchCase>>) -> &[NodeId<MatchCase>] {
+        let end = id.start + id.len;
+        &self.match_case_lists[id.start..end]
+    }
+
+    pub fn identifier_list(&self, id: ListId<NodeId<Identifier>>) -> &[NodeId<Identifier>] {
+        let end = id.start + id.len;
+        &self.identifier_lists[id.start..end]
+    }
+
+    pub fn wrapped_expression_list(
+        &self,
+        id: ListId<NodeId<WrappedExpression>>,
+    ) -> &[NodeId<WrappedExpression>] {
+        let end = id.start + id.len;
+        &self.wrapped_expression_lists[id.start..end]
     }
 }
 

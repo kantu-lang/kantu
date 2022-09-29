@@ -14,7 +14,8 @@ pub fn extract_variant_type_args_for_file(
     file: &File,
 ) -> Result<VariantReturnTypeTypeArgsMap, IllegalVariantReturnTypeError> {
     let mut map = VariantReturnTypeTypeArgsMap::empty();
-    for item_id in &file.item_ids {
+    let item_ids = registry.file_item_list(file.item_list_id);
+    for item_id in item_ids {
         if let FileItemNodeId::Type(type_id) = item_id {
             let type_statement = registry.type_statement(*type_id);
             extract_variant_type_args_for_type_statement(
@@ -34,7 +35,8 @@ fn extract_variant_type_args_for_type_statement(
     map: &mut VariantReturnTypeTypeArgsMap,
     type_statement: &TypeStatement,
 ) -> Result<(), IllegalVariantReturnTypeError> {
-    for variant_id in &type_statement.variant_ids {
+    let variant_ids = registry.variant_list(type_statement.variant_list_id);
+    for variant_id in variant_ids {
         let variant = registry.variant(*variant_id);
         let args = get_variant_type_args(symbol_db, registry, type_statement, variant)?;
         map.insert_new(variant.id, args);
@@ -66,7 +68,8 @@ fn get_variant_type_args(
                 Expression::Identifier(identifier) => {
                     let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
                     if identifier_symbol == type_symbol {
-                        Ok(call.arg_ids.clone())
+                        let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+                        Ok(arg_ids.to_vec())
                     } else {
                         Err(IllegalVariantReturnTypeError(return_type_id))
                     }

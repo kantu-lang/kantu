@@ -19,7 +19,7 @@ pub fn type_check_file(
     file_id: NodeId<File>,
 ) -> Result<TypeMap, TypeError> {
     let file = registry.file(file_id);
-    let file_item_ids = file.item_ids.clone();
+    let file_item_ids = registry.file_item_list(file.item_list_id).to_vec();
     let mut state = TypeCheckState {
         registry,
         symbol_db,
@@ -42,11 +42,11 @@ fn type_check_type_statement(
     state: &mut TypeCheckState,
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeError> {
+    let type_statement = state.registry.type_statement(type_statement_id);
     let variant_ids: Vec<NodeId<Variant>> = state
         .registry
-        .type_statement(type_statement_id)
-        .variant_ids
-        .clone();
+        .variant_list(type_statement.variant_list_id)
+        .to_vec();
     for variant_id in variant_ids {
         type_check_variant(state, variant_id)?;
     }
@@ -63,9 +63,10 @@ fn type_check_let_statement(
 
 fn type_check_variant(
     state: &mut TypeCheckState,
-    variant: NodeId<Variant>,
+    variant_id: NodeId<Variant>,
 ) -> Result<(), TypeError> {
-    let param_ids: Vec<NodeId<Param>> = state.registry.variant(variant).param_ids.clone();
+    let variant = state.registry.variant(variant_id);
+    let param_ids: Vec<NodeId<Param>> = state.registry.param_list(variant.param_list_id).to_vec();
     for param_id in param_ids {
         type_check_param(state, param_id)?;
     }
