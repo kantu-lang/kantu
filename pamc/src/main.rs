@@ -39,7 +39,9 @@ fn main() {
                     let mut registry = pamc::data::node_registry::NodeRegistry::empty();
                     let file_node_id =
                         pamc::processing::register::register_file(&mut registry, file);
-                    println!("Registered file: {:#?}", registry.file(file_node_id));
+                    println!("Registered file.");
+                    println!("{:#?}", registry.file(file_node_id));
+                    print_separator();
 
                     let bind_result =
                         pamc::processing::bind_type_independent::bind_symbols_to_identifiers(
