@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{ListId, NodeId, NodeRegistry},
     registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
+    symbol_database::{Symbol, SymbolDatabase},
     type_map::{NormalFormNodeId, TypeMap},
     variant_return_type::VariantReturnTypeDatabase,
 };
@@ -126,7 +126,6 @@ fn type_check_let_statement(
 fn type_check_variant(
     state: &mut TypeCheckState,
     variant_id: NodeId<Variant>,
-    type_identifier_id: NodeId<Identifier>,
 ) -> Result<(), TypeError> {
     let variant = state.registry.variant(variant_id);
     let param_ids = state.registry.param_list(variant.param_list_id).to_vec();
@@ -134,38 +133,38 @@ fn type_check_variant(
         type_check_param(state, *param_id)?;
     }
 
-    let normalized_param_list_id = normalize_params(state, param_ids.iter().copied())?;
+    // This return type type will either be `Type` (i.e., type 0)
+    // or it will not be well-typed at all.
+    type_check_expression(state, variant.return_type_id)?;
 
-    let return_type_arg_list_id = state.variant_return_type_args.get(variant_id);
-    let return_type_arg_ids = state
-        .registry
-        .wrapped_expression_list(return_type_arg_list_id)
-        .to_vec();
-    for return_type_arg_id in &return_type_arg_ids {
-        type_check_expression(state, *return_type_arg_id)?;
-    }
-    // let normalized_return_type_arg_ids: Vec<NodeId<WrappedExpression>> = return_type_arg_ids
-    //     .iter()
-    //     .map(|id| Ok(evaluate_well_typed_expression(state, *id)?.0))
-    //     .collect::<Result<Vec<_>, TypeError>>()?;
-    // let normalized_return_type_arg_list_id = state
-    //     .registry
-    //     .add_wrapped_expression_list(normalized_return_type_arg_ids);
+    let normalized_return_type_id = evaluate_well_typed_expression(state, variant.return_type_id)?;
 
     let variant_type_id = if param_ids.is_empty() {
-        let call_id = state.registry.add_call_and_overwrite_its_id(Call {
-            id: dummy_id(),
-            callee_id: type_identifier_id,
-            arg_list_id: normalized_return_type_arg_list_id,
-        });
+        normalized_return_type_id
     } else {
-        unimplemented!();
+        let normalized_param_list_id = normalize_params(state, param_ids.iter().copied())?;
+        let forall_with_dummy_id = Forall {
+            id: dummy_id(),
+            param_list_id: normalized_param_list_id,
+            output_id: normalized_return_type_id.0,
+        };
+        let forall_id = state
+            .registry
+            .add_forall_and_overwrite_its_id(forall_with_dummy_id);
+        let registered_forall = state.registry.forall(forall_id).clone();
+        let wrapped_with_dummy_id = WrappedExpression {
+            id: dummy_id(),
+            expression: Expression::Forall(Box::new(registered_forall)),
+        };
+        let wrapped_id = state
+            .registry
+            .add_wrapped_expression_and_overwrite_its_id(wrapped_with_dummy_id);
+        NormalFormNodeId(wrapped_id)
     };
 
-    // We need to add the type for the declared variant to the context.
-    // If `variant` is a variant of type T, then the type of `variant` is either
-    // `T` or `forall() { T }`.
-    unimplemented!();
+    let variant_symbol = state.symbol_db.identifier_symbols.get(variant.name_id);
+    state.context.insert_new(variant_symbol, variant_type_id);
+
     Ok(())
 }
 
