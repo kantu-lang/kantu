@@ -297,7 +297,7 @@ impl NodeRegistry {
 }
 
 impl NodeRegistry {
-    pub fn add_file_item_list(&mut self, list: Vec<FileItemNodeId>) -> ListId<FileItemNodeId> {
+    pub fn add_file_item_list(&mut self, mut list: Vec<FileItemNodeId>) -> ListId<FileItemNodeId> {
         if list.is_empty() {
             panic!("Cannot add an empty file item id list");
         }
@@ -306,7 +306,7 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_param_list(&mut self, list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
+    pub fn add_param_list(&mut self, mut list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
         if list.is_empty() {
             panic!("Cannot add an empty param id list");
         }
@@ -315,7 +315,7 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_variant_list(&mut self, list: Vec<NodeId<Variant>>) -> ListId<NodeId<Variant>> {
+    pub fn add_variant_list(&mut self, mut list: Vec<NodeId<Variant>>) -> ListId<NodeId<Variant>> {
         if list.is_empty() {
             panic!("Cannot add an empty variant id list");
         }
@@ -326,7 +326,7 @@ impl NodeRegistry {
 
     pub fn add_match_case_list(
         &mut self,
-        list: Vec<NodeId<MatchCase>>,
+        mut list: Vec<NodeId<MatchCase>>,
     ) -> ListId<NodeId<MatchCase>> {
         if list.is_empty() {
             panic!("Cannot add an empty match case id list");
@@ -338,7 +338,7 @@ impl NodeRegistry {
 
     pub fn add_identifier_list(
         &mut self,
-        list: Vec<NodeId<Identifier>>,
+        mut list: Vec<NodeId<Identifier>>,
     ) -> ListId<NodeId<Identifier>> {
         if list.is_empty() {
             panic!("Cannot add an empty identifier id list");
@@ -350,7 +350,7 @@ impl NodeRegistry {
 
     pub fn add_wrapped_expression_list(
         &mut self,
-        list: Vec<NodeId<WrappedExpression>>,
+        mut list: Vec<NodeId<WrappedExpression>>,
     ) -> ListId<NodeId<WrappedExpression>> {
         if list.is_empty() {
             panic!("Cannot add an empty wrapped expression id list");
