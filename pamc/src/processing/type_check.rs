@@ -20,6 +20,11 @@ pub enum TypeError {
         param_arity: usize,
         arg_arity: usize,
     },
+    WrongArgumentType {
+        arg_id: NodeId<WrappedExpression>,
+        param_type: NodeId<WrappedExpression>,
+        arg_type: NodeId<WrappedExpression>,
+    },
 }
 
 pub fn type_check_file(
@@ -157,36 +162,63 @@ fn type_check_expression(
                 });
             }
 
-            let arg_type_ids: Vec<NormalFormNodeId> = arg_ids
-                .to_vec()
+            let arg_ids_and_arg_type_ids: Vec<(NodeId<WrappedExpression>, NormalFormNodeId)> =
+                arg_ids
+                    .to_vec()
+                    .iter()
+                    .map(|arg_id| -> Result<(NodeId<WrappedExpression>, NormalFormNodeId), TypeError> {
+                        Ok((*arg_id, type_check_expression(state, *arg_id)?))
+                    })
+                    .collect::<Result<Vec<_>, TypeError>>()?;
+
+            let param_ids = state
+                .registry
+                .param_list(callee_type.param_list_id)
+                .to_vec();
+
+            for (param_id, (arg_id, arg_type_id)) in param_ids
                 .iter()
-                .map(|arg_id| type_check_expression(state, *arg_id))
-                .collect::<Result<Vec<NormalFormNodeId>, TypeError>>()?;
-
-            let param_ids = state.registry.param_list(callee_type.param_list_id);
-
-            for (param_id, arg_type_id) in
-                param_ids.iter().copied().zip(arg_type_ids.iter().copied())
+                .copied()
+                .zip(arg_ids_and_arg_type_ids.iter().copied())
             {
                 let param = state.registry.param(param_id);
                 let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
                 let param_type_id = get_normalized_type(state, param_symbol)?;
-                if are_types_equal(state, param_type_id, arg_type_id) {
-                    continue;
+                if !are_types_equal(state, param_type_id, arg_type_id) {
+                    return Err(TypeError::WrongArgumentType {
+                        arg_id,
+                        param_type: param_type_id.0,
+                        arg_type: arg_type_id.0,
+                    });
                 }
-                // let arg_type_id = type_check_expression(state, arg_id)?;
-                // if param_type_id != arg_type_id {
-                //     return Err(TypeError::WrongArgumentType {
-                //         call: call_id,
-                //         param: param_id,
-                //         param_type: param_type_id,
-                //         arg: arg_id,
-                //         arg_type: arg_type_id,
-                //     });
-                // }
             }
 
-            unimplemented!()
+            let substitutions: Vec<Substitution> = param_ids
+                .iter()
+                .copied()
+                .zip(arg_ids_and_arg_type_ids.iter().copied())
+                .map(
+                    |(param_id, (arg_id, _))| -> Result<Substitution, TypeError> {
+                        let normalized_arg_id = evaluate_well_typed_expression(state, arg_id)?;
+                        let param = state.registry.param(param_id);
+                        let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
+                        Ok(Substitution {
+                            from: param_symbol,
+                            to: normalized_arg_id,
+                        })
+                    },
+                )
+                .collect::<Result<Vec<_>, TypeError>>()?;
+            let unnormalized_return_type_id = apply_substitutions(
+                &mut state.registry,
+                &state.symbol_db,
+                callee_type.output_id,
+                substitutions,
+            );
+            let return_type_id =
+                evaluate_well_typed_expression(state, unnormalized_return_type_id)?;
+
+            Ok(return_type_id)
         }
         _ => unimplemented!(),
     }
@@ -216,7 +248,7 @@ fn get_normalized_type(
     evaluate_well_typed_expression(state, unnormalized_type_id)
 }
 
-fn are_types_equal(state: &TypeCheckState, a: NormalFormNodeId, b: NormalFormNodeId) -> bool {
+fn are_types_equal(_state: &TypeCheckState, _a: NormalFormNodeId, _b: NormalFormNodeId) -> bool {
     unimplemented!()
 }
 
