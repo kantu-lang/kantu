@@ -3,7 +3,6 @@ use crate::data::{
     registered_ast::*,
     symbol_database::{Symbol, SymbolDatabase},
     type_map::{NormalFormNodeId, TypeMap},
-    variant_return_type::VariantReturnTypeDatabase,
 };
 
 #[derive(Clone, Debug)]
