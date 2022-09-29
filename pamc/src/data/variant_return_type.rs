@@ -3,10 +3,16 @@ use crate::data::{
     registered_ast::*,
 };
 
+
+// TODO: Delete this.
+// check_variant_return_types_for_file should probably
+// return Result<(), ...> instead.
 #[derive(Clone, Debug)]
 pub struct VariantReturnTypeDatabase {
     map: Vec<Option<VariantReturnType>>,
 }
+
+check_variant_return_types_for_file
 
 #[derive(Clone, Debug)]
 pub enum VariantReturnType {
