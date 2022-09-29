@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase},
+    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
 };
 
@@ -38,6 +38,7 @@ pub fn type_check_file(
         registry,
         symbol_db,
         context: TypeCheckContext::new(),
+        type0_identifier_id: todo(),
     };
     for item_id in file_item_ids {
         match item_id {
@@ -52,11 +53,73 @@ pub fn type_check_file(
     Ok(state.context.bottom_type_map())
 }
 
+fn todo<T>() -> T {
+    unimplemented!()
+}
+
 fn type_check_type_statement(
     state: &mut TypeCheckState,
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeError> {
     let type_statement = state.registry.type_statement(type_statement_id);
+    let param_ids: Vec<NodeId<Param>> = state
+        .registry
+        .param_list(type_statement.param_list_id)
+        .to_vec();
+    for param_id in &param_ids {
+        type_check_param(state, *param_id)?;
+    }
+
+    let type_name_type_id = if param_ids.is_empty() {
+        state.type0_identifier_id
+    } else {
+        let normalized_param_ids: Vec<NodeId<Param>> = param_ids
+            .iter()
+            .map(|id| -> Result<NodeId<Param>, TypeError> {
+                let param = state.registry.param(*id);
+                let param_type_id = param.type_id;
+                let normalized_param_with_dummy_id = Param {
+                    id: dummy_id(),
+                    is_dashed: param.is_dashed,
+                    name_id: param.name_id,
+                    // It's safe to call `evaluate_well_typed_expression`
+                    // because we type-checked it above.
+                    type_id: evaluate_well_typed_expression(state, param_type_id)?.0,
+                };
+                Ok(state
+                    .registry
+                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id))
+            })
+            .collect::<Result<Vec<_>, TypeError>>()?;
+        let normalized_param_list_id = state.registry.add_param_list(normalized_param_ids);
+
+        let forall_with_dummy_id = Forall {
+            id: dummy_id(),
+            param_list_id: normalized_param_list_id,
+            output_id: state.type0_identifier_id.0,
+        };
+        let forall_id = state
+            .registry
+            .add_forall_and_overwrite_its_id(forall_with_dummy_id);
+        let registered_forall = state.registry.forall(forall_id).clone();
+        let wrapped_with_dummy_id = WrappedExpression {
+            id: dummy_id(),
+            expression: Expression::Forall(Box::new(registered_forall)),
+        };
+        let wrapped_id = state
+            .registry
+            .add_wrapped_expression_and_overwrite_its_id(wrapped_with_dummy_id);
+        NormalFormNodeId(wrapped_id)
+    };
+    let type_statement = state.registry.type_statement(type_statement_id);
+    let type_name_symbol = state
+        .symbol_db
+        .identifier_symbols
+        .get(type_statement.name_id);
+    state
+        .context
+        .insert_new(type_name_symbol, type_name_type_id);
+
     let variant_ids: Vec<NodeId<Variant>> = state
         .registry
         .variant_list(type_statement.variant_list_id)
@@ -64,9 +127,7 @@ fn type_check_type_statement(
     for variant_id in variant_ids {
         type_check_variant(state, variant_id)?;
     }
-    // We need to add the type for the declared type to the context.
-    // It's either Type or forall() { Type }.
-    unimplemented!();
+
     Ok(())
 }
 
@@ -95,6 +156,7 @@ fn type_check_variant(
 }
 
 fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Result<(), TypeError> {
+    // TODO Review
     let type_id = state.registry.param(param_id).type_id;
     let type_type_id = type_check_expression(state, type_id)?.0;
     let type_type = state.registry.wrapped_expression(type_type_id);
@@ -110,6 +172,8 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
                 });
             }
         }
+        // TODO: Should we really be this strict?
+        // Answer: No. Otherwise `List(T)` would be disallowed.
         _other_type_type => {
             return Err(TypeError::IllegalParamType {
                 param: param_id,
@@ -259,11 +323,16 @@ fn are_types_equal(_state: &TypeCheckState, _a: NormalFormNodeId, _b: NormalForm
     unimplemented!()
 }
 
+fn dummy_id<T>() -> NodeId<T> {
+    NodeId::new(0)
+}
+
 #[derive(Debug)]
 struct TypeCheckState<'a> {
     registry: &'a mut NodeRegistry,
     symbol_db: &'a mut SymbolDatabase,
     context: TypeCheckContext,
+    type0_identifier_id: NormalFormNodeId,
 }
 
 use context::*;
