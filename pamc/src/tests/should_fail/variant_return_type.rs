@@ -10,7 +10,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(&Expression, &N
     let file_id = register_file(&mut registry, file);
     let file = registry.file(file_id);
     let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
-    let err = extract_variant_type_args_for_file(&symbol_db, &registry, file)
+    let err = check_variant_return_types_for_file(&symbol_db, &registry, file)
         .expect_err("Type arg extraction unexpectedly succeeded");
     let illegal_variant_return_type = &registry.wrapped_expression(err.0).expression;
     panicker(illegal_variant_return_type, &registry);

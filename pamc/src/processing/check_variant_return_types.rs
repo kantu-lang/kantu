@@ -2,23 +2,23 @@ use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::SymbolDatabase,
-    variant_return_type::VariantReturnTypeTypeArgsMap,
+    variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
 };
 
 #[derive(Clone, Debug)]
 pub struct IllegalVariantReturnTypeError(pub NodeId<WrappedExpression>);
 
-pub fn extract_variant_type_args_for_file(
+pub fn check_variant_return_types_for_file(
     symbol_db: &SymbolDatabase,
     registry: &NodeRegistry,
     file: &File,
-) -> Result<VariantReturnTypeTypeArgsMap, IllegalVariantReturnTypeError> {
-    let mut map = VariantReturnTypeTypeArgsMap::empty();
+) -> Result<VariantReturnTypeDatabase, IllegalVariantReturnTypeError> {
+    let mut map = VariantReturnTypeDatabase::empty();
     let item_ids = registry.file_item_list(file.item_list_id);
     for item_id in item_ids {
         if let FileItemNodeId::Type(type_id) = item_id {
             let type_statement = registry.type_statement(*type_id);
-            extract_variant_type_args_for_type_statement(
+            check_variant_return_types_for_type_statement(
                 symbol_db,
                 registry,
                 &mut map,
@@ -29,10 +29,10 @@ pub fn extract_variant_type_args_for_file(
     Ok(map)
 }
 
-fn extract_variant_type_args_for_type_statement(
+fn check_variant_return_types_for_type_statement(
     symbol_db: &SymbolDatabase,
     registry: &NodeRegistry,
-    map: &mut VariantReturnTypeTypeArgsMap,
+    map: &mut VariantReturnTypeDatabase,
     type_statement: &TypeStatement,
 ) -> Result<(), IllegalVariantReturnTypeError> {
     let variant_ids = registry.variant_list(type_statement.variant_list_id);
@@ -49,7 +49,7 @@ fn get_variant_type_args(
     registry: &NodeRegistry,
     type_statement: &TypeStatement,
     variant: &Variant,
-) -> Result<Vec<NodeId<WrappedExpression>>, IllegalVariantReturnTypeError> {
+) -> Result<VariantReturnType, IllegalVariantReturnTypeError> {
     let type_symbol = symbol_db.identifier_symbols.get(type_statement.name_id);
     let return_type_id = variant.return_type_id;
     let return_type = &registry.wrapped_expression(return_type_id).expression;
@@ -57,19 +57,23 @@ fn get_variant_type_args(
         Expression::Identifier(identifier) => {
             let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
             if identifier_symbol == type_symbol {
-                Ok(vec![])
+                Ok(VariantReturnType::Identifier {
+                    identifier_id: return_type_id,
+                })
             } else {
                 Err(IllegalVariantReturnTypeError(return_type_id))
             }
         }
         Expression::Call(call) => {
-            let callee = &registry.wrapped_expression(call.callee_id).expression;
-            match callee {
+            let callee = &registry.wrapped_expression(call.callee_id);
+            match &callee.expression {
                 Expression::Identifier(identifier) => {
                     let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
                     if identifier_symbol == type_symbol {
-                        let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
-                        Ok(arg_ids.to_vec())
+                        Ok(VariantReturnType::Call {
+                            callee_id: callee.id,
+                            arg_list_id: call.arg_list_id,
+                        })
                     } else {
                         Err(IllegalVariantReturnTypeError(return_type_id))
                     }

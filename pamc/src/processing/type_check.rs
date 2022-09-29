@@ -1,7 +1,7 @@
 use crate::data::{
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::{ListId, NodeId, NodeRegistry},
     registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
+    symbol_database::{Symbol, SymbolDatabase},
     type_map::{NormalFormNodeId, TypeMap},
 };
 
@@ -62,7 +62,7 @@ fn type_check_type_statement(
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeError> {
     let type_statement = state.registry.type_statement(type_statement_id);
-    let param_ids: Vec<NodeId<Param>> = state
+    let param_ids = state
         .registry
         .param_list(type_statement.param_list_id)
         .to_vec();
@@ -73,43 +73,11 @@ fn type_check_type_statement(
     let type_name_type_id = if param_ids.is_empty() {
         state.type0_identifier_id
     } else {
-        let normalized_param_ids: Vec<NodeId<Param>> = param_ids
-            .iter()
-            .map(|id| -> Result<NodeId<Param>, TypeError> {
-                let param = state.registry.param(*id);
-                let param_type_id = param.type_id;
-                let normalized_param_with_dummy_id = Param {
-                    id: dummy_id(),
-                    is_dashed: param.is_dashed,
-                    name_id: param.name_id,
-                    // It's safe to call `evaluate_well_typed_expression`
-                    // because we type-checked it above.
-                    type_id: evaluate_well_typed_expression(state, param_type_id)?.0,
-                };
-                Ok(state
-                    .registry
-                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id))
-            })
-            .collect::<Result<Vec<_>, TypeError>>()?;
-        let normalized_param_list_id = state.registry.add_param_list(normalized_param_ids);
-
-        let forall_with_dummy_id = Forall {
-            id: dummy_id(),
-            param_list_id: normalized_param_list_id,
-            output_id: state.type0_identifier_id.0,
-        };
-        let forall_id = state
-            .registry
-            .add_forall_and_overwrite_its_id(forall_with_dummy_id);
-        let registered_forall = state.registry.forall(forall_id).clone();
-        let wrapped_with_dummy_id = WrappedExpression {
-            id: dummy_id(),
-            expression: Expression::Forall(Box::new(registered_forall)),
-        };
-        let wrapped_id = state
-            .registry
-            .add_wrapped_expression_and_overwrite_its_id(wrapped_with_dummy_id);
-        NormalFormNodeId(wrapped_id)
+        let normalized_param_list_id =
+            normalize_type_checked_params(state, param_ids.iter().copied())?;
+        let wrapped_forall_id =
+            register_wrapped_forall(state, normalized_param_list_id, state.type0_identifier_id.0);
+        NormalFormNodeId(wrapped_forall_id)
     };
     let type_statement = state.registry.type_statement(type_statement_id);
     let type_name_symbol = state
@@ -131,12 +99,57 @@ fn type_check_type_statement(
     Ok(())
 }
 
-fn type_check_let_statement(
-    _state: &mut TypeCheckState,
-    _let_statement: NodeId<LetStatement>,
-) -> Result<(), TypeError> {
-    // TODO: Actually implement (or remove) type_check_let_statement
-    Ok(())
+/// Every param id yielded by `param_ids` **must** be a param that has been
+/// type checked.
+fn normalize_type_checked_params(
+    state: &mut TypeCheckState,
+    param_ids: impl IntoIterator<Item = NodeId<Param>>,
+) -> Result<ListId<NodeId<Param>>, TypeError> {
+    let normalized_param_ids: Vec<NodeId<Param>> = param_ids
+        .into_iter()
+        .map(|id| -> Result<NodeId<Param>, TypeError> {
+            let param = state.registry.param(id);
+            let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
+            let normalized_param_type_id = get_normalized_type(state, param_symbol)?;
+
+            let param = state.registry.param(id);
+            let normalized_param_with_dummy_id = Param {
+                id: dummy_id(),
+                is_dashed: param.is_dashed,
+                name_id: param.name_id,
+                // It's safe to call `evaluate_well_typed_expression`
+                // because we type-checked it above.
+                type_id: normalized_param_type_id.0,
+            };
+            Ok(state
+                .registry
+                .add_param_and_overwrite_its_id(normalized_param_with_dummy_id))
+        })
+        .collect::<Result<Vec<_>, TypeError>>()?;
+    Ok(state.registry.add_param_list(normalized_param_ids))
+}
+
+fn register_wrapped_forall(
+    state: &mut TypeCheckState,
+    param_list_id: ListId<NodeId<Param>>,
+    output_id: NodeId<WrappedExpression>,
+) -> NodeId<WrappedExpression> {
+    let forall_with_dummy_id = Forall {
+        id: dummy_id(),
+        param_list_id,
+        output_id,
+    };
+    let forall_id = state
+        .registry
+        .add_forall_and_overwrite_its_id(forall_with_dummy_id);
+    let registered_forall = state.registry.forall(forall_id).clone();
+    let wrapped_with_dummy_id = WrappedExpression {
+        id: dummy_id(),
+        expression: Expression::Forall(Box::new(registered_forall)),
+    };
+    state
+        .registry
+        .add_wrapped_expression_and_overwrite_its_id(wrapped_with_dummy_id)
 }
 
 fn type_check_variant(
@@ -144,14 +157,32 @@ fn type_check_variant(
     variant_id: NodeId<Variant>,
 ) -> Result<(), TypeError> {
     let variant = state.registry.variant(variant_id);
-    let param_ids: Vec<NodeId<Param>> = state.registry.param_list(variant.param_list_id).to_vec();
-    for param_id in param_ids {
-        type_check_param(state, param_id)?;
+    let variant_return_type_id = variant.return_type_id;
+    let variant_name_id = variant.name_id;
+    let param_ids = state.registry.param_list(variant.param_list_id).to_vec();
+    for param_id in &param_ids {
+        type_check_param(state, *param_id)?;
     }
-    // We need to add the type for the declared variant to the context.
-    // If `variant` is a variant of type T, then the type of `variant` is either
-    // `T` or `forall() { T }`.
-    unimplemented!();
+
+    // This return type type will either be `Type` (i.e., type 0)
+    // or it will not be well-typed at all.
+    type_check_expression(state, variant_return_type_id)?;
+
+    let normalized_return_type_id = evaluate_well_typed_expression(state, variant_return_type_id)?;
+
+    let variant_type_id = if param_ids.is_empty() {
+        normalized_return_type_id
+    } else {
+        let normalized_param_list_id =
+            normalize_type_checked_params(state, param_ids.iter().copied())?;
+        let wrapped_forall_id =
+            register_wrapped_forall(state, normalized_param_list_id, normalized_return_type_id.0);
+        NormalFormNodeId(wrapped_forall_id)
+    };
+
+    let variant_symbol = state.symbol_db.identifier_symbols.get(variant_name_id);
+    state.context.insert_new(variant_symbol, variant_type_id);
+
     Ok(())
 }
 
@@ -187,6 +218,14 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
     let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?;
     state.context.insert_new(param_symbol, type_normal_form_id);
 
+    Ok(())
+}
+
+fn type_check_let_statement(
+    _state: &mut TypeCheckState,
+    _let_statement: NodeId<LetStatement>,
+) -> Result<(), TypeError> {
+    // TODO: Actually implement (or remove) type_check_let_statement
     Ok(())
 }
 
