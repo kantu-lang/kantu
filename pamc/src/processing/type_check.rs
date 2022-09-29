@@ -3,7 +3,7 @@ use crate::data::{
     registered_ast::*,
     symbol_database::{Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
-    variant_return_type::VariantReturnTypeTypeArgsMap,
+    variant_return_type::VariantReturnTypeDatabase,
 };
 
 #[derive(Clone, Debug)]
@@ -31,7 +31,7 @@ pub enum TypeError {
 pub fn type_check_file(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
-    variant_return_type_args: &VariantReturnTypeTypeArgsMap,
+    variant_return_type_args: &VariantReturnTypeDatabase,
     file_id: NodeId<File>,
 ) -> Result<TypeMap, TypeError> {
     let file = registry.file(file_id);
@@ -126,6 +126,7 @@ fn type_check_let_statement(
 fn type_check_variant(
     state: &mut TypeCheckState,
     variant_id: NodeId<Variant>,
+    type_identifier_id: NodeId<Identifier>,
 ) -> Result<(), TypeError> {
     let variant = state.registry.variant(variant_id);
     let param_ids = state.registry.param_list(variant.param_list_id).to_vec();
@@ -135,13 +136,27 @@ fn type_check_variant(
 
     let normalized_param_list_id = normalize_params(state, param_ids.iter().copied())?;
 
-    let return_type_type_args = state.variant_return_type_args.get(variant_id);
+    let return_type_arg_list_id = state.variant_return_type_args.get(variant_id);
+    let return_type_arg_ids = state
+        .registry
+        .wrapped_expression_list(return_type_arg_list_id)
+        .to_vec();
+    for return_type_arg_id in &return_type_arg_ids {
+        type_check_expression(state, *return_type_arg_id)?;
+    }
+    // let normalized_return_type_arg_ids: Vec<NodeId<WrappedExpression>> = return_type_arg_ids
+    //     .iter()
+    //     .map(|id| Ok(evaluate_well_typed_expression(state, *id)?.0))
+    //     .collect::<Result<Vec<_>, TypeError>>()?;
+    // let normalized_return_type_arg_list_id = state
+    //     .registry
+    //     .add_wrapped_expression_list(normalized_return_type_arg_ids);
 
     let variant_type_id = if param_ids.is_empty() {
         let call_id = state.registry.add_call_and_overwrite_its_id(Call {
             id: dummy_id(),
-            callee_id: variant.return_type_id,
-            arg_list_id: ListId::new(),
+            callee_id: type_identifier_id,
+            arg_list_id: normalized_return_type_arg_list_id,
         });
     } else {
         unimplemented!();
@@ -361,7 +376,7 @@ fn dummy_id<T>() -> NodeId<T> {
 struct TypeCheckState<'a> {
     registry: &'a mut NodeRegistry,
     symbol_db: &'a mut SymbolDatabase,
-    variant_return_type_args: &'a VariantReturnTypeTypeArgsMap,
+    variant_return_type_args: &'a VariantReturnTypeDatabase,
     context: TypeCheckContext,
     type0_identifier_id: NormalFormNodeId,
 }

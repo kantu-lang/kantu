@@ -1,5 +1,5 @@
 pub mod bind_type_independent;
-pub mod extract_variant_type_args;
+pub mod check_variant_return_types;
 pub mod lex;
 pub mod parse;
 pub mod register;

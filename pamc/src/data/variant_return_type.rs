@@ -4,24 +4,35 @@ use crate::data::{
 };
 
 #[derive(Clone, Debug)]
-pub struct VariantReturnTypeTypeArgsMap {
-    map: Vec<Option<ListId<NodeId<WrappedExpression>>>>,
+pub struct VariantReturnTypeDatabase {
+    map: Vec<Option<VariantReturnType>>,
 }
 
-impl VariantReturnTypeTypeArgsMap {
+#[derive(Clone, Debug)]
+pub enum VariantReturnType {
+    Identifier {
+        identifier_id: NodeId<WrappedExpression>,
+    },
+    Call {
+        callee_id: NodeId<WrappedExpression>,
+        arg_list_id: ListId<NodeId<WrappedExpression>>,
+    },
+}
+
+impl VariantReturnTypeDatabase {
     pub fn empty() -> Self {
-        VariantReturnTypeTypeArgsMap { map: Vec::new() }
+        VariantReturnTypeDatabase { map: Vec::new() }
     }
 }
 
-impl VariantReturnTypeTypeArgsMap {
+impl VariantReturnTypeDatabase {
     /// Panics if no entry is found for the provided variant.
-    pub fn get(&self, variant: NodeId<Variant>) -> ListId<NodeId<WrappedExpression>> {
+    pub fn get(&self, variant: NodeId<Variant>) -> VariantReturnType {
         self.try_get(variant)
-            .expect(&format!("Type args could not be found for {:?}", variant))
+            .expect(&format!("Return type could not be found for {:?}", variant))
     }
 
-    fn try_get(&self, variant: NodeId<Variant>) -> Option<ListId<NodeId<WrappedExpression>>> {
+    fn try_get(&self, variant: NodeId<Variant>) -> Option<VariantReturnType> {
         if variant.raw >= self.map.len() {
             None
         } else {
@@ -30,30 +41,22 @@ impl VariantReturnTypeTypeArgsMap {
     }
 
     /// Panics if an entry already exists for the provided variant.
-    pub fn insert_new(
-        &mut self,
-        variant: NodeId<Variant>,
-        type_arg_list_id: ListId<NodeId<WrappedExpression>>,
-    ) {
+    pub fn insert_new(&mut self, variant: NodeId<Variant>, return_type: VariantReturnType) {
         if self.contains(variant) {
-            panic!("Type arg list id already exist for {:?}", variant);
+            panic!("Return type already exists for variant {:?}", variant);
         }
-        self.insert(variant, type_arg_list_id);
+        self.insert(variant, return_type);
     }
 
     fn contains(&self, variant: NodeId<Variant>) -> bool {
         self.try_get(variant).is_some()
     }
 
-    fn insert(
-        &mut self,
-        variant: NodeId<Variant>,
-        type_arg_list_id: ListId<NodeId<WrappedExpression>>,
-    ) {
+    fn insert(&mut self, variant: NodeId<Variant>, return_type: VariantReturnType) {
         let min_len = variant.raw + 1;
         if self.map.len() < min_len {
             self.map.resize(min_len, None);
         }
-        self.map[variant.raw] = Some(type_arg_list_id);
+        self.map[variant.raw] = Some(return_type);
     }
 }
