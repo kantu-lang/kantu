@@ -11,8 +11,8 @@ where "pahm" pronounced like "palm" without the "l",
 "lee" is pronounced like the name (i.e., rhymes with "tree"),
 and "who" is pronounced normally.
 
-The name is derived from the Lojbanic word _pamli'u_, which is roughly
-equivalent to the English "date" (in the romantic sense of the word).
+The name is derived from the Lojbanic word _pamli'u_, which roughly
+means "to date" (in the sense of "We went on our first date last week.").
 
 ## Guides
 
