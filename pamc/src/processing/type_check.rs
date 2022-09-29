@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_ast::*,
-    symbol_database::SymbolDatabase,
+    symbol_database::{Symbol, SymbolDatabase},
     type_map::{NormalFormNodeId, TypeMap},
 };
 
@@ -10,6 +10,15 @@ pub enum TypeError {
     IllegalParamType {
         param: NodeId<Param>,
         type_type: NodeId<WrappedExpression>,
+    },
+    CalleeNotAFunction {
+        callee: NodeId<WrappedExpression>,
+        callee_type: NodeId<WrappedExpression>,
+    },
+    WrongNumberOfArguments {
+        call: NodeId<Call>,
+        param_arity: usize,
+        arg_arity: usize,
     },
 }
 
@@ -112,33 +121,72 @@ fn type_check_expression(
     match &state.registry.wrapped_expression(id).expression {
         Expression::Identifier(identifier) => {
             let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
-            let (unsubstituted_type_id, substitutions) = state.context.get(symbol);
-            let unnormalized_type_id = apply_substitutions(
-                &mut state.registry,
-                &state.symbol_db,
-                unsubstituted_type_id.0,
-                substitutions
-                    .iter()
-                    .flat_map(std::ops::Deref::deref)
-                    .copied(),
-            );
-            let type_id = evaluate_well_typed_expression(state, unnormalized_type_id)?;
+            let type_id = get_normalized_type(state, symbol)?;
             Ok(type_id)
         }
         Expression::Dot(dot) => {
             let symbol = state.symbol_db.identifier_symbols.get(dot.right_id);
-            let (unsubstituted_type_id, substitutions) = state.context.get(symbol);
-            let unnormalized_type_id = apply_substitutions(
-                &mut state.registry,
-                &state.symbol_db,
-                unsubstituted_type_id.0,
-                substitutions
-                    .iter()
-                    .flat_map(std::ops::Deref::deref)
-                    .copied(),
-            );
-            let type_id = evaluate_well_typed_expression(state, unnormalized_type_id)?;
+            let type_id = get_normalized_type(state, symbol)?;
             Ok(type_id)
+        }
+        Expression::Call(call) => {
+            let call_id = call.id;
+            let callee_id = call.callee_id;
+            let arg_list_id = call.arg_list_id;
+            let callee_type_id = type_check_expression(state, callee_id)?;
+            let callee_type: Forall = match &state
+                .registry
+                .wrapped_expression(callee_type_id.0)
+                .expression
+            {
+                Expression::Forall(forall) => (**forall).clone(),
+                _ => {
+                    return Err(TypeError::CalleeNotAFunction {
+                        callee: callee_id,
+                        callee_type: callee_type_id.0,
+                    })
+                }
+            };
+            let param_ids = state.registry.param_list(callee_type.param_list_id);
+            let arg_ids = state.registry.wrapped_expression_list(arg_list_id);
+            if param_ids.len() != arg_ids.len() {
+                return Err(TypeError::WrongNumberOfArguments {
+                    call: call_id,
+                    param_arity: param_ids.len(),
+                    arg_arity: arg_ids.len(),
+                });
+            }
+
+            let arg_type_ids: Vec<NormalFormNodeId> = arg_ids
+                .to_vec()
+                .iter()
+                .map(|arg_id| type_check_expression(state, *arg_id))
+                .collect::<Result<Vec<NormalFormNodeId>, TypeError>>()?;
+
+            let param_ids = state.registry.param_list(callee_type.param_list_id);
+
+            for (param_id, arg_type_id) in
+                param_ids.iter().copied().zip(arg_type_ids.iter().copied())
+            {
+                let param = state.registry.param(param_id);
+                let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
+                let param_type_id = get_normalized_type(state, param_symbol)?;
+                if are_types_equal(state, param_type_id, arg_type_id) {
+                    continue;
+                }
+                // let arg_type_id = type_check_expression(state, arg_id)?;
+                // if param_type_id != arg_type_id {
+                //     return Err(TypeError::WrongArgumentType {
+                //         call: call_id,
+                //         param: param_id,
+                //         param_type: param_type_id,
+                //         arg: arg_id,
+                //         arg_type: arg_type_id,
+                //     });
+                // }
+            }
+
+            unimplemented!()
         }
         _ => unimplemented!(),
     }
@@ -149,6 +197,27 @@ fn evaluate_well_typed_expression(
     _expression: NodeId<WrappedExpression>,
 ) -> Result<NormalFormNodeId, TypeError> {
     unimplemented!();
+}
+
+fn get_normalized_type(
+    state: &mut TypeCheckState,
+    symbol: Symbol,
+) -> Result<NormalFormNodeId, TypeError> {
+    let (unsubstituted_type_id, substitutions) = state.context.get(symbol);
+    let unnormalized_type_id = apply_substitutions(
+        &mut state.registry,
+        &state.symbol_db,
+        unsubstituted_type_id.0,
+        substitutions
+            .iter()
+            .flat_map(std::ops::Deref::deref)
+            .copied(),
+    );
+    evaluate_well_typed_expression(state, unnormalized_type_id)
+}
+
+fn are_types_equal(state: &TypeCheckState, a: NormalFormNodeId, b: NormalFormNodeId) -> bool {
+    unimplemented!()
 }
 
 #[derive(Debug)]
