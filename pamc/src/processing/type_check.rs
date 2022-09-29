@@ -34,11 +34,24 @@ pub fn type_check_file(
 ) -> Result<TypeMap, TypeError> {
     let file = registry.file(file_id);
     let file_item_ids = registry.file_item_list(file.item_list_id).to_vec();
+    let wrapped_type0_identifier_id = {
+        let type0_identifier_id = registry.add_identifier_and_overwrite_its_id(Identifier {
+            id: dummy_id(),
+            start: None,
+            name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
+        });
+        let type0_identifier = registry.identifier(type0_identifier_id).clone();
+        let wrapped_id = registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+            id: dummy_id(),
+            expression: Expression::Identifier(type0_identifier),
+        });
+        NormalFormNodeId(wrapped_id)
+    };
     let mut state = TypeCheckState {
         registry,
         symbol_db,
         context: TypeCheckContext::new(),
-        type0_identifier_id: todo(),
+        type0_identifier_id: wrapped_type0_identifier_id,
     };
     for item_id in file_item_ids {
         match item_id {
@@ -51,10 +64,6 @@ pub fn type_check_file(
         }
     }
     Ok(state.context.bottom_type_map())
-}
-
-fn todo<T>() -> T {
-    unimplemented!()
 }
 
 fn type_check_type_statement(
