@@ -14,10 +14,11 @@ pub fn register_file(registry: &mut NodeRegistry, unregistered: ur::File) -> Nod
         .into_iter()
         .map(|unregistered| register_file_item(registry, unregistered))
         .collect();
+    let item_list_id = registry.add_file_item_list(item_ids);
     registry.add_file_and_overwrite_its_id(File {
         id: dummy_id(),
         file_id: unregistered.id,
-        item_ids,
+        item_list_id,
     })
 }
 
@@ -45,16 +46,18 @@ pub fn register_type_statement(
         .into_iter()
         .map(|unregistered| register_param(registry, unregistered))
         .collect();
+    let param_list_id = registry.add_param_list(param_ids);
     let variant_ids = unregistered
         .variants
         .into_iter()
         .map(|unregistered_variant| register_variant(registry, unregistered_variant))
         .collect();
+    let variant_list_id = registry.add_variant_list(variant_ids);
     registry.add_type_statement_and_overwrite_its_id(TypeStatement {
         id: dummy_id(),
         name_id,
-        param_ids,
-        variant_ids,
+        param_list_id,
+        variant_list_id,
     })
 }
 
@@ -87,11 +90,12 @@ pub fn register_variant(registry: &mut NodeRegistry, unregistered: ur::Variant) 
         .into_iter()
         .map(|unregistered| register_param(registry, unregistered))
         .collect();
+    let param_list_id = registry.add_param_list(param_ids);
     let return_type_id = register_expression(registry, unregistered.return_type);
     registry.add_variant_and_overwrite_its_id(Variant {
         id: dummy_id(),
         name_id,
-        param_ids,
+        param_list_id,
         return_type_id,
     })
 }
@@ -168,10 +172,11 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: ur::Call) -> Nod
         .into_iter()
         .map(|unregistered| register_expression(registry, unregistered))
         .collect();
+    let arg_list_id = registry.add_wrapped_expression_list(arg_ids);
     registry.add_call_and_overwrite_its_id(Call {
         id: dummy_id(),
         callee_id,
-        arg_ids,
+        arg_list_id,
     })
 }
 
@@ -182,12 +187,13 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: ur::Fun) -> NodeI
         .into_iter()
         .map(|unregistered| register_param(registry, unregistered))
         .collect();
+    let param_list_id = registry.add_param_list(param_ids);
     let return_type_id = register_expression(registry, unregistered.return_type);
     let body_id = register_expression(registry, unregistered.body);
     registry.add_fun_and_overwrite_its_id(Fun {
         id: dummy_id(),
         name_id,
-        param_ids,
+        param_list_id,
         return_type_id,
         body_id,
     })
@@ -200,10 +206,11 @@ pub fn register_match(registry: &mut NodeRegistry, unregistered: ur::Match) -> N
         .into_iter()
         .map(|unregistered| register_match_case(registry, unregistered))
         .collect();
+    let case_list_id = registry.add_match_case_list(case_ids);
     registry.add_match_and_overwrite_its_id(Match {
         id: dummy_id(),
         matchee_id,
-        case_ids,
+        case_list_id,
     })
 }
 
@@ -213,10 +220,11 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: ur::Forall) ->
         .into_iter()
         .map(|unregistered| register_param(registry, unregistered))
         .collect();
+    let param_list_id = registry.add_param_list(param_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add_forall_and_overwrite_its_id(Forall {
         id: dummy_id(),
-        param_ids,
+        param_list_id,
         output_id,
     })
 }
@@ -231,11 +239,12 @@ pub fn register_match_case(
         .into_iter()
         .map(|unregistered| register_identifier(registry, unregistered))
         .collect();
+    let param_list_id = registry.add_identifier_list(param_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add_match_case_and_overwrite_its_id(MatchCase {
         id: dummy_id(),
         variant_name_id,
-        param_ids,
+        param_list_id,
         output_id,
     })
 }

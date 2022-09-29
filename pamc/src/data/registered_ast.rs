@@ -1,24 +1,23 @@
-use crate::data::{node_registry::NodeId, FileId, TextPosition};
+use crate::data::{
+    node_registry::{ListId, NodeId},
+    FileId, TextPosition,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
     pub file_id: FileId,
     pub id: NodeId<Self>,
-    pub item_ids: Vec<FileItemNodeId>,
+    pub item_list_id: ListId<FileItemNodeId>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum FileItemNodeId {
-    Type(NodeId<TypeStatement>),
-    Let(NodeId<LetStatement>),
-}
+pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
     pub id: NodeId<Self>,
     pub name_id: NodeId<Identifier>,
-    pub param_ids: Vec<NodeId<Param>>,
-    pub variant_ids: Vec<NodeId<Variant>>,
+    pub param_list_id: ListId<NodeId<Param>>,
+    pub variant_list_id: ListId<NodeId<Variant>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,7 +32,7 @@ pub struct Param {
 pub struct Variant {
     pub id: NodeId<Self>,
     pub name_id: NodeId<Identifier>,
-    pub param_ids: Vec<NodeId<Param>>,
+    pub param_list_id: ListId<NodeId<Param>>,
     pub return_type_id: NodeId<WrappedExpression>,
 }
 
@@ -85,14 +84,14 @@ pub struct Dot {
 pub struct Call {
     pub id: NodeId<Self>,
     pub callee_id: NodeId<WrappedExpression>,
-    pub arg_ids: Vec<NodeId<WrappedExpression>>,
+    pub arg_list_id: ListId<NodeId<WrappedExpression>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
     pub id: NodeId<Self>,
     pub name_id: NodeId<Identifier>,
-    pub param_ids: Vec<NodeId<Param>>,
+    pub param_list_id: ListId<NodeId<Param>>,
     pub return_type_id: NodeId<WrappedExpression>,
     pub body_id: NodeId<WrappedExpression>,
 }
@@ -101,20 +100,20 @@ pub struct Fun {
 pub struct Match {
     pub id: NodeId<Self>,
     pub matchee_id: NodeId<WrappedExpression>,
-    pub case_ids: Vec<NodeId<MatchCase>>,
+    pub case_list_id: ListId<NodeId<MatchCase>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
     pub id: NodeId<Self>,
     pub variant_name_id: NodeId<Identifier>,
-    pub param_ids: Vec<NodeId<Identifier>>,
+    pub param_list_id: ListId<NodeId<Identifier>>,
     pub output_id: NodeId<WrappedExpression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
     pub id: NodeId<Self>,
-    pub param_ids: Vec<NodeId<Param>>,
+    pub param_list_id: ListId<NodeId<Param>>,
     pub output_id: NodeId<WrappedExpression>,
 }
