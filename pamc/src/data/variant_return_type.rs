@@ -39,7 +39,7 @@ impl VariantReturnTypeDatabase {
         if variant.raw >= self.map.len() {
             None
         } else {
-            self.map[variant.raw]
+            self.map[variant.raw].clone()
         }
     }
 

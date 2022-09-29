@@ -57,7 +57,9 @@ fn get_variant_type_args(
         Expression::Identifier(identifier) => {
             let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
             if identifier_symbol == type_symbol {
-                Ok(vec![])
+                Ok(VariantReturnType::Identifier {
+                    identifier_id: return_type_id,
+                })
             } else {
                 Err(IllegalVariantReturnTypeError(return_type_id))
             }

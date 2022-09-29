@@ -31,7 +31,6 @@ pub enum TypeError {
 pub fn type_check_file(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
-    variant_return_type_args: &VariantReturnTypeDatabase,
     file_id: NodeId<File>,
 ) -> Result<TypeMap, TypeError> {
     let file = registry.file(file_id);
@@ -39,7 +38,6 @@ pub fn type_check_file(
     let mut state = TypeCheckState {
         registry,
         symbol_db,
-        variant_return_type_args,
         context: TypeCheckContext::new(),
         type0_identifier_id: todo(),
     };
@@ -128,6 +126,8 @@ fn type_check_variant(
     variant_id: NodeId<Variant>,
 ) -> Result<(), TypeError> {
     let variant = state.registry.variant(variant_id);
+    let variant_return_type_id = variant.return_type_id;
+    let variant_name_id = variant.name_id;
     let param_ids = state.registry.param_list(variant.param_list_id).to_vec();
     for param_id in &param_ids {
         type_check_param(state, *param_id)?;
@@ -135,9 +135,9 @@ fn type_check_variant(
 
     // This return type type will either be `Type` (i.e., type 0)
     // or it will not be well-typed at all.
-    type_check_expression(state, variant.return_type_id)?;
+    type_check_expression(state, variant_return_type_id)?;
 
-    let normalized_return_type_id = evaluate_well_typed_expression(state, variant.return_type_id)?;
+    let normalized_return_type_id = evaluate_well_typed_expression(state, variant_return_type_id)?;
 
     let variant_type_id = if param_ids.is_empty() {
         normalized_return_type_id
@@ -162,7 +162,7 @@ fn type_check_variant(
         NormalFormNodeId(wrapped_id)
     };
 
-    let variant_symbol = state.symbol_db.identifier_symbols.get(variant.name_id);
+    let variant_symbol = state.symbol_db.identifier_symbols.get(variant_name_id);
     state.context.insert_new(variant_symbol, variant_type_id);
 
     Ok(())
@@ -375,7 +375,6 @@ fn dummy_id<T>() -> NodeId<T> {
 struct TypeCheckState<'a> {
     registry: &'a mut NodeRegistry,
     symbol_db: &'a mut SymbolDatabase,
-    variant_return_type_args: &'a VariantReturnTypeDatabase,
     context: TypeCheckContext,
     type0_identifier_id: NormalFormNodeId,
 }
