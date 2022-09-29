@@ -1,5 +1,5 @@
 use crate::data::{
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::{ListId, NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::SymbolDatabase,
     variant_return_type::VariantReturnTypeTypeArgsMap,
@@ -49,7 +49,7 @@ fn get_variant_type_args(
     registry: &NodeRegistry,
     type_statement: &TypeStatement,
     variant: &Variant,
-) -> Result<Vec<NodeId<WrappedExpression>>, IllegalVariantReturnTypeError> {
+) -> Result<ListId<NodeId<WrappedExpression>>, IllegalVariantReturnTypeError> {
     let type_symbol = symbol_db.identifier_symbols.get(type_statement.name_id);
     let return_type_id = variant.return_type_id;
     let return_type = &registry.wrapped_expression(return_type_id).expression;
@@ -68,8 +68,7 @@ fn get_variant_type_args(
                 Expression::Identifier(identifier) => {
                     let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
                     if identifier_symbol == type_symbol {
-                        let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
-                        Ok(arg_ids.to_vec())
+                        Ok(call.arg_list_id)
                     } else {
                         Err(IllegalVariantReturnTypeError(return_type_id))
                     }
