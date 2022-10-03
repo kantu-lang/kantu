@@ -5,6 +5,7 @@ use crate::data::{
     type_map::{NormalFormNodeId, TypeMap},
 };
 
+// TODO: id-ify names
 #[derive(Clone, Debug)]
 pub enum TypeError {
     IllegalParamType {
@@ -37,6 +38,19 @@ pub enum TypeError {
     GoalMismatch {
         goal: NormalFormNodeId,
         actual: NormalFormNodeId,
+    },
+    IllegalMatcheeType {
+        match_: NodeId<Match>,
+        matchee_type: NormalFormNodeId,
+    },
+    UnrecognizedVariant {
+        adt_callee: NodeId<Identifier>,
+        variant_name: NodeId<Identifier>,
+    },
+    DuplicateMatchCases {
+        match_: NodeId<Match>,
+        first_case: NodeId<MatchCase>,
+        second_case: NodeId<MatchCase>,
     },
 }
 
@@ -241,6 +255,17 @@ fn is_expression_type0_or_type1(
     }
 }
 
+fn is_expression_type0(state: &TypeCheckState, type_id: NodeId<WrappedExpression>) -> bool {
+    let type_ = state.registry.wrapped_expression(type_id);
+    match &type_.expression {
+        Expression::Identifier(identifier) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+            symbol == state.symbol_db.provider.type0_symbol()
+        }
+        _other_type => false,
+    }
+}
+
 fn type_check_let_statement(
     _state: &mut TypeCheckState,
     _let_statement: NodeId<LetStatement>,
@@ -298,6 +323,7 @@ fn type_check_expression(
                     .to_vec()
                     .iter()
                     .map(|arg_id| -> Result<(NodeId<WrappedExpression>, NormalFormNodeId), TypeError> {
+                        // TODO: Infer arg goal using callee (i.e., current) goal
                         Ok((*arg_id, type_check_expression(state, *arg_id, None)?))
                     })
                     .collect::<Result<Vec<_>, TypeError>>()?;
@@ -406,8 +432,65 @@ fn type_check_expression(
 
             ok_unless_contradicts_goal(state, wrapped_type_id, goal)
         }
+        Expression::Match(match_) => {
+            let match_id = match_.id;
+            let matchee_id = match_.matchee_id;
+            let case_list_id = match_.case_list_id;
+
+            let matchee_type_id = type_check_expression(state, matchee_id, None)?;
+            let matchee_type = if let Some(t) = as_algebraic_data_type(state, matchee_type_id) {
+                t
+            } else {
+                return Err(TypeError::IllegalMatcheeType {
+                    match_: match_id,
+                    matchee_type: matchee_type_id,
+                });
+            };
+
+            let case_ids = state.registry.match_case_list(case_list_id).to_vec();
+            let mut covered_cases: Vec<(String, NodeId<MatchCase>)> = vec![];
+            if let Some(goal) = goal {
+                for case_id in case_ids.iter().copied() {
+                    let variant_name_id = state.registry.match_case(case_id).variant_name_id;
+                    let variant_name: String =
+                        match &state.registry.identifier(variant_name_id).name {
+                            IdentifierName::Standard(name) => name.clone(),
+                            IdentifierName::Reserved(_) => {
+                                return Err(TypeError::UnrecognizedVariant {
+                                    adt_callee: matchee_type.callee_id,
+                                    variant_name: variant_name_id,
+                                })
+                            }
+                        };
+                    if let Some((_, covered_case_id)) = covered_cases
+                        .iter()
+                        .find(|(covered_name, _)| *covered_name == variant_name)
+                    {
+                        return Err(TypeError::DuplicateMatchCases {
+                            match_: match_id,
+                            first_case: *covered_case_id,
+                            second_case: case_id,
+                        });
+                    }
+                    covered_cases.push((variant_name, case_id));
+                    type_check_match_case(state, case_id, matchee_type, Some(goal))?;
+                }
+                Ok(goal)
+            } else {
+                unimplemented!()
+            }
+        }
         _ => unimplemented!(),
     }
+}
+
+fn type_check_match_case(
+    state: &mut TypeCheckState,
+    case_id: NodeId<MatchCase>,
+    matchee_type: AlgebraicDataType,
+    goal: Option<NormalFormNodeId>,
+) -> Result<NormalFormNodeId, TypeError> {
+    unimplemented!()
 }
 
 fn evaluate_well_typed_expression(
@@ -590,4 +673,26 @@ fn ok_unless_contradicts_goal(
     } else {
         return Ok(nfid);
     }
+}
+
+fn is_well_typed_term_of_type_type0(
+    state: &mut TypeCheckState,
+    term_id: NodeId<WrappedExpression>,
+) -> bool {
+    let type_id =
+        type_check_expression(state, term_id, None).expect("A well-typed term should have a type.");
+    is_expression_type0(state, type_id.0)
+}
+
+#[derive(Clone, Copy, Debug)]
+struct AlgebraicDataType {
+    callee_id: NodeId<Identifier>,
+    arg_list_id: ListId<NodeId<WrappedExpression>>,
+}
+
+fn as_algebraic_data_type(
+    state: &mut TypeCheckState,
+    term_id: NormalFormNodeId,
+) -> Option<AlgebraicDataType> {
+    unimplemented!();
 }
