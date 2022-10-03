@@ -25,6 +25,10 @@ pub enum TypeError {
         param_type: NodeId<WrappedExpression>,
         arg_type: NodeId<WrappedExpression>,
     },
+    IllegalReturnType {
+        fun: NodeId<Fun>,
+        return_type_type: NodeId<WrappedExpression>,
+    },
 }
 
 pub fn type_check_file(
@@ -198,25 +202,11 @@ fn type_check_variant(
 fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Result<(), TypeError> {
     let type_id = state.registry.param(param_id).type_id;
     let type_type_id = type_check_expression(state, type_id)?.0;
-    let type_type = state.registry.wrapped_expression(type_type_id);
-    match &type_type.expression {
-        Expression::Identifier(identifier) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
-            if !(symbol == state.symbol_db.provider.type0_symbol()
-                || symbol == state.symbol_db.provider.type1_symbol())
-            {
-                return Err(TypeError::IllegalParamType {
-                    param: param_id,
-                    type_type: type_type_id,
-                });
-            }
-        }
-        _other_type_type => {
-            return Err(TypeError::IllegalParamType {
-                param: param_id,
-                type_type: type_type_id,
-            })
-        }
+    if !is_expression_type0_or_type1(state, type_type_id) {
+        return Err(TypeError::IllegalParamType {
+            param: param_id,
+            type_type: type_type_id,
+        });
     }
 
     let param_name_id = state.registry.param(param_id).name_id;
@@ -225,6 +215,21 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
     state.context.insert_new(param_symbol, type_normal_form_id);
 
     Ok(())
+}
+
+fn is_expression_type0_or_type1(
+    state: &TypeCheckState,
+    type_id: NodeId<WrappedExpression>,
+) -> bool {
+    let type_ = state.registry.wrapped_expression(type_id);
+    match &type_.expression {
+        Expression::Identifier(identifier) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+            symbol == state.symbol_db.provider.type0_symbol()
+                || symbol == state.symbol_db.provider.type1_symbol()
+        }
+        _other_type => false,
+    }
 }
 
 fn type_check_let_statement(
@@ -335,6 +340,51 @@ fn type_check_expression(
                 evaluate_well_typed_expression(state, unnormalized_return_type_id)?;
 
             Ok(return_type_id)
+        }
+        Expression::Fun(fun) => {
+            let fun_id = fun.id;
+            let fun_name_id = fun.name_id;
+            let param_list_id = fun.param_list_id;
+            let return_type_id = fun.return_type_id;
+            let param_ids = state.registry.param_list(param_list_id).to_vec();
+            for param_id in &param_ids {
+                type_check_param(state, *param_id)?;
+            }
+            let normalized_param_list_id =
+                normalize_type_checked_params(state, param_ids.iter().copied())?;
+
+            let return_type_type_id = type_check_expression(state, return_type_id)?.0;
+            if !is_expression_type0_or_type1(state, return_type_type_id) {
+                return Err(TypeError::IllegalReturnType {
+                    fun: fun_id,
+                    return_type_type: return_type_type_id,
+                });
+            }
+
+            let normalized_return_type_id =
+                evaluate_well_typed_expression(state, return_type_id)?.0;
+
+            let fun_type_id = state.registry.add_forall_and_overwrite_its_id(Forall {
+                id: dummy_id(),
+                param_list_id: normalized_param_list_id,
+                output_id: normalized_return_type_id,
+            });
+            let fun_type = state.registry.forall(fun_type_id).clone();
+            let wrapped_type_id =
+                state
+                    .registry
+                    .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                        id: dummy_id(),
+                        expression: Expression::Forall(Box::new(fun_type)),
+                    });
+            // This is safe because the params and output are normalized, so
+            // by definition, the Forall is a normal form.
+            let wrapped_type_id = NormalFormNodeId(wrapped_type_id);
+
+            let fun_symbol = state.symbol_db.identifier_symbols.get(fun_name_id);
+            state.context.insert_new(fun_symbol, wrapped_type_id);
+
+            Ok(wrapped_type_id)
         }
         _ => unimplemented!(),
     }
