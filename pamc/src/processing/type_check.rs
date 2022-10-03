@@ -196,7 +196,6 @@ fn type_check_variant(
 }
 
 fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Result<(), TypeError> {
-    // TODO Review
     let type_id = state.registry.param(param_id).type_id;
     let type_type_id = type_check_expression(state, type_id)?.0;
     let type_type = state.registry.wrapped_expression(type_type_id);
@@ -212,8 +211,6 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
                 });
             }
         }
-        // TODO: Should we really be this strict?
-        // Answer: No. Otherwise `List(T)` would be disallowed.
         _other_type_type => {
             return Err(TypeError::IllegalParamType {
                 param: param_id,
