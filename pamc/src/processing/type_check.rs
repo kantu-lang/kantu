@@ -9,11 +9,11 @@ use crate::data::{
 pub enum TypeError {
     IllegalParamType {
         param: NodeId<Param>,
-        type_type: NodeId<WrappedExpression>,
+        type_type: NormalFormNodeId,
     },
     CalleeNotAFunction {
         callee: NodeId<WrappedExpression>,
-        callee_type: NodeId<WrappedExpression>,
+        callee_type: NormalFormNodeId,
     },
     WrongNumberOfArguments {
         call: NodeId<Call>,
@@ -22,12 +22,21 @@ pub enum TypeError {
     },
     WrongArgumentType {
         arg_id: NodeId<WrappedExpression>,
-        param_type: NodeId<WrappedExpression>,
-        arg_type: NodeId<WrappedExpression>,
+        param_type: NormalFormNodeId,
+        arg_type: NormalFormNodeId,
     },
     IllegalReturnType {
         fun: NodeId<Fun>,
-        return_type_type: NodeId<WrappedExpression>,
+        return_type_type: NormalFormNodeId,
+    },
+    WrongBodyType {
+        fun: NodeId<Fun>,
+        normalized_return_type: NormalFormNodeId,
+        body_type: NormalFormNodeId,
+    },
+    GoalMismatch {
+        goal: NormalFormNodeId,
+        actual: NormalFormNodeId,
     },
 }
 
@@ -179,7 +188,7 @@ fn type_check_variant(
 
     // This return type type will either be `Type` (i.e., type 0)
     // or it will not be well-typed at all.
-    type_check_expression(state, variant_return_type_id)?;
+    type_check_expression(state, variant_return_type_id, None)?;
 
     let normalized_return_type_id = evaluate_well_typed_expression(state, variant_return_type_id)?;
 
@@ -201,8 +210,8 @@ fn type_check_variant(
 
 fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Result<(), TypeError> {
     let type_id = state.registry.param(param_id).type_id;
-    let type_type_id = type_check_expression(state, type_id)?.0;
-    if !is_expression_type0_or_type1(state, type_type_id) {
+    let type_type_id = type_check_expression(state, type_id, None)?;
+    if !is_expression_type0_or_type1(state, type_type_id.0) {
         return Err(TypeError::IllegalParamType {
             param: param_id,
             type_type: type_type_id,
@@ -243,23 +252,24 @@ fn type_check_let_statement(
 fn type_check_expression(
     state: &mut TypeCheckState,
     id: NodeId<WrappedExpression>,
+    goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
     match &state.registry.wrapped_expression(id).expression {
         Expression::Identifier(identifier) => {
             let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
             let type_id = get_normalized_type(state, symbol)?;
-            Ok(type_id)
+            ok_unless_contradicts_goal(state, type_id, goal)
         }
         Expression::Dot(dot) => {
             let symbol = state.symbol_db.identifier_symbols.get(dot.right_id);
             let type_id = get_normalized_type(state, symbol)?;
-            Ok(type_id)
+            ok_unless_contradicts_goal(state, type_id, goal)
         }
         Expression::Call(call) => {
             let call_id = call.id;
             let callee_id = call.callee_id;
             let arg_list_id = call.arg_list_id;
-            let callee_type_id = type_check_expression(state, callee_id)?;
+            let callee_type_id = type_check_expression(state, callee_id, None)?;
             let callee_type: Forall = match &state
                 .registry
                 .wrapped_expression(callee_type_id.0)
@@ -269,7 +279,7 @@ fn type_check_expression(
                 _ => {
                     return Err(TypeError::CalleeNotAFunction {
                         callee: callee_id,
-                        callee_type: callee_type_id.0,
+                        callee_type: callee_type_id,
                     })
                 }
             };
@@ -288,7 +298,7 @@ fn type_check_expression(
                     .to_vec()
                     .iter()
                     .map(|arg_id| -> Result<(NodeId<WrappedExpression>, NormalFormNodeId), TypeError> {
-                        Ok((*arg_id, type_check_expression(state, *arg_id)?))
+                        Ok((*arg_id, type_check_expression(state, *arg_id, None)?))
                     })
                     .collect::<Result<Vec<_>, TypeError>>()?;
 
@@ -308,8 +318,8 @@ fn type_check_expression(
                 if !are_types_equal(state, param_type_id, arg_type_id) {
                     return Err(TypeError::WrongArgumentType {
                         arg_id,
-                        param_type: param_type_id.0,
-                        arg_type: arg_type_id.0,
+                        param_type: param_type_id,
+                        arg_type: arg_type_id,
                     });
                 }
             }
@@ -339,13 +349,15 @@ fn type_check_expression(
             let return_type_id =
                 evaluate_well_typed_expression(state, unnormalized_return_type_id)?;
 
-            Ok(return_type_id)
+            ok_unless_contradicts_goal(state, return_type_id, goal)
         }
         Expression::Fun(fun) => {
             let fun_id = fun.id;
-            let fun_name_id = fun.name_id;
+            let name_id = fun.name_id;
             let param_list_id = fun.param_list_id;
             let return_type_id = fun.return_type_id;
+            let body_id = fun.body_id;
+
             let param_ids = state.registry.param_list(param_list_id).to_vec();
             for param_id in &param_ids {
                 type_check_param(state, *param_id)?;
@@ -353,21 +365,29 @@ fn type_check_expression(
             let normalized_param_list_id =
                 normalize_type_checked_params(state, param_ids.iter().copied())?;
 
-            let return_type_type_id = type_check_expression(state, return_type_id)?.0;
-            if !is_expression_type0_or_type1(state, return_type_type_id) {
+            let return_type_type_id = type_check_expression(state, return_type_id, None)?;
+            if !is_expression_type0_or_type1(state, return_type_type_id.0) {
                 return Err(TypeError::IllegalReturnType {
                     fun: fun_id,
                     return_type_type: return_type_type_id,
                 });
             }
 
-            let normalized_return_type_id =
-                evaluate_well_typed_expression(state, return_type_id)?.0;
+            let normalized_return_type_id = evaluate_well_typed_expression(state, return_type_id)?;
+
+            let goal_id = normalized_return_type_id;
+            type_check_expression(state, body_id, Some(goal_id)).map_goal_mismatch_err(
+                |actual_type_id, _| TypeError::WrongBodyType {
+                    fun: fun_id,
+                    normalized_return_type: normalized_return_type_id,
+                    body_type: actual_type_id,
+                },
+            )?;
 
             let fun_type_id = state.registry.add_forall_and_overwrite_its_id(Forall {
                 id: dummy_id(),
                 param_list_id: normalized_param_list_id,
-                output_id: normalized_return_type_id,
+                output_id: normalized_return_type_id.0,
             });
             let fun_type = state.registry.forall(fun_type_id).clone();
             let wrapped_type_id =
@@ -381,10 +401,10 @@ fn type_check_expression(
             // by definition, the Forall is a normal form.
             let wrapped_type_id = NormalFormNodeId(wrapped_type_id);
 
-            let fun_symbol = state.symbol_db.identifier_symbols.get(fun_name_id);
+            let fun_symbol = state.symbol_db.identifier_symbols.get(name_id);
             state.context.insert_new(fun_symbol, wrapped_type_id);
 
-            Ok(wrapped_type_id)
+            ok_unless_contradicts_goal(state, wrapped_type_id, goal)
         }
         _ => unimplemented!(),
     }
@@ -526,4 +546,48 @@ fn apply_substitution(
     _substitutions: Substitution,
 ) -> NodeId<WrappedExpression> {
     unimplemented!()
+}
+
+use map_goal_mismatch_err::*;
+mod map_goal_mismatch_err {
+    use super::*;
+
+    pub trait MapGoalMismatchErr {
+        /// The `f` callback takes the params: `actual, goal`.
+        fn map_goal_mismatch_err(
+            self,
+            f: impl FnOnce(NormalFormNodeId, NormalFormNodeId) -> TypeError,
+        ) -> Self;
+    }
+
+    impl<T> MapGoalMismatchErr for Result<T, TypeError> {
+        fn map_goal_mismatch_err(
+            self,
+            f: impl FnOnce(NormalFormNodeId, NormalFormNodeId) -> TypeError,
+        ) -> Self {
+            self.map_err(|err| match err {
+                TypeError::GoalMismatch { actual, goal } => f(actual, goal),
+                _ => err,
+            })
+        }
+    }
+}
+
+/// This returns `Ok(nfid)` unless
+/// `goal` equals `Some(g)` where `nfid` is **not** equal to `g` under
+/// the definition type equality.
+fn ok_unless_contradicts_goal(
+    state: &TypeCheckState,
+    nfid: NormalFormNodeId,
+    goal: Option<NormalFormNodeId>,
+) -> Result<NormalFormNodeId, TypeError> {
+    if let Some(goal) = goal {
+        if are_types_equal(state, nfid, goal) {
+            Ok(nfid)
+        } else {
+            Err(TypeError::GoalMismatch { actual: nfid, goal })
+        }
+    } else {
+        return Ok(nfid);
+    }
 }
