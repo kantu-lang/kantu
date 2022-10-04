@@ -60,6 +60,12 @@ pub enum TypeError {
         match_id: NodeId<Match>,
         uncovered_case: IdentifierName,
     },
+    WrongNumberOfMatchCaseParams {
+        case_id: NodeId<MatchCase>,
+        variant_id: NodeId<Variant>,
+        expected_arity: usize,
+        actual_arity: usize,
+    },
 }
 
 pub fn type_check_file(
@@ -588,6 +594,54 @@ fn type_check_match_case(
                 variant_name_id: case.variant_name_id,
             });
         };
+
+    let case_constructed_type_id = {
+        let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
+        let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
+        let case_param_list_id = state.registry.match_case(case_id).param_list_id;
+        let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
+        if variant_param_ids.len() != case_param_ids.len() {
+            return Err(TypeError::WrongNumberOfMatchCaseParams {
+                case_id: case_id,
+                variant_id,
+                expected_arity: variant_param_ids.len(),
+                actual_arity: case_param_ids.len(),
+            });
+        }
+        let substitutions: Vec<Substitution> = variant_param_ids
+            .into_iter()
+            .zip(case_param_ids.into_iter())
+            .map(|(variant_param_id, case_param_id)| {
+                let variant_param = state.registry.param(variant_param_id);
+                let variant_param_symbol = state
+                    .symbol_db
+                    .identifier_symbols
+                    .get(variant_param.name_id);
+                let case_param = state.registry.identifier(case_param_id).clone();
+                let wrapped_case_param_id = state
+                    .registry
+                    .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                        id: dummy_id(),
+                        expression: Expression::Identifier(case_param),
+                    });
+                // This is safe because an identifier defined by a match case param declaration
+                // is always a normal form.
+                let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
+                Substitution {
+                    from: variant_param_symbol,
+                    to: wrapped_case_param_id,
+                }
+            })
+            .collect();
+
+        let variant_return_type_id = state.registry.variant(variant_id).return_type_id;
+        apply_substitutions(
+            &mut state.registry,
+            &state.symbol_db,
+            variant_return_type_id,
+            substitutions,
+        )
+    };
 
     unimplemented!()
 }
