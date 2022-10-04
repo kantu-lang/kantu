@@ -338,7 +338,7 @@ fn type_check_expression(
                 let param = state.registry.param(param_id);
                 let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
                 let param_type_id = get_normalized_type(state, param_symbol)?;
-                if !are_types_equal(state, param_type_id, arg_type_id) {
+                if !does_production_type_satisfy_required_type(state, arg_type_id, param_type_id) {
                     return Err(TypeError::WrongArgumentType {
                         arg_id,
                         param_type_id: param_type_id,
@@ -473,7 +473,11 @@ fn type_check_expression(
                         None,
                     )?;
                     if let Some(first_case_output_type_id) = first_case_output_type_id {
-                        if !are_types_equal(state, first_case_output_type_id, output_type_id) {
+                        if !does_production_type_satisfy_required_type(
+                            state,
+                            output_type_id,
+                            first_case_output_type_id,
+                        ) {
                             return Err(TypeError::InconsistentMatchCases {
                                 match_id: match_id,
                                 first_case_output_type_id: first_case_output_type_id,
@@ -641,7 +645,11 @@ fn get_normalized_type(
     evaluate_well_typed_expression(state, unnormalized_type_id)
 }
 
-fn are_types_equal(_state: &TypeCheckState, _a: NormalFormNodeId, _b: NormalFormNodeId) -> bool {
+fn does_production_type_satisfy_required_type(
+    _state: &TypeCheckState,
+    _production_type_id: NormalFormNodeId,
+    _requirement_type_id: NormalFormNodeId,
+) -> bool {
     unimplemented!()
 }
 
@@ -788,20 +796,20 @@ mod map_goal_mismatch_err {
 /// the definition type equality.
 fn ok_unless_contradicts_goal(
     state: &TypeCheckState,
-    nfid: NormalFormNodeId,
+    production_type_id: NormalFormNodeId,
     goal_id: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
     if let Some(goal_id) = goal_id {
-        if are_types_equal(state, nfid, goal_id) {
-            Ok(nfid)
+        if does_production_type_satisfy_required_type(state, production_type_id, goal_id) {
+            Ok(production_type_id)
         } else {
             Err(TypeError::GoalMismatch {
-                actual_type_id: nfid,
+                actual_type_id: production_type_id,
                 goal_id,
             })
         }
     } else {
-        return Ok(nfid);
+        return Ok(production_type_id);
     }
 }
 
