@@ -263,17 +263,6 @@ fn is_expression_type0_or_type1(
     }
 }
 
-fn is_expression_type0(state: &TypeCheckState, type_id: NodeId<WrappedExpression>) -> bool {
-    let type_ = state.registry.wrapped_expression(type_id);
-    match &type_.expression {
-        Expression::Identifier(identifier) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
-            symbol == state.symbol_db.provider.type0_symbol()
-        }
-        _other_type => false,
-    }
-}
-
 fn type_check_let_statement(
     _state: &mut TypeCheckState,
     _let_statement: NodeId<LetStatement>,
@@ -568,10 +557,10 @@ fn verify_all_cases_were_covered(
 }
 
 fn type_check_match_case(
-    state: &mut TypeCheckState,
-    case_id: NodeId<MatchCase>,
-    matchee_type: AlgebraicDataType,
-    goal: Option<NormalFormNodeId>,
+    _state: &mut TypeCheckState,
+    _case_id: NodeId<MatchCase>,
+    _matchee_type: AlgebraicDataType,
+    _goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
     unimplemented!()
 }
@@ -762,15 +751,6 @@ fn ok_unless_contradicts_goal(
     } else {
         return Ok(nfid);
     }
-}
-
-fn is_well_typed_term_of_type_type0(
-    state: &mut TypeCheckState,
-    term_id: NodeId<WrappedExpression>,
-) -> bool {
-    let type_id =
-        type_check_expression(state, term_id, None).expect("A well-typed term should have a type.");
-    is_expression_type0(state, type_id.0)
 }
 
 #[derive(Clone, Copy, Debug)]
