@@ -706,7 +706,6 @@ fn type_check_match_case(
             state,
             substituted_matchee_type_arg_id,
             substituted_case_constructed_type_arg_id,
-            goal.as_mut(),
         )?;
         match fusion_result {
             FusionResult::Exploded => {
@@ -759,7 +758,6 @@ fn compute_ltr_fusion_of_well_typed_expressions(
     state: &mut TypeCheckState,
     left_id: NodeId<WrappedExpression>,
     right_id: NodeId<WrappedExpression>,
-    goal: Option<&mut NormalFormNodeId>,
 ) -> Result<FusionResult, TypeError> {
     let normalized_left_id =
         evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, left_id)?;
