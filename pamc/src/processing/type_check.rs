@@ -668,6 +668,7 @@ fn type_check_match_case(
 
     assert_eq!(matchee_type_arg_ids.len(), case_constructed_type_arg_ids.len(), "The number of type arguments of the matchee type and the number of type arguments of the constructed type should be the same. But they were different. This indicates a serious logic error.");
 
+    state.context.push_scope();
     for (matchee_type_arg_id, case_constructed_type_arg_id) in matchee_type_arg_ids
         .into_iter()
         .zip(case_constructed_type_arg_ids.into_iter())
@@ -687,9 +688,11 @@ fn type_check_match_case(
             // goal.
         }
     }
-
     let output_id = state.registry.match_case(case_id).output_id;
-    type_check_expression(state, output_id, goal)
+    let return_val = type_check_expression(state, output_id, goal);
+    state.context.pop_scope();
+
+    return_val
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -841,15 +844,23 @@ mod context {
             if let Some((existing_type_id, substitutions)) = self.try_get(symbol) {
                 panic!("Tried to insert new entry ({:?}, {:?}) into a context, when it already contained the entry ({:?}, {:?} + {} substitutions).", symbol, type_id, symbol, existing_type_id, substitutions.len());
             }
-            self.stack.last_mut().expect("Error: Tried to insert an entry into a context with an empty stack scope. This indicates a serious logic error.").map.insert_new(symbol, type_id);
+            self.stack.last_mut().expect("Error: Tried to insert an entry into a context with an empty scope stack. This indicates a serious logic error.").map.insert_new(symbol, type_id);
         }
 
         pub fn bottom_type_map(self) -> TypeMap {
             self.stack
                 .into_iter()
                 .next()
-                .expect("Error: Tried to get the bottom type map from a context with an empty stack scope. This indicates a serious logic error.")
+                .expect("Error: Tried to get the bottom type map from a context with an empty scope stack. This indicates a serious logic error.")
                 .map
+        }
+
+        pub fn push_scope(&mut self) {
+            self.stack.push(Scope::new());
+        }
+
+        pub fn pop_scope(&mut self) {
+            self.stack.pop().expect("Error: Tried to pop a scope from a context with an empty scope stack. This indicates a serious logic error.");
         }
     }
 }
