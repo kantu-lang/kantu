@@ -661,6 +661,46 @@ fn type_check_match_case(
             VariantReturnType::Identifier { .. } => vec![],
         };
 
+    let matchee_type_arg_ids = state
+        .registry
+        .wrapped_expression_list(matchee_type.arg_list_id)
+        .to_vec();
+
+    assert_eq!(matchee_type_arg_ids.len(), case_constructed_type_arg_ids.len(), "The number of type arguments of the matchee type and the number of type arguments of the constructed type should be the same. But they were different. This indicates a serious logic error.");
+
+    for (matchee_type_arg_id, case_constructed_type_arg_id) in matchee_type_arg_ids
+        .into_iter()
+        .zip(case_constructed_type_arg_ids.into_iter())
+    {
+        let has_exploded = ltr_fuse(
+            state,
+            matchee_type_arg_id,
+            case_constructed_type_arg_id,
+            goal.as_mut(),
+        )
+        .0;
+        if has_exploded {
+            if let Some(original_goal) = original_goal {
+                return Ok(original_goal);
+            }
+            // TODO: Handle explosions in the case where there is no
+            // goal.
+        }
+    }
+
+    let output_id = state.registry.match_case(case_id).output_id;
+    type_check_expression(state, output_id, goal)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct HasExploded(pub bool);
+
+fn ltr_fuse(
+    state: &mut TypeCheckState,
+    left_id: NodeId<WrappedExpression>,
+    right_id: NodeId<WrappedExpression>,
+    goal: Option<&mut NormalFormNodeId>,
+) -> HasExploded {
     unimplemented!()
 }
 
