@@ -685,23 +685,61 @@ fn type_check_match_case(
     assert_eq!(matchee_type_arg_ids.len(), case_constructed_type_arg_ids.len(), "The number of type arguments of the matchee type and the number of type arguments of the constructed type should be the same. But they were different. This indicates a serious logic error.");
 
     state.context.push_scope();
+    let mut type_arg_substitutions = vec![];
     for (matchee_type_arg_id, case_constructed_type_arg_id) in matchee_type_arg_ids
         .into_iter()
         .zip(case_constructed_type_arg_ids.into_iter())
     {
-        let has_exploded = ltr_fuse_well_typed_expressions(
-            state,
+        let substituted_matchee_type_arg_id = apply_substitutions(
+            &mut state.registry,
+            &state.symbol_db,
             matchee_type_arg_id,
+            type_arg_substitutions.iter().copied(),
+        );
+        let substituted_case_constructed_type_arg_id = apply_substitutions(
+            &mut state.registry,
+            &state.symbol_db,
             case_constructed_type_arg_id,
+            type_arg_substitutions.iter().copied(),
+        );
+        let fusion_result = compute_ltr_fusion_of_well_typed_expressions(
+            state,
+            substituted_matchee_type_arg_id,
+            substituted_case_constructed_type_arg_id,
             goal.as_mut(),
-        )?
-        .0;
-        if has_exploded {
-            if let Some(original_goal) = original_goal {
-                return Ok(original_goal);
+        )?;
+        match fusion_result {
+            FusionResult::Exploded => {
+                if let Some(original_goal) = original_goal {
+                    return Ok(original_goal);
+                }
+                // TODO: Handle explosions in the case where there is no
+                // goal.
             }
-            // TODO: Handle explosions in the case where there is no
-            // goal.
+            FusionResult::Fused(substitutions) => {
+                type_arg_substitutions.extend(substitutions.iter().copied());
+
+                state.context.apply_substitutions_to_top_scope(
+                    &mut state.registry,
+                    &mut state.symbol_db,
+                    &substitutions,
+                )?;
+
+                if let Some(goal) = goal.as_mut() {
+                    let substituted_goal = apply_substitutions(
+                        &mut state.registry,
+                        &state.symbol_db,
+                        goal.0,
+                        substitutions,
+                    );
+                    let normalized_substituted_goal = evaluate_well_typed_expression(
+                        &mut state.registry,
+                        &mut state.symbol_db,
+                        substituted_goal,
+                    )?;
+                    *goal = normalized_substituted_goal;
+                }
+            }
         }
     }
     let output_id = state.registry.match_case(case_id).output_id;
@@ -711,60 +749,34 @@ fn type_check_match_case(
     return_val
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct HasExploded(pub bool);
+#[derive(Clone, Debug)]
+enum FusionResult {
+    Exploded,
+    Fused(Vec<Substitution>),
+}
 
-fn ltr_fuse_well_typed_expressions(
+fn compute_ltr_fusion_of_well_typed_expressions(
     state: &mut TypeCheckState,
     left_id: NodeId<WrappedExpression>,
     right_id: NodeId<WrappedExpression>,
     goal: Option<&mut NormalFormNodeId>,
-) -> Result<HasExploded, TypeError> {
+) -> Result<FusionResult, TypeError> {
     let normalized_left_id =
         evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, left_id)?;
     let normalized_right_id =
         evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, right_id)?;
-    let fusion_substitutions =
-        get_fusion_substitutions(state, normalized_left_id, normalized_right_id);
-    let fusion_substitutions = match fusion_substitutions {
-        FusionSubstitutions::Substitutions(s) => s,
-        FusionSubstitutions::Exploded => return Ok(HasExploded(true)),
-    };
-
-    state.context.apply_substitutions_to_top_scope(
-        &mut state.registry,
-        &mut state.symbol_db,
-        &fusion_substitutions,
-    )?;
-    if let Some(goal) = goal {
-        let substituted_goal = apply_substitutions(
-            &mut state.registry,
-            &state.symbol_db,
-            goal.0,
-            fusion_substitutions,
-        );
-        let normalized_substituted_goal = evaluate_well_typed_expression(
-            &mut state.registry,
-            &mut state.symbol_db,
-            substituted_goal,
-        )?;
-        *goal = normalized_substituted_goal;
-    }
-
-    Ok(HasExploded(false))
+    Ok(compute_ltr_fusion_of_well_typed_normal_forms(
+        state,
+        normalized_left_id,
+        normalized_right_id,
+    ))
 }
 
-#[derive(Clone, Debug)]
-enum FusionSubstitutions {
-    Exploded,
-    Substitutions(Vec<Substitution>),
-}
-
-fn get_fusion_substitutions(
+fn compute_ltr_fusion_of_well_typed_normal_forms(
     state: &mut TypeCheckState,
     left_id: NormalFormNodeId,
     right_id: NormalFormNodeId,
-) -> FusionSubstitutions {
+) -> FusionResult {
     unimplemented!()
 }
 
