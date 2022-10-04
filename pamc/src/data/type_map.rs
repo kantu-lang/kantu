@@ -25,6 +25,13 @@ impl TypeMap {
         self.raw.insert(symbol, type_id);
     }
 
+    pub fn update(&mut self, symbol: Symbol, type_id: NormalFormNodeId) {
+        if self.raw.get(&symbol).is_none() {
+            panic!("Tried to update existing entry to ({:?}, {:?}) into a type map, but no existing entry was found.", symbol, type_id);
+        }
+        self.raw.insert(symbol, type_id);
+    }
+
     pub fn get(&self, symbol: Symbol) -> NormalFormNodeId {
         self.try_get(symbol).expect(&format!(
             "Tried to get the type of {:?}, but it was not in the type map.",
@@ -34,5 +41,9 @@ impl TypeMap {
 
     pub fn try_get(&self, symbol: Symbol) -> Option<NormalFormNodeId> {
         self.raw.get(&symbol).copied()
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = Symbol> + '_ {
+        self.raw.keys().copied()
     }
 }

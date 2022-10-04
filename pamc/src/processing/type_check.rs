@@ -221,7 +221,11 @@ fn type_check_variant(
     // or it will not be well-typed at all.
     type_check_expression(state, variant_return_type_id, None)?;
 
-    let normalized_return_type_id = evaluate_well_typed_expression(state, variant_return_type_id)?;
+    let normalized_return_type_id = evaluate_well_typed_expression(
+        &mut state.registry,
+        &mut state.symbol_db,
+        variant_return_type_id,
+    )?;
 
     let variant_type_id = if param_ids.is_empty() {
         normalized_return_type_id
@@ -251,7 +255,8 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
 
     let param_name_id = state.registry.param(param_id).name_id;
     let param_symbol = state.symbol_db.identifier_symbols.get(param_name_id);
-    let type_normal_form_id = evaluate_well_typed_expression(state, type_id)?;
+    let type_normal_form_id =
+        evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, type_id)?;
     state.context.insert_new(param_symbol, type_normal_form_id);
 
     Ok(())
@@ -362,7 +367,11 @@ fn type_check_expression(
                 .zip(arg_ids_and_arg_type_ids.iter().copied())
                 .map(
                     |(param_id, (arg_id, _))| -> Result<Substitution, TypeError> {
-                        let normalized_arg_id = evaluate_well_typed_expression(state, arg_id)?;
+                        let normalized_arg_id = evaluate_well_typed_expression(
+                            &mut state.registry,
+                            &mut state.symbol_db,
+                            arg_id,
+                        )?;
                         let param = state.registry.param(param_id);
                         let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
                         Ok(Substitution {
@@ -378,8 +387,11 @@ fn type_check_expression(
                 callee_type.output_id,
                 substitutions,
             );
-            let return_type_id =
-                evaluate_well_typed_expression(state, unnormalized_return_type_id)?;
+            let return_type_id = evaluate_well_typed_expression(
+                &mut state.registry,
+                &mut state.symbol_db,
+                unnormalized_return_type_id,
+            )?;
 
             ok_unless_contradicts_goal(state, return_type_id, goal)
         }
@@ -405,7 +417,11 @@ fn type_check_expression(
                 });
             }
 
-            let normalized_return_type_id = evaluate_well_typed_expression(state, return_type_id)?;
+            let normalized_return_type_id = evaluate_well_typed_expression(
+                &mut state.registry,
+                &mut state.symbol_db,
+                return_type_id,
+            )?;
 
             let goal_id = normalized_return_type_id;
             type_check_expression(state, body_id, Some(goal_id)).map_goal_mismatch_err(
@@ -678,7 +694,7 @@ fn type_check_match_case(
             matchee_type_arg_id,
             case_constructed_type_arg_id,
             goal.as_mut(),
-        )
+        )?
         .0;
         if has_exploded {
             if let Some(original_goal) = original_goal {
@@ -703,7 +719,52 @@ fn ltr_fuse_well_typed_expressions(
     left_id: NodeId<WrappedExpression>,
     right_id: NodeId<WrappedExpression>,
     goal: Option<&mut NormalFormNodeId>,
-) -> HasExploded {
+) -> Result<HasExploded, TypeError> {
+    let normalized_left_id =
+        evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, left_id)?;
+    let normalized_right_id =
+        evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, right_id)?;
+    let fusion_substitutions =
+        get_fusion_substitutions(state, normalized_left_id, normalized_right_id);
+    let fusion_substitutions = match fusion_substitutions {
+        FusionSubstitutions::Substitutions(s) => s,
+        FusionSubstitutions::Exploded => return Ok(HasExploded(true)),
+    };
+
+    state.context.apply_substitutions_to_top_scope(
+        &mut state.registry,
+        &mut state.symbol_db,
+        &fusion_substitutions,
+    )?;
+    if let Some(goal) = goal {
+        let substituted_goal = apply_substitutions(
+            &mut state.registry,
+            &state.symbol_db,
+            goal.0,
+            fusion_substitutions,
+        );
+        let normalized_substituted_goal = evaluate_well_typed_expression(
+            &mut state.registry,
+            &mut state.symbol_db,
+            substituted_goal,
+        )?;
+        *goal = normalized_substituted_goal;
+    }
+
+    Ok(HasExploded(false))
+}
+
+#[derive(Clone, Debug)]
+enum FusionSubstitutions {
+    Exploded,
+    Substitutions(Vec<Substitution>),
+}
+
+fn get_fusion_substitutions(
+    state: &mut TypeCheckState,
+    left_id: NormalFormNodeId,
+    right_id: NormalFormNodeId,
+) -> FusionSubstitutions {
     unimplemented!()
 }
 
@@ -737,7 +798,8 @@ fn get_corresponding_variant_id(
 }
 
 fn evaluate_well_typed_expression(
-    _state: &mut TypeCheckState,
+    _state: &mut NodeRegistry,
+    _symbol_db: &mut SymbolDatabase,
     _expression: NodeId<WrappedExpression>,
 ) -> Result<NormalFormNodeId, TypeError> {
     unimplemented!();
@@ -757,7 +819,11 @@ fn get_normalized_type(
             .flat_map(std::ops::Deref::deref)
             .copied(),
     );
-    evaluate_well_typed_expression(state, unnormalized_type_id)
+    evaluate_well_typed_expression(
+        &mut state.registry,
+        &mut state.symbol_db,
+        unnormalized_type_id,
+    )
 }
 
 fn does_production_type_satisfy_required_type(
@@ -862,6 +928,45 @@ mod context {
         pub fn pop_scope(&mut self) {
             self.stack.pop().expect("Error: Tried to pop a scope from a context with an empty scope stack. This indicates a serious logic error.");
         }
+
+        pub fn apply_substitutions_to_top_scope(
+            &mut self,
+            registry: &mut NodeRegistry,
+            symbol_db: &mut SymbolDatabase,
+            substitutions: &[Substitution],
+        ) -> Result<(), TypeError> {
+            let top = self
+                .stack
+                .last_mut()
+                .expect("Error: Tried to apply substitutions to the top scope of a context with an empty scope stack. This indicates a serious logic error.");
+            apply_substitutions_to_map(registry, symbol_db, &mut top.map, substitutions)?;
+            top.substitutions_applied_to_previous_scopes
+                .extend(substitutions);
+            Ok(())
+        }
+    }
+
+    fn apply_substitutions_to_map(
+        registry: &mut NodeRegistry,
+        symbol_db: &mut SymbolDatabase,
+        map: &mut TypeMap,
+        substitutions: &[Substitution],
+    ) -> Result<(), TypeError> {
+        let keys = map.keys().collect::<Vec<_>>();
+        for key in keys {
+            let type_id = map.get(key);
+            let substituted_type_id = apply_substitutions(
+                registry,
+                symbol_db,
+                type_id.0,
+                substitutions.iter().copied(),
+            );
+            let normalized_substituted_type_id =
+                evaluate_well_typed_expression(registry, symbol_db, substituted_type_id)?;
+            map.update(key, normalized_substituted_type_id);
+        }
+
+        Ok(())
     }
 }
 
