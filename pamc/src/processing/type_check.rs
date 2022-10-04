@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{ListId, NodeId, NodeRegistry},
     registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase},
+    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
 };
 
@@ -568,12 +568,53 @@ fn verify_all_cases_were_covered(
 }
 
 fn type_check_match_case(
-    _state: &mut TypeCheckState,
-    _case_id: NodeId<MatchCase>,
-    _matchee_type: AlgebraicDataType,
-    _goal: Option<NormalFormNodeId>,
+    state: &mut TypeCheckState,
+    case_id: NodeId<MatchCase>,
+    matchee_type: AlgebraicDataType,
+    original_goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
+    let mut goal = original_goal;
+    let variant_id =
+        if let Some(variant_id) = get_corresponding_variant_id(state, matchee_type, case_id) {
+            variant_id
+        } else {
+            let case = state.registry.match_case(case_id);
+            return Err(TypeError::UnrecognizedVariant {
+                adt_callee_id: matchee_type.callee_id,
+                variant_name_id: case.variant_name_id,
+            });
+        };
+
     unimplemented!()
+}
+
+fn get_corresponding_variant_id(
+    state: &mut TypeCheckState,
+    matchee_type: AlgebraicDataType,
+    case_id: NodeId<MatchCase>,
+) -> Option<NodeId<Variant>> {
+    let case = state.registry.match_case(case_id);
+    let callee_symbol = state
+        .symbol_db
+        .identifier_symbols
+        .get(matchee_type.callee_id);
+    let variant_name = &state.registry.identifier(case.variant_name_id).name;
+    let target_symbol = state
+        .symbol_db
+        .symbol_dot_targets
+        .get(callee_symbol, variant_name)?;
+    let target_symbol_source = state
+        .symbol_db
+        .symbol_sources
+        .get(&target_symbol)
+        .expect("Variant symbol should have a source defined.");
+    match target_symbol_source {
+        SymbolSource::Variant(variant_id) => Some(*variant_id),
+        other_source => panic!(
+            "Variant symbol source should be of type `Variant`, but was `{:?}`.",
+            other_source
+        ),
+    }
 }
 
 fn evaluate_well_typed_expression(
