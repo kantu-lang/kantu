@@ -142,6 +142,12 @@ mod dot_targets {
                 .and_then(|targets| targets.get(target_name))
                 .copied()
         }
+
+        pub fn get_all(&self, symbol: Symbol) -> Option<impl Iterator<Item = &IdentifierName>> {
+            self.0
+                .get(&symbol)
+                .map(std::collections::hash_map::HashMap::keys)
+        }
     }
 }
 

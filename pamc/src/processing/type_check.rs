@@ -52,6 +52,15 @@ pub enum TypeError {
         first_case: NodeId<MatchCase>,
         second_case: NodeId<MatchCase>,
     },
+    InconsistentMatchCases {
+        match_: NodeId<Match>,
+        first_case_output_type: NormalFormNodeId,
+        second_case_output_type: NormalFormNodeId,
+    },
+    UncoveredMatchCase {
+        match_: NodeId<Match>,
+        uncovered_case: IdentifierName,
+    },
 }
 
 pub fn type_check_file(
@@ -448,39 +457,114 @@ fn type_check_expression(
             };
 
             let case_ids = state.registry.match_case_list(case_list_id).to_vec();
-            let mut covered_cases: Vec<(String, NodeId<MatchCase>)> = vec![];
+            let mut covered_cases: Vec<(IdentifierName, NodeId<MatchCase>)> = vec![];
             if let Some(goal) = goal {
                 for case_id in case_ids.iter().copied() {
-                    let variant_name_id = state.registry.match_case(case_id).variant_name_id;
-                    let variant_name: String =
-                        match &state.registry.identifier(variant_name_id).name {
-                            IdentifierName::Standard(name) => name.clone(),
-                            IdentifierName::Reserved(_) => {
-                                return Err(TypeError::UnrecognizedVariant {
-                                    adt_callee: matchee_type.callee_id,
-                                    variant_name: variant_name_id,
-                                })
-                            }
-                        };
-                    if let Some((_, covered_case_id)) = covered_cases
-                        .iter()
-                        .find(|(covered_name, _)| *covered_name == variant_name)
-                    {
-                        return Err(TypeError::DuplicateMatchCases {
-                            match_: match_id,
-                            first_case: *covered_case_id,
-                            second_case: case_id,
-                        });
-                    }
-                    covered_cases.push((variant_name, case_id));
-                    type_check_match_case(state, case_id, matchee_type, Some(goal))?;
+                    type_check_uncovered_match_case(
+                        state,
+                        case_id,
+                        match_id,
+                        matchee_type,
+                        &mut covered_cases,
+                        Some(goal),
+                    )?;
                 }
+
+                verify_all_cases_were_covered(state, match_id, matchee_type, &covered_cases)?;
+
                 Ok(goal)
             } else {
+                let mut first_case_output_type_id = None;
+                for case_id in case_ids.iter().copied() {
+                    let output_type_id = type_check_uncovered_match_case(
+                        state,
+                        case_id,
+                        match_id,
+                        matchee_type,
+                        &mut covered_cases,
+                        None,
+                    )?;
+                    if let Some(first_case_output_type_id) = first_case_output_type_id {
+                        if !are_types_equal(state, first_case_output_type_id, output_type_id) {
+                            return Err(TypeError::InconsistentMatchCases {
+                                match_: match_id,
+                                first_case_output_type: first_case_output_type_id,
+                                second_case_output_type: output_type_id,
+                            });
+                        }
+                    } else {
+                        first_case_output_type_id = Some(output_type_id);
+                    }
+                }
+
+                verify_all_cases_were_covered(state, match_id, matchee_type, &covered_cases)?;
+
                 unimplemented!()
             }
         }
         _ => unimplemented!(),
+    }
+}
+
+fn type_check_uncovered_match_case(
+    state: &mut TypeCheckState,
+    case_id: NodeId<MatchCase>,
+    match_id: NodeId<Match>,
+    matchee_type: AlgebraicDataType,
+    covered_cases: &mut Vec<(IdentifierName, NodeId<MatchCase>)>,
+    goal: Option<NormalFormNodeId>,
+) -> Result<NormalFormNodeId, TypeError> {
+    let variant_name_id = state.registry.match_case(case_id).variant_name_id;
+    let variant_name: IdentifierName = state.registry.identifier(variant_name_id).name.clone();
+    if let Some((_, covered_case_id)) = covered_cases
+        .iter()
+        .find(|(covered_name, _)| *covered_name == variant_name)
+    {
+        return Err(TypeError::DuplicateMatchCases {
+            match_: match_id,
+            first_case: *covered_case_id,
+            second_case: case_id,
+        });
+    }
+
+    covered_cases.push((variant_name, case_id));
+
+    type_check_match_case(state, case_id, matchee_type, goal)
+}
+
+fn verify_all_cases_were_covered(
+    state: &mut TypeCheckState,
+    match_id: NodeId<Match>,
+    matchee_type: AlgebraicDataType,
+    covered_cases: &[(IdentifierName, NodeId<MatchCase>)],
+) -> Result<(), TypeError> {
+    let matchee_type_callee_symbol = state
+        .symbol_db
+        .identifier_symbols
+        .get(matchee_type.callee_id);
+    let uncovered_case = match state
+        .symbol_db
+        .symbol_dot_targets
+        .get_all(matchee_type_callee_symbol)
+    {
+        Some(mut target_names) => target_names
+            .find(|target_name| {
+                let has_covered_target = covered_cases
+                    .iter()
+                    .any(|(covered_name, _)| *target_name == covered_name);
+                !has_covered_target
+            })
+            .cloned(),
+        None => None,
+    };
+
+    if let Some(uncovered_case) = uncovered_case {
+        Err(TypeError::UncoveredMatchCase {
+            match_: match_id,
+            uncovered_case,
+        })
+    } else {
+        Ok(())
     }
 }
 
