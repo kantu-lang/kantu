@@ -487,7 +487,18 @@ fn type_check_expression(
 
                 verify_all_cases_were_covered(state, match_id, matchee_type, &covered_cases)?;
 
-                unimplemented!()
+                match first_case_output_type_id {
+                    Some(first_case_output_type_id) => Ok(first_case_output_type_id),
+                    // If `first_case_output_type_id` is `None`, then there are no cases.
+                    // Since `verify_all_cases_were_covered` returned `Ok`, the matchee type
+                    // must have zero variants.
+                    // This means the matchee type is equivalent to the empty type.
+                    // The match expression's type is also equivalent to the empty type.
+                    // Thus, we need to return the empty type.
+                    // There is no built-in empty type, so we simply return the type of the
+                    // matchee (which was proven above to be equivalent to the empty type).
+                    None => Ok(matchee_type_id),
+                }
             }
         }
         _ => unimplemented!(),
