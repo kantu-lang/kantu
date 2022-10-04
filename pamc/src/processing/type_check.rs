@@ -5,60 +5,59 @@ use crate::data::{
     type_map::{NormalFormNodeId, TypeMap},
 };
 
-// TODO: id-ify names
 #[derive(Clone, Debug)]
 pub enum TypeError {
     IllegalParamType {
-        param: NodeId<Param>,
-        type_type: NormalFormNodeId,
+        param_id: NodeId<Param>,
+        type_type_id: NormalFormNodeId,
     },
     CalleeNotAFunction {
-        callee: NodeId<WrappedExpression>,
-        callee_type: NormalFormNodeId,
+        callee_id: NodeId<WrappedExpression>,
+        callee_type_id: NormalFormNodeId,
     },
     WrongNumberOfArguments {
-        call: NodeId<Call>,
+        call_id: NodeId<Call>,
         param_arity: usize,
         arg_arity: usize,
     },
     WrongArgumentType {
         arg_id: NodeId<WrappedExpression>,
-        param_type: NormalFormNodeId,
-        arg_type: NormalFormNodeId,
+        param_type_id: NormalFormNodeId,
+        arg_type_id: NormalFormNodeId,
     },
     IllegalReturnType {
-        fun: NodeId<Fun>,
-        return_type_type: NormalFormNodeId,
+        fun_id: NodeId<Fun>,
+        return_type_type_id: NormalFormNodeId,
     },
     WrongBodyType {
-        fun: NodeId<Fun>,
-        normalized_return_type: NormalFormNodeId,
-        body_type: NormalFormNodeId,
+        fun_id: NodeId<Fun>,
+        normalized_return_type_id: NormalFormNodeId,
+        body_type_id: NormalFormNodeId,
     },
     GoalMismatch {
-        goal: NormalFormNodeId,
-        actual: NormalFormNodeId,
+        goal_id: NormalFormNodeId,
+        actual_type_id: NormalFormNodeId,
     },
     IllegalMatcheeType {
-        match_: NodeId<Match>,
-        matchee_type: NormalFormNodeId,
+        match_id: NodeId<Match>,
+        matchee_type_id: NormalFormNodeId,
     },
     UnrecognizedVariant {
-        adt_callee: NodeId<Identifier>,
-        variant_name: NodeId<Identifier>,
+        adt_callee_id: NodeId<Identifier>,
+        variant_name_id: NodeId<Identifier>,
     },
     DuplicateMatchCases {
-        match_: NodeId<Match>,
-        first_case: NodeId<MatchCase>,
-        second_case: NodeId<MatchCase>,
+        match_id: NodeId<Match>,
+        first_case_id: NodeId<MatchCase>,
+        second_case_id: NodeId<MatchCase>,
     },
     InconsistentMatchCases {
-        match_: NodeId<Match>,
-        first_case_output_type: NormalFormNodeId,
-        second_case_output_type: NormalFormNodeId,
+        match_id: NodeId<Match>,
+        first_case_output_type_id: NormalFormNodeId,
+        second_case_output_type_id: NormalFormNodeId,
     },
     UncoveredMatchCase {
-        match_: NodeId<Match>,
+        match_id: NodeId<Match>,
         uncovered_case: IdentifierName,
     },
 }
@@ -236,8 +235,8 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
     let type_type_id = type_check_expression(state, type_id, None)?;
     if !is_expression_type0_or_type1(state, type_type_id.0) {
         return Err(TypeError::IllegalParamType {
-            param: param_id,
-            type_type: type_type_id,
+            param_id: param_id,
+            type_type_id: type_type_id,
         });
     }
 
@@ -312,8 +311,8 @@ fn type_check_expression(
                 Expression::Forall(forall) => (**forall).clone(),
                 _ => {
                     return Err(TypeError::CalleeNotAFunction {
-                        callee: callee_id,
-                        callee_type: callee_type_id,
+                        callee_id: callee_id,
+                        callee_type_id: callee_type_id,
                     })
                 }
             };
@@ -321,7 +320,7 @@ fn type_check_expression(
             let arg_ids = state.registry.wrapped_expression_list(arg_list_id);
             if param_ids.len() != arg_ids.len() {
                 return Err(TypeError::WrongNumberOfArguments {
-                    call: call_id,
+                    call_id: call_id,
                     param_arity: param_ids.len(),
                     arg_arity: arg_ids.len(),
                 });
@@ -353,8 +352,8 @@ fn type_check_expression(
                 if !are_types_equal(state, param_type_id, arg_type_id) {
                     return Err(TypeError::WrongArgumentType {
                         arg_id,
-                        param_type: param_type_id,
-                        arg_type: arg_type_id,
+                        param_type_id: param_type_id,
+                        arg_type_id: arg_type_id,
                     });
                 }
             }
@@ -403,8 +402,8 @@ fn type_check_expression(
             let return_type_type_id = type_check_expression(state, return_type_id, None)?;
             if !is_expression_type0_or_type1(state, return_type_type_id.0) {
                 return Err(TypeError::IllegalReturnType {
-                    fun: fun_id,
-                    return_type_type: return_type_type_id,
+                    fun_id: fun_id,
+                    return_type_type_id: return_type_type_id,
                 });
             }
 
@@ -413,9 +412,9 @@ fn type_check_expression(
             let goal_id = normalized_return_type_id;
             type_check_expression(state, body_id, Some(goal_id)).map_goal_mismatch_err(
                 |actual_type_id, _| TypeError::WrongBodyType {
-                    fun: fun_id,
-                    normalized_return_type: normalized_return_type_id,
-                    body_type: actual_type_id,
+                    fun_id: fun_id,
+                    normalized_return_type_id: normalized_return_type_id,
+                    body_type_id: actual_type_id,
                 },
             )?;
 
@@ -451,8 +450,8 @@ fn type_check_expression(
                 t
             } else {
                 return Err(TypeError::IllegalMatcheeType {
-                    match_: match_id,
-                    matchee_type: matchee_type_id,
+                    match_id: match_id,
+                    matchee_type_id: matchee_type_id,
                 });
             };
 
@@ -487,9 +486,9 @@ fn type_check_expression(
                     if let Some(first_case_output_type_id) = first_case_output_type_id {
                         if !are_types_equal(state, first_case_output_type_id, output_type_id) {
                             return Err(TypeError::InconsistentMatchCases {
-                                match_: match_id,
-                                first_case_output_type: first_case_output_type_id,
-                                second_case_output_type: output_type_id,
+                                match_id: match_id,
+                                first_case_output_type_id: first_case_output_type_id,
+                                second_case_output_type_id: output_type_id,
                             });
                         }
                     } else {
@@ -521,9 +520,9 @@ fn type_check_uncovered_match_case(
         .find(|(covered_name, _)| *covered_name == variant_name)
     {
         return Err(TypeError::DuplicateMatchCases {
-            match_: match_id,
-            first_case: *covered_case_id,
-            second_case: case_id,
+            match_id: match_id,
+            first_case_id: *covered_case_id,
+            second_case_id: case_id,
         });
     }
 
@@ -560,7 +559,7 @@ fn verify_all_cases_were_covered(
 
     if let Some(uncovered_case) = uncovered_case {
         Err(TypeError::UncoveredMatchCase {
-            match_: match_id,
+            match_id: match_id,
             uncovered_case,
         })
     } else {
@@ -733,7 +732,10 @@ mod map_goal_mismatch_err {
             f: impl FnOnce(NormalFormNodeId, NormalFormNodeId) -> TypeError,
         ) -> Self {
             self.map_err(|err| match err {
-                TypeError::GoalMismatch { actual, goal } => f(actual, goal),
+                TypeError::GoalMismatch {
+                    actual_type_id,
+                    goal_id,
+                } => f(actual_type_id, goal_id),
                 _ => err,
             })
         }
@@ -746,13 +748,16 @@ mod map_goal_mismatch_err {
 fn ok_unless_contradicts_goal(
     state: &TypeCheckState,
     nfid: NormalFormNodeId,
-    goal: Option<NormalFormNodeId>,
+    goal_id: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
-    if let Some(goal) = goal {
-        if are_types_equal(state, nfid, goal) {
+    if let Some(goal_id) = goal_id {
+        if are_types_equal(state, nfid, goal_id) {
             Ok(nfid)
         } else {
-            Err(TypeError::GoalMismatch { actual: nfid, goal })
+            Err(TypeError::GoalMismatch {
+                actual_type_id: nfid,
+                goal_id,
+            })
         }
     } else {
         return Ok(nfid);
