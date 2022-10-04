@@ -30,16 +30,16 @@ impl VariantReturnTypeDatabase {
 
 impl VariantReturnTypeDatabase {
     /// Panics if no entry is found for the provided variant.
-    pub fn get(&self, variant: NodeId<Variant>) -> VariantReturnType {
+    pub fn get(&self, variant: NodeId<Variant>) -> &VariantReturnType {
         self.try_get(variant)
             .expect(&format!("Return type could not be found for {:?}", variant))
     }
 
-    fn try_get(&self, variant: NodeId<Variant>) -> Option<VariantReturnType> {
+    fn try_get(&self, variant: NodeId<Variant>) -> Option<&VariantReturnType> {
         if variant.raw >= self.map.len() {
             None
         } else {
-            self.map[variant.raw].clone()
+            self.map[variant.raw].as_ref()
         }
     }
 

@@ -3,6 +3,7 @@ use crate::data::{
     registered_ast::*,
     symbol_database::{Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
+    variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
 };
 
 #[derive(Clone, Debug)]
@@ -71,6 +72,7 @@ pub enum TypeError {
 pub fn type_check_file(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
+    variant_db: &VariantReturnTypeDatabase,
     file_id: NodeId<File>,
 ) -> Result<TypeMap, TypeError> {
     let file = registry.file(file_id);
@@ -91,6 +93,7 @@ pub fn type_check_file(
     let mut state = TypeCheckState {
         registry,
         symbol_db,
+        variant_db,
         context: TypeCheckContext::new(),
         type0_identifier_id: wrapped_type0_identifier_id,
     };
@@ -595,53 +598,68 @@ fn type_check_match_case(
             });
         };
 
-    let case_constructed_type_id = {
-        let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
-        let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
-        let case_param_list_id = state.registry.match_case(case_id).param_list_id;
-        let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
-        if variant_param_ids.len() != case_param_ids.len() {
-            return Err(TypeError::WrongNumberOfMatchCaseParams {
-                case_id: case_id,
-                variant_id,
-                expected_arity: variant_param_ids.len(),
-                actual_arity: case_param_ids.len(),
-            });
-        }
-        let substitutions: Vec<Substitution> = variant_param_ids
-            .into_iter()
-            .zip(case_param_ids.into_iter())
-            .map(|(variant_param_id, case_param_id)| {
-                let variant_param = state.registry.param(variant_param_id);
-                let variant_param_symbol = state
-                    .symbol_db
-                    .identifier_symbols
-                    .get(variant_param.name_id);
-                let case_param = state.registry.identifier(case_param_id).clone();
-                let wrapped_case_param_id = state
-                    .registry
-                    .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                        id: dummy_id(),
-                        expression: Expression::Identifier(case_param),
+    let case_constructed_type_arg_ids: Vec<NodeId<WrappedExpression>> =
+        match state.variant_db.get(variant_id) {
+            VariantReturnType::Call {
+                arg_list_id: variant_return_type_arg_list_id,
+                ..
+            } => {
+                let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
+                let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
+                let case_param_list_id = state.registry.match_case(case_id).param_list_id;
+                let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
+                if variant_param_ids.len() != case_param_ids.len() {
+                    return Err(TypeError::WrongNumberOfMatchCaseParams {
+                        case_id: case_id,
+                        variant_id,
+                        expected_arity: variant_param_ids.len(),
+                        actual_arity: case_param_ids.len(),
                     });
-                // This is safe because an identifier defined by a match case param declaration
-                // is always a normal form.
-                let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
-                Substitution {
-                    from: variant_param_symbol,
-                    to: wrapped_case_param_id,
                 }
-            })
-            .collect();
+                let substitutions: Vec<Substitution> = variant_param_ids
+                    .into_iter()
+                    .zip(case_param_ids.into_iter())
+                    .map(|(variant_param_id, case_param_id)| {
+                        let variant_param = state.registry.param(variant_param_id);
+                        let variant_param_symbol = state
+                            .symbol_db
+                            .identifier_symbols
+                            .get(variant_param.name_id);
+                        let case_param = state.registry.identifier(case_param_id).clone();
+                        let wrapped_case_param_id = state
+                            .registry
+                            .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                                id: dummy_id(),
+                                expression: Expression::Identifier(case_param),
+                            });
+                        // This is safe because an identifier defined by a match case param declaration
+                        // is always a normal form.
+                        let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
+                        Substitution {
+                            from: variant_param_symbol,
+                            to: wrapped_case_param_id,
+                        }
+                    })
+                    .collect();
 
-        let variant_return_type_id = state.registry.variant(variant_id).return_type_id;
-        apply_substitutions(
-            &mut state.registry,
-            &state.symbol_db,
-            variant_return_type_id,
-            substitutions,
-        )
-    };
+                let variant_return_type_arg_ids = state
+                    .registry
+                    .wrapped_expression_list(*variant_return_type_arg_list_id)
+                    .to_vec();
+                variant_return_type_arg_ids
+                    .into_iter()
+                    .map(|variant_return_type_arg_id| {
+                        apply_substitutions(
+                            &mut state.registry,
+                            &state.symbol_db,
+                            variant_return_type_arg_id,
+                            substitutions.clone(),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            }
+            VariantReturnType::Identifier { .. } => vec![],
+        };
 
     unimplemented!()
 }
@@ -715,6 +733,7 @@ fn dummy_id<T>() -> NodeId<T> {
 struct TypeCheckState<'a> {
     registry: &'a mut NodeRegistry,
     symbol_db: &'a mut SymbolDatabase,
+    variant_db: &'a VariantReturnTypeDatabase,
     context: TypeCheckContext,
     type0_identifier_id: NormalFormNodeId,
 }

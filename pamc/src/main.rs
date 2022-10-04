@@ -78,33 +78,44 @@ fn main() {
                             );
                             print_separator();
 
-                            let rec_validation_result = pamc::processing::validate_fun_recursion::validate_fun_recursion_in_file(
-                                &symbol_db,
-                                &registry,
-                                registry.file(file_node_id),
-                            );
-                            match rec_validation_result {
-                                Ok(()) => {
-                                    println!("Recursion validation success!");
-                                    let mut symbol_db = symbol_db;
-                                    let type_check_result =
-                                        pamc::processing::type_check::type_check_file(
-                                            &mut registry,
-                                            &mut symbol_db,
-                                            file_node_id,
-                                        );
-                                    match type_check_result {
-                                        Ok(type_map) => {
-                                            println!("Type check success!");
-                                            println!("{:#?}", type_map);
+                            let variant_return_type_validation_result = pamc::processing::check_variant_return_types::check_variant_return_types_for_file(&symbol_db, &registry, registry.file(file_node_id));
+                            match variant_return_type_validation_result {
+                                Ok(variant_db) => {
+                                    println!("Variant return type validation success!");
+
+                                    let rec_validation_result = pamc::processing::validate_fun_recursion::validate_fun_recursion_in_file(
+                                        &symbol_db,
+                                        &registry,
+                                        registry.file(file_node_id),
+                                    );
+                                    match rec_validation_result {
+                                        Ok(()) => {
+                                            println!("Recursion validation success!");
+                                            let mut symbol_db = symbol_db;
+                                            let type_check_result =
+                                                pamc::processing::type_check::type_check_file(
+                                                    &mut registry,
+                                                    &mut symbol_db,
+                                                    &variant_db,
+                                                    file_node_id,
+                                                );
+                                            match type_check_result {
+                                                Ok(type_map) => {
+                                                    println!("Type check success!");
+                                                    println!("{:#?}", type_map);
+                                                }
+                                                Err(err) => {
+                                                    println!("Type check error: {:#?}", err);
+                                                }
+                                            }
                                         }
                                         Err(err) => {
-                                            println!("Type check error: {:#?}", err);
+                                            println!("Recursion validation error: {:#?}", err);
                                         }
                                     }
                                 }
-                                Err(err) => {
-                                    println!("Recursion validation error: {:#?}", err);
+                                Err(error) => {
+                                    println!("Variant return type validation error: {:#?}", error);
                                 }
                             }
                         }
