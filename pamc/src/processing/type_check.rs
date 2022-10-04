@@ -673,7 +673,7 @@ fn type_check_match_case(
         .into_iter()
         .zip(case_constructed_type_arg_ids.into_iter())
     {
-        let has_exploded = ltr_fuse(
+        let has_exploded = ltr_fuse_well_typed_expressions(
             state,
             matchee_type_arg_id,
             case_constructed_type_arg_id,
@@ -698,7 +698,7 @@ fn type_check_match_case(
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct HasExploded(pub bool);
 
-fn ltr_fuse(
+fn ltr_fuse_well_typed_expressions(
     state: &mut TypeCheckState,
     left_id: NodeId<WrappedExpression>,
     right_id: NodeId<WrappedExpression>,
