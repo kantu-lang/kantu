@@ -763,5 +763,24 @@ fn as_algebraic_data_type(
     state: &mut TypeCheckState,
     term_id: NormalFormNodeId,
 ) -> Option<AlgebraicDataType> {
-    unimplemented!();
+    let empty_list_id = state.registry.add_wrapped_expression_list(Vec::new());
+
+    let term = state.registry.wrapped_expression(term_id.0);
+    match &term.expression {
+        Expression::Identifier(identifier) => Some(AlgebraicDataType {
+            callee_id: identifier.id,
+            arg_list_id: empty_list_id,
+        }),
+        Expression::Call(call) => {
+            let callee = state.registry.wrapped_expression(call.callee_id);
+            match &callee.expression {
+                Expression::Identifier(callee_identifier) => Some(AlgebraicDataType {
+                    callee_id: callee_identifier.id,
+                    arg_list_id: call.arg_list_id,
+                }),
+                _other_callee => None,
+            }
+        }
+        _other_term => None,
+    }
 }
