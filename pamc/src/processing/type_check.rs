@@ -780,6 +780,38 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
         return FusionResult::Fused(vec![]);
     }
 
+    /// Tries to execute `[happy_path_lhs -> right_id]`, but may change the
+    /// direction of the arrows as needed depending on which term (if any)
+    /// is a subterm of the other.
+    fn substitute_based_on_subterm_status(
+        state: &mut TypeCheckState,
+        left_id: NormalFormNodeId,
+        right_id: NormalFormNodeId,
+        happy_path_lhs: SubstitutionLhs,
+    ) -> FusionResult {
+        let left_subterm_right =
+            is_term_a_subterm(&state.registry, &state.symbol_db, left_id.0, right_id.0);
+        let right_subterm_left =
+            is_term_a_subterm(&state.registry, &state.symbol_db, right_id.0, left_id.0);
+        match (left_subterm_right, right_subterm_left) {
+            (false, false) => FusionResult::Fused(vec![Substitution {
+                from: happy_path_lhs,
+                to: right_id,
+            }]),
+            (true, true) => {
+                panic!("Impossible: Two terms are mutually subterms of each other.")
+            }
+            (true, false) => FusionResult::Fused(vec![Substitution {
+                from: SubstitutionLhs::Expression(right_id.0),
+                to: left_id,
+            }]),
+            (false, true) => FusionResult::Fused(vec![Substitution {
+                from: SubstitutionLhs::Expression(left_id.0),
+                to: right_id,
+            }]),
+        }
+    }
+
     let left = state.registry.wrapped_expression(left_id.0);
     let right = state.registry.wrapped_expression(right_id.0);
     match &left.expression {
@@ -804,27 +836,12 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                 }
                 SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
                     // `left` can be replaced.
-                    let left_subterm_right =
-                        is_term_a_subterm(&state.registry, &state.symbol_db, left_id.0, right_id.0);
-                    let right_subterm_left =
-                        is_term_a_subterm(&state.registry, &state.symbol_db, right_id.0, left_id.0);
-                    match (left_subterm_right, right_subterm_left) {
-                        (true, true) => {
-                            panic!("Impossible: Two terms are mutually subterms of each other.")
-                        }
-                        (true, false) => FusionResult::Fused(vec![Substitution {
-                            from: SubstitutionLhs::Expression(right_id.0),
-                            to: left_id,
-                        }]),
-                        (false, true) => FusionResult::Fused(vec![Substitution {
-                            from: SubstitutionLhs::Expression(left_id.0),
-                            to: right_id,
-                        }]),
-                        (false, false) => FusionResult::Fused(vec![Substitution {
-                            from: SubstitutionLhs::Symbol(left_symbol),
-                            to: right_id,
-                        }]),
-                    }
+                    substitute_based_on_subterm_status(
+                        state,
+                        left_id,
+                        right_id,
+                        SubstitutionLhs::Symbol(left_symbol),
+                    )
                 }
             }
         }
