@@ -763,18 +763,14 @@ fn compute_ltr_fusion_of_well_typed_expressions(
         evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, left_id)?;
     let normalized_right_id =
         evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, right_id)?;
-    Ok(compute_ltr_fusion_of_well_typed_normal_forms(
-        state,
-        normalized_left_id,
-        normalized_right_id,
-    ))
+    compute_ltr_fusion_of_well_typed_normal_forms(state, normalized_left_id, normalized_right_id)
 }
 
 fn compute_ltr_fusion_of_well_typed_normal_forms(
     state: &mut TypeCheckState,
     left_id: NormalFormNodeId,
     right_id: NormalFormNodeId,
-) -> FusionResult {
+) -> Result<FusionResult, TypeError> {
     #[derive(Clone, Debug)]
     enum FusionCase {
         SyntacticallyIdentical,
@@ -906,20 +902,20 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
     }
 
     match get_fusion_case(state, left_id, right_id) {
-        FusionCase::SyntacticallyIdentical => FusionResult::Fused(vec![]),
-        FusionCase::LeftReplacable { left_symbol } => substitute_based_on_subterm_status(
+        FusionCase::SyntacticallyIdentical => Ok(FusionResult::Fused(vec![])),
+        FusionCase::LeftReplacable { left_symbol } => Ok(substitute_based_on_subterm_status(
             state,
             left_id,
             right_id,
             SubstitutionLhs::Symbol(left_symbol),
-        ),
+        )),
         FusionCase::LeftIrreplacableRightReplacable { right_symbol } => {
-            substitute_based_on_subterm_status(
+            Ok(substitute_based_on_subterm_status(
                 state,
                 right_id,
                 left_id,
                 SubstitutionLhs::Symbol(right_symbol),
-            )
+            ))
         }
         FusionCase::NeitherReplacable => {
             let raw_result = substitute_based_on_subterm_status(
@@ -931,11 +927,67 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
             let left = state.registry.wrapped_expression(left_id.0);
             let right = state.registry.wrapped_expression(right_id.0);
             let fusion_implied_by_constructors = match (&left.expression, &right.expression) {
-                (Expression::Call(left_call), Expression::Call(right_call)) => unimplemented!(),
+                (Expression::Call(left_call), Expression::Call(right_call)) => {
+                    let left_callee = state.registry.wrapped_expression(left_call.callee_id);
+                    let right_callee = state.registry.wrapped_expression(right_call.callee_id);
+                    match (&left_callee.expression, &right_callee.expression) {
+                        (Expression::Dot(left_callee_dot), Expression::Dot(right_callee_dot)) => {
+                            let left_callee_symbol = state
+                                .symbol_db
+                                .identifier_symbols
+                                .get(left_callee_dot.right_id);
+                            let left_callee_source = *state
+                                .symbol_db
+                                .symbol_sources
+                                .get(&left_callee_symbol)
+                                .expect("An dot RHS's symbol should have source.");
+                            let right_callee_symbol = state
+                                .symbol_db
+                                .identifier_symbols
+                                .get(right_callee_dot.right_id);
+                            let right_callee_source = *state
+                                .symbol_db
+                                .symbol_sources
+                                .get(&right_callee_symbol)
+                                .expect("An dot RHS's symbol should have source.");
+                            match (left_callee_source, right_callee_source) {
+                                (SymbolSource::Variant(_), SymbolSource::Variant(_)) => {
+                                    if left_callee_symbol == right_callee_symbol {
+                                        let left_arg_ids = state
+                                            .registry
+                                            .wrapped_expression_list(left_call.arg_list_id)
+                                            .to_vec();
+                                        let right_arg_ids = state
+                                            .registry
+                                            .wrapped_expression_list(right_call.arg_list_id)
+                                            .to_vec();
+                                        let mut out = FusionResult::Fused(vec![]);
+                                        for (left_arg_id, right_arg_id) in
+                                            left_arg_ids.into_iter().zip(right_arg_ids)
+                                        {
+                                            let arg_fusion_result =
+                                                compute_ltr_fusion_of_well_typed_expressions(
+                                                    state,
+                                                    left_arg_id,
+                                                    right_arg_id,
+                                                )?;
+                                            out = out.chain(arg_fusion_result);
+                                        }
+                                        out
+                                    } else {
+                                        FusionResult::Exploded
+                                    }
+                                }
+                                _ => FusionResult::Fused(vec![]),
+                            }
+                        }
+                        _ => FusionResult::Fused(vec![]),
+                    }
+                }
                 _ => FusionResult::Fused(vec![]),
             };
 
-            raw_result.chain(fusion_implied_by_constructors)
+            Ok(raw_result.chain(fusion_implied_by_constructors))
         }
     }
 }
