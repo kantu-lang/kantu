@@ -1067,9 +1067,61 @@ enum EvalStepResult {
 fn perform_eval_step_on_well_typed_expression(
     state: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
-    expression: NodeId<WrappedExpression>,
+    expression_id: NodeId<WrappedExpression>,
 ) -> Result<EvalStepResult, TypeError> {
-    unimplemented!()
+    fn perform_eval_step_on_identifier_or_dot_based_on_symbol(
+        state: &mut NodeRegistry,
+        symbol_db: &mut SymbolDatabase,
+        symbol: Symbol,
+        original_expression_id: NodeId<WrappedExpression>,
+    ) -> EvalStepResult {
+        let source = *symbol_db
+            .symbol_sources
+            .get(&symbol)
+            .expect("Symbol referenced in identifier expression should have a source.");
+        match source {
+            SymbolSource::Type(_)
+            | SymbolSource::Variant(_)
+            | SymbolSource::TypedParam(_)
+            | SymbolSource::UntypedParam(_)
+            | SymbolSource::Fun(_)
+            | SymbolSource::BuiltinTypeTitleCase => {
+                // This is safe because a identifier expression with
+                // a symbol defined by a type, variant, param, fun, or Type0
+                // is a normal form.
+                EvalStepResult::CouldNotStepBecauseNormalForm(NormalFormNodeId(
+                    original_expression_id,
+                ))
+            }
+            SymbolSource::Let(let_id) => {
+                let let_statement = state.let_statement(let_id);
+                EvalStepResult::Stepped(let_statement.value_id)
+            }
+        }
+    }
+
+    let wrapped = state.wrapped_expression(expression_id);
+    match &wrapped.expression {
+        Expression::Identifier(identifier) => {
+            let symbol = symbol_db.identifier_symbols.get(identifier.id);
+            Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
+                state,
+                symbol_db,
+                symbol,
+                expression_id,
+            ))
+        }
+        Expression::Dot(dot) => {
+            let symbol = symbol_db.identifier_symbols.get(dot.right_id);
+            Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
+                state,
+                symbol_db,
+                symbol,
+                expression_id,
+            ))
+        }
+        _ => unimplemented!(),
+    }
 }
 
 fn get_normalized_type(
