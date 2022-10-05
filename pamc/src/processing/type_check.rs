@@ -775,7 +775,59 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
     left_id: NormalFormNodeId,
     right_id: NormalFormNodeId,
 ) -> FusionResult {
-    unimplemented!()
+    if are_expressions_equal_ignoring_ids(&state.registry, &state.symbol_db, left_id.0, right_id.0)
+    {
+        return FusionResult::Fused(vec![]);
+    }
+
+    let left = state.registry.wrapped_expression(left_id.0);
+    let right = state.registry.wrapped_expression(right_id.0);
+    match &left.expression {
+        Expression::Identifier(left_identifier) => {
+            let left_symbol = state.symbol_db.identifier_symbols.get(left_identifier.id);
+            let left_source = *state
+                .symbol_db
+                .symbol_sources
+                .get(&left_symbol)
+                .expect("An identifier expression's symbol should have source.");
+            match left_source {
+                SymbolSource::Let(_) => {
+                    panic!("A let-defined identifier should never appear in a normal form.")
+                }
+                SymbolSource::Type(_)
+                | SymbolSource::Variant(_)
+                | SymbolSource::Fun(_)
+                | SymbolSource::BuiltinTypeTitleCase => {
+                    // `left` cannot be replaced.
+                    // TODO: Implement rest
+                    unimplemented!()
+                }
+                SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
+                    // `left` can be replaced.
+                    let left_subterm_right =
+                        is_term_a_subterm(&state.registry, &state.symbol_db, left_id.0, right_id.0);
+                    let right_subterm_left =
+                        is_term_a_subterm(&state.registry, &state.symbol_db, right_id.0, left_id.0);
+                    match (left_subterm_right, right_subterm_left) {
+                        (true, true) => {
+                            panic!("Impossible: Two terms are mutually subterms of each other.")
+                        }
+                        (true, false) => {
+                            unimplemented!()
+                        }
+                        (false, true) => {
+                            unimplemented!()
+                        }
+                        (false, false) => FusionResult::Fused(vec![Substitution {
+                            from: left_symbol,
+                            to: right_id,
+                        }]),
+                    }
+                }
+            }
+        }
+        _ => unimplemented!(),
+    }
 }
 
 fn get_corresponding_variant_id(
@@ -1082,4 +1134,22 @@ fn as_algebraic_data_type(
         }
         _other_term => None,
     }
+}
+
+fn are_expressions_equal_ignoring_ids(
+    registry: &NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    a: NodeId<WrappedExpression>,
+    b: NodeId<WrappedExpression>,
+) -> bool {
+    unimplemented!();
+}
+
+fn is_term_a_subterm(
+    registry: &NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    sub: NodeId<WrappedExpression>,
+    sup: NodeId<WrappedExpression>,
+) -> bool {
+    unimplemented!()
 }
