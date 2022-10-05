@@ -775,9 +775,87 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
     left_id: NormalFormNodeId,
     right_id: NormalFormNodeId,
 ) -> FusionResult {
-    if are_expressions_equal_ignoring_ids(&state.registry, &state.symbol_db, left_id.0, right_id.0)
-    {
-        return FusionResult::Fused(vec![]);
+    #[derive(Clone, Debug)]
+    enum FusionCase {
+        SyntacticallyIdentical,
+        LeftReplacable { left_symbol: Symbol },
+        LeftIrreplacableRightReplacable { right_symbol: Symbol },
+        NeitherReplacable,
+    }
+
+    fn get_fusion_case(
+        state: &mut TypeCheckState,
+        left_id: NormalFormNodeId,
+        right_id: NormalFormNodeId,
+    ) -> FusionCase {
+        if are_expressions_equal_ignoring_ids(
+            &state.registry,
+            &state.symbol_db,
+            left_id.0,
+            right_id.0,
+        ) {
+            return FusionCase::SyntacticallyIdentical;
+        }
+
+        fn get_fusion_case_assuming_left_is_irreplacable(
+            state: &TypeCheckState,
+            right: &WrappedExpression,
+        ) -> FusionCase {
+            match &right.expression {
+                Expression::Identifier(right_identifier) => {
+                    let right_symbol = state.symbol_db.identifier_symbols.get(right_identifier.id);
+                    let right_source = *state
+                        .symbol_db
+                        .symbol_sources
+                        .get(&right_symbol)
+                        .expect("An identifier expression's symbol should have source.");
+                    match right_source {
+                        SymbolSource::Let(_) => {
+                            panic!("A let-defined identifier should never appear in a normal form.")
+                        }
+                        SymbolSource::Type(_)
+                        | SymbolSource::Variant(_)
+                        | SymbolSource::Fun(_)
+                        | SymbolSource::BuiltinTypeTitleCase => {
+                            // `right` cannot be replaced.
+                            FusionCase::NeitherReplacable
+                        }
+                        SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
+                            FusionCase::LeftIrreplacableRightReplacable { right_symbol }
+                        }
+                    }
+                }
+                _other_right => FusionCase::NeitherReplacable,
+            }
+        }
+
+        let left = state.registry.wrapped_expression(left_id.0);
+        let right = state.registry.wrapped_expression(right_id.0);
+        match &left.expression {
+            Expression::Identifier(left_identifier) => {
+                let left_symbol = state.symbol_db.identifier_symbols.get(left_identifier.id);
+                let left_source = *state
+                    .symbol_db
+                    .symbol_sources
+                    .get(&left_symbol)
+                    .expect("An identifier expression's symbol should have source.");
+                match left_source {
+                    SymbolSource::Let(_) => {
+                        panic!("A let-defined identifier should never appear in a normal form.")
+                    }
+                    SymbolSource::Type(_)
+                    | SymbolSource::Variant(_)
+                    | SymbolSource::Fun(_)
+                    | SymbolSource::BuiltinTypeTitleCase => {
+                        get_fusion_case_assuming_left_is_irreplacable(state, right)
+                    }
+                    SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
+                        FusionCase::LeftReplacable { left_symbol }
+                    }
+                }
+            }
+            _other_left => get_fusion_case_assuming_left_is_irreplacable(state, right),
+        }
     }
 
     /// Tries to execute `[happy_path_lhs -> right_id]`, but may change the
@@ -812,40 +890,53 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
         }
     }
 
-    let left = state.registry.wrapped_expression(left_id.0);
-    let right = state.registry.wrapped_expression(right_id.0);
-    match &left.expression {
-        Expression::Identifier(left_identifier) => {
-            let left_symbol = state.symbol_db.identifier_symbols.get(left_identifier.id);
-            let left_source = *state
-                .symbol_db
-                .symbol_sources
-                .get(&left_symbol)
-                .expect("An identifier expression's symbol should have source.");
-            match left_source {
-                SymbolSource::Let(_) => {
-                    panic!("A let-defined identifier should never appear in a normal form.")
-                }
-                SymbolSource::Type(_)
-                | SymbolSource::Variant(_)
-                | SymbolSource::Fun(_)
-                | SymbolSource::BuiltinTypeTitleCase => {
-                    // `left` cannot be replaced.
-                    // TODO: Implement rest
-                    unimplemented!()
-                }
-                SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
-                    // `left` can be replaced.
-                    substitute_based_on_subterm_status(
-                        state,
-                        left_id,
-                        right_id,
-                        SubstitutionLhs::Symbol(left_symbol),
-                    )
+    impl FusionResult {
+        fn chain(self, other: FusionResult) -> FusionResult {
+            match (self, other) {
+                (FusionResult::Exploded, _) | (_, FusionResult::Exploded) => FusionResult::Exploded,
+                (
+                    FusionResult::Fused(mut substitutions),
+                    FusionResult::Fused(other_substitutions),
+                ) => {
+                    substitutions.extend(other_substitutions);
+                    FusionResult::Fused(substitutions)
                 }
             }
         }
-        _ => unimplemented!(),
+    }
+
+    match get_fusion_case(state, left_id, right_id) {
+        FusionCase::SyntacticallyIdentical => FusionResult::Fused(vec![]),
+        FusionCase::LeftReplacable { left_symbol } => substitute_based_on_subterm_status(
+            state,
+            left_id,
+            right_id,
+            SubstitutionLhs::Symbol(left_symbol),
+        ),
+        FusionCase::LeftIrreplacableRightReplacable { right_symbol } => {
+            substitute_based_on_subterm_status(
+                state,
+                right_id,
+                left_id,
+                SubstitutionLhs::Symbol(right_symbol),
+            )
+        }
+        FusionCase::NeitherReplacable => {
+            let raw_result = substitute_based_on_subterm_status(
+                state,
+                left_id,
+                right_id,
+                SubstitutionLhs::Expression(left_id.0),
+            );
+            let left = state.registry.wrapped_expression(left_id.0);
+            let right = state.registry.wrapped_expression(right_id.0);
+            let fusion_implied_by_constructors = match (&left.expression, &right.expression) {
+                (Expression::Call(left_call), Expression::Call(right_call)) => unimplemented!(),
+                _ => FusionResult::Fused(vec![]),
+            };
+
+            raw_result.chain(fusion_implied_by_constructors)
+        }
     }
 }
 
