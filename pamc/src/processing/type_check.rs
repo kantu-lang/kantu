@@ -375,7 +375,7 @@ fn type_check_expression(
                         let param = state.registry.param(param_id);
                         let param_symbol = state.symbol_db.identifier_symbols.get(param.name_id);
                         Ok(Substitution {
-                            from: param_symbol,
+                            from: SubstitutionLhs::Symbol(param_symbol),
                             to: normalized_arg_id,
                         })
                     },
@@ -652,7 +652,7 @@ fn type_check_match_case(
                         // is always a normal form.
                         let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
                         Substitution {
-                            from: variant_param_symbol,
+                            from: SubstitutionLhs::Symbol(variant_param_symbol),
                             to: wrapped_case_param_id,
                         }
                     })
@@ -812,14 +812,16 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                         (true, true) => {
                             panic!("Impossible: Two terms are mutually subterms of each other.")
                         }
-                        (true, false) => {
-                            unimplemented!()
-                        }
-                        (false, true) => {
-                            unimplemented!()
-                        }
+                        (true, false) => FusionResult::Fused(vec![Substitution {
+                            from: SubstitutionLhs::Expression(right_id.0),
+                            to: left_id,
+                        }]),
+                        (false, true) => FusionResult::Fused(vec![Substitution {
+                            from: SubstitutionLhs::Expression(left_id.0),
+                            to: right_id,
+                        }]),
                         (false, false) => FusionResult::Fused(vec![Substitution {
-                            from: left_symbol,
+                            from: SubstitutionLhs::Symbol(left_symbol),
                             to: right_id,
                         }]),
                     }
@@ -922,8 +924,14 @@ mod context {
 
     #[derive(Clone, Copy, Debug)]
     pub struct Substitution {
-        pub from: Symbol,
+        pub from: SubstitutionLhs,
         pub to: NormalFormNodeId,
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub enum SubstitutionLhs {
+        Symbol(Symbol),
+        Expression(NodeId<WrappedExpression>),
     }
 
     #[derive(Clone, Debug)]
