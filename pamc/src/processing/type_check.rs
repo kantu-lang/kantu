@@ -1065,12 +1065,12 @@ enum EvalStepResult {
 }
 
 fn perform_eval_step_on_well_typed_expression(
-    state: &mut NodeRegistry,
+    registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     expression_id: NodeId<WrappedExpression>,
 ) -> Result<EvalStepResult, TypeError> {
     fn perform_eval_step_on_identifier_or_dot_based_on_symbol(
-        state: &mut NodeRegistry,
+        registry: &mut NodeRegistry,
         symbol_db: &mut SymbolDatabase,
         symbol: Symbol,
         original_expression_id: NodeId<WrappedExpression>,
@@ -1094,18 +1094,18 @@ fn perform_eval_step_on_well_typed_expression(
                 ))
             }
             SymbolSource::Let(let_id) => {
-                let let_statement = state.let_statement(let_id);
+                let let_statement = registry.let_statement(let_id);
                 EvalStepResult::Stepped(let_statement.value_id)
             }
         }
     }
 
-    let wrapped = state.wrapped_expression(expression_id);
+    let wrapped = registry.wrapped_expression(expression_id);
     match &wrapped.expression {
         Expression::Identifier(identifier) => {
             let symbol = symbol_db.identifier_symbols.get(identifier.id);
             Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
-                state,
+                registry,
                 symbol_db,
                 symbol,
                 expression_id,
@@ -1114,11 +1114,77 @@ fn perform_eval_step_on_well_typed_expression(
         Expression::Dot(dot) => {
             let symbol = symbol_db.identifier_symbols.get(dot.right_id);
             Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
-                state,
+                registry,
                 symbol_db,
                 symbol,
                 expression_id,
             ))
+        }
+        Expression::Call(call) => {
+            let callee_id = call.callee_id;
+            let arg_list_id = call.arg_list_id;
+            let callee_step_result =
+                perform_eval_step_on_well_typed_expression(registry, symbol_db, callee_id)?;
+            if let EvalStepResult::Stepped(stepped_callee_id) = callee_step_result {
+                let stepped_call_id = registry.add_call_and_overwrite_its_id(Call {
+                    id: dummy_id(),
+                    callee_id: stepped_callee_id,
+                    arg_list_id,
+                });
+                let stepped_call = registry.call(stepped_call_id).clone();
+                let wrapped_stepped_id =
+                    registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                        id: dummy_id(),
+                        expression: Expression::Call(Box::new(stepped_call)),
+                    });
+                return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
+            }
+
+            let callee = registry.wrapped_expression(callee_id);
+            match &callee.expression {
+                Expression::Identifier(callee_identifier) => {
+                   let callee_symbol = symbol_db.identifier_symbols.get(callee_identifier.id);
+                   let callee_source = *symbol_db.symbol_sources.get(&callee_symbol).expect("Symbol referenced in identifier expression should have a source.");
+                   let callee_fun_id: NodeId<Fun> = match callee_source {
+                    SymbolSource::Fun(fun_id) => fun_id,
+                    other_source => panic!("Callee identifier symbol of call expression should be have a Fun source, but the source was `{:?}`.", other_source),
+                   };
+                   let callee_fun = registry.fun(callee_fun_id);
+                   let callee_param_list_id = callee_fun.param_list_id;
+                   let calee_body_id = callee_fun.body_id;
+                   let callee_param_ids = registry.param_list(callee_param_list_id).to_vec();
+                   let body_freshening_substitutions: Vec<Substitution> = callee_param_ids.iter().copied().map(|param_id| {
+                     let param = registry.param(param_id);
+                     let param_is_dashed = param.is_dashed;
+                     let param_name_id = param.name_id;
+                     let param_type_id = param.type_id;
+                     let param_symbol = symbol_db.identifier_symbols.get(param.name_id);
+                     
+
+
+                    //  let fresh_param_id = registry.add_param_and_overwrite_its_id(Param {
+                    //      id: dummy_id(),
+                    //      is_dashed: param_is_dashed,
+                    //      name_id: param_name_id,
+                    //      type_id: param_type_id,
+                    //  });
+                    //  let fresh_param = registry.param(fresh_param_id).clone();
+                    //  let wrapped_fresh_param_id = registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                    //      id: dummy_id(),
+                    //      expression: Expression::Param(Box::new(fresh_param)),
+                    //  });
+                    //  Substitution {
+                    //      from: SubstitutionLhs::Symbol(param_symbol),
+                    //      to: wrapped_fresh_param
+                    //  }
+                    unimplemented!()
+                   }).collect();
+
+                   unimplemented!()
+
+                }
+                other_normal_form_callee => panic!("A normal form callee in a well-typed Call expression should be an identifier, but was `{:?}`.", other_normal_form_callee),
+            }
         }
         _ => unimplemented!(),
     }
