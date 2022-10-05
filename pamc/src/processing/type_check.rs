@@ -1044,11 +1044,32 @@ fn get_corresponding_variant_id(
 }
 
 fn evaluate_well_typed_expression(
-    _state: &mut NodeRegistry,
-    _symbol_db: &mut SymbolDatabase,
-    _expression: NodeId<WrappedExpression>,
+    state: &mut NodeRegistry,
+    symbol_db: &mut SymbolDatabase,
+    expression: NodeId<WrappedExpression>,
 ) -> Result<NormalFormNodeId, TypeError> {
-    unimplemented!();
+    let mut current = expression;
+    loop {
+        let step_result = perform_eval_step_on_well_typed_expression(state, symbol_db, current)?;
+        match step_result {
+            EvalStepResult::Stepped(new_current) => current = new_current,
+            EvalStepResult::CouldNotStepBecauseNormalForm(nfid) => break Ok(nfid),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+enum EvalStepResult {
+    Stepped(NodeId<WrappedExpression>),
+    CouldNotStepBecauseNormalForm(NormalFormNodeId),
+}
+
+fn perform_eval_step_on_well_typed_expression(
+    state: &mut NodeRegistry,
+    symbol_db: &mut SymbolDatabase,
+    expression: NodeId<WrappedExpression>,
+) -> Result<EvalStepResult, TypeError> {
+    unimplemented!()
 }
 
 fn get_normalized_type(
