@@ -92,6 +92,12 @@ pub fn type_check_file(
             id: dummy_id(),
             expression: Expression::Identifier(type0_identifier),
         });
+
+        symbol_db.identifier_symbols.insert(
+            type0_identifier_id,
+           symbol_db.provider.type0_symbol(),
+        );
+
         NormalFormNodeId(wrapped_id)
     };
     let mut state = TypeCheckState {
