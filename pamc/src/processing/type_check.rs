@@ -1045,6 +1045,8 @@ fn apply_substitutions(
     type_id
 }
 
+/// NOTE: "Applying" a substitution means to **repeatedly** substitute until
+/// no more substitutions can be made.
 fn apply_substitution(
     _registry: &mut NodeRegistry,
     _symbol_db: &SymbolDatabase,
