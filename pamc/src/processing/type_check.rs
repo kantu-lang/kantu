@@ -393,7 +393,7 @@ fn type_check_expression(
                 .collect::<Result<Vec<_>, TypeError>>()?;
             let unnormalized_return_type_id = apply_substitutions(
                 &mut state.registry,
-                &state.symbol_db,
+                &mut state.symbol_db,
                 callee_type.output_id,
                 substitutions,
             );
@@ -695,7 +695,7 @@ fn type_check_match_case(
                     .map(|variant_return_type_arg_id| {
                         apply_substitutions(
                             &mut state.registry,
-                            &state.symbol_db,
+                            &mut state.symbol_db,
                             variant_return_type_arg_id,
                             substitutions.clone(),
                         )
@@ -720,13 +720,13 @@ fn type_check_match_case(
     {
         let substituted_matchee_type_arg_id = apply_substitutions(
             &mut state.registry,
-            &state.symbol_db,
+            &mut state.symbol_db,
             matchee_type_arg_id,
             type_arg_substitutions.iter().copied(),
         );
         let substituted_case_constructed_type_arg_id = apply_substitutions(
             &mut state.registry,
-            &state.symbol_db,
+            &mut state.symbol_db,
             case_constructed_type_arg_id,
             type_arg_substitutions.iter().copied(),
         );
@@ -755,7 +755,7 @@ fn type_check_match_case(
                 if let Some(goal) = goal.as_mut() {
                     let substituted_goal = apply_substitutions(
                         &mut state.registry,
-                        &state.symbol_db,
+                        &mut state.symbol_db,
                         goal.0,
                         substitutions,
                     );
@@ -1234,7 +1234,7 @@ fn get_normalized_type(
     let (unsubstituted_type_id, substitutions) = state.context.get(symbol);
     let unnormalized_type_id = apply_substitutions(
         &mut state.registry,
-        &state.symbol_db,
+        &mut state.symbol_db,
         unsubstituted_type_id.0,
         substitutions
             .iter()
@@ -1260,6 +1260,9 @@ fn dummy_id<T>() -> NodeId<T> {
     NodeId::new(0)
 }
 
+// TODO: Maybe context should be separate, since
+// I feel like I'm passing `registry` and `symbol_db`
+// a lot (since `context` is borrowed in such circumstances).
 #[derive(Debug)]
 struct TypeCheckState<'a> {
     registry: &'a mut NodeRegistry,
@@ -1401,7 +1404,7 @@ mod context {
 // TODO: Make this apply_capture_avoiding_substitutions
 fn apply_substitutions(
     registry: &mut NodeRegistry,
-    symbol_db: &SymbolDatabase,
+    symbol_db: &mut SymbolDatabase,
     type_id: NodeId<WrappedExpression>,
     substitutions: impl IntoIterator<Item = Substitution>,
 ) -> NodeId<WrappedExpression> {
@@ -1418,10 +1421,14 @@ fn apply_substitutions(
 /// safeguard against infinite loops.
 fn apply_substitution(
     _registry: &mut NodeRegistry,
-    _symbol_db: &SymbolDatabase,
+    _symbol_db: &mut SymbolDatabase,
     _type_id: NodeId<WrappedExpression>,
     _substitutions: Substitution,
 ) -> NodeId<WrappedExpression> {
+    // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
+    // any time we enter a node with params (e.g., fun, forall, match case).
+    // Or, we could just always substitute said params with new params to avoid capture.
+    // In either case, we'll need to assign symbols accordingly.
     unimplemented!()
 }
 
