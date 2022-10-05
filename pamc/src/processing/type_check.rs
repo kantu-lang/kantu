@@ -1398,6 +1398,7 @@ mod context {
     }
 }
 
+// TODO: Make this apply_capture_avoiding_substitutions
 fn apply_substitutions(
     registry: &mut NodeRegistry,
     symbol_db: &SymbolDatabase,
@@ -1413,6 +1414,8 @@ fn apply_substitutions(
 
 /// NOTE: "Applying" a substitution means to **repeatedly** substitute until
 /// no more substitutions can be made.
+/// There should be a limit (after which we panic) to
+/// safeguard against infinite loops.
 fn apply_substitution(
     _registry: &mut NodeRegistry,
     _symbol_db: &SymbolDatabase,
