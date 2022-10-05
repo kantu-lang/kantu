@@ -67,6 +67,10 @@ pub enum TypeError {
         expected_arity: usize,
         actual_arity: usize,
     },
+    IllegalForallOutputType {
+        forall_id: NodeId<Forall>,
+        output_type_id: NormalFormNodeId,
+    },
 }
 
 pub fn type_check_file(
@@ -530,7 +534,25 @@ fn type_check_expression(
                 }
             }
         }
-        _ => unimplemented!(),
+        Expression::Forall(forall) => {
+            let forall_id = forall.id;
+            let param_list_id = forall.param_list_id;
+            let output_id = forall.output_id;
+            let param_ids = state.registry.param_list(param_list_id).to_vec();
+            for param_id in param_ids {
+                type_check_param(state, param_id)?;
+            }
+
+            let output_type_id = type_check_expression(state, output_id, None)?;
+            if !is_expression_type0_or_type1(state, output_type_id.0) {
+                return Err(TypeError::IllegalForallOutputType {
+                    forall_id: forall_id,
+                    output_type_id: output_type_id,
+                });
+            }
+
+            Ok(state.type0_identifier_id)
+        }
     }
 }
 
