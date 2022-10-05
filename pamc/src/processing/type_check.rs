@@ -1157,34 +1157,65 @@ fn perform_eval_step_on_well_typed_expression(
                    };
                    let callee_fun = registry.fun(callee_fun_id);
                    let callee_param_list_id = callee_fun.param_list_id;
-                   let calee_body_id = callee_fun.body_id;
+                   let callee_body_id = callee_fun.body_id;
                    let callee_param_ids = registry.param_list(callee_param_list_id).to_vec();
-                   let body_freshening_substitutions: Vec<Substitution> = callee_param_ids.iter().copied().map(|param_id| {
-                     let param = registry.param(param_id);
-                     let param_is_dashed = param.is_dashed;
-                     let param_name_id = param.name_id;
-                     let param_type_id = param.type_id;
-                     let param_symbol = symbol_db.identifier_symbols.get(param.name_id);
+
+
+                   struct ParamFreshening {
+                        old_param_symbol: Symbol,
+                        fresh_param_symbol: Symbol,
+                        fresh_param_wrapped_identifier_id: NormalFormNodeId,
+                   }
+                   let freshenings: Vec<ParamFreshening> = callee_param_ids.iter().copied().map(|param_id| {
+                     let param_name_id = registry.param(param_id).name_id;
+                     let param_symbol = symbol_db.identifier_symbols.get(param_name_id);
+                     let param_name = registry.identifier(param_name_id);
+                     let param_name_start = param_name.start;
+                     let param_name_name = param_name.name.clone();
                      
 
 
-                    //  let fresh_param_id = registry.add_param_and_overwrite_its_id(Param {
-                    //      id: dummy_id(),
-                    //      is_dashed: param_is_dashed,
-                    //      name_id: param_name_id,
-                    //      type_id: param_type_id,
-                    //  });
-                    //  let fresh_param = registry.param(fresh_param_id).clone();
-                    //  let wrapped_fresh_param_id = registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                    //      id: dummy_id(),
-                    //      expression: Expression::Param(Box::new(fresh_param)),
-                    //  });
-                    //  Substitution {
-                    //      from: SubstitutionLhs::Symbol(param_symbol),
-                    //      to: wrapped_fresh_param
-                    //  }
-                    unimplemented!()
+                     let fresh_param_id = registry.add_identifier_and_overwrite_its_id(Identifier {
+                         id: dummy_id(),
+                         start: param_name_start,
+                         name: param_name_name,
+                     });
+                     let fresh_param = registry.identifier(fresh_param_id).clone();
+                     let wrapped_fresh_param_id = registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                         id: dummy_id(),
+                         expression: Expression::Identifier(fresh_param),
+                     });
+                     // This is safe because the fresh param is a parameter-symbol-sourced
+                     // identifier expression, which is a normal form.
+                     let wrapped_fresh_param_id = NormalFormNodeId(wrapped_fresh_param_id);
+
+
+
+                     let fresh_param_symbol = symbol_db.provider.new_symbol();
+                     symbol_db.identifier_symbols.insert(fresh_param_id, fresh_param_symbol);
+
+
+
+
+
+                     ParamFreshening {
+                         old_param_symbol: param_symbol,
+                            fresh_param_symbol,
+                            fresh_param_wrapped_identifier_id: wrapped_fresh_param_id,
+                     }
                    }).collect();
+
+                   let freshening_substitutions: Vec<Substitution> = freshenings.iter().map(|freshening| {
+                     Substitution {
+                         from: SubstitutionLhs::Symbol(freshening.old_param_symbol),
+                         to: freshening.fresh_param_wrapped_identifier_id,
+                     }
+                   }).collect();
+
+                   let fresh_body = apply_substitutions(registry, symbol_db, callee_body_id, freshening_substitutions);
+
+                   let fresh_param_symbols = freshenings.iter().map(|freshening| freshening.fresh_param_symbol);
+                   let param_to_arg_substitutions: Vec<Substitution> = unimplemented!();
 
                    unimplemented!()
 
