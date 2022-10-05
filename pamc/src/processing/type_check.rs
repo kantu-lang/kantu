@@ -1306,6 +1306,8 @@ fn as_algebraic_data_type(
     }
 }
 
+// IDEA: Use hashing when registering the nodes to speed up
+// equality checking.
 fn are_expressions_equal_ignoring_ids(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
