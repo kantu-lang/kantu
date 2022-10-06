@@ -1180,6 +1180,12 @@ fn perform_eval_step_on_well_typed_expression(
             let callee = registry.wrapped_expression(callee_id);
             match &callee.expression {
                 Expression::Identifier(callee_identifier) => {
+                    // TODO: We can't always substitute, even if the args are
+                    // all normal forms.
+                    // We can **only** substitute if 
+                    // 1. The arg corresponding to the callee's decreasing parameter has
+                    // a constructor at the top OR
+                    // 2. The callee has no decreasing parameter (i.e., it is not recursive).
                     let callee_symbol = symbol_db.identifier_symbols.get(callee_identifier.id);
                     let callee_source = *symbol_db.symbol_sources.get(&callee_symbol).expect("Symbol referenced in identifier expression should have a source.");
                     let callee_fun_id: NodeId<Fun> = match callee_source {
