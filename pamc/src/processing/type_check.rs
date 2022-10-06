@@ -1207,6 +1207,16 @@ fn perform_eval_step_on_well_typed_expression(
                 other_normal_form_callee => panic!("A normal form callee in a well-typed Call expression should be an identifier, but was `{:?}`.", other_normal_form_callee),
             }
         }
+        Expression::Fun(fun) => {
+            let name_id = fun.name_id;
+            let name = registry.identifier(name_id).clone();
+            let wrapped_name_id =
+                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                    id: dummy_id(),
+                    expression: Expression::Identifier(name),
+                });
+            Ok(EvalStepResult::Stepped(wrapped_name_id))
+        }
         _ => unimplemented!(),
     }
 }
