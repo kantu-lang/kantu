@@ -430,11 +430,38 @@ pub fn apply_single_substitution(
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
     target_id: NodeId<WrappedExpression>,
-    substitutions: Substitution,
+    substitution: Substitution,
+) -> NodeId<WrappedExpression> {
+    unimplemented!()
+
+    // // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
+    // // any time we enter a node with params (e.g., fun, forall, match case).
+    // // Or, we could just always substitute said params with new params to avoid capture.
+    // // In either case, we'll need to assign symbols accordingly.
+    // let target = registry.wrapped_expression(target_id);
+    // match &target.expression {
+    //     Expression::Identifier(identifier) => {
+    //         let symbol = symbol_db.identifier_symbols.get(identifier.name_id);
+    //         if subst.from
+    //     }
+    //     _ => unimplemented!(),
+    // }
+}
+
+pub fn apply_single_substitution_using_lhs_expression(
+    registry: &mut NodeRegistry,
+    symbol_db: &mut SymbolDatabase,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
+    target_id: NodeId<WrappedExpression>,
+    from: NodeId<WrappedExpression>,
+    to: NodeId<WrappedExpression>,
 ) -> NodeId<WrappedExpression> {
     // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
     // any time we enter a node with params (e.g., fun, forall, match case).
     // Or, we could just always substitute said params with new params to avoid capture.
     // In either case, we'll need to assign symbols accordingly.
-    unimplemented!()
+    let target = registry.wrapped_expression(target_id);
+    match &target.expression {
+        _ => unimplemented!(),
+    }
 }

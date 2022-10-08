@@ -1,3 +1,4 @@
+pub mod free_variable_cache;
 pub mod node_hash_cache;
 pub mod node_registry;
 pub mod registered_ast;
