@@ -1,3 +1,4 @@
+pub mod node_hash_cache;
 pub mod node_registry;
 pub mod registered_ast;
 pub mod symbol_database;
