@@ -303,23 +303,84 @@ pub(super) fn as_algebraic_data_type(
 pub fn are_expressions_equal_ignoring_ids(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
-    eq_cache: &mut NodeStructuralIdentityHashCache,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
     a: NodeId<WrappedExpression>,
     b: NodeId<WrappedExpression>,
 ) -> bool {
     let node_info = (registry, symbol_db);
-    let a_sih = eq_cache.get_structural_identity_hash(a, node_info);
-    let b_sih = eq_cache.get_structural_identity_hash(b, node_info);
+    let a_sih = sih_cache.get_structural_identity_hash(a, node_info);
+    let b_sih = sih_cache.get_structural_identity_hash(b, node_info);
     a_sih == b_sih
 }
 
-pub fn is_term_a_subterm(
+pub fn is_term_a_non_strict_subterm(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
-    sub: NodeId<WrappedExpression>,
-    sup: NodeId<WrappedExpression>,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
+    sub_id: NodeId<WrappedExpression>,
+    super_id: NodeId<WrappedExpression>,
 ) -> bool {
-    unimplemented!()
+    if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, sub_id, super_id) {
+        return true;
+    }
+
+    // IDEA: We could cache this too.
+
+    let super_ = registry.wrapped_expression(super_id);
+    match &super_.expression {
+        Expression::Identifier(_) => false,
+        Expression::Dot(dot) => {
+            is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, dot.left_id)
+        }
+        Expression::Call(call) => {
+            let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+            is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, call.callee_id)
+                || arg_ids.iter().copied().any(|arg_id| {
+                    is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, arg_id)
+                })
+        }
+        Expression::Fun(fun) => {
+            let param_ids = registry.param_list(fun.param_list_id);
+
+            param_ids.iter().copied().any(|param_id| {
+                let param = registry.param(param_id);
+                is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, param.type_id)
+            }) || is_term_a_non_strict_subterm(
+                registry,
+                symbol_db,
+                sih_cache,
+                sub_id,
+                fun.return_type_id,
+            ) || is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, fun.body_id)
+        }
+        Expression::Match(match_) => {
+            let case_ids = registry.match_case_list(match_.case_list_id);
+            is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, match_.matchee_id)
+                || case_ids.iter().copied().any(|case_id| {
+                    let case = registry.match_case(case_id);
+                    is_term_a_non_strict_subterm(
+                        registry,
+                        symbol_db,
+                        sih_cache,
+                        sub_id,
+                        case.output_id,
+                    )
+                })
+        }
+        Expression::Forall(forall) => {
+            let param_ids = registry.param_list(forall.param_list_id);
+            param_ids.iter().copied().any(|param_id| {
+                let param = registry.param(param_id);
+                is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, param.type_id)
+            }) || is_term_a_non_strict_subterm(
+                registry,
+                symbol_db,
+                sih_cache,
+                sub_id,
+                forall.output_id,
+            )
+        }
+    }
 }
 
 // TODO: Make this apply_capture_avoiding_substitutions

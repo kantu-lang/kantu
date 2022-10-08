@@ -110,16 +110,26 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
     /// Tries to execute `[happy_path_lhs -> right_id]`, but may change the
     /// direction of the arrows as needed depending on which term (if any)
     /// is a subterm of the other.
-    fn substitute_based_on_subterm_status(
+    fn substitute_non_identical_terms_based_on_subterm_status(
         state: &mut TypeCheckState,
         left_id: NormalFormNodeId,
         right_id: NormalFormNodeId,
         happy_path_lhs: SubstitutionLhs,
     ) -> FusionResult {
-        let left_subterm_right =
-            is_term_a_subterm(&state.registry, &state.symbol_db, left_id.0, right_id.0);
-        let right_subterm_left =
-            is_term_a_subterm(&state.registry, &state.symbol_db, right_id.0, left_id.0);
+        let left_subterm_right = is_term_a_non_strict_subterm(
+            &state.registry,
+            &state.symbol_db,
+            &mut state.sih_cache,
+            left_id.0,
+            right_id.0,
+        );
+        let right_subterm_left = is_term_a_non_strict_subterm(
+            &state.registry,
+            &state.symbol_db,
+            &mut state.sih_cache,
+            right_id.0,
+            left_id.0,
+        );
         match (left_subterm_right, right_subterm_left) {
             (false, false) => FusionResult::Fused(vec![Substitution {
                 from: happy_path_lhs,
@@ -156,14 +166,16 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
 
     match get_fusion_case(state, left_id, right_id) {
         FusionCase::SyntacticallyIdentical => Ok(FusionResult::Fused(vec![])),
-        FusionCase::LeftReplacable { left_symbol } => Ok(substitute_based_on_subterm_status(
-            state,
-            left_id,
-            right_id,
-            SubstitutionLhs::Symbol(left_symbol),
-        )),
+        FusionCase::LeftReplacable { left_symbol } => {
+            Ok(substitute_non_identical_terms_based_on_subterm_status(
+                state,
+                left_id,
+                right_id,
+                SubstitutionLhs::Symbol(left_symbol),
+            ))
+        }
         FusionCase::LeftIrreplacableRightReplacable { right_symbol } => {
-            Ok(substitute_based_on_subterm_status(
+            Ok(substitute_non_identical_terms_based_on_subterm_status(
                 state,
                 right_id,
                 left_id,
@@ -171,7 +183,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
             ))
         }
         FusionCase::NeitherReplacable => {
-            let raw_result = substitute_based_on_subterm_status(
+            let raw_result = substitute_non_identical_terms_based_on_subterm_status(
                 state,
                 left_id,
                 right_id,
