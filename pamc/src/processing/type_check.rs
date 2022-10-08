@@ -1180,18 +1180,20 @@ fn perform_eval_step_on_well_typed_expression(
             let callee = registry.wrapped_expression(callee_id);
             match &callee.expression {
                 Expression::Identifier(callee_identifier) => {
-                    // TODO: We can't always substitute, even if the args are
-                    // all normal forms.
-                    // We can **only** substitute if 
-                    // 1. The arg corresponding to the callee's decreasing parameter has
-                    // a constructor at the top OR
-                    // 2. The callee has no decreasing parameter (i.e., it is not recursive).
                     let callee_symbol = symbol_db.identifier_symbols.get(callee_identifier.id);
                     let callee_source = *symbol_db.symbol_sources.get(&callee_symbol).expect("Symbol referenced in identifier expression should have a source.");
                     let callee_fun_id: NodeId<Fun> = match callee_source {
                         SymbolSource::Fun(fun_id) => fun_id,
                         other_source => panic!("Callee identifier symbol of call expression should be have a Fun source, but the source was `{:?}`.", other_source),
                     };
+
+                    let can_substitute = can_apply_well_typed_fun_call(registry, symbol_db, callee_fun_id, &arg_nfids);
+                    if !can_substitute {
+                        return Ok(EvalStepResult::CouldNotStepBecauseNormalForm(
+                            NormalFormNodeId(expression_id),
+                        ));
+                    }
+
                     let callee_fun = registry.fun(callee_fun_id);
                     let callee_param_list_id = callee_fun.param_list_id;
                     let callee_body_id = callee_fun.body_id;
@@ -1254,6 +1256,71 @@ fn does_production_type_satisfy_required_type(
     _requirement_type_id: NormalFormNodeId,
 ) -> bool {
     unimplemented!()
+}
+
+fn can_apply_well_typed_fun_call(
+    registry: &NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    fun_id: NodeId<Fun>,
+    arg_nfids: &[NormalFormNodeId],
+) -> bool {
+    let fun = registry.fun(fun_id);
+    let fun_param_ids = registry.param_list(fun.param_list_id);
+
+    #[derive(Clone, Debug)]
+    enum RecursionStatus {
+        NonRecursive,
+        Recursive { decreasing_param_index: usize },
+    }
+    let recursion_status = {
+        let decreasing_param_index = fun_param_ids.iter().position(|param_id| {
+            let param = registry.param(*param_id);
+            param.is_dashed
+        });
+        match decreasing_param_index {
+            Some(decreasing_param_index) => RecursionStatus::Recursive {
+                decreasing_param_index,
+            },
+            None => RecursionStatus::NonRecursive,
+        }
+    };
+
+    match recursion_status {
+        RecursionStatus::NonRecursive => true,
+        RecursionStatus::Recursive {
+            decreasing_param_index,
+        } => match arg_nfids.get(decreasing_param_index) {
+            Some(decreasing_arg_nfid) => {
+                is_expression_a_variant_call(registry, symbol_db, decreasing_arg_nfid.0)
+            }
+            _ => false,
+        },
+    }
+}
+
+fn is_expression_a_variant_call(
+    registry: &NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    expression_id: NodeId<WrappedExpression>,
+) -> bool {
+    let wrapped = registry.wrapped_expression(expression_id);
+    match &wrapped.expression {
+        Expression::Call(call) => {
+            let callee = registry.wrapped_expression(call.callee_id);
+            match &callee.expression {
+                Expression::Dot(callee_dot) => {
+                    let symbol = symbol_db.identifier_symbols.get(callee_dot.right_id);
+                    let symbol_source = symbol_db
+                        .symbol_sources
+                        .get(&symbol)
+                        .expect("A symbol bound to a Dot expression RHS should have a source.");
+                    matches!(symbol_source, SymbolSource::Variant(_))
+                }
+                _other_callee => false,
+            }
+        }
+        _other_expression => false,
+    }
 }
 
 fn dummy_id<T>() -> NodeId<T> {
