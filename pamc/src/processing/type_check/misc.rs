@@ -402,9 +402,30 @@ pub fn apply_substitutions(
 
 /// NOTE: "Applying" a substitution means to **repeatedly** substitute until
 /// no more substitutions can be made.
-/// There should be a limit (after which we panic) to
+/// This is distinct from a "single substitution", which, as the name implies,
+/// is simply a single substitution.
+///
+/// TODO: There should be a limit (after which we panic) to
 /// safeguard against infinite loops.
 pub fn apply_substitution(
+    registry: &mut NodeRegistry,
+    symbol_db: &mut SymbolDatabase,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
+    target_id: NodeId<WrappedExpression>,
+    substitutions: Substitution,
+) -> NodeId<WrappedExpression> {
+    let mut target_id = target_id;
+    loop {
+        let new_id =
+            apply_single_substitution(registry, symbol_db, sih_cache, target_id, substitutions);
+        if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, target_id, new_id) {
+            return target_id;
+        }
+        target_id = new_id;
+    }
+}
+
+pub fn apply_single_substitution(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
