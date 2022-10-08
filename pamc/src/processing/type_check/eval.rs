@@ -177,6 +177,77 @@ fn perform_eval_step_on_well_typed_expression(
                 });
             Ok(EvalStepResult::Stepped(wrapped_name_id))
         }
+        Expression::Match(match_) => {
+            let match_id = match_.id;
+            let matchee_id = match_.matchee_id;
+            let case_list_id = match_.case_list_id;
+
+            let matchee_step_result =
+                perform_eval_step_on_well_typed_expression(registry, symbol_db, matchee_id)?;
+            let matchee_nfid = match matchee_step_result {
+                EvalStepResult::Stepped(stepped_matchee_id) => {
+                    let stepped_match_id = registry.add_match_and_overwrite_its_id(Match {
+                        id: dummy_id(),
+                        matchee_id: stepped_matchee_id,
+                        case_list_id: case_list_id,
+                    });
+                    let stepped_match = registry.match_(stepped_match_id).clone();
+                    let wrapped_stepped_id =
+                        registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                            id: dummy_id(),
+                            expression: Expression::Match(Box::new(stepped_match)),
+                        });
+                    return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
+                }
+                EvalStepResult::CouldNotStepBecauseNormalForm(matchee_nfid) => matchee_nfid,
+            };
+
+            let matchee_callee_symbol_and_source =
+                as_variant_call(registry, symbol_db, matchee_nfid);
+            match matchee_callee_symbol_and_source {
+                None => Ok(EvalStepResult::CouldNotStepBecauseNormalForm(
+                    NormalFormNodeId(expression_id),
+                )),
+                Some((called_variant_id, matchee_arg_list_id)) => {
+                    let case_id = get_match_case_id_corresponding_to_variant(
+                        registry,
+                        called_variant_id,
+                        match_id,
+                    ).expect("A well-typed match expression should have a case corresponding to the variant of its matchee.");
+                    let case = registry.match_case(case_id);
+                    let case_output_id = case.output_id;
+                    let substitutions: Vec<Substitution> = {
+                        let case_param_list_id = case.param_list_id;
+                        let case_param_ids = registry.identifier_list(case_param_list_id).to_vec();
+                        let matchee_arg_ids = registry
+                            .wrapped_expression_list(matchee_arg_list_id)
+                            .to_vec();
+                        case_param_ids
+                            .iter()
+                            .copied()
+                            .zip(matchee_arg_ids.iter().copied())
+                            .map(|(param_id, arg_id)| {
+                                let param_symbol = symbol_db.identifier_symbols.get(param_id);
+                                Substitution {
+                                    from: SubstitutionLhs::Symbol(param_symbol),
+                                    // This is safe, since we know the matchee is a well-typed normal form Call expression.
+                                    // Every argument of a normal form Call expression is a normal form, therefore it
+                                    // is safe to assume that arg_id is a NormalFormNodeId.
+                                    to: NormalFormNodeId(arg_id),
+                                }
+                            })
+                            .collect()
+                    };
+                    let substituted_output = apply_substitutions(
+                        registry,
+                        symbol_db,
+                        case_output_id,
+                        substitutions.iter().copied(),
+                    );
+                    Ok(EvalStepResult::Stepped(substituted_output))
+                }
+            }
+        }
         _ => unimplemented!(),
     }
 }

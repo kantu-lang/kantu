@@ -97,6 +97,22 @@ pub(super) fn get_variant_id_corresponding_to_match_case(
     }
 }
 
+pub(super) fn get_match_case_id_corresponding_to_variant(
+    registry: &NodeRegistry,
+    target_variant_id: NodeId<Variant>,
+    match_id: NodeId<Match>,
+) -> Option<NodeId<MatchCase>> {
+    let target_variant_name_id = registry.variant(target_variant_id).name_id;
+    let target_variant_name: &IdentifierName = &registry.identifier(target_variant_name_id).name;
+    let case_list_id = registry.match_(match_id).case_list_id;
+    let case_ids = registry.match_case_list(case_list_id);
+    case_ids.iter().copied().find(|case_id| {
+        let case = registry.match_case(*case_id);
+        let case_variant_name: &IdentifierName = &registry.identifier(case.variant_name_id).name;
+        case_variant_name == target_variant_name
+    })
+}
+
 pub(super) fn get_normalized_type(
     state: &mut TypeCheckState,
     symbol: Symbol,
@@ -159,19 +175,28 @@ pub fn can_apply_well_typed_fun_call(
             decreasing_param_index,
         } => match arg_nfids.get(decreasing_param_index) {
             Some(decreasing_arg_nfid) => {
-                is_expression_a_variant_call(registry, symbol_db, decreasing_arg_nfid.0)
+                is_normal_form_a_variant_call(registry, symbol_db, *decreasing_arg_nfid)
             }
             _ => false,
         },
     }
 }
 
-pub fn is_expression_a_variant_call(
+pub fn is_normal_form_a_variant_call(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
-    expression_id: NodeId<WrappedExpression>,
+    nfid: NormalFormNodeId,
 ) -> bool {
-    let wrapped = registry.wrapped_expression(expression_id);
+    as_variant_call(registry, symbol_db, nfid).is_some()
+}
+
+/// If the expression referenced by `nfid` is not a variant call, returns `None`.
+pub fn as_variant_call(
+    registry: &NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    nfid: NormalFormNodeId,
+) -> Option<(NodeId<Variant>, ListId<NodeId<WrappedExpression>>)> {
+    let wrapped = registry.wrapped_expression(nfid.0);
     match &wrapped.expression {
         Expression::Call(call) => {
             let callee = registry.wrapped_expression(call.callee_id);
@@ -182,12 +207,15 @@ pub fn is_expression_a_variant_call(
                         .symbol_sources
                         .get(&symbol)
                         .expect("A symbol bound to a Dot expression RHS should have a source.");
-                    matches!(symbol_source, SymbolSource::Variant(_))
+                    match symbol_source {
+                        SymbolSource::Variant(variant_id) => Some((*variant_id, call.arg_list_id)),
+                        _other_source => None,
+                    }
                 }
-                _other_callee => false,
+                _other_callee => None,
             }
         }
-        _other_expression => false,
+        _other_expression => None,
     }
 }
 
