@@ -489,16 +489,17 @@ fn type_check_match_case(
     original_goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
     let mut goal = original_goal;
-    let variant_id =
-        if let Some(variant_id) = get_corresponding_variant_id(state, matchee_type, case_id) {
-            variant_id
-        } else {
-            let case = state.registry.match_case(case_id);
-            return Err(TypeError::UnrecognizedVariant {
-                adt_callee_id: matchee_type.callee_id,
-                variant_name_id: case.variant_name_id,
-            });
-        };
+    let variant_id = if let Some(variant_id) =
+        get_variant_id_corresponding_to_match_case(state, matchee_type, case_id)
+    {
+        variant_id
+    } else {
+        let case = state.registry.match_case(case_id);
+        return Err(TypeError::UnrecognizedVariant {
+            adt_callee_id: matchee_type.callee_id,
+            variant_name_id: case.variant_name_id,
+        });
+    };
 
     let case_constructed_type_arg_ids: Vec<NodeId<WrappedExpression>> =
         match state.variant_db.get(variant_id) {
