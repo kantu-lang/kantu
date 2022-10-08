@@ -108,6 +108,7 @@ fn type_check_variant(
     let normalized_return_type_id = evaluate_well_typed_expression(
         &mut state.registry,
         &mut state.symbol_db,
+        &mut state.sih_cache,
         variant_return_type_id,
     )?;
 
@@ -139,8 +140,12 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
 
     let param_name_id = state.registry.param(param_id).name_id;
     let param_symbol = state.symbol_db.identifier_symbols.get(param_name_id);
-    let type_normal_form_id =
-        evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, type_id)?;
+    let type_normal_form_id = evaluate_well_typed_expression(
+        &mut state.registry,
+        &mut state.symbol_db,
+        &mut state.sih_cache,
+        type_id,
+    )?;
     state.context.insert_new(param_symbol, type_normal_form_id);
 
     Ok(())
@@ -239,6 +244,7 @@ fn type_check_expression(
                         let normalized_arg_id = evaluate_well_typed_expression(
                             &mut state.registry,
                             &mut state.symbol_db,
+                            &mut state.sih_cache,
                             arg_id,
                         )?;
                         let param = state.registry.param(param_id);
@@ -253,12 +259,14 @@ fn type_check_expression(
             let unnormalized_return_type_id = apply_substitutions(
                 &mut state.registry,
                 &mut state.symbol_db,
+                &mut state.sih_cache,
                 callee_type.output_id,
                 substitutions,
             );
             let return_type_id = evaluate_well_typed_expression(
                 &mut state.registry,
                 &mut state.symbol_db,
+                &mut state.sih_cache,
                 unnormalized_return_type_id,
             )?;
 
@@ -289,6 +297,7 @@ fn type_check_expression(
             let normalized_return_type_id = evaluate_well_typed_expression(
                 &mut state.registry,
                 &mut state.symbol_db,
+                &mut state.sih_cache,
                 return_type_id,
             )?;
 
@@ -556,6 +565,7 @@ fn type_check_match_case(
                         apply_substitutions(
                             &mut state.registry,
                             &mut state.symbol_db,
+                            &mut state.sih_cache,
                             variant_return_type_arg_id,
                             substitutions.clone(),
                         )
@@ -581,12 +591,14 @@ fn type_check_match_case(
         let substituted_matchee_type_arg_id = apply_substitutions(
             &mut state.registry,
             &mut state.symbol_db,
+            &mut state.sih_cache,
             matchee_type_arg_id,
             type_arg_substitutions.iter().copied(),
         );
         let substituted_case_constructed_type_arg_id = apply_substitutions(
             &mut state.registry,
             &mut state.symbol_db,
+            &mut state.sih_cache,
             case_constructed_type_arg_id,
             type_arg_substitutions.iter().copied(),
         );
@@ -609,6 +621,7 @@ fn type_check_match_case(
                 state.context.apply_substitutions_to_top_scope(
                     &mut state.registry,
                     &mut state.symbol_db,
+                    &mut state.sih_cache,
                     &substitutions,
                 )?;
 
@@ -616,12 +629,14 @@ fn type_check_match_case(
                     let substituted_goal = apply_substitutions(
                         &mut state.registry,
                         &mut state.symbol_db,
+                        &mut state.sih_cache,
                         goal.0,
                         substitutions,
                     );
                     let normalized_substituted_goal = evaluate_well_typed_expression(
                         &mut state.registry,
                         &mut state.symbol_db,
+                        &mut state.sih_cache,
                         substituted_goal,
                     )?;
                     *goal = normalized_substituted_goal;

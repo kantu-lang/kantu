@@ -88,13 +88,14 @@ impl TypeCheckContext {
         &mut self,
         registry: &mut NodeRegistry,
         symbol_db: &mut SymbolDatabase,
+        sih_cache: &mut NodeStructuralIdentityHashCache,
         substitutions: &[Substitution],
     ) -> Result<(), TypeError> {
         let top = self
                 .stack
                 .last_mut()
                 .expect("Error: Tried to apply substitutions to the top scope of a context with an empty scope stack. This indicates a serious logic error.");
-        apply_substitutions_to_map(registry, symbol_db, &mut top.map, substitutions)?;
+        apply_substitutions_to_map(registry, symbol_db, sih_cache, &mut top.map, substitutions)?;
         top.substitutions_applied_to_previous_scopes
             .extend(substitutions);
         Ok(())
@@ -104,6 +105,7 @@ impl TypeCheckContext {
 fn apply_substitutions_to_map(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
     map: &mut TypeMap,
     substitutions: &[Substitution],
 ) -> Result<(), TypeError> {
@@ -113,11 +115,12 @@ fn apply_substitutions_to_map(
         let substituted_type_id = apply_substitutions(
             registry,
             symbol_db,
+            sih_cache,
             type_id.0,
             substitutions.iter().copied(),
         );
         let normalized_substituted_type_id =
-            evaluate_well_typed_expression(registry, symbol_db, substituted_type_id)?;
+            evaluate_well_typed_expression(registry, symbol_db, sih_cache, substituted_type_id)?;
         map.update(key, normalized_substituted_type_id);
     }
 

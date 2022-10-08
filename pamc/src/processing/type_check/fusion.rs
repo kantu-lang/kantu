@@ -11,10 +11,18 @@ pub(super) fn compute_ltr_fusion_of_well_typed_expressions(
     left_id: NodeId<WrappedExpression>,
     right_id: NodeId<WrappedExpression>,
 ) -> Result<FusionResult, TypeError> {
-    let normalized_left_id =
-        evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, left_id)?;
-    let normalized_right_id =
-        evaluate_well_typed_expression(&mut state.registry, &mut state.symbol_db, right_id)?;
+    let normalized_left_id = evaluate_well_typed_expression(
+        &mut state.registry,
+        &mut state.symbol_db,
+        &mut state.sih_cache,
+        left_id,
+    )?;
+    let normalized_right_id = evaluate_well_typed_expression(
+        &mut state.registry,
+        &mut state.symbol_db,
+        &mut state.sih_cache,
+        right_id,
+    )?;
     compute_ltr_fusion_of_well_typed_normal_forms(state, normalized_left_id, normalized_right_id)
 }
 

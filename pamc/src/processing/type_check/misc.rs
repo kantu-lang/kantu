@@ -121,6 +121,7 @@ pub(super) fn get_normalized_type(
     let unnormalized_type_id = apply_substitutions(
         &mut state.registry,
         &mut state.symbol_db,
+        &mut state.sih_cache,
         unsubstituted_type_id.0,
         substitutions
             .iter()
@@ -130,6 +131,7 @@ pub(super) fn get_normalized_type(
     evaluate_well_typed_expression(
         &mut state.registry,
         &mut state.symbol_db,
+        &mut state.sih_cache,
         unnormalized_type_id,
     )
 }
@@ -387,14 +389,15 @@ pub fn is_term_a_non_strict_subterm(
 pub fn apply_substitutions(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
-    type_id: NodeId<WrappedExpression>,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
+    target_id: NodeId<WrappedExpression>,
     substitutions: impl IntoIterator<Item = Substitution>,
 ) -> NodeId<WrappedExpression> {
-    let mut type_id = type_id;
+    let mut target_id = target_id;
     for substitution in substitutions {
-        type_id = apply_substitution(registry, symbol_db, type_id, substitution);
+        target_id = apply_substitution(registry, symbol_db, sih_cache, target_id, substitution);
     }
-    type_id
+    target_id
 }
 
 /// NOTE: "Applying" a substitution means to **repeatedly** substitute until
@@ -402,10 +405,11 @@ pub fn apply_substitutions(
 /// There should be a limit (after which we panic) to
 /// safeguard against infinite loops.
 pub fn apply_substitution(
-    _registry: &mut NodeRegistry,
-    _symbol_db: &mut SymbolDatabase,
-    _type_id: NodeId<WrappedExpression>,
-    _substitutions: Substitution,
+    registry: &mut NodeRegistry,
+    symbol_db: &mut SymbolDatabase,
+    sih_cache: &mut NodeStructuralIdentityHashCache,
+    target_id: NodeId<WrappedExpression>,
+    substitutions: Substitution,
 ) -> NodeId<WrappedExpression> {
     // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
     // any time we enter a node with params (e.g., fun, forall, match case).
