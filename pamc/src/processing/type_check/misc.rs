@@ -324,7 +324,7 @@ pub fn is_term_a_non_strict_subterm(
         return true;
     }
 
-    // IDEA: We could cache this too.
+    // TODO: We should probably cache this too.
 
     let super_ = registry.wrapped_expression(super_id);
     match &super_.expression {
