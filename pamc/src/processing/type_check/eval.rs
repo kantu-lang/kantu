@@ -248,6 +248,68 @@ fn perform_eval_step_on_well_typed_expression(
                 }
             }
         }
-        _ => unimplemented!(),
+        Expression::Forall(forall) => {
+            let param_list_id = forall.param_list_id;
+            let param_ids = registry.param_list(param_list_id).to_vec();
+            let output_id = forall.output_id;
+
+            for (param_index, param_id) in param_ids.iter().copied().enumerate() {
+                let param = registry.param(param_id);
+                let param_is_dashed = param.is_dashed;
+                let param_name_id = param.name_id;
+                let param_type_id = param.type_id;
+                let param_type_step_result =
+                    perform_eval_step_on_well_typed_expression(registry, symbol_db, param_type_id)?;
+                if let EvalStepResult::Stepped(stepped_param_type_id) = param_type_step_result {
+                    let stepped_param_id = registry.add_param_and_overwrite_its_id(Param {
+                        id: dummy_id(),
+                        is_dashed: param_is_dashed,
+                        name_id: param_name_id,
+                        type_id: stepped_param_type_id,
+                    });
+                    let stepped_param_ids = {
+                        let mut out = Vec::with_capacity(param_ids.len());
+                        out.extend(param_ids[0..param_index].iter().copied());
+                        out.push(stepped_param_id);
+                        out.extend(param_ids[param_index + 1..].iter().copied());
+                        out
+                    };
+                    let stepped_param_list_id = registry.add_param_list(stepped_param_ids);
+                    let stepped_forall_id = registry.add_forall_and_overwrite_its_id(Forall {
+                        id: dummy_id(),
+                        param_list_id: stepped_param_list_id,
+                        output_id: output_id,
+                    });
+                    let stepped_forall = registry.forall(stepped_forall_id).clone();
+                    let wrapped_stepped_id =
+                        registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                            id: dummy_id(),
+                            expression: Expression::Forall(Box::new(stepped_forall)),
+                        });
+                    return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
+                }
+            }
+
+            let output_step_result =
+                perform_eval_step_on_well_typed_expression(registry, symbol_db, output_id)?;
+            if let EvalStepResult::Stepped(stepped_output_id) = output_step_result {
+                let stepped_forall_id = registry.add_forall_and_overwrite_its_id(Forall {
+                    id: dummy_id(),
+                    param_list_id: param_list_id,
+                    output_id: stepped_output_id,
+                });
+                let stepped_forall = registry.forall(stepped_forall_id).clone();
+                let wrapped_stepped_id =
+                    registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                        id: dummy_id(),
+                        expression: Expression::Forall(Box::new(stepped_forall)),
+                    });
+                return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
+            }
+
+            Ok(EvalStepResult::CouldNotStepBecauseNormalForm(
+                NormalFormNodeId(expression_id),
+            ))
+        }
     }
 }
