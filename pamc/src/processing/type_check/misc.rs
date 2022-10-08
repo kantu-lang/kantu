@@ -300,15 +300,17 @@ pub(super) fn as_algebraic_data_type(
     }
 }
 
-// IDEA: Use hashing when registering the nodes to speed up
-// equality checking.
 pub fn are_expressions_equal_ignoring_ids(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
+    eq_cache: &mut NodeStructuralIdentityHashCache,
     a: NodeId<WrappedExpression>,
     b: NodeId<WrappedExpression>,
 ) -> bool {
-    unimplemented!();
+    let node_info = (registry, symbol_db);
+    let a_sih = eq_cache.get_structural_identity_hash(a, node_info);
+    let b_sih = eq_cache.get_structural_identity_hash(b, node_info);
+    a_sih == b_sih
 }
 
 pub fn is_term_a_subterm(

@@ -32,6 +32,7 @@ pub fn type_check_file(
         variant_db,
         context: TypeCheckContext::new(),
         type0_identifier_id: wrapped_type0_identifier_id,
+        sih_cache: NodeStructuralIdentityHashCache::empty(),
     };
     for item_id in file_item_ids {
         match item_id {

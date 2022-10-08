@@ -1,4 +1,5 @@
 use crate::data::{
+    node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ListId, NodeId, NodeRegistry},
     registered_ast::*,
     symbol_database::{Symbol, SymbolDatabase, SymbolSource},
@@ -98,4 +99,5 @@ struct TypeCheckState<'a> {
     variant_db: &'a VariantReturnTypeDatabase,
     context: TypeCheckContext,
     type0_identifier_id: NormalFormNodeId,
+    sih_cache: NodeStructuralIdentityHashCache,
 }

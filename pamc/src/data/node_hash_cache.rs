@@ -11,23 +11,18 @@ use rustc_hash::FxHasher;
 // `hash_explicit_type` submodule.
 use std::hash::Hasher;
 
-/// This cache is used to speed up the process of determining whether two nodes
-/// are structurally equal.
+/// To speed up equality checks, we assign each node a "structural identity hash" (SIH).
+/// This hash accounts for symbols, but ignores `id` and its position in the AST.
+/// In this way, two nodes will have the same SIH if and only if they are "structurally equal".
 ///
-/// The hashing algorithm ignores identity and location (i.e., it ignores
-/// the `id` and `start` fields of each node), so only the
-/// "actual value" of the nodes matters.
-/// That is, two nodes have the same hash if and only if
-/// they are structurally equal after expanding all the ids
-/// into nodes, removing the ids, and removing the locations.
-///
-/// Note that structural equality **does** take into account symbols.
+/// To avoid recomputing the SIH of a node every time we need it, we cache the SIH of each node
+/// using this struct.
 #[derive(Clone, Debug)]
-pub struct NodeHashCache {
+pub struct NodeStructuralIdentityHashCache {
     wrapped_expression_hashes: Vec<Option<u64>>,
 }
 
-impl NodeHashCache {
+impl NodeStructuralIdentityHashCache {
     pub fn empty() -> Self {
         Self {
             wrapped_expression_hashes: Vec::new(),
@@ -35,20 +30,23 @@ impl NodeHashCache {
     }
 }
 
-impl NodeHashCache {
-    pub fn get_hash(
+impl NodeStructuralIdentityHashCache {
+    pub fn get_structural_identity_hash(
         &mut self,
         node_id: NodeId<WrappedExpression>,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
-        if let Some(cached) = self.get_cached_hash(node_id) {
+        if let Some(cached) = self.get_cached_structural_identity_hash(node_id) {
             cached
         } else {
             self.compute_hash_and_cache(node_id, node_info)
         }
     }
 
-    fn get_cached_hash(&mut self, node_id: NodeId<WrappedExpression>) -> Option<u64> {
+    fn get_cached_structural_identity_hash(
+        &mut self,
+        node_id: NodeId<WrappedExpression>,
+    ) -> Option<u64> {
         self.wrapped_expression_hashes
             .get(node_id.raw)
             .copied()
@@ -105,7 +103,7 @@ impl NodeHashCache {
     ) -> u64 {
         let (registry, symbol_db) = node_info;
         let dot = registry.dot(node_id);
-        let left_hash = self.get_hash(dot.left_id, node_info);
+        let left_hash = self.get_structural_identity_hash(dot.left_id, node_info);
         let right_symbol = symbol_db.identifier_symbols.get(dot.right_id);
 
         let mut hasher = FxHasher::default();
@@ -121,13 +119,13 @@ impl NodeHashCache {
     ) -> u64 {
         let (registry, _) = node_info;
         let call = registry.call(node_id);
-        let callee_hash = self.get_hash(call.callee_id, node_info);
+        let callee_hash = self.get_structural_identity_hash(call.callee_id, node_info);
         let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
 
         let mut hasher = FxHasher::default();
         hash_u64(callee_hash, &mut hasher);
         for arg_id in arg_ids {
-            let arg_hash = self.get_hash(*arg_id, node_info);
+            let arg_hash = self.get_structural_identity_hash(*arg_id, node_info);
             hash_u64(arg_hash, &mut hasher);
         }
         hasher.finish()
@@ -141,7 +139,7 @@ impl NodeHashCache {
         let (registry, symbol_db) = node_info;
         let fun = registry.fun(node_id);
         let param_ids = registry.param_list(fun.param_list_id);
-        let body_hash = self.get_hash(fun.body_id, node_info);
+        let body_hash = self.get_structural_identity_hash(fun.body_id, node_info);
 
         let mut hasher = FxHasher::default();
         for param_id in param_ids {
@@ -160,7 +158,7 @@ impl NodeHashCache {
     ) -> u64 {
         let (registry, _) = node_info;
         let match_ = registry.match_(node_id);
-        let matchee_hash = self.get_hash(match_.matchee_id, node_info);
+        let matchee_hash = self.get_structural_identity_hash(match_.matchee_id, node_info);
         let case_ids = registry.match_case_list(match_.case_list_id);
 
         let mut hasher = FxHasher::default();
@@ -181,7 +179,7 @@ impl NodeHashCache {
         let case = registry.match_case(node_id);
         let variant_name: &IdentifierName = &registry.identifier(case.variant_name_id).name;
         let param_ids = registry.identifier_list(case.param_list_id);
-        let output_hash = self.get_hash(case.output_id, node_info);
+        let output_hash = self.get_structural_identity_hash(case.output_id, node_info);
 
         let mut hasher = FxHasher::default();
         hash_identifier_name(variant_name, &mut hasher);
@@ -201,7 +199,7 @@ impl NodeHashCache {
         let (registry, symbol_db) = node_info;
         let forall = registry.forall(node_id);
         let param_ids = registry.param_list(forall.param_list_id);
-        let output_hash = self.get_hash(forall.output_id, node_info);
+        let output_hash = self.get_structural_identity_hash(forall.output_id, node_info);
 
         let mut hasher = FxHasher::default();
         for param_id in param_ids {

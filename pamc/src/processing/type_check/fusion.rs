@@ -39,6 +39,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
         if are_expressions_equal_ignoring_ids(
             &state.registry,
             &state.symbol_db,
+            &mut state.sih_cache,
             left_id.0,
             right_id.0,
         ) {
