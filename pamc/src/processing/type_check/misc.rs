@@ -549,8 +549,71 @@ fn apply_single_substitution_using_lhs_expression(
     // any time we enter a node with params (e.g., fun, forall, match case).
     // Or, we could just always substitute said params with new params to avoid capture.
     // In either case, we'll need to assign symbols accordingly.
+
+    if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, target_id, from) {
+        return to;
+    }
+
     let target = registry.wrapped_expression(target_id);
     match &target.expression {
+        Expression::Identifier(_) => target_id,
+        // TODO: In the future, if we allow arbitrary
+        // expressions in the lhs of Dot expression,
+        // we will need to handle that here.
+        Expression::Dot(_) => target_id,
+        Expression::Call(call) => {
+            let old_callee_id = call.callee_id;
+            let old_arg_list_id = call.arg_list_id;
+
+            let new_callee_id = apply_single_substitution_using_lhs_expression(
+                registry,
+                symbol_db,
+                sih_cache,
+                old_callee_id,
+                from,
+                to,
+            );
+            let new_arg_list_id = {
+                let old_arg_ids = registry.wrapped_expression_list(old_arg_list_id).to_vec();
+                let new_arg_ids: Vec<NodeId<WrappedExpression>> = old_arg_ids
+                    .iter()
+                    .copied()
+                    .map(|arg_id| {
+                        apply_single_substitution_using_lhs_expression(
+                            registry, symbol_db, sih_cache, arg_id, from, to,
+                        )
+                    })
+                    .collect();
+                if old_arg_ids
+                    .iter()
+                    .copied()
+                    .zip(new_arg_ids.iter().copied())
+                    .all(|(old_arg_id, new_arg_id)| {
+                        are_expressions_equal_ignoring_ids(
+                            registry, symbol_db, sih_cache, old_arg_id, new_arg_id,
+                        )
+                    })
+                {
+                    old_arg_list_id
+                } else {
+                    registry.add_wrapped_expression_list(new_arg_ids)
+                }
+            };
+            if old_callee_id == new_callee_id && old_arg_list_id == new_arg_list_id {
+                target_id
+            } else {
+                let new_call_id = registry.add_call_and_overwrite_its_id(Call {
+                    id: dummy_id(),
+                    callee_id: new_callee_id,
+                    arg_list_id: new_arg_list_id,
+                });
+                let new_call = registry.call(new_call_id).clone();
+                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                    id: dummy_id(),
+                    expression: Expression::Call(Box::new(new_call)),
+                })
+            }
+        }
         _ => unimplemented!(),
     }
 }
