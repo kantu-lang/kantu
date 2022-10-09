@@ -4,12 +4,18 @@ pub fn evaluate_well_typed_expression(
     state: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    type0_identifier_id: NormalFormNodeId,
     expression: NodeId<WrappedExpression>,
 ) -> Result<NormalFormNodeId, TypeError> {
     let mut current = expression;
     loop {
-        let step_result =
-            perform_eval_step_on_well_typed_expression(state, symbol_db, sih_cache, current)?;
+        let step_result = perform_eval_step_on_well_typed_expression(
+            state,
+            symbol_db,
+            sih_cache,
+            type0_identifier_id,
+            current,
+        )?;
         match step_result {
             EvalStepResult::Stepped(new_current) => current = new_current,
             EvalStepResult::CouldNotStepBecauseNormalForm(nfid) => break Ok(nfid),
@@ -27,6 +33,7 @@ fn perform_eval_step_on_well_typed_expression(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    type0_identifier_id: NormalFormNodeId,
     expression_id: NodeId<WrappedExpression>,
 ) -> Result<EvalStepResult, TypeError> {
     fn perform_eval_step_on_identifier_or_dot_based_on_symbol(
@@ -84,7 +91,11 @@ fn perform_eval_step_on_well_typed_expression(
             let callee_id = call.callee_id;
             let arg_list_id = call.arg_list_id;
             let callee_step_result = perform_eval_step_on_well_typed_expression(
-                registry, symbol_db, sih_cache, callee_id,
+                registry,
+                symbol_db,
+                sih_cache,
+                type0_identifier_id,
+                callee_id,
             )?;
             if let EvalStepResult::Stepped(stepped_callee_id) = callee_step_result {
                 let stepped_call_id = registry.add_call_and_overwrite_its_id(Call {
@@ -105,7 +116,11 @@ fn perform_eval_step_on_well_typed_expression(
             let mut arg_nfids = Vec::with_capacity(arg_ids.len());
             for (arg_index, arg_id) in arg_ids.iter().copied().enumerate() {
                 let arg_step_result = perform_eval_step_on_well_typed_expression(
-                    registry, symbol_db, sih_cache, arg_id,
+                    registry,
+                    symbol_db,
+                    sih_cache,
+                    type0_identifier_id,
+                    arg_id,
                 )?;
                 match arg_step_result {
                     EvalStepResult::Stepped(stepped_arg_id) => {
@@ -166,7 +181,7 @@ fn perform_eval_step_on_well_typed_expression(
                              to: arg_nfid
                             }
                         }).collect();
-                    let application_result = apply_substitutions(registry, symbol_db, sih_cache, callee_body_id, substitutions);
+                    let application_result = apply_substitutions(registry, symbol_db, sih_cache, type0_identifier_id, callee_body_id, substitutions);
                     Ok(EvalStepResult::Stepped(application_result))
                 }
                 other_normal_form_callee => panic!("A normal form callee in a well-typed Call expression should be an identifier, but was `{:?}`.", other_normal_form_callee),
@@ -188,7 +203,11 @@ fn perform_eval_step_on_well_typed_expression(
             let case_list_id = match_.case_list_id;
 
             let matchee_step_result = perform_eval_step_on_well_typed_expression(
-                registry, symbol_db, sih_cache, matchee_id,
+                registry,
+                symbol_db,
+                sih_cache,
+                type0_identifier_id,
+                matchee_id,
             )?;
             let matchee_nfid = match matchee_step_result {
                 EvalStepResult::Stepped(stepped_matchee_id) => {
@@ -248,6 +267,7 @@ fn perform_eval_step_on_well_typed_expression(
                         registry,
                         symbol_db,
                         sih_cache,
+                        type0_identifier_id,
                         case_output_id,
                         substitutions.iter().copied(),
                     );
@@ -269,6 +289,7 @@ fn perform_eval_step_on_well_typed_expression(
                     registry,
                     symbol_db,
                     sih_cache,
+                    type0_identifier_id,
                     param_type_id,
                 )?;
                 if let EvalStepResult::Stepped(stepped_param_type_id) = param_type_step_result {
@@ -302,7 +323,11 @@ fn perform_eval_step_on_well_typed_expression(
             }
 
             let output_step_result = perform_eval_step_on_well_typed_expression(
-                registry, symbol_db, sih_cache, output_id,
+                registry,
+                symbol_db,
+                sih_cache,
+                type0_identifier_id,
+                output_id,
             )?;
             if let EvalStepResult::Stepped(stepped_output_id) = output_step_result {
                 let stepped_forall_id = registry.add_forall_and_overwrite_its_id(Forall {

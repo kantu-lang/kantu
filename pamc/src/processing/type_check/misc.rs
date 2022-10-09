@@ -122,6 +122,7 @@ pub(super) fn get_normalized_type(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        state.type0_identifier_id,
         unsubstituted_type_id.0,
         substitutions
             .iter()
@@ -132,6 +133,7 @@ pub(super) fn get_normalized_type(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        state.type0_identifier_id,
         unnormalized_type_id,
     )
 }
@@ -390,12 +392,20 @@ pub fn apply_substitutions(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    type0_identifier_id: NormalFormNodeId,
     target_id: NodeId<WrappedExpression>,
     substitutions: impl IntoIterator<Item = Substitution>,
 ) -> NodeId<WrappedExpression> {
     let mut target_id = target_id;
     for substitution in substitutions {
-        target_id = apply_substitution(registry, symbol_db, sih_cache, target_id, substitution);
+        target_id = apply_substitution(
+            registry,
+            symbol_db,
+            sih_cache,
+            type0_identifier_id,
+            target_id,
+            substitution,
+        );
     }
     target_id
 }
@@ -411,13 +421,20 @@ pub fn apply_substitution(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    type0_identifier_id: NormalFormNodeId,
     target_id: NodeId<WrappedExpression>,
     substitutions: Substitution,
 ) -> NodeId<WrappedExpression> {
     let mut target_id = target_id;
     loop {
-        let new_id =
-            apply_single_substitution(registry, symbol_db, sih_cache, target_id, substitutions);
+        let new_id = apply_single_substitution(
+            registry,
+            symbol_db,
+            sih_cache,
+            type0_identifier_id,
+            target_id,
+            substitutions,
+        );
         if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, target_id, new_id) {
             return target_id;
         }
@@ -425,30 +442,102 @@ pub fn apply_substitution(
     }
 }
 
-pub fn apply_single_substitution(
+fn apply_single_substitution(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    type0_identifier_id: NormalFormNodeId,
     target_id: NodeId<WrappedExpression>,
     substitution: Substitution,
 ) -> NodeId<WrappedExpression> {
-    unimplemented!()
-
-    // // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
-    // // any time we enter a node with params (e.g., fun, forall, match case).
-    // // Or, we could just always substitute said params with new params to avoid capture.
-    // // In either case, we'll need to assign symbols accordingly.
-    // let target = registry.wrapped_expression(target_id);
-    // match &target.expression {
-    //     Expression::Identifier(identifier) => {
-    //         let symbol = symbol_db.identifier_symbols.get(identifier.name_id);
-    //         if subst.from
-    //     }
-    //     _ => unimplemented!(),
-    // }
+    match substitution.from {
+        SubstitutionLhs::Expression(from) => apply_single_substitution_using_lhs_expression(
+            registry,
+            symbol_db,
+            sih_cache,
+            target_id,
+            from,
+            substitution.to.0,
+        ),
+        SubstitutionLhs::Symbol(from_symbol) => {
+            let wrapped_identifier_id =
+                get_wrapped_identifier_id(registry, symbol_db, type0_identifier_id, from_symbol);
+            apply_single_substitution_using_lhs_expression(
+                registry,
+                symbol_db,
+                sih_cache,
+                target_id,
+                wrapped_identifier_id,
+                substitution.to.0,
+            )
+        }
+    }
 }
 
-pub fn apply_single_substitution_using_lhs_expression(
+fn get_wrapped_identifier_id(
+    registry: &mut NodeRegistry,
+    symbol_db: &SymbolDatabase,
+    type0_identifier_id: NormalFormNodeId,
+    symbol: Symbol,
+) -> NodeId<WrappedExpression> {
+    let source = *symbol_db
+        .symbol_sources
+        .get(&symbol)
+        .expect("Symbol not found");
+    match source {
+        // type variant typed_param untyped_param let fun builtin_type_title_case
+        SymbolSource::Type(id) => {
+            let type_ = registry.type_statement(id);
+            let identifier = registry.identifier(type_.name_id).clone();
+            registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                id: dummy_id(),
+                expression: Expression::Identifier(identifier),
+            })
+        }
+        SymbolSource::Variant(id) => {
+            let variant = registry.variant(id);
+            let identifier = registry.identifier(variant.name_id).clone();
+            registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                id: dummy_id(),
+                expression: Expression::Identifier(identifier),
+            })
+        }
+        SymbolSource::TypedParam(id) => {
+            let param = registry.param(id);
+            let identifier = registry.identifier(param.name_id).clone();
+            registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                id: dummy_id(),
+                expression: Expression::Identifier(identifier),
+            })
+        }
+        SymbolSource::UntypedParam(id) => {
+            let identifier = registry.identifier(id).clone();
+            registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                id: dummy_id(),
+                expression: Expression::Identifier(identifier),
+            })
+        }
+        SymbolSource::Let(id) => {
+            let let_ = registry.let_statement(id);
+            let identifier = registry.identifier(let_.name_id).clone();
+            registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                id: dummy_id(),
+                expression: Expression::Identifier(identifier),
+            })
+        }
+        SymbolSource::Fun(id) => {
+            let fun = registry.fun(id);
+            let identifier = registry.identifier(fun.name_id).clone();
+            registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                id: dummy_id(),
+                expression: Expression::Identifier(identifier),
+            })
+        }
+        SymbolSource::BuiltinTypeTitleCase => type0_identifier_id.0,
+    }
+}
+
+fn apply_single_substitution_using_lhs_expression(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,

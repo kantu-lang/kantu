@@ -15,12 +15,14 @@ pub(super) fn compute_ltr_fusion_of_well_typed_expressions(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        state.type0_identifier_id,
         left_id,
     )?;
     let normalized_right_id = evaluate_well_typed_expression(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        state.type0_identifier_id,
         right_id,
     )?;
     compute_ltr_fusion_of_well_typed_normal_forms(state, normalized_left_id, normalized_right_id)

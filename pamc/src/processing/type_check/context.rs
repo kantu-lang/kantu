@@ -89,13 +89,21 @@ impl TypeCheckContext {
         registry: &mut NodeRegistry,
         symbol_db: &mut SymbolDatabase,
         sih_cache: &mut NodeStructuralIdentityHashCache,
+        type0_identifier_id: NormalFormNodeId,
         substitutions: &[Substitution],
     ) -> Result<(), TypeError> {
         let top = self
                 .stack
                 .last_mut()
                 .expect("Error: Tried to apply substitutions to the top scope of a context with an empty scope stack. This indicates a serious logic error.");
-        apply_substitutions_to_map(registry, symbol_db, sih_cache, &mut top.map, substitutions)?;
+        apply_substitutions_to_map(
+            registry,
+            symbol_db,
+            sih_cache,
+            type0_identifier_id,
+            &mut top.map,
+            substitutions,
+        )?;
         top.substitutions_applied_to_previous_scopes
             .extend(substitutions);
         Ok(())
@@ -106,6 +114,7 @@ fn apply_substitutions_to_map(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    type0_identifier_id: NormalFormNodeId,
     map: &mut TypeMap,
     substitutions: &[Substitution],
 ) -> Result<(), TypeError> {
@@ -116,11 +125,17 @@ fn apply_substitutions_to_map(
             registry,
             symbol_db,
             sih_cache,
+            type0_identifier_id,
             type_id.0,
             substitutions.iter().copied(),
         );
-        let normalized_substituted_type_id =
-            evaluate_well_typed_expression(registry, symbol_db, sih_cache, substituted_type_id)?;
+        let normalized_substituted_type_id = evaluate_well_typed_expression(
+            registry,
+            symbol_db,
+            sih_cache,
+            type0_identifier_id,
+            substituted_type_id,
+        )?;
         map.update(key, normalized_substituted_type_id);
     }
 

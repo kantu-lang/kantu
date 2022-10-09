@@ -109,6 +109,7 @@ fn type_check_variant(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        state.type0_identifier_id,
         variant_return_type_id,
     )?;
 
@@ -144,6 +145,7 @@ fn type_check_param(state: &mut TypeCheckState, param_id: NodeId<Param>) -> Resu
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        state.type0_identifier_id,
         type_id,
     )?;
     state.context.insert_new(param_symbol, type_normal_form_id);
@@ -245,6 +247,7 @@ fn type_check_expression(
                             &mut state.registry,
                             &mut state.symbol_db,
                             &mut state.sih_cache,
+                            state.type0_identifier_id,
                             arg_id,
                         )?;
                         let param = state.registry.param(param_id);
@@ -260,6 +263,7 @@ fn type_check_expression(
                 &mut state.registry,
                 &mut state.symbol_db,
                 &mut state.sih_cache,
+                state.type0_identifier_id,
                 callee_type.output_id,
                 substitutions,
             );
@@ -267,6 +271,7 @@ fn type_check_expression(
                 &mut state.registry,
                 &mut state.symbol_db,
                 &mut state.sih_cache,
+                state.type0_identifier_id,
                 unnormalized_return_type_id,
             )?;
 
@@ -298,6 +303,7 @@ fn type_check_expression(
                 &mut state.registry,
                 &mut state.symbol_db,
                 &mut state.sih_cache,
+                state.type0_identifier_id,
                 return_type_id,
             )?;
 
@@ -566,6 +572,7 @@ fn type_check_match_case(
                             &mut state.registry,
                             &mut state.symbol_db,
                             &mut state.sih_cache,
+                            state.type0_identifier_id,
                             variant_return_type_arg_id,
                             substitutions.clone(),
                         )
@@ -592,6 +599,7 @@ fn type_check_match_case(
             &mut state.registry,
             &mut state.symbol_db,
             &mut state.sih_cache,
+            state.type0_identifier_id,
             matchee_type_arg_id,
             type_arg_substitutions.iter().copied(),
         );
@@ -599,6 +607,7 @@ fn type_check_match_case(
             &mut state.registry,
             &mut state.symbol_db,
             &mut state.sih_cache,
+            state.type0_identifier_id,
             case_constructed_type_arg_id,
             type_arg_substitutions.iter().copied(),
         );
@@ -622,6 +631,7 @@ fn type_check_match_case(
                     &mut state.registry,
                     &mut state.symbol_db,
                     &mut state.sih_cache,
+                    state.type0_identifier_id,
                     &substitutions,
                 )?;
 
@@ -630,6 +640,7 @@ fn type_check_match_case(
                         &mut state.registry,
                         &mut state.symbol_db,
                         &mut state.sih_cache,
+                        state.type0_identifier_id,
                         goal.0,
                         substitutions,
                     );
@@ -637,6 +648,7 @@ fn type_check_match_case(
                         &mut state.registry,
                         &mut state.symbol_db,
                         &mut state.sih_cache,
+                        state.type0_identifier_id,
                         substituted_goal,
                     )?;
                     *goal = normalized_substituted_goal;
