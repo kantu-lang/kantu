@@ -660,184 +660,136 @@ fn apply_single_substitution_using_lhs_expression(
 
             let old_param_ids = registry.param_list(old_param_list_id).to_vec();
 
-            // let type_subbed_param_ids: Vec<NodeId<Param>> = old_param_ids
-            //     .iter()
-            //     .copied()
-            //     .map(|old_param_id| {
-            //         let param = registry.param(old_param_id);
-            //         let param_is_dashed = param.is_dashed;
-            //         let param_name_id = param.name_id;
-            //         let param_type_id = param.type_id;
-            //         let new_param_type_id = apply_single_substitution_using_lhs_expression(
-            //             registry,
-            //             symbol_db,
-            //             sih_cache,
-            //             fv_cache,
-            //             type0_identifier_id,
-            //             param_type_id,
-            //             from_id,
-            //             to_id,
-            //         );
-            //         if are_expressions_equal_ignoring_ids(
-            //             registry,
-            //             symbol_db,
-            //             sih_cache,
-            //             param_type_id,
-            //             new_param_type_id,
-            //         ) {
-            //             old_param_id
-            //         } else {
-            //             registry.add_param_and_overwrite_its_id(Param {
-            //                 id: dummy_id(),
-            //                 is_dashed: param_is_dashed,
-            //                 name_id: param_name_id,
-            //                 type_id: new_param_type_id,
-            //             })
-            //         }
-            //     })
-            //     .collect();
-
-            // MARK
-
-            let (from_free_variables, to_free_variables) = {
-                let node_info = (&*registry, &*symbol_db);
-                fv_cache.get_free_variables_2((from_id, to_id), node_info)
+            let (freshening_pairs, freshening_substitutions): (
+                Vec<(Symbol, Symbol)>,
+                Vec<Substitution>,
+            ) = {
+                let (from_free_variables, to_free_variables) = {
+                    let node_info = (&*registry, &*symbol_db);
+                    fv_cache.get_free_variables_2((from_id, to_id), node_info)
+                };
+                let captured_param_symbols: Vec<Symbol> = old_param_ids
+                    .iter()
+                    .copied()
+                    .map(|param_id| {
+                        let param = registry.param(param_id);
+                        symbol_db.identifier_symbols.get(param.name_id)
+                    })
+                    .filter(|s| from_free_variables.contains(*s) || to_free_variables.contains(*s))
+                    .collect();
+                let fresh_param_symbols: Vec<Symbol> = captured_param_symbols
+                    .iter()
+                    .map(|_| symbol_db.provider.new_symbol())
+                    .collect();
+                let freshening_pairs: Vec<(Symbol, Symbol)> = captured_param_symbols
+                    .iter()
+                    .copied()
+                    .zip(fresh_param_symbols.iter().copied())
+                    .collect();
+                let freshening_substitutions: Vec<Substitution> = freshening_pairs
+                    .iter()
+                    .copied()
+                    .map(|(captured_param_symbol, fresh_param_symbol)| {
+                        let fresh_param_identifier_id = get_wrapped_identifier_id_for_symbol(
+                            registry,
+                            symbol_db,
+                            type0_identifier_id,
+                            fresh_param_symbol,
+                        );
+                        Substitution {
+                            from: SubstitutionLhs::Symbol(captured_param_symbol),
+                            to: fresh_param_identifier_id,
+                        }
+                    })
+                    .collect();
+                (freshening_pairs, freshening_substitutions)
             };
 
-            let captured_param_symbols: Vec<Symbol> = old_param_ids
-                .iter()
-                .copied()
-                .map(|param_id| {
-                    let param = registry.param(param_id);
-                    symbol_db.identifier_symbols.get(param.name_id)
-                })
-                .filter(|s| from_free_variables.contains(*s) || to_free_variables.contains(*s))
-                .collect();
+            let new_param_list_id = {
+                let new_param_ids: Vec<NodeId<Param>> = old_param_ids
+                    .iter()
+                    .copied()
+                    .map(|old_param_id| {
+                        let old_param = registry.param(old_param_id);
+                        let old_param_is_dashed = old_param.is_dashed;
+                        let old_param_name_id = old_param.name_id;
+                        let old_param_type_id = old_param.type_id;
 
-            // TODO: Delete
-            // let new_param_list_id = {
-            //     if old_param_ids
-            //         .iter()
-            //         .copied()
-            //         .zip(new_param_ids.iter().copied())
-            //         .all(|(old_param_id, new_param_id)| old_param_id == new_param_id)
-            //     {
-            //         old_param_list_id
-            //     } else {
-            //         registry.add_param_list(new_param_ids)
-            //     }
-            // };
+                        let old_symbol = symbol_db.identifier_symbols.get(old_param.name_id);
+                        let new_param_name_id = if let Some((_, corresponding_fresh_symbol)) =
+                            freshening_pairs
+                                .iter()
+                                .copied()
+                                .find(|(captured, _fresh)| *captured == old_symbol)
+                        {
+                            let old_param_name = registry.identifier(old_param_name_id);
+                            let old_param_name_start = old_param_name.start;
+                            let old_param_name_name = old_param_name.name.clone();
+                            let new_param_name_id =
+                                registry.add_identifier_and_overwrite_its_id(Identifier {
+                                    id: dummy_id(),
+                                    start: old_param_name_start,
+                                    name: old_param_name_name,
+                                });
 
-            let fresh_param_symbols: Vec<Symbol> = captured_param_symbols
-                .iter()
-                .map(|_| symbol_db.provider.new_symbol())
-                .collect();
-            let freshening_pairs: Vec<(Symbol, Symbol)> = captured_param_symbols
-                .iter()
-                .copied()
-                .zip(fresh_param_symbols.iter().copied())
-                .collect();
-            let freshening_substitutions: Vec<Substitution> = freshening_pairs
-                .iter()
-                .copied()
-                .map(|(captured_param_symbol, fresh_param_symbol)| {
-                    let fresh_param_identifier_id = get_wrapped_identifier_id_for_symbol(
-                        registry,
-                        symbol_db,
-                        type0_identifier_id,
-                        fresh_param_symbol,
-                    );
-                    Substitution {
-                        from: SubstitutionLhs::Symbol(captured_param_symbol),
-                        to: fresh_param_identifier_id,
-                    }
-                })
-                .collect();
-            let new_param_ids: Vec<NodeId<Param>> = old_param_ids
-                .iter()
-                .copied()
-                .map(|old_param_id| {
-                    let old_param = registry.param(old_param_id);
-                    let old_param_is_dashed = old_param.is_dashed;
-                    let old_param_name_id = old_param.name_id;
-                    let old_param_type_id = old_param.type_id;
+                            symbol_db
+                                .identifier_symbols
+                                .insert(new_param_name_id, corresponding_fresh_symbol);
 
-                    let old_symbol = symbol_db.identifier_symbols.get(old_param.name_id);
-                    let new_param_name_id = if let Some((_, corresponding_fresh_symbol)) =
-                        freshening_pairs
-                            .iter()
-                            .copied()
-                            .find(|(captured, _fresh)| *captured == old_symbol)
-                    {
-                        let old_param_name = registry.identifier(old_param_name_id);
-                        let old_param_name_start = old_param_name.start;
-                        let old_param_name_name = old_param_name.name.clone();
-                        let new_param_name_id =
-                            registry.add_identifier_and_overwrite_its_id(Identifier {
+                            new_param_name_id
+                        } else {
+                            old_param_name_id
+                        };
+
+                        let new_param_type_id = {
+                            let freshened_param_type_id = apply_substitutions(
+                                registry,
+                                symbol_db,
+                                sih_cache,
+                                fv_cache,
+                                type0_identifier_id,
+                                old_param_type_id,
+                                freshening_substitutions.iter().copied(),
+                            );
+                            apply_single_substitution_using_lhs_expression(
+                                registry,
+                                symbol_db,
+                                sih_cache,
+                                fv_cache,
+                                type0_identifier_id,
+                                freshened_param_type_id,
+                                from_id,
+                                to_id,
+                            )
+                        };
+
+                        if old_param_name_id == new_param_name_id
+                            && are_expressions_equal_ignoring_ids(
+                                registry,
+                                symbol_db,
+                                sih_cache,
+                                old_param_type_id,
+                                new_param_type_id,
+                            )
+                        {
+                            old_param_id
+                        } else {
+                            let new_param_id = registry.add_param_and_overwrite_its_id(Param {
                                 id: dummy_id(),
-                                start: old_param_name_start,
-                                name: old_param_name_name,
+                                is_dashed: old_param_is_dashed,
+                                name_id: old_param_name_id,
+                                type_id: new_param_type_id,
                             });
 
-                        symbol_db
-                            .identifier_symbols
-                            .insert(new_param_name_id, corresponding_fresh_symbol);
+                            symbol_db.symbol_sources.insert(
+                                symbol_db.identifier_symbols.get(new_param_name_id),
+                                SymbolSource::TypedParam(new_param_id),
+                            );
 
-                        new_param_name_id
-                    } else {
-                        old_param_name_id
-                    };
-
-                    let new_param_type_id = {
-                        let freshened_param_type_id = apply_substitutions(
-                            registry,
-                            symbol_db,
-                            sih_cache,
-                            fv_cache,
-                            type0_identifier_id,
-                            old_param_type_id,
-                            freshening_substitutions.iter().copied(),
-                        );
-                        apply_single_substitution_using_lhs_expression(
-                            registry,
-                            symbol_db,
-                            sih_cache,
-                            fv_cache,
-                            type0_identifier_id,
-                            freshened_param_type_id,
-                            from_id,
-                            to_id,
-                        )
-                    };
-
-                    if old_param_name_id == new_param_name_id
-                        && are_expressions_equal_ignoring_ids(
-                            registry,
-                            symbol_db,
-                            sih_cache,
-                            old_param_type_id,
-                            new_param_type_id,
-                        )
-                    {
-                        old_param_id
-                    } else {
-                        let new_param_id = registry.add_param_and_overwrite_its_id(Param {
-                            id: dummy_id(),
-                            is_dashed: old_param_is_dashed,
-                            name_id: old_param_name_id,
-                            type_id: new_param_type_id,
-                        });
-
-                        symbol_db.symbol_sources.insert(
-                            symbol_db.identifier_symbols.get(new_param_name_id),
-                            SymbolSource::TypedParam(new_param_id),
-                        );
-
-                        new_param_id
-                    }
-                })
-                .collect();
-            let new_param_list_id = {
+                            new_param_id
+                        }
+                    })
+                    .collect();
                 if old_param_ids
                     .iter()
                     .copied()
@@ -850,25 +802,27 @@ fn apply_single_substitution_using_lhs_expression(
                 }
             };
 
-            let freshened_body_id = apply_substitutions(
-                registry,
-                symbol_db,
-                sih_cache,
-                fv_cache,
-                type0_identifier_id,
-                old_body_id,
-                freshening_substitutions.iter().copied(),
-            );
-            let new_body_id = apply_single_substitution_using_lhs_expression(
-                registry,
-                symbol_db,
-                sih_cache,
-                fv_cache,
-                type0_identifier_id,
-                freshened_body_id,
-                from_id,
-                to_id,
-            );
+            let new_body_id = {
+                let freshened_body_id = apply_substitutions(
+                    registry,
+                    symbol_db,
+                    sih_cache,
+                    fv_cache,
+                    type0_identifier_id,
+                    old_body_id,
+                    freshening_substitutions.iter().copied(),
+                );
+                apply_single_substitution_using_lhs_expression(
+                    registry,
+                    symbol_db,
+                    sih_cache,
+                    fv_cache,
+                    type0_identifier_id,
+                    freshened_body_id,
+                    from_id,
+                    to_id,
+                )
+            };
 
             let new_return_type_id = {
                 let freshened_return_type_id = apply_substitutions(
