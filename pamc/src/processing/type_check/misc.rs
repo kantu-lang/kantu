@@ -387,7 +387,7 @@ pub fn is_term_a_non_strict_subterm(
     }
 }
 
-// TODO: Make this apply_capture_avoiding_substitutions
+// TODO: Apply all the substitutions at once to speed things up.
 pub fn apply_substitutions(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
@@ -613,6 +613,9 @@ fn apply_single_substitution_using_lhs_expression(
                     expression: Expression::Call(Box::new(new_call)),
                 })
             }
+        }
+        Expression::Fun(fun) => {
+            unimplemented!()
         }
         _ => unimplemented!(),
     }
