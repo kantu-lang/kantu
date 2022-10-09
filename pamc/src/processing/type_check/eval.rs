@@ -4,6 +4,7 @@ pub fn evaluate_well_typed_expression(
     state: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
     expression: NodeId<WrappedExpression>,
 ) -> Result<NormalFormNodeId, TypeError> {
@@ -13,6 +14,7 @@ pub fn evaluate_well_typed_expression(
             state,
             symbol_db,
             sih_cache,
+            fv_cache,
             type0_identifier_id,
             current,
         )?;
@@ -33,6 +35,7 @@ fn perform_eval_step_on_well_typed_expression(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
     expression_id: NodeId<WrappedExpression>,
 ) -> Result<EvalStepResult, TypeError> {
@@ -94,6 +97,7 @@ fn perform_eval_step_on_well_typed_expression(
                 registry,
                 symbol_db,
                 sih_cache,
+                fv_cache,
                 type0_identifier_id,
                 callee_id,
             )?;
@@ -119,6 +123,7 @@ fn perform_eval_step_on_well_typed_expression(
                     registry,
                     symbol_db,
                     sih_cache,
+                    fv_cache,
                     type0_identifier_id,
                     arg_id,
                 )?;
@@ -181,7 +186,7 @@ fn perform_eval_step_on_well_typed_expression(
                              to: arg_nfid
                             }
                         }).collect();
-                    let application_result = apply_substitutions(registry, symbol_db, sih_cache, type0_identifier_id, callee_body_id, substitutions);
+                    let application_result = apply_substitutions(registry, symbol_db, sih_cache, fv_cache, type0_identifier_id, callee_body_id, substitutions);
                     Ok(EvalStepResult::Stepped(application_result))
                 }
                 other_normal_form_callee => panic!("A normal form callee in a well-typed Call expression should be an identifier, but was `{:?}`.", other_normal_form_callee),
@@ -206,6 +211,7 @@ fn perform_eval_step_on_well_typed_expression(
                 registry,
                 symbol_db,
                 sih_cache,
+                fv_cache,
                 type0_identifier_id,
                 matchee_id,
             )?;
@@ -267,6 +273,7 @@ fn perform_eval_step_on_well_typed_expression(
                         registry,
                         symbol_db,
                         sih_cache,
+                        fv_cache,
                         type0_identifier_id,
                         case_output_id,
                         substitutions.iter().copied(),
@@ -289,6 +296,7 @@ fn perform_eval_step_on_well_typed_expression(
                     registry,
                     symbol_db,
                     sih_cache,
+                    fv_cache,
                     type0_identifier_id,
                     param_type_id,
                 )?;
@@ -326,6 +334,7 @@ fn perform_eval_step_on_well_typed_expression(
                 registry,
                 symbol_db,
                 sih_cache,
+                fv_cache,
                 type0_identifier_id,
                 output_id,
             )?;

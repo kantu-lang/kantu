@@ -5,11 +5,11 @@ use crate::data::{
 };
 
 #[derive(Clone, Debug)]
-pub struct FreeVariableCache {
+pub struct NodeFreeVariableCache {
     wrapped_expression_hashes: Vec<Option<FreeVariableSet>>,
 }
 
-impl FreeVariableCache {
+impl NodeFreeVariableCache {
     pub fn empty() -> Self {
         Self {
             wrapped_expression_hashes: Vec::new(),
@@ -28,7 +28,7 @@ impl FreeVariableSet {
     }
 }
 
-impl FreeVariableCache {
+impl NodeFreeVariableCache {
     pub fn get_free_variables(
         &mut self,
         node_id: NodeId<WrappedExpression>,
@@ -55,8 +55,30 @@ impl FreeVariableCache {
             .expect("We just cached this, so it should be Some(_).")
     }
 
-    fn get_cached_free_variables(
+    pub fn get_free_variables_2(
         &mut self,
+        (id1, id2): (NodeId<WrappedExpression>, NodeId<WrappedExpression>),
+        node_info: (&NodeRegistry, &SymbolDatabase),
+    ) -> (&FreeVariableSet, &FreeVariableSet) {
+        if self.get_cached_free_variables(id1).is_none() {
+            self.compute_free_variables_and_cache(id1, node_info);
+        }
+
+        if self.get_cached_free_variables(id2).is_none() {
+            self.compute_free_variables_and_cache(id2, node_info);
+        }
+
+        let set1 = self
+            .get_cached_free_variables(id1)
+            .expect("We just cached this, so it should be Some(_).");
+        let set2 = self
+            .get_cached_free_variables(id2)
+            .expect("We just cached this, so it should be Some(_).");
+        (set1, set2)
+    }
+
+    fn get_cached_free_variables(
+        &self,
         node_id: NodeId<WrappedExpression>,
     ) -> Option<&FreeVariableSet> {
         self.wrapped_expression_hashes

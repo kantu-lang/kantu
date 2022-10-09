@@ -122,6 +122,7 @@ pub(super) fn get_normalized_type(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        &mut state.fv_cache,
         state.type0_identifier_id,
         unsubstituted_type_id.0,
         substitutions
@@ -133,6 +134,7 @@ pub(super) fn get_normalized_type(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        &mut state.fv_cache,
         state.type0_identifier_id,
         unnormalized_type_id,
     )
@@ -392,6 +394,7 @@ pub fn apply_substitutions(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
     target_id: NodeId<WrappedExpression>,
     substitutions: impl IntoIterator<Item = Substitution>,
@@ -402,6 +405,7 @@ pub fn apply_substitutions(
             registry,
             symbol_db,
             sih_cache,
+            fv_cache,
             type0_identifier_id,
             target_id,
             substitution,
@@ -421,6 +425,7 @@ pub fn apply_substitution(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
     target_id: NodeId<WrappedExpression>,
     substitutions: Substitution,
@@ -431,6 +436,7 @@ pub fn apply_substitution(
             registry,
             symbol_db,
             sih_cache,
+            fv_cache,
             type0_identifier_id,
             target_id,
             substitutions,
@@ -446,6 +452,7 @@ fn apply_single_substitution(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
     target_id: NodeId<WrappedExpression>,
     substitution: Substitution,
@@ -455,6 +462,7 @@ fn apply_single_substitution(
             registry,
             symbol_db,
             sih_cache,
+            fv_cache,
             target_id,
             from,
             substitution.to.0,
@@ -466,6 +474,7 @@ fn apply_single_substitution(
                 registry,
                 symbol_db,
                 sih_cache,
+                fv_cache,
                 target_id,
                 wrapped_identifier_id,
                 substitution.to.0,
@@ -541,17 +550,18 @@ fn apply_single_substitution_using_lhs_expression(
     registry: &mut NodeRegistry,
     symbol_db: &mut SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
+    fv_cache: &mut NodeFreeVariableCache,
     target_id: NodeId<WrappedExpression>,
-    from: NodeId<WrappedExpression>,
-    to: NodeId<WrappedExpression>,
+    from_id: NodeId<WrappedExpression>,
+    to_id: NodeId<WrappedExpression>,
 ) -> NodeId<WrappedExpression> {
     // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
     // any time we enter a node with params (e.g., fun, forall, match case).
     // Or, we could just always substitute said params with new params to avoid capture.
     // In either case, we'll need to assign symbols accordingly.
 
-    if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, target_id, from) {
-        return to;
+    if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, target_id, from_id) {
+        return to_id;
     }
 
     let target = registry.wrapped_expression(target_id);
@@ -569,9 +579,10 @@ fn apply_single_substitution_using_lhs_expression(
                 registry,
                 symbol_db,
                 sih_cache,
+                fv_cache,
                 old_callee_id,
-                from,
-                to,
+                from_id,
+                to_id,
             );
             let new_arg_list_id = {
                 let old_arg_ids = registry.wrapped_expression_list(old_arg_list_id).to_vec();
@@ -580,7 +591,7 @@ fn apply_single_substitution_using_lhs_expression(
                     .copied()
                     .map(|arg_id| {
                         apply_single_substitution_using_lhs_expression(
-                            registry, symbol_db, sih_cache, arg_id, from, to,
+                            registry, symbol_db, sih_cache, fv_cache, arg_id, from_id, to_id,
                         )
                     })
                     .collect();
@@ -615,6 +626,25 @@ fn apply_single_substitution_using_lhs_expression(
             }
         }
         Expression::Fun(fun) => {
+            let old_param_ids = registry.param_list(fun.param_list_id).to_vec();
+
+            // MARK
+
+            let (from_free_variables, to_free_variables) = {
+                let node_info = (&*registry, &*symbol_db);
+                fv_cache.get_free_variables_2((from_id, to_id), node_info)
+            };
+
+            let captured_param_symbols: Vec<Symbol> = old_param_ids
+                .iter()
+                .copied()
+                .map(|param_id| {
+                    let param = registry.param(param_id);
+                    symbol_db.identifier_symbols.get(param.name_id)
+                })
+                .filter(|s| from_free_variables.contains(*s) || to_free_variables.contains(*s))
+                .collect();
+
             unimplemented!()
         }
         _ => unimplemented!(),

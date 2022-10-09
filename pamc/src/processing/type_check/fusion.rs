@@ -15,6 +15,7 @@ pub(super) fn compute_ltr_fusion_of_well_typed_expressions(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        &mut state.fv_cache,
         state.type0_identifier_id,
         left_id,
     )?;
@@ -22,6 +23,7 @@ pub(super) fn compute_ltr_fusion_of_well_typed_expressions(
         &mut state.registry,
         &mut state.symbol_db,
         &mut state.sih_cache,
+        &mut state.fv_cache,
         state.type0_identifier_id,
         right_id,
     )?;

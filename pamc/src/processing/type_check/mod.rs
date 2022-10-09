@@ -1,4 +1,5 @@
 use crate::data::{
+    node_free_variable_cache::NodeFreeVariableCache,
     node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ListId, NodeId, NodeRegistry},
     registered_ast::*,
@@ -100,4 +101,5 @@ struct TypeCheckState<'a> {
     context: TypeCheckContext,
     type0_identifier_id: NormalFormNodeId,
     sih_cache: NodeStructuralIdentityHashCache,
+    fv_cache: NodeFreeVariableCache,
 }
