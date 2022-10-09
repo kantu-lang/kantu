@@ -90,6 +90,9 @@ mod fusion;
 use misc::*;
 mod misc;
 
+use substitution::*;
+mod substitution;
+
 // TODO: Maybe context should be separate, since
 // I feel like I'm passing `registry` and `symbol_db`
 // a lot (since `context` is borrowed in such circumstances).
