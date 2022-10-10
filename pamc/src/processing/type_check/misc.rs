@@ -141,7 +141,7 @@ pub(super) fn get_normalized_type(
 }
 
 pub(super) fn does_production_type_satisfy_required_type(
-    state: &TypeCheckState,
+    state: &mut TypeCheckState,
     production_type_id: NormalFormNodeId,
     requirement_type_id: NormalFormNodeId,
 ) -> bool {
@@ -154,7 +154,7 @@ pub(super) fn does_production_type_satisfy_required_type(
 }
 
 fn are_types_equivalent_up_to_renaming_of_forall_params(
-    state: &TypeCheckState,
+    state: &mut TypeCheckState,
     production_type_id: NormalFormNodeId,
     requirement_type_id: NormalFormNodeId,
 ) -> bool {
@@ -210,6 +210,8 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
                         .iter()
                         .copied()
                         .zip(requirement_arg_ids.iter().copied())
+                        .collect::<Vec<_>>()
+                        .into_iter()
                         .all(|(production_argument_id, requirement_argument_id)| {
                             are_types_equivalent_up_to_renaming_of_forall_params(
                                 state,
@@ -225,7 +227,11 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
             }
         }
         (Expression::Forall(production_forall), Expression::Forall(requirement_forall)) => {
-            // Real challenge is this one.
+            let production_param_ids = state.registry.param_list(production_forall.param_list_id);
+            let requirement_param_ids = state.registry.param_list(requirement_forall.param_list_id);
+            if production_param_ids.len() != requirement_param_ids.len() {
+                return false;
+            }
             unimplemented!()
         }
         _ => false,
@@ -365,7 +371,7 @@ pub fn dummy_id<T>() -> NodeId<T> {
 /// `goal` equals `Some(g)` where `nfid` is **not** equal to `g` under
 /// the definition type equality.
 pub(super) fn ok_unless_contradicts_goal(
-    state: &TypeCheckState,
+    state: &mut TypeCheckState,
     production_type_id: NormalFormNodeId,
     goal_id: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
