@@ -145,10 +145,19 @@ pub(super) fn does_production_type_satisfy_required_type(
     production_type_id: NormalFormNodeId,
     requirement_type_id: NormalFormNodeId,
 ) -> bool {
-    if is_type_trivially_empty(state, production_type_id) {
-        return true;
-    }
+    return is_type_trivially_empty(state, production_type_id)
+        || are_types_equivalent_up_to_renaming_of_forall_params(
+            state,
+            production_type_id,
+            requirement_type_id,
+        );
+}
 
+fn are_types_equivalent_up_to_renaming_of_forall_params(
+    state: &TypeCheckState,
+    production_type_id: NormalFormNodeId,
+    requirement_type_id: NormalFormNodeId,
+) -> bool {
     let production_type = state.registry.wrapped_expression(production_type_id.0);
     let requirement_type = state.registry.wrapped_expression(requirement_type_id.0);
     match (&production_type.expression, &requirement_type.expression) {
@@ -167,8 +176,53 @@ pub(super) fn does_production_type_satisfy_required_type(
             production_symbol == requirement_symbol
         }
         (Expression::Call(production_call), Expression::Call(requirement_call)) => {
-            // Trivial
-            unimplemented!()
+            let production_callee = state.registry.wrapped_expression(production_call.callee_id);
+            let requirement_callee = state
+                .registry
+                .wrapped_expression(requirement_call.callee_id);
+            match (
+                &production_callee.expression,
+                &requirement_callee.expression,
+            ) {
+                (
+                    Expression::Identifier(production_callee_identifier),
+                    Expression::Identifier(requirement_callee_identifier),
+                ) => {
+                    let production_callee_symbol = state
+                        .symbol_db
+                        .identifier_symbols
+                        .get(production_callee_identifier.id);
+                    let requirement_callee_symbol = state
+                        .symbol_db
+                        .identifier_symbols
+                        .get(requirement_callee_identifier.id);
+                    if production_callee_symbol != requirement_callee_symbol {
+                        return false;
+                    }
+
+                    let production_arg_ids = state
+                        .registry
+                        .wrapped_expression_list(production_call.arg_list_id);
+                    let requirement_arg_ids = state
+                        .registry
+                        .wrapped_expression_list(requirement_call.arg_list_id);
+                    production_arg_ids
+                        .iter()
+                        .copied()
+                        .zip(requirement_arg_ids.iter().copied())
+                        .all(|(production_argument_id, requirement_argument_id)| {
+                            are_types_equivalent_up_to_renaming_of_forall_params(
+                                state,
+                                // These casts are safe because we know that the call
+                                // is a normal form, and every argument of a normal form
+                                // is itself (by definition) a normal form.
+                                NormalFormNodeId(production_argument_id),
+                                NormalFormNodeId(requirement_argument_id),
+                            )
+                        })
+                }
+                _ => false,
+            }
         }
         (Expression::Forall(production_forall), Expression::Forall(requirement_forall)) => {
             // Real challenge is this one.
