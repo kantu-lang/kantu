@@ -46,6 +46,7 @@ pub struct LetStatement {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct WrappedExpression {
     pub id: NodeId<Self>,
+    // TODO: This should be `expression_id`.
     pub expression: Expression,
 }
 

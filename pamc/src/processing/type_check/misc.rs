@@ -158,22 +158,23 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
     production_type_id: NormalFormNodeId,
     requirement_type_id: NormalFormNodeId,
 ) -> bool {
+    if are_expressions_equal_ignoring_ids(
+        &state.registry,
+        &state.symbol_db,
+        &mut state.sih_cache,
+        production_type_id.0,
+        requirement_type_id.0,
+    ) {
+        return true;
+    }
+
     let production_type = state.registry.wrapped_expression(production_type_id.0);
     let requirement_type = state.registry.wrapped_expression(requirement_type_id.0);
     match (&production_type.expression, &requirement_type.expression) {
-        (
-            Expression::Identifier(production_identifier),
-            Expression::Identifier(requirement_identifier),
-        ) => {
-            let production_symbol = state
-                .symbol_db
-                .identifier_symbols
-                .get(production_identifier.id);
-            let requirement_symbol = state
-                .symbol_db
-                .identifier_symbols
-                .get(requirement_identifier.id);
-            production_symbol == requirement_symbol
+        (Expression::Identifier(_), Expression::Identifier(_)) => {
+            // The production and requirement identifiers must be different,
+            // since `are_expressions_equal_ignoring_ids` returned false.
+            false
         }
         (Expression::Call(production_call), Expression::Call(requirement_call)) => {
             let production_callee = state.registry.wrapped_expression(production_call.callee_id);
@@ -232,6 +233,43 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
             if production_param_ids.len() != requirement_param_ids.len() {
                 return false;
             }
+
+            let fresh_symbols: Vec<Symbol> = production_param_ids
+                .iter()
+                .map(|_| state.symbol_db.provider.new_symbol())
+                .collect();
+
+            // let (production_substitutions, requirement_substitutions) = {
+
+            //         let production_substitutions = production_param_ids.iter().copied().zip(fresh_symbols.iter().copied()).map(|(param_id,fresh_symbol)| {
+            //             let param = state.registry.param(param_id);
+            //             let symbol = state.symbol_db.identifier_symbols.get(param.name_id);
+            //             Substitution {
+            //                 from: SubstitutionLhs::Symbol(symbol),
+            //                 to:
+            //             }
+            //         })
+            // };
+
+            // let renamed_production_forall_id = apply_substitutions(
+            //     &mut state.registry,
+            //     &mut state.symbol_db,
+            //     &mut state.sih_cache,
+            //     &mut state.fv_cache,
+            //     state.type0_identifier_id,
+            //     production_type_id.0,
+            //     production_substitutions,
+            // );
+            // let renamed_requirement_forall_id = apply_substitutions(
+            //     &mut state.registry,
+            //     &mut state.symbol_db,
+            //     &mut state.sih_cache,
+            //     &mut state.fv_cache,
+            //     state.type0_identifier_id,
+            //     requirement_type_id.0,
+            //     requirement_substitutions,
+            // );
+
             unimplemented!()
         }
         _ => false,
