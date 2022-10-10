@@ -141,11 +141,89 @@ pub(super) fn get_normalized_type(
 }
 
 pub(super) fn does_production_type_satisfy_required_type(
-    _state: &TypeCheckState,
-    _production_type_id: NormalFormNodeId,
-    _requirement_type_id: NormalFormNodeId,
+    state: &TypeCheckState,
+    production_type_id: NormalFormNodeId,
+    requirement_type_id: NormalFormNodeId,
 ) -> bool {
-    unimplemented!()
+    if is_type_trivially_empty(state, production_type_id) {
+        return true;
+    }
+
+    let production_type = state.registry.wrapped_expression(production_type_id.0);
+    let requirement_type = state.registry.wrapped_expression(requirement_type_id.0);
+    match (&production_type.expression, &requirement_type.expression) {
+        (
+            Expression::Identifier(production_identifier),
+            Expression::Identifier(requirement_identifier),
+        ) => {
+            let production_symbol = state
+                .symbol_db
+                .identifier_symbols
+                .get(production_identifier.id);
+            let requirement_symbol = state
+                .symbol_db
+                .identifier_symbols
+                .get(requirement_identifier.id);
+            production_symbol == requirement_symbol
+        }
+        (Expression::Call(production_call), Expression::Call(requirement_call)) => {
+            // Trivial
+            unimplemented!()
+        }
+        (Expression::Forall(production_forall), Expression::Forall(requirement_forall)) => {
+            // Real challenge is this one.
+            unimplemented!()
+        }
+        _ => false,
+    }
+}
+
+fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) -> bool {
+    let type_ = state.registry.wrapped_expression(type_id.0);
+    match &type_.expression {
+        Expression::Identifier(identifier) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+            let source = *state
+                .symbol_db
+                .symbol_sources
+                .get(&symbol)
+                .expect("Symbol should have a source defined.");
+            let defining_type_statement_id = match source {
+                SymbolSource::Type(type_statement_id) => type_statement_id,
+                _ => return false,
+            };
+            let defining_type_statement = state.registry.type_statement(defining_type_statement_id);
+            let defining_type_statement_variants = state
+                .registry
+                .variant_list(defining_type_statement.variant_list_id);
+            defining_type_statement_variants.is_empty()
+        }
+        Expression::Call(call) => {
+            let callee = state.registry.wrapped_expression(call.callee_id);
+            match &callee.expression {
+                Expression::Identifier(callee_identifier) => {
+                    let symbol = state.symbol_db.identifier_symbols.get(callee_identifier.id);
+                    let source = *state
+                        .symbol_db
+                        .symbol_sources
+                        .get(&symbol)
+                        .expect("Symbol should have a source defined.");
+                    let defining_type_statement_id = match source {
+                        SymbolSource::Type(type_statement_id) => type_statement_id,
+                        _ => return false,
+                    };
+                    let defining_type_statement =
+                        state.registry.type_statement(defining_type_statement_id);
+                    let defining_type_statement_variants = state
+                        .registry
+                        .variant_list(defining_type_statement.variant_list_id);
+                    defining_type_statement_variants.is_empty()
+                }
+                _ => false,
+            }
+        }
+        _other_type => false,
+    }
 }
 
 pub fn can_apply_well_typed_fun_call(
