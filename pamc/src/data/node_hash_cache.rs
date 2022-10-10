@@ -4,6 +4,10 @@ use crate::data::{
     symbol_database::{Symbol, SymbolDatabase},
 };
 
+// TODO: There's too much logic in this file.
+// We should just make caches generic and implement
+// the hashing in a separate file (as a submodule of `processing`).
+
 use rustc_hash::FxHasher;
 
 // Do **NOT** write `use std::hash::Hash` (however, `use std::hash::Hasher` is okay).
