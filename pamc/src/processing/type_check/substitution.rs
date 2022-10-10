@@ -518,6 +518,186 @@ fn apply_single_substitution_using_lhs_expression(
                 })
             }
         }
+        Expression::Match(match_) => {
+            let old_match = registry.match_(match_.id);
+            let old_matchee_id = old_match.matchee_id;
+            let old_case_list_id = old_match.case_list_id;
+            let old_case_ids = registry.match_case_list(old_case_list_id).to_vec();
+
+            let new_matchee_id = apply_single_substitution_using_lhs_expression(
+                registry,
+                symbol_db,
+                sih_cache,
+                fv_cache,
+                type0_identifier_id,
+                old_matchee_id,
+                from_id,
+                to_id,
+            );
+
+            let new_case_list_id = {
+                let new_case_ids: Vec<NodeId<MatchCase>> = old_case_ids
+                    .iter()
+                    .copied()
+                    .map(|old_case_id| {
+                        let old_case = registry.match_case(old_case_id);
+                        let old_case_variant_name_id = old_case.variant_name_id;
+                        let old_case_param_list_id = old_case.param_list_id;
+                        let old_case_output_id = old_case.output_id;
+
+                        let old_case_param_ids =
+                            registry.identifier_list(old_case_param_list_id).to_vec();
+
+                        let (freshening_pairs, freshening_substitutions) = {
+                            let (from_free_variables, to_free_variables) = {
+                                let node_info = (&*registry, &*symbol_db);
+                                fv_cache.get_free_variables_2((from_id, to_id), node_info)
+                            };
+                            let captured_param_symbols: Vec<Symbol> = old_case_param_ids
+                                .iter()
+                                .copied()
+                                .map(|param_id| symbol_db.identifier_symbols.get(param_id))
+                                .filter(|s| {
+                                    from_free_variables.contains(*s)
+                                        || to_free_variables.contains(*s)
+                                })
+                                .collect();
+                            let fresh_param_symbols: Vec<Symbol> = captured_param_symbols
+                                .iter()
+                                .map(|_| symbol_db.provider.new_symbol())
+                                .collect();
+                            let freshening_pairs: Vec<(Symbol, Symbol)> = captured_param_symbols
+                                .iter()
+                                .copied()
+                                .zip(fresh_param_symbols.iter().copied())
+                                .collect();
+                            let freshening_substitutions: Vec<Substitution> = freshening_pairs
+                                .iter()
+                                .copied()
+                                .map(|(captured_param_symbol, fresh_param_symbol)| {
+                                    let fresh_param_identifier_id =
+                                        get_wrapped_identifier_id_for_symbol(
+                                            registry,
+                                            symbol_db,
+                                            type0_identifier_id,
+                                            fresh_param_symbol,
+                                        );
+                                    Substitution {
+                                        from: SubstitutionLhs::Symbol(captured_param_symbol),
+                                        to: fresh_param_identifier_id,
+                                    }
+                                })
+                                .collect();
+                            (freshening_pairs, freshening_substitutions)
+                        };
+
+                        let new_param_list_id = {
+                            let new_case_param_ids: Vec<NodeId<Identifier>> = old_case_param_ids
+                                .iter()
+                                .copied()
+                                .map(|old_param_id| {
+                                    let old_symbol = symbol_db.identifier_symbols.get(old_param_id);
+                                    if let Some((_, corresponding_fresh_symbol)) = freshening_pairs
+                                        .iter()
+                                        .copied()
+                                        .find(|(captured, _fresh)| *captured == old_symbol)
+                                    {
+                                        let old_param = registry.identifier(old_param_id);
+                                        let old_param_start = old_param.start;
+                                        let old_param_name = old_param.name.clone();
+                                        let new_param_id = registry
+                                            .add_identifier_and_overwrite_its_id(Identifier {
+                                                id: dummy_id(),
+                                                start: old_param_start,
+                                                name: old_param_name,
+                                            });
+
+                                        symbol_db
+                                            .identifier_symbols
+                                            .insert(new_param_id, corresponding_fresh_symbol);
+
+                                        new_param_id
+                                    } else {
+                                        old_param_id
+                                    }
+                                })
+                                .collect();
+                            if old_case_param_ids
+                                .iter()
+                                .copied()
+                                .zip(new_case_param_ids.iter().copied())
+                                .all(|(old_param_id, new_param_id)| old_param_id == new_param_id)
+                            {
+                                old_case_param_list_id
+                            } else {
+                                registry.add_identifier_list(new_case_param_ids)
+                            }
+                        };
+
+                        let new_case_output_id = {
+                            let freshened_case_output_id = apply_substitutions(
+                                registry,
+                                symbol_db,
+                                sih_cache,
+                                fv_cache,
+                                type0_identifier_id,
+                                old_case_output_id,
+                                freshening_substitutions.iter().copied(),
+                            );
+                            apply_single_substitution_using_lhs_expression(
+                                registry,
+                                symbol_db,
+                                sih_cache,
+                                fv_cache,
+                                type0_identifier_id,
+                                freshened_case_output_id,
+                                from_id,
+                                to_id,
+                            )
+                        };
+
+                        if old_case_param_list_id == new_param_list_id
+                            && old_case_output_id == new_case_output_id
+                        {
+                            old_case_id
+                        } else {
+                            registry.add_match_case_and_overwrite_its_id(MatchCase {
+                                id: dummy_id(),
+                                variant_name_id: old_case_variant_name_id,
+                                param_list_id: new_param_list_id,
+                                output_id: new_case_output_id,
+                            })
+                        }
+                    })
+                    .collect();
+                // TODO: Replace .all(...==...) with .eq(...)
+                // in other parts of the codebase as well.
+                if old_case_ids
+                    .iter()
+                    .copied()
+                    .eq(new_case_ids.iter().copied())
+                {
+                    old_case_list_id
+                } else {
+                    registry.add_match_case_list(new_case_ids)
+                }
+            };
+
+            if old_matchee_id == new_matchee_id && old_case_list_id == new_case_list_id {
+                target_id
+            } else {
+                let new_match_id = registry.add_match_and_overwrite_its_id(Match {
+                    id: dummy_id(),
+                    matchee_id: new_matchee_id,
+                    case_list_id: new_case_list_id,
+                });
+                let new_match = registry.match_(new_match_id).clone();
+                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                    id: dummy_id(),
+                    expression: Expression::Match(Box::new(new_match)),
+                })
+            }
+        }
         _ => unimplemented!(),
     }
 }
