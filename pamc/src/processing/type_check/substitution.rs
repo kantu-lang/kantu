@@ -385,6 +385,8 @@ fn apply_single_substitution_using_lhs_expression(
                         {
                             old_param_id
                         } else {
+                            // TODO: We may need to move this up before calling `are_expressions_equal_ignoring_ids`
+                            // since I'm not sure how things will play out with symbol source registration.
                             let new_param_id = registry.add_param_and_overwrite_its_id(Param {
                                 id: dummy_id(),
                                 is_dashed: old_param_is_dashed,
