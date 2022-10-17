@@ -70,10 +70,9 @@ fn perform_eval_step_on_well_typed_expression(
         }
     }
 
-    let wrapped = registry.wrapped_expression(expression_id);
-    match &wrapped.expression {
-        Expression::Identifier(identifier) => {
-            let symbol = symbol_db.identifier_symbols.get(identifier.id);
+    match expression_id {
+        ExpressionId::Identifier(identifier_id) => {
+            let symbol = symbol_db.identifier_symbols.get(identifier_id);
             Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
                 registry,
                 symbol_db,
@@ -81,7 +80,8 @@ fn perform_eval_step_on_well_typed_expression(
                 expression_id,
             ))
         }
-        Expression::Dot(dot) => {
+        ExpressionId::Dot(dot_id) => {
+            let dot = registry.dot(dot_id);
             let symbol = symbol_db.identifier_symbols.get(dot.right_id);
             Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
                 registry,
@@ -90,7 +90,8 @@ fn perform_eval_step_on_well_typed_expression(
                 expression_id,
             ))
         }
-        Expression::Call(call) => {
+        ExpressionId::Call(call_id) => {
+            let call = registry.call(call_id);
             let callee_id = call.callee_id;
             let arg_list_id = call.arg_list_id;
             let callee_step_result = perform_eval_step_on_well_typed_expression(
@@ -107,12 +108,7 @@ fn perform_eval_step_on_well_typed_expression(
                     callee_id: stepped_callee_id,
                     arg_list_id,
                 });
-                let stepped_call = registry.call(stepped_call_id).clone();
-                let wrapped_stepped_id =
-                    registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                        id: dummy_id(),
-                        expression: Expression::Call(Box::new(stepped_call)),
-                    });
+                let wrapped_stepped_id = ExpressionId::Call(stepped_call_id);
                 return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
             }
 
@@ -139,12 +135,7 @@ fn perform_eval_step_on_well_typed_expression(
                             callee_id,
                             arg_list_id: stepped_arg_list_id,
                         });
-                        let stepped_call = registry.call(stepped_call_id).clone();
-                        let wrapped_stepped_id = registry
-                            .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                                id: dummy_id(),
-                                expression: Expression::Call(Box::new(stepped_call)),
-                            });
+                        let wrapped_stepped_id = ExpressionId::Call(stepped_call_id);
                         return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
                     }
                     EvalStepResult::CouldNotStepBecauseNormalForm(arg_nfid) => {
@@ -153,10 +144,9 @@ fn perform_eval_step_on_well_typed_expression(
                 }
             }
 
-            let callee = registry.wrapped_expression(callee_id);
-            match &callee.expression {
-                Expression::Identifier(callee_identifier) => {
-                    let callee_symbol = symbol_db.identifier_symbols.get(callee_identifier.id);
+            match callee_id {
+                ExpressionId::Identifier(callee_identifier_id) => {
+                    let callee_symbol = symbol_db.identifier_symbols.get(callee_identifier_id);
                     let callee_source = *symbol_db.symbol_sources.get(&callee_symbol).expect("Symbol referenced in identifier expression should have a source.");
                     let callee_fun_id: NodeId<Fun> = match callee_source {
                         SymbolSource::Fun(fun_id) => fun_id,
@@ -191,18 +181,14 @@ fn perform_eval_step_on_well_typed_expression(
                 other_normal_form_callee => panic!("A normal form callee in a well-typed Call expression should be an identifier, but was `{:?}`.", other_normal_form_callee),
             }
         }
-        Expression::Fun(fun) => {
+        ExpressionId::Fun(fun_id) => {
+            let fun = registry.fun(fun_id);
             let name_id = fun.name_id;
-            let name = registry.identifier(name_id).clone();
-            let wrapped_name_id =
-                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(name),
-                });
+            let wrapped_name_id = ExpressionId::Identifier(name_id);
             Ok(EvalStepResult::Stepped(wrapped_name_id))
         }
-        Expression::Match(match_) => {
-            let match_id = match_.id;
+        ExpressionId::Match(match_id) => {
+            let match_ = registry.match_(match_id);
             let matchee_id = match_.matchee_id;
             let case_list_id = match_.case_list_id;
 
@@ -221,12 +207,7 @@ fn perform_eval_step_on_well_typed_expression(
                         matchee_id: stepped_matchee_id,
                         case_list_id: case_list_id,
                     });
-                    let stepped_match = registry.match_(stepped_match_id).clone();
-                    let wrapped_stepped_id =
-                        registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                            id: dummy_id(),
-                            expression: Expression::Match(Box::new(stepped_match)),
-                        });
+                    let wrapped_stepped_id = ExpressionId::Match(stepped_match_id);
                     return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
                 }
                 EvalStepResult::CouldNotStepBecauseNormalForm(matchee_nfid) => matchee_nfid,
@@ -280,7 +261,8 @@ fn perform_eval_step_on_well_typed_expression(
                 }
             }
         }
-        Expression::Forall(forall) => {
+        ExpressionId::Forall(forall_id) => {
+            let forall = registry.forall(forall_id);
             let param_list_id = forall.param_list_id;
             let param_ids = registry.param_list(param_list_id).to_vec();
             let output_id = forall.output_id;
@@ -318,12 +300,7 @@ fn perform_eval_step_on_well_typed_expression(
                         param_list_id: stepped_param_list_id,
                         output_id: output_id,
                     });
-                    let stepped_forall = registry.forall(stepped_forall_id).clone();
-                    let wrapped_stepped_id =
-                        registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                            id: dummy_id(),
-                            expression: Expression::Forall(Box::new(stepped_forall)),
-                        });
+                    let wrapped_stepped_id = ExpressionId::Forall(stepped_forall_id);
                     return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
                 }
             }
@@ -343,11 +320,7 @@ fn perform_eval_step_on_well_typed_expression(
                     output_id: stepped_output_id,
                 });
                 let stepped_forall = registry.forall(stepped_forall_id).clone();
-                let wrapped_stepped_id =
-                    registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                        id: dummy_id(),
-                        expression: Expression::Forall(Box::new(stepped_forall)),
-                    });
+                let wrapped_stepped_id = ExpressionId::Forall(stepped_forall_id);
                 return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
             }
 

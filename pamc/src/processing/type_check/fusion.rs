@@ -60,11 +60,11 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
 
         fn get_fusion_case_assuming_left_is_irreplacable(
             state: &TypeCheckState,
-            right: &WrappedExpression,
+            right_id: ExpressionId,
         ) -> FusionCase {
-            match &right.expression {
-                Expression::Identifier(right_identifier) => {
-                    let right_symbol = state.symbol_db.identifier_symbols.get(right_identifier.id);
+            match right_id {
+                ExpressionId::Identifier(right_identifier_id) => {
+                    let right_symbol = state.symbol_db.identifier_symbols.get(right_identifier_id);
                     let right_source = *state
                         .symbol_db
                         .symbol_sources
@@ -90,11 +90,9 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
             }
         }
 
-        let left = state.registry.wrapped_expression(left_id.0);
-        let right = state.registry.wrapped_expression(right_id.0);
-        match &left.expression {
-            Expression::Identifier(left_identifier) => {
-                let left_symbol = state.symbol_db.identifier_symbols.get(left_identifier.id);
+        match left_id.0 {
+            ExpressionId::Identifier(left_identifier_id) => {
+                let left_symbol = state.symbol_db.identifier_symbols.get(left_identifier_id);
                 let left_source = *state
                     .symbol_db
                     .symbol_sources
@@ -108,14 +106,14 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                     | SymbolSource::Variant(_)
                     | SymbolSource::Fun(_)
                     | SymbolSource::BuiltinTypeTitleCase => {
-                        get_fusion_case_assuming_left_is_irreplacable(state, right)
+                        get_fusion_case_assuming_left_is_irreplacable(state, right_id.0)
                     }
                     SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
                         FusionCase::LeftReplacable { left_symbol }
                     }
                 }
             }
-            _other_left => get_fusion_case_assuming_left_is_irreplacable(state, right),
+            _other_left => get_fusion_case_assuming_left_is_irreplacable(state, right_id.0),
         }
     }
 
@@ -201,14 +199,17 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                 right_id,
                 SubstitutionLhs::Expression(left_id.0),
             );
-            let left = state.registry.wrapped_expression(left_id.0);
-            let right = state.registry.wrapped_expression(right_id.0);
-            let fusion_implied_by_constructors = match (&left.expression, &right.expression) {
-                (Expression::Call(left_call), Expression::Call(right_call)) => {
-                    let left_callee = state.registry.wrapped_expression(left_call.callee_id);
-                    let right_callee = state.registry.wrapped_expression(right_call.callee_id);
-                    match (&left_callee.expression, &right_callee.expression) {
-                        (Expression::Dot(left_callee_dot), Expression::Dot(right_callee_dot)) => {
+            let fusion_implied_by_constructors = match (left_id.0, right_id.0) {
+                (ExpressionId::Call(left_call_id), ExpressionId::Call(right_call_id)) => {
+                    let left_call = state.registry.call(left_call_id);
+                    let right_call = state.registry.call(right_call_id);
+                    match (left_call.callee_id, right_call.callee_id) {
+                        (
+                            ExpressionId::Dot(left_callee_dot_id),
+                            ExpressionId::Dot(right_callee_dot_id),
+                        ) => {
+                            let left_callee_dot = state.registry.dot(left_callee_dot_id);
+                            let right_callee_dot = state.registry.dot(right_callee_dot_id);
                             let left_callee_symbol = state
                                 .symbol_db
                                 .identifier_symbols
