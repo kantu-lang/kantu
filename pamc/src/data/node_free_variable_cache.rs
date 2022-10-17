@@ -1,18 +1,28 @@
 use crate::data::{
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::NodeRegistry,
     registered_ast::*,
     symbol_database::{Symbol, SymbolDatabase},
 };
 
 #[derive(Clone, Debug)]
 pub struct NodeFreeVariableCache {
-    wrapped_expression_hashes: Vec<Option<FreeVariableSet>>,
+    identifier_hashes: Vec<Option<FreeVariableSet>>,
+    dot_hashes: Vec<Option<FreeVariableSet>>,
+    call_hashes: Vec<Option<FreeVariableSet>>,
+    fun_hashes: Vec<Option<FreeVariableSet>>,
+    match_hashes: Vec<Option<FreeVariableSet>>,
+    forall_hashes: Vec<Option<FreeVariableSet>>,
 }
 
 impl NodeFreeVariableCache {
     pub fn empty() -> Self {
         Self {
-            wrapped_expression_hashes: Vec::new(),
+            identifier_hashes: Vec::new(),
+            dot_hashes: Vec::new(),
+            call_hashes: Vec::new(),
+            fun_hashes: Vec::new(),
+            match_hashes: Vec::new(),
+            forall_hashes: Vec::new(),
         }
     }
 }
@@ -31,7 +41,7 @@ impl FreeVariableSet {
 impl NodeFreeVariableCache {
     pub fn get_free_variables(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
+        node_id: ExpressionId,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> &FreeVariableSet {
         // The obvious implementation is:
@@ -57,7 +67,7 @@ impl NodeFreeVariableCache {
 
     pub fn get_free_variables_2(
         &mut self,
-        (id1, id2): (NodeId<WrappedExpression>, NodeId<WrappedExpression>),
+        (id1, id2): (ExpressionId, ExpressionId),
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> (&FreeVariableSet, &FreeVariableSet) {
         if self.get_cached_free_variables(id1).is_none() {
@@ -77,19 +87,22 @@ impl NodeFreeVariableCache {
         (set1, set2)
     }
 
-    fn get_cached_free_variables(
-        &self,
-        node_id: NodeId<WrappedExpression>,
-    ) -> Option<&FreeVariableSet> {
-        self.wrapped_expression_hashes
-            .get(node_id.raw)
-            .map(Option::as_ref)
-            .flatten()
+    fn get_cached_free_variables(&self, node_id: ExpressionId) -> Option<&FreeVariableSet> {
+        match node_id {
+            ExpressionId::Identifier(id) => {
+                self.identifier_hashes.get(id.raw).and_then(Option::as_ref)
+            }
+            ExpressionId::Dot(id) => self.dot_hashes.get(id.raw).and_then(Option::as_ref),
+            ExpressionId::Call(id) => self.call_hashes.get(id.raw).and_then(Option::as_ref),
+            ExpressionId::Fun(id) => self.fun_hashes.get(id.raw).and_then(Option::as_ref),
+            ExpressionId::Match(id) => self.match_hashes.get(id.raw).and_then(Option::as_ref),
+            ExpressionId::Forall(id) => self.forall_hashes.get(id.raw).and_then(Option::as_ref),
+        }
     }
 
     fn compute_free_variables_and_cache(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
+        node_id: ExpressionId,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> &FreeVariableSet {
         let free_variables = self.compute_free_variables(node_id, node_info);
@@ -98,24 +111,31 @@ impl NodeFreeVariableCache {
 
     fn compute_free_variables(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
-        node_info: (&NodeRegistry, &SymbolDatabase),
+        _node_id: ExpressionId,
+        _node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> FreeVariableSet {
         unimplemented!()
     }
 
     fn set_free_variables(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
+        node_id: ExpressionId,
         free_variables: FreeVariableSet,
     ) -> &FreeVariableSet {
-        let node_id = node_id.raw;
-        if node_id >= self.wrapped_expression_hashes.len() {
-            self.wrapped_expression_hashes
-                .resize_with(node_id + 1, || None);
+        let (index, vec) = match node_id {
+            ExpressionId::Identifier(id) => (id.raw, &mut self.identifier_hashes),
+            ExpressionId::Dot(id) => (id.raw, &mut self.dot_hashes),
+            ExpressionId::Call(id) => (id.raw, &mut self.call_hashes),
+            ExpressionId::Fun(id) => (id.raw, &mut self.fun_hashes),
+            ExpressionId::Match(id) => (id.raw, &mut self.match_hashes),
+            ExpressionId::Forall(id) => (id.raw, &mut self.forall_hashes),
+        };
+
+        if index >= vec.len() {
+            vec.resize_with(index + 1, || None);
         }
-        self.wrapped_expression_hashes[node_id] = Some(free_variables);
-        self.wrapped_expression_hashes[node_id]
+        vec[index] = Some(free_variables);
+        vec[index]
             .as_ref()
             .expect("Value should be Some(_), since we just set it to that.")
     }

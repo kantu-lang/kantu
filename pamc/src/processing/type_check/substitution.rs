@@ -7,9 +7,9 @@ pub fn apply_substitutions(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
+    target_id: ExpressionId,
     substitutions: impl IntoIterator<Item = Substitution>,
-) -> NodeId<WrappedExpression> {
+) -> ExpressionId {
     let mut target_id = target_id;
     for substitution in substitutions {
         target_id = apply_substitution(
@@ -38,9 +38,9 @@ pub fn apply_substitution(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
+    target_id: ExpressionId,
     substitutions: Substitution,
-) -> NodeId<WrappedExpression> {
+) -> ExpressionId {
     let mut target_id = target_id;
     loop {
         let new_id = apply_single_substitution(
@@ -65,9 +65,9 @@ fn apply_single_substitution(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
+    target_id: ExpressionId,
     substitution: Substitution,
-) -> NodeId<WrappedExpression> {
+) -> ExpressionId {
     match substitution.from {
         SubstitutionLhs::Expression(from) => apply_single_substitution_using_lhs_expression(
             registry,
@@ -114,62 +114,24 @@ fn get_wrapped_identifier_id_for_symbol(
         // type variant typed_param untyped_param let fun builtin_type_title_case
         SymbolSource::Type(id) => {
             let type_ = registry.type_statement(id);
-            let identifier = registry.identifier(type_.name_id).clone();
-            NormalFormNodeId(registry.add_wrapped_expression_and_overwrite_its_id(
-                WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(identifier),
-                },
-            ))
+            NormalFormNodeId(ExpressionId::Identifier(type_.name_id))
         }
         SymbolSource::Variant(id) => {
             let variant = registry.variant(id);
-            let identifier = registry.identifier(variant.name_id).clone();
-            NormalFormNodeId(registry.add_wrapped_expression_and_overwrite_its_id(
-                WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(identifier),
-                },
-            ))
+            NormalFormNodeId(ExpressionId::Identifier(variant.name_id))
         }
         SymbolSource::TypedParam(id) => {
             let param = registry.param(id);
-            let identifier = registry.identifier(param.name_id).clone();
-            NormalFormNodeId(registry.add_wrapped_expression_and_overwrite_its_id(
-                WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(identifier),
-                },
-            ))
+            NormalFormNodeId(ExpressionId::Identifier(param.name_id))
         }
-        SymbolSource::UntypedParam(id) => {
-            let identifier = registry.identifier(id).clone();
-            NormalFormNodeId(registry.add_wrapped_expression_and_overwrite_its_id(
-                WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(identifier),
-                },
-            ))
-        }
+        SymbolSource::UntypedParam(id) => NormalFormNodeId(ExpressionId::Identifier(id)),
         SymbolSource::Let(id) => {
             let let_ = registry.let_statement(id);
-            let identifier = registry.identifier(let_.name_id).clone();
-            NormalFormNodeId(registry.add_wrapped_expression_and_overwrite_its_id(
-                WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(identifier),
-                },
-            ))
+            NormalFormNodeId(ExpressionId::Identifier(let_.name_id))
         }
         SymbolSource::Fun(id) => {
             let fun = registry.fun(id);
-            let identifier = registry.identifier(fun.name_id).clone();
-            NormalFormNodeId(registry.add_wrapped_expression_and_overwrite_its_id(
-                WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Identifier(identifier),
-                },
-            ))
+            NormalFormNodeId(ExpressionId::Identifier(fun.name_id))
         }
         SymbolSource::BuiltinTypeTitleCase => type0_identifier_id,
     }
@@ -181,10 +143,10 @@ fn apply_single_substitution_using_lhs_expression(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
-    from_id: NodeId<WrappedExpression>,
-    to_id: NodeId<WrappedExpression>,
-) -> NodeId<WrappedExpression> {
+    target_id: ExpressionId,
+    from_id: ExpressionId,
+    to_id: ExpressionId,
+) -> ExpressionId {
     // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
     // any time we enter a node with params (e.g., fun, forall, match case).
     // Or, we could just always substitute said params with new params to avoid capture.
@@ -194,14 +156,14 @@ fn apply_single_substitution_using_lhs_expression(
         return to_id;
     }
 
-    let target = registry.wrapped_expression(target_id);
-    match &target.expression {
-        Expression::Identifier(_) => target_id,
+    match target_id {
+        ExpressionId::Identifier(_) => target_id,
         // TODO: In the future, if we allow arbitrary
         // expressions in the lhs of Dot expression,
         // we will need to handle that here.
-        Expression::Dot(_) => target_id,
-        Expression::Call(call) => {
+        ExpressionId::Dot(_) => target_id,
+        ExpressionId::Call(call_id) => {
+            let call = registry.call(call_id);
             let old_callee_id = call.callee_id;
             let old_arg_list_id = call.arg_list_id;
 
@@ -216,8 +178,8 @@ fn apply_single_substitution_using_lhs_expression(
                 to_id,
             );
             let new_arg_list_id = {
-                let old_arg_ids = registry.wrapped_expression_list(old_arg_list_id).to_vec();
-                let new_arg_ids: Vec<NodeId<WrappedExpression>> = old_arg_ids
+                let old_arg_ids = registry.expression_list(old_arg_list_id).to_vec();
+                let new_arg_ids: Vec<ExpressionId> = old_arg_ids
                     .iter()
                     .copied()
                     .map(|arg_id| {
@@ -245,7 +207,7 @@ fn apply_single_substitution_using_lhs_expression(
                 {
                     old_arg_list_id
                 } else {
-                    registry.add_wrapped_expression_list(new_arg_ids)
+                    registry.add_expression_list(new_arg_ids)
                 }
             };
             if old_callee_id == new_callee_id && old_arg_list_id == new_arg_list_id {
@@ -256,14 +218,11 @@ fn apply_single_substitution_using_lhs_expression(
                     callee_id: new_callee_id,
                     arg_list_id: new_arg_list_id,
                 });
-                let new_call = registry.call(new_call_id).clone();
-                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Call(Box::new(new_call)),
-                })
+                ExpressionId::Call(new_call_id)
             }
         }
-        Expression::Fun(fun) => {
+        ExpressionId::Fun(fun_id) => {
+            let fun = registry.fun(fun_id);
             let old_name_id = fun.name_id;
             let old_param_list_id = fun.param_list_id;
             let old_return_type_id = fun.return_type_id;
@@ -483,12 +442,7 @@ fn apply_single_substitution_using_lhs_expression(
                     new_name_id
                 };
                 let renamed_body_id = {
-                    let new_name = registry.identifier(new_name_id).clone();
-                    let wrapped_new_name_id =
-                        registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                            id: dummy_id(),
-                            expression: Expression::Identifier(new_name),
-                        });
+                    let wrapped_new_name_id = ExpressionId::Identifier(new_name_id);
                     apply_single_substitution_using_lhs_expression(
                         registry,
                         symbol_db,
@@ -513,14 +467,11 @@ fn apply_single_substitution_using_lhs_expression(
                     SymbolSource::Fun(new_fun_id),
                 );
 
-                let new_fun = registry.fun(new_fun_id).clone();
-                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Fun(Box::new(new_fun)),
-                })
+                ExpressionId::Fun(new_fun_id)
             }
         }
-        Expression::Match(match_) => {
+        ExpressionId::Match(match_id) => {
+            let match_ = registry.match_(match_id);
             let old_match = registry.match_(match_.id);
             let old_matchee_id = old_match.matchee_id;
             let old_case_list_id = old_match.case_list_id;
@@ -693,14 +644,11 @@ fn apply_single_substitution_using_lhs_expression(
                     matchee_id: new_matchee_id,
                     case_list_id: new_case_list_id,
                 });
-                let new_match = registry.match_(new_match_id).clone();
-                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Match(Box::new(new_match)),
-                })
+                ExpressionId::Match(new_match_id)
             }
         }
-        Expression::Forall(forall) => {
+        ExpressionId::Forall(forall_id) => {
+            let forall = registry.forall(forall_id);
             let old_param_list_id = forall.param_list_id;
             let old_output_id = forall.output_id;
 
@@ -878,12 +826,7 @@ fn apply_single_substitution_using_lhs_expression(
                     param_list_id: new_param_list_id,
                     output_id: new_output_id,
                 });
-
-                let new_forall = registry.forall(new_forall_id).clone();
-                registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                    id: dummy_id(),
-                    expression: Expression::Forall(Box::new(new_forall)),
-                })
+                ExpressionId::Forall(new_forall_id)
             }
         }
     }

@@ -1,12 +1,12 @@
 use crate::data::{
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::NodeRegistry,
     registered_ast::*,
     symbol_database::SymbolDatabase,
     variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
 };
 
 #[derive(Clone, Debug)]
-pub struct IllegalVariantReturnTypeError(pub NodeId<WrappedExpression>);
+pub struct IllegalVariantReturnTypeError(pub ExpressionId);
 
 pub fn check_variant_return_types_for_file(
     symbol_db: &SymbolDatabase,
@@ -52,10 +52,9 @@ fn get_variant_type_args(
 ) -> Result<VariantReturnType, IllegalVariantReturnTypeError> {
     let type_symbol = symbol_db.identifier_symbols.get(type_statement.name_id);
     let return_type_id = variant.return_type_id;
-    let return_type = &registry.wrapped_expression(return_type_id).expression;
-    match return_type {
-        Expression::Identifier(identifier) => {
-            let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
+    match return_type_id {
+        ExpressionId::Identifier(identifier_id) => {
+            let identifier_symbol = symbol_db.identifier_symbols.get(identifier_id);
             if identifier_symbol == type_symbol {
                 Ok(VariantReturnType::Identifier {
                     identifier_id: return_type_id,
@@ -64,14 +63,14 @@ fn get_variant_type_args(
                 Err(IllegalVariantReturnTypeError(return_type_id))
             }
         }
-        Expression::Call(call) => {
-            let callee = &registry.wrapped_expression(call.callee_id);
-            match &callee.expression {
-                Expression::Identifier(identifier) => {
-                    let identifier_symbol = symbol_db.identifier_symbols.get(identifier.id);
+        ExpressionId::Call(call_id) => {
+            let call = registry.call(call_id);
+            match call.callee_id {
+                ExpressionId::Identifier(identifier_id) => {
+                    let identifier_symbol = symbol_db.identifier_symbols.get(identifier_id);
                     if identifier_symbol == type_symbol {
                         Ok(VariantReturnType::Call {
-                            callee_id: callee.id,
+                            callee_id: call.callee_id,
                             arg_list_id: call.arg_list_id,
                         })
                     } else {

@@ -14,11 +14,11 @@ pub struct VariantReturnTypeDatabase {
 #[derive(Clone, Debug)]
 pub enum VariantReturnType {
     Identifier {
-        identifier_id: NodeId<WrappedExpression>,
+        identifier_id: ExpressionId,
     },
     Call {
-        callee_id: NodeId<WrappedExpression>,
-        arg_list_id: ListId<NodeId<WrappedExpression>>,
+        callee_id: ExpressionId,
+        arg_list_id: ListId<ExpressionId>,
     },
 }
 

@@ -15,7 +15,7 @@ pub enum TypeError {
         type_type_id: NormalFormNodeId,
     },
     CalleeNotAFunction {
-        callee_id: NodeId<WrappedExpression>,
+        callee_id: ExpressionId,
         callee_type_id: NormalFormNodeId,
     },
     WrongNumberOfArguments {
@@ -24,7 +24,7 @@ pub enum TypeError {
         arg_arity: usize,
     },
     WrongArgumentType {
-        arg_id: NodeId<WrappedExpression>,
+        arg_id: ExpressionId,
         param_type_id: NormalFormNodeId,
         arg_type_id: NormalFormNodeId,
     },

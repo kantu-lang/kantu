@@ -1,5 +1,7 @@
 use crate::data::registered_ast::*;
 
+// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
+// since #[derive] only works if T implements the respective traits.
 #[derive(Debug, PartialEq, Eq)]
 pub struct NodeId<T> {
     pub raw: usize,
@@ -38,6 +40,16 @@ pub enum FileItemNodeId {
     Let(NodeId<LetStatement>),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ExpressionId {
+    Identifier(NodeId<Identifier>),
+    Dot(NodeId<Dot>),
+    Call(NodeId<Call>),
+    Fun(NodeId<Fun>),
+    Match(NodeId<Match>),
+    Forall(NodeId<Forall>),
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct ListId<T> {
     pub start: usize,
@@ -70,8 +82,15 @@ impl<T> std::hash::Hash for ListId<T> {
     }
 }
 
-// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
-// since #[derive] only works if T implements the respective traits.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExpressionRef<'a> {
+    Identifier(&'a Identifier),
+    Dot(&'a Dot),
+    Call(&'a Call),
+    Fun(&'a Fun),
+    Match(&'a Match),
+    Forall(&'a Forall),
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NodeRegistry {
@@ -81,7 +100,6 @@ pub struct NodeRegistry {
     params: Vec<Param>,
     variants: Vec<Variant>,
     let_statements: Vec<LetStatement>,
-    wrapped_expressions: Vec<WrappedExpression>,
     dots: Vec<Dot>,
     calls: Vec<Call>,
     funs: Vec<Fun>,
@@ -94,7 +112,7 @@ pub struct NodeRegistry {
     variant_lists: Vec<NodeId<Variant>>,
     match_case_lists: Vec<NodeId<MatchCase>>,
     identifier_lists: Vec<NodeId<Identifier>>,
-    wrapped_expression_lists: Vec<NodeId<WrappedExpression>>,
+    expression_lists: Vec<ExpressionId>,
 }
 
 impl NodeRegistry {
@@ -106,7 +124,6 @@ impl NodeRegistry {
             params: Vec::new(),
             variants: Vec::new(),
             let_statements: Vec::new(),
-            wrapped_expressions: Vec::new(),
             dots: Vec::new(),
             calls: Vec::new(),
             funs: Vec::new(),
@@ -119,7 +136,7 @@ impl NodeRegistry {
             variant_lists: Vec::new(),
             match_case_lists: Vec::new(),
             identifier_lists: Vec::new(),
-            wrapped_expression_lists: Vec::new(),
+            expression_lists: Vec::new(),
         }
     }
 }
@@ -173,16 +190,6 @@ impl NodeRegistry {
         let id = NodeId::<LetStatement>::new(self.let_statements.len());
         let_statement.id = id;
         self.let_statements.push(let_statement);
-        id
-    }
-
-    pub fn add_wrapped_expression_and_overwrite_its_id(
-        &mut self,
-        mut wrapped_expression: WrappedExpression,
-    ) -> NodeId<WrappedExpression> {
-        let id = NodeId::<WrappedExpression>::new(self.wrapped_expressions.len());
-        wrapped_expression.id = id;
-        self.wrapped_expressions.push(wrapped_expression);
         id
     }
 
@@ -267,10 +274,6 @@ impl NodeRegistry {
         &self.let_statements[id.raw]
     }
 
-    pub fn wrapped_expression(&self, id: NodeId<WrappedExpression>) -> &WrappedExpression {
-        &self.wrapped_expressions[id.raw]
-    }
-
     pub fn dot(&self, id: NodeId<Dot>) -> &Dot {
         &self.dots[id.raw]
     }
@@ -333,15 +336,9 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_wrapped_expression_list(
-        &mut self,
-        mut list: Vec<NodeId<WrappedExpression>>,
-    ) -> ListId<NodeId<WrappedExpression>> {
-        let id = ListId::<NodeId<WrappedExpression>>::new(
-            self.wrapped_expression_lists.len(),
-            list.len(),
-        );
-        self.wrapped_expression_lists.append(&mut list);
+    pub fn add_expression_list(&mut self, mut list: Vec<ExpressionId>) -> ListId<ExpressionId> {
+        let id = ListId::<ExpressionId>::new(self.expression_lists.len(), list.len());
+        self.expression_lists.append(&mut list);
         id
     }
 }
@@ -372,12 +369,22 @@ impl NodeRegistry {
         &self.identifier_lists[id.start..end]
     }
 
-    pub fn wrapped_expression_list(
-        &self,
-        id: ListId<NodeId<WrappedExpression>>,
-    ) -> &[NodeId<WrappedExpression>] {
+    pub fn expression_list(&self, id: ListId<ExpressionId>) -> &[ExpressionId] {
         let end = id.start + id.len;
-        &self.wrapped_expression_lists[id.start..end]
+        &self.expression_lists[id.start..end]
+    }
+}
+
+impl NodeRegistry {
+    pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
+        match id {
+            ExpressionId::Identifier(id) => ExpressionRef::Identifier(self.identifier(id)),
+            ExpressionId::Dot(id) => ExpressionRef::Dot(self.dot(id)),
+            ExpressionId::Call(id) => ExpressionRef::Call(self.call(id)),
+            ExpressionId::Fun(id) => ExpressionRef::Fun(self.fun(id)),
+            ExpressionId::Match(id) => ExpressionRef::Match(self.match_(id)),
+            ExpressionId::Forall(id) => ExpressionRef::Forall(self.forall(id)),
+        }
     }
 }
 

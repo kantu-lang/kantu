@@ -4,7 +4,10 @@ mod scope;
 mod variant_return_type;
 
 use crate::{
-    data::{node_registry::NodeRegistry, FileId},
+    data::{
+        node_registry::{ExpressionRef, NodeRegistry},
+        FileId,
+    },
     processing::{
         bind_type_independent::{bind_symbols_to_identifiers, BindError},
         check_variant_return_types::check_variant_return_types_for_file,

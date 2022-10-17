@@ -14,12 +14,7 @@ pub fn type_check_file(
             start: None,
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
         });
-        let type0_identifier = registry.identifier(type0_identifier_id).clone();
-        let wrapped_id = registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-            id: dummy_id(),
-            expression: Expression::Identifier(type0_identifier),
-        });
-
+        let wrapped_id = ExpressionId::Identifier(type0_identifier_id);
         symbol_db
             .identifier_symbols
             .insert(type0_identifier_id, symbol_db.provider.type0_symbol());
@@ -166,31 +161,32 @@ fn type_check_let_statement(
 
 fn type_check_expression(
     state: &mut TypeCheckState,
-    id: NodeId<WrappedExpression>,
+    id: ExpressionId,
     goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
-    match &state.registry.wrapped_expression(id).expression {
-        Expression::Identifier(identifier) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+    match id {
+        ExpressionId::Identifier(identifier_id) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier_id);
             let type_id = get_normalized_type(state, symbol)?;
             ok_unless_contradicts_goal(state, type_id, goal)
         }
-        Expression::Dot(dot) => {
+        ExpressionId::Dot(dot_id) => {
+            let dot = state.registry.dot(dot_id);
             let symbol = state.symbol_db.identifier_symbols.get(dot.right_id);
             let type_id = get_normalized_type(state, symbol)?;
             ok_unless_contradicts_goal(state, type_id, goal)
         }
-        Expression::Call(call) => {
+        ExpressionId::Call(call_id) => {
+            let call = state.registry.call(call_id);
             let call_id = call.id;
             let callee_id = call.callee_id;
             let arg_list_id = call.arg_list_id;
             let callee_type_id = type_check_expression(state, callee_id, None)?;
-            let callee_type: Forall = match &state
-                .registry
-                .wrapped_expression(callee_type_id.0)
-                .expression
-            {
-                Expression::Forall(forall) => (**forall).clone(),
+            let callee_type: Forall = match callee_type_id.0 {
+                ExpressionId::Forall(forall_id) => {
+                    let forall = state.registry.forall(forall_id);
+                    forall.clone()
+                }
                 _ => {
                     return Err(TypeError::CalleeNotAFunction {
                         callee_id: callee_id,
@@ -199,7 +195,7 @@ fn type_check_expression(
                 }
             };
             let param_ids = state.registry.param_list(callee_type.param_list_id);
-            let arg_ids = state.registry.wrapped_expression_list(arg_list_id);
+            let arg_ids = state.registry.expression_list(arg_list_id);
             if param_ids.len() != arg_ids.len() {
                 return Err(TypeError::WrongNumberOfArguments {
                     call_id: call_id,
@@ -208,15 +204,16 @@ fn type_check_expression(
                 });
             }
 
-            let arg_ids_and_arg_type_ids: Vec<(NodeId<WrappedExpression>, NormalFormNodeId)> =
-                arg_ids
-                    .to_vec()
-                    .iter()
-                    .map(|arg_id| -> Result<(NodeId<WrappedExpression>, NormalFormNodeId), TypeError> {
+            let arg_ids_and_arg_type_ids: Vec<(ExpressionId, NormalFormNodeId)> = arg_ids
+                .to_vec()
+                .iter()
+                .map(
+                    |arg_id| -> Result<(ExpressionId, NormalFormNodeId), TypeError> {
                         // TODO: Infer arg goal using callee (i.e., current) goal
                         Ok((*arg_id, type_check_expression(state, *arg_id, None)?))
-                    })
-                    .collect::<Result<Vec<_>, TypeError>>()?;
+                    },
+                )
+                .collect::<Result<Vec<_>, TypeError>>()?;
 
             let param_ids = state
                 .registry
@@ -283,7 +280,8 @@ fn type_check_expression(
 
             ok_unless_contradicts_goal(state, return_type_id, goal)
         }
-        Expression::Fun(fun) => {
+        ExpressionId::Fun(fun_id) => {
+            let fun = state.registry.fun(fun_id);
             let fun_id = fun.id;
             let name_id = fun.name_id;
             let param_list_id = fun.param_list_id;
@@ -328,14 +326,7 @@ fn type_check_expression(
                 param_list_id: normalized_param_list_id,
                 output_id: normalized_return_type_id.0,
             });
-            let fun_type = state.registry.forall(fun_type_id).clone();
-            let wrapped_type_id =
-                state
-                    .registry
-                    .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                        id: dummy_id(),
-                        expression: Expression::Forall(Box::new(fun_type)),
-                    });
+            let wrapped_type_id = ExpressionId::Forall(fun_type_id);
             // This is safe because the params and output are normalized, so
             // by definition, the Forall is a normal form.
             let wrapped_type_id = NormalFormNodeId(wrapped_type_id);
@@ -345,7 +336,8 @@ fn type_check_expression(
 
             ok_unless_contradicts_goal(state, wrapped_type_id, goal)
         }
-        Expression::Match(match_) => {
+        ExpressionId::Match(match_id) => {
+            let match_ = state.registry.match_(match_id);
             let match_id = match_.id;
             let matchee_id = match_.matchee_id;
             let case_list_id = match_.case_list_id;
@@ -421,7 +413,8 @@ fn type_check_expression(
                 }
             }
         }
-        Expression::Forall(forall) => {
+        ExpressionId::Forall(forall_id) => {
+            let forall = state.registry.forall(forall_id);
             let forall_id = forall.id;
             let param_list_id = forall.param_list_id;
             let output_id = forall.output_id;
@@ -524,75 +517,68 @@ fn type_check_match_case(
         });
     };
 
-    let case_constructed_type_arg_ids: Vec<NodeId<WrappedExpression>> =
-        match state.variant_db.get(variant_id) {
-            VariantReturnType::Call {
-                arg_list_id: variant_return_type_arg_list_id,
-                ..
-            } => {
-                let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
-                let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
-                let case_param_list_id = state.registry.match_case(case_id).param_list_id;
-                let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
-                if variant_param_ids.len() != case_param_ids.len() {
-                    return Err(TypeError::WrongNumberOfMatchCaseParams {
-                        case_id: case_id,
-                        variant_id,
-                        expected_arity: variant_param_ids.len(),
-                        actual_arity: case_param_ids.len(),
-                    });
-                }
-                let substitutions: Vec<Substitution> = variant_param_ids
-                    .into_iter()
-                    .zip(case_param_ids.into_iter())
-                    .map(|(variant_param_id, case_param_id)| {
-                        let variant_param = state.registry.param(variant_param_id);
-                        let variant_param_symbol = state
-                            .symbol_db
-                            .identifier_symbols
-                            .get(variant_param.name_id);
-                        let case_param = state.registry.identifier(case_param_id).clone();
-                        let wrapped_case_param_id = state
-                            .registry
-                            .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                                id: dummy_id(),
-                                expression: Expression::Identifier(case_param),
-                            });
-                        // This is safe because an identifier defined by a match case param declaration
-                        // is always a normal form.
-                        let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
-                        Substitution {
-                            from: SubstitutionLhs::Symbol(variant_param_symbol),
-                            to: wrapped_case_param_id,
-                        }
-                    })
-                    .collect();
-
-                let variant_return_type_arg_ids = state
-                    .registry
-                    .wrapped_expression_list(*variant_return_type_arg_list_id)
-                    .to_vec();
-                variant_return_type_arg_ids
-                    .into_iter()
-                    .map(|variant_return_type_arg_id| {
-                        apply_substitutions(
-                            &mut state.registry,
-                            &mut state.symbol_db,
-                            &mut state.sih_cache,
-                            &mut state.fv_cache,
-                            state.type0_identifier_id,
-                            variant_return_type_arg_id,
-                            substitutions.clone(),
-                        )
-                    })
-                    .collect::<Vec<_>>()
+    let case_constructed_type_arg_ids: Vec<ExpressionId> = match state.variant_db.get(variant_id) {
+        VariantReturnType::Call {
+            arg_list_id: variant_return_type_arg_list_id,
+            ..
+        } => {
+            let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
+            let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
+            let case_param_list_id = state.registry.match_case(case_id).param_list_id;
+            let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
+            if variant_param_ids.len() != case_param_ids.len() {
+                return Err(TypeError::WrongNumberOfMatchCaseParams {
+                    case_id: case_id,
+                    variant_id,
+                    expected_arity: variant_param_ids.len(),
+                    actual_arity: case_param_ids.len(),
+                });
             }
-            VariantReturnType::Identifier { .. } => vec![],
-        };
+            let substitutions: Vec<Substitution> = variant_param_ids
+                .into_iter()
+                .zip(case_param_ids.into_iter())
+                .map(|(variant_param_id, case_param_id)| {
+                    let variant_param = state.registry.param(variant_param_id);
+                    let variant_param_symbol = state
+                        .symbol_db
+                        .identifier_symbols
+                        .get(variant_param.name_id);
+                    let wrapped_case_param_id = ExpressionId::Identifier(case_param_id);
+                    // This is safe because an identifier defined by a match case param declaration
+                    // is always a normal form.
+                    let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
+                    Substitution {
+                        from: SubstitutionLhs::Symbol(variant_param_symbol),
+                        to: wrapped_case_param_id,
+                    }
+                })
+                .collect();
+
+            let variant_return_type_arg_ids = state
+                .registry
+                .expression_list(*variant_return_type_arg_list_id)
+                .to_vec();
+            variant_return_type_arg_ids
+                .into_iter()
+                .map(|variant_return_type_arg_id| {
+                    apply_substitutions(
+                        &mut state.registry,
+                        &mut state.symbol_db,
+                        &mut state.sih_cache,
+                        &mut state.fv_cache,
+                        state.type0_identifier_id,
+                        variant_return_type_arg_id,
+                        substitutions.clone(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        }
+        VariantReturnType::Identifier { .. } => vec![],
+    };
 
     let matchee_type_arg_ids = state
         .registry
-        .wrapped_expression_list(matchee_type.arg_list_id)
+        .expression_list(matchee_type.arg_list_id)
         .to_vec();
 
     assert_eq!(matchee_type_arg_ids.len(), case_constructed_type_arg_ids.len(), "The number of type arguments of the matchee type and the number of type arguments of the constructed type should be the same. But they were different. This indicates a serious logic error.");

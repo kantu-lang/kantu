@@ -33,8 +33,8 @@ pub(super) fn normalize_type_checked_params(
 pub(super) fn register_wrapped_forall(
     state: &mut TypeCheckState,
     param_list_id: ListId<NodeId<Param>>,
-    output_id: NodeId<WrappedExpression>,
-) -> NodeId<WrappedExpression> {
+    output_id: ExpressionId,
+) -> ExpressionId {
     let forall_with_dummy_id = Forall {
         id: dummy_id(),
         param_list_id,
@@ -43,24 +43,13 @@ pub(super) fn register_wrapped_forall(
     let forall_id = state
         .registry
         .add_forall_and_overwrite_its_id(forall_with_dummy_id);
-    let registered_forall = state.registry.forall(forall_id).clone();
-    let wrapped_with_dummy_id = WrappedExpression {
-        id: dummy_id(),
-        expression: Expression::Forall(Box::new(registered_forall)),
-    };
-    state
-        .registry
-        .add_wrapped_expression_and_overwrite_its_id(wrapped_with_dummy_id)
+    ExpressionId::Forall(forall_id)
 }
 
-pub(super) fn is_expression_type0_or_type1(
-    state: &TypeCheckState,
-    type_id: NodeId<WrappedExpression>,
-) -> bool {
-    let type_ = state.registry.wrapped_expression(type_id);
-    match &type_.expression {
-        Expression::Identifier(identifier) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+pub(super) fn is_expression_type0_or_type1(state: &TypeCheckState, type_id: ExpressionId) -> bool {
+    match type_id {
+        ExpressionId::Identifier(identifier_id) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier_id);
             symbol == state.symbol_db.provider.type0_symbol()
                 || symbol == state.symbol_db.provider.type1_symbol()
         }
@@ -168,45 +157,36 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
         return true;
     }
 
-    let production_type = state.registry.wrapped_expression(production_type_id.0);
-    let requirement_type = state.registry.wrapped_expression(requirement_type_id.0);
-    match (&production_type.expression, &requirement_type.expression) {
-        (Expression::Identifier(_), Expression::Identifier(_)) => {
+    match (production_type_id.0, requirement_type_id.0) {
+        (ExpressionId::Identifier(_), ExpressionId::Identifier(_)) => {
             // The production and requirement identifiers must be different,
             // since `are_expressions_equal_ignoring_ids` returned false.
             false
         }
-        (Expression::Call(production_call), Expression::Call(requirement_call)) => {
-            let production_callee = state.registry.wrapped_expression(production_call.callee_id);
-            let requirement_callee = state
-                .registry
-                .wrapped_expression(requirement_call.callee_id);
-            match (
-                &production_callee.expression,
-                &requirement_callee.expression,
-            ) {
+        (ExpressionId::Call(production_call_id), ExpressionId::Call(requirement_call_id)) => {
+            let production_call = state.registry.call(production_call_id);
+            let requirement_call = state.registry.call(requirement_call_id);
+            match (production_call.callee_id, requirement_call.callee_id) {
                 (
-                    Expression::Identifier(production_callee_identifier),
-                    Expression::Identifier(requirement_callee_identifier),
+                    ExpressionId::Identifier(production_callee_identifier_id),
+                    ExpressionId::Identifier(requirement_callee_identifier_id),
                 ) => {
                     let production_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get(production_callee_identifier.id);
+                        .get(production_callee_identifier_id);
                     let requirement_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get(requirement_callee_identifier.id);
+                        .get(requirement_callee_identifier_id);
                     if production_callee_symbol != requirement_callee_symbol {
                         return false;
                     }
 
-                    let production_arg_ids = state
-                        .registry
-                        .wrapped_expression_list(production_call.arg_list_id);
-                    let requirement_arg_ids = state
-                        .registry
-                        .wrapped_expression_list(requirement_call.arg_list_id);
+                    let production_arg_ids =
+                        state.registry.expression_list(production_call.arg_list_id);
+                    let requirement_arg_ids =
+                        state.registry.expression_list(requirement_call.arg_list_id);
                     production_arg_ids
                         .iter()
                         .copied()
@@ -227,14 +207,19 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
                 _ => false,
             }
         }
-        (Expression::Forall(production_forall), Expression::Forall(requirement_forall)) => {
+        (
+            ExpressionId::Forall(production_forall_id),
+            ExpressionId::Forall(requirement_forall_id),
+        ) => {
+            let production_forall = state.registry.forall(production_forall_id);
+            let requirement_forall = state.registry.forall(requirement_forall_id);
             let production_param_ids = state.registry.param_list(production_forall.param_list_id);
             let requirement_param_ids = state.registry.param_list(requirement_forall.param_list_id);
             if production_param_ids.len() != requirement_param_ids.len() {
                 return false;
             }
 
-            let fresh_symbols: Vec<Symbol> = production_param_ids
+            let _fresh_symbols: Vec<Symbol> = production_param_ids
                 .iter()
                 .map(|_| state.symbol_db.provider.new_symbol())
                 .collect();
@@ -277,10 +262,9 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
 }
 
 fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) -> bool {
-    let type_ = state.registry.wrapped_expression(type_id.0);
-    match &type_.expression {
-        Expression::Identifier(identifier) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier.id);
+    match type_id.0 {
+        ExpressionId::Identifier(identifier_id) => {
+            let symbol = state.symbol_db.identifier_symbols.get(identifier_id);
             let source = *state
                 .symbol_db
                 .symbol_sources
@@ -296,11 +280,11 @@ fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) ->
                 .variant_list(defining_type_statement.variant_list_id);
             defining_type_statement_variants.is_empty()
         }
-        Expression::Call(call) => {
-            let callee = state.registry.wrapped_expression(call.callee_id);
-            match &callee.expression {
-                Expression::Identifier(callee_identifier) => {
-                    let symbol = state.symbol_db.identifier_symbols.get(callee_identifier.id);
+        ExpressionId::Call(call_id) => {
+            let call = state.registry.call(call_id);
+            match call.callee_id {
+                ExpressionId::Identifier(callee_identifier_id) => {
+                    let symbol = state.symbol_db.identifier_symbols.get(callee_identifier_id);
                     let source = *state
                         .symbol_db
                         .symbol_sources
@@ -377,13 +361,13 @@ pub fn as_variant_call(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
     nfid: NormalFormNodeId,
-) -> Option<(NodeId<Variant>, ListId<NodeId<WrappedExpression>>)> {
-    let wrapped = registry.wrapped_expression(nfid.0);
-    match &wrapped.expression {
-        Expression::Call(call) => {
-            let callee = registry.wrapped_expression(call.callee_id);
-            match &callee.expression {
-                Expression::Dot(callee_dot) => {
+) -> Option<(NodeId<Variant>, ListId<ExpressionId>)> {
+    match nfid.0 {
+        ExpressionId::Call(call_id) => {
+            let call = registry.call(call_id);
+            match call.callee_id {
+                ExpressionId::Dot(callee_dot_id) => {
+                    let callee_dot = registry.dot(callee_dot_id);
                     let symbol = symbol_db.identifier_symbols.get(callee_dot.right_id);
                     let symbol_source = symbol_db
                         .symbol_sources
@@ -453,26 +437,25 @@ impl<T> MapGoalMismatchErr for Result<T, TypeError> {
 #[derive(Clone, Copy, Debug)]
 pub struct AlgebraicDataType {
     pub callee_id: NodeId<Identifier>,
-    pub arg_list_id: ListId<NodeId<WrappedExpression>>,
+    pub arg_list_id: ListId<ExpressionId>,
 }
 
 pub(super) fn as_algebraic_data_type(
     state: &mut TypeCheckState,
     term_id: NormalFormNodeId,
 ) -> Option<AlgebraicDataType> {
-    let empty_list_id = state.registry.add_wrapped_expression_list(Vec::new());
+    let empty_list_id = state.registry.add_expression_list(Vec::new());
 
-    let term = state.registry.wrapped_expression(term_id.0);
-    match &term.expression {
-        Expression::Identifier(identifier) => Some(AlgebraicDataType {
-            callee_id: identifier.id,
+    match term_id.0 {
+        ExpressionId::Identifier(identifier_id) => Some(AlgebraicDataType {
+            callee_id: identifier_id,
             arg_list_id: empty_list_id,
         }),
-        Expression::Call(call) => {
-            let callee = state.registry.wrapped_expression(call.callee_id);
-            match &callee.expression {
-                Expression::Identifier(callee_identifier) => Some(AlgebraicDataType {
-                    callee_id: callee_identifier.id,
+        ExpressionId::Call(call_id) => {
+            let call = state.registry.call(call_id);
+            match call.callee_id {
+                ExpressionId::Identifier(callee_identifier_id) => Some(AlgebraicDataType {
+                    callee_id: callee_identifier_id,
                     arg_list_id: call.arg_list_id,
                 }),
                 _other_callee => None,
@@ -486,8 +469,8 @@ pub fn are_expressions_equal_ignoring_ids(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
-    a: NodeId<WrappedExpression>,
-    b: NodeId<WrappedExpression>,
+    a: ExpressionId,
+    b: ExpressionId,
 ) -> bool {
     let node_info = (registry, symbol_db);
     let a_sih = sih_cache.get_structural_identity_hash(a, node_info);
@@ -499,8 +482,8 @@ pub fn is_term_a_non_strict_subterm(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
-    sub_id: NodeId<WrappedExpression>,
-    super_id: NodeId<WrappedExpression>,
+    sub_id: ExpressionId,
+    super_id: ExpressionId,
 ) -> bool {
     if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, sub_id, super_id) {
         return true;
@@ -508,20 +491,22 @@ pub fn is_term_a_non_strict_subterm(
 
     // TODO: We should probably cache this too.
 
-    let super_ = registry.wrapped_expression(super_id);
-    match &super_.expression {
-        Expression::Identifier(_) => false,
-        Expression::Dot(dot) => {
+    match super_id {
+        ExpressionId::Identifier(_) => false,
+        ExpressionId::Dot(dot_id) => {
+            let dot = registry.dot(dot_id);
             is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, dot.left_id)
         }
-        Expression::Call(call) => {
-            let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+        ExpressionId::Call(call_id) => {
+            let call = registry.call(call_id);
+            let arg_ids = registry.expression_list(call.arg_list_id);
             is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, call.callee_id)
                 || arg_ids.iter().copied().any(|arg_id| {
                     is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, arg_id)
                 })
         }
-        Expression::Fun(fun) => {
+        ExpressionId::Fun(fun_id) => {
+            let fun = registry.fun(fun_id);
             let param_ids = registry.param_list(fun.param_list_id);
 
             param_ids.iter().copied().any(|param_id| {
@@ -535,7 +520,8 @@ pub fn is_term_a_non_strict_subterm(
                 fun.return_type_id,
             ) || is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, fun.body_id)
         }
-        Expression::Match(match_) => {
+        ExpressionId::Match(match_id) => {
+            let match_ = registry.match_(match_id);
             let case_ids = registry.match_case_list(match_.case_list_id);
             is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, match_.matchee_id)
                 || case_ids.iter().copied().any(|case_id| {
@@ -549,7 +535,8 @@ pub fn is_term_a_non_strict_subterm(
                     )
                 })
         }
-        Expression::Forall(forall) => {
+        ExpressionId::Forall(forall_id) => {
+            let forall = registry.forall(forall_id);
             let param_ids = registry.param_list(forall.param_list_id);
             param_ids.iter().copied().any(|param_id| {
                 let param = registry.param(param_id);
