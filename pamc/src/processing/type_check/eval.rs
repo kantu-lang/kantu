@@ -319,7 +319,6 @@ fn perform_eval_step_on_well_typed_expression(
                     param_list_id: param_list_id,
                     output_id: stepped_output_id,
                 });
-                let stepped_forall = registry.forall(stepped_forall_id).clone();
                 let wrapped_stepped_id = ExpressionId::Forall(stepped_forall_id);
                 return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
             }

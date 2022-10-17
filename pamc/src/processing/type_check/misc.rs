@@ -219,7 +219,7 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
                 return false;
             }
 
-            let fresh_symbols: Vec<Symbol> = production_param_ids
+            let _fresh_symbols: Vec<Symbol> = production_param_ids
                 .iter()
                 .map(|_| state.symbol_db.provider.new_symbol())
                 .collect();

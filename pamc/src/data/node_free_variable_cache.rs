@@ -111,8 +111,8 @@ impl NodeFreeVariableCache {
 
     fn compute_free_variables(
         &mut self,
-        node_id: ExpressionId,
-        node_info: (&NodeRegistry, &SymbolDatabase),
+        _node_id: ExpressionId,
+        _node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> FreeVariableSet {
         unimplemented!()
     }
