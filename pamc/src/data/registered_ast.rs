@@ -53,6 +53,16 @@ pub enum ExpressionId {
     Forall(NodeId<Forall>),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExpressionRef<'a> {
+    Identifier(&'a Identifier),
+    Dot(&'a Dot),
+    Call(&'a Call),
+    Fun(&'a Fun),
+    Match(&'a Match),
+    Forall(&'a Forall),
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
     pub id: NodeId<Self>,

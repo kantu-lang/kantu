@@ -357,6 +357,19 @@ impl NodeRegistry {
 }
 
 impl NodeRegistry {
+    pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
+        match id {
+            ExpressionId::Identifier(id) => ExpressionRef::Identifier(self.identifier(id)),
+            ExpressionId::Dot(id) => ExpressionRef::Dot(self.dot(id)),
+            ExpressionId::Call(id) => ExpressionRef::Call(self.call(id)),
+            ExpressionId::Fun(id) => ExpressionRef::Fun(self.fun(id)),
+            ExpressionId::Match(id) => ExpressionRef::Match(self.match_(id)),
+            ExpressionId::Forall(id) => ExpressionRef::Forall(self.forall(id)),
+        }
+    }
+}
+
+impl NodeRegistry {
     // TODO: Delete after we're done debugging.
     #[allow(non_snake_case)]
     pub fn TODO_identifiers(&self) -> &[Identifier] {

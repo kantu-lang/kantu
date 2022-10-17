@@ -25,14 +25,14 @@ fn rec_fun_same_param() {
             arg: arg_id,
         } => {
             let callee = registry.identifier(callee_id);
-            let arg = &registry.wrapped_expression(arg_id).expression;
+            let arg = &registry.expression_ref(arg_id);
             assert_eq!(
                 callee.name,
                 standard_ident_name("x"),
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, Expression::Identifier(identifier) if identifier.name == standard_ident_name("a")),
+                matches!(arg, ExpressionRef::Identifier(identifier) if identifier.name == standard_ident_name("a")),
                 "Unexpected arg: {:#?}",
                 arg
             );
@@ -50,14 +50,14 @@ fn rec_fun_non_substruct() {
             arg: arg_id,
         } => {
             let callee = registry.identifier(callee_id);
-            let arg = &registry.wrapped_expression(arg_id).expression;
+            let arg = &registry.expression_ref(arg_id);
             assert_eq!(
                 callee.name,
                 standard_ident_name("x"),
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, Expression::Identifier(identifier) if identifier.name == standard_ident_name("b")),
+                matches!(arg, ExpressionRef::Identifier(identifier) if identifier.name == standard_ident_name("b")),
                 "Unexpected arg: {:#?}",
                 arg
             );
@@ -75,14 +75,14 @@ fn rec_fun_non_ident() {
             arg: arg_id,
         } => {
             let callee = registry.identifier(callee_id);
-            let arg = &registry.wrapped_expression(arg_id).expression;
+            let arg = &registry.expression_ref(arg_id);
             assert_eq!(
                 callee.name,
                 standard_ident_name("x"),
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, Expression::Dot(dot) if registry.identifier(dot.right_id).name == standard_ident_name("O")),
+                matches!(arg, ExpressionRef::Dot(dot) if registry.identifier(dot.right_id).name == standard_ident_name("O")),
                 "Unexpected arg: {:#?}",
                 arg
             );

@@ -209,9 +209,9 @@ fn reference_unbindable_dot_lhs() {
     let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
     expect_bind_error(src, |err, registry| match err {
         BindError::UnbindableDotExpressionLhs(lhs_id) => {
-            let invalid_lhs = &registry.wrapped_expression(lhs_id).expression;
+            let invalid_lhs = &registry.expression_ref(lhs_id);
             assert!(
-                matches!(invalid_lhs, Expression::Match(_)),
+                matches!(invalid_lhs, ExpressionRef::Match(_)),
                 "Unexpected lhs {:?}",
                 invalid_lhs
             );

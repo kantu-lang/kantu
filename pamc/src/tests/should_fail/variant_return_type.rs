@@ -2,7 +2,7 @@ use super::*;
 
 /// The job of `panicker` is to panic if the error is different than the expected
 /// error.
-fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(&Expression, &NodeRegistry)) {
+fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, &NodeRegistry)) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -12,7 +12,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(&Expression, &N
     let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
     let err = check_variant_return_types_for_file(&symbol_db, &registry, file)
         .expect_err("Type arg extraction unexpectedly succeeded");
-    let illegal_variant_return_type = &registry.wrapped_expression(err.0).expression;
+    let illegal_variant_return_type = registry.expression_ref(err.0);
     panicker(illegal_variant_return_type, &registry);
 }
 
@@ -20,7 +20,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(&Expression, &N
 fn param() {
     let src = include_str!("../sample_code/should_fail/variant_return_type/param.ph");
     expect_type_arg_extraction_error(src, |return_type, _registry| match return_type {
-        Expression::Identifier(identifier) => {
+        ExpressionRef::Identifier(identifier) => {
             assert_eq!(
                 identifier.name,
                 standard_ident_name("a"),
@@ -37,7 +37,7 @@ fn complex_expression() {
     let src = include_str!("../sample_code/should_fail/variant_return_type/complex_expression.ph");
     expect_type_arg_extraction_error(src, |return_type, _registry| {
         assert!(
-            matches!(return_type, Expression::Match(_)),
+            matches!(return_type, ExpressionRef::Match(_)),
             "Unexpected variant return type: {:#?}",
             return_type
         );
@@ -49,7 +49,7 @@ fn foreign_nullary_type() {
     let src =
         include_str!("../sample_code/should_fail/variant_return_type/foreign_nullary_type.ph");
     expect_type_arg_extraction_error(src, |return_type, _registry| match return_type {
-        Expression::Identifier(identifier) => {
+        ExpressionRef::Identifier(identifier) => {
             assert_eq!(
                 identifier.name,
                 standard_ident_name("U"),
@@ -66,12 +66,12 @@ fn foreign_non_nullary_type() {
     let src =
         include_str!("../sample_code/should_fail/variant_return_type/foreign_non_nullary_type.ph");
     expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
-        Expression::Call(call) => {
+        ExpressionRef::Call(call) => {
             let arg_ids = registry.expression_list(call.arg_list_id);
             assert_eq!(arg_ids.len(), 1);
-            let callee = &registry.wrapped_expression(call.callee_id);
-            match &callee.expression {
-                Expression::Identifier(identifier) => {
+            let callee = registry.expression_ref(call.callee_id);
+            match callee {
+                ExpressionRef::Identifier(identifier) => {
                     assert_eq!(
                         identifier.name,
                         standard_ident_name("T"),
