@@ -164,8 +164,7 @@ fn bind_param(
     registry: &NodeRegistry,
     param: &Param,
 ) -> Result<(), BindError> {
-    let type_ = registry.wrapped_expression(param.type_id);
-    bind_expression(bind_state, registry, type_)?;
+    bind_expression(bind_state, registry, param.type_id)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
         registry,
@@ -187,8 +186,7 @@ fn bind_variant(
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }
-    let return_type = registry.wrapped_expression(variant.return_type_id);
-    bind_expression(bind_state, registry, return_type)?;
+    bind_expression(bind_state, registry, variant.return_type_id)?;
     bind_state.context.pop_scope();
 
     let variant_symbol = bind_new_symbol_to_identifier(bind_state, registry, variant.name_id);
@@ -219,8 +217,7 @@ fn bind_let_statement(
     registry: &NodeRegistry,
     let_statement: &LetStatement,
 ) -> Result<(), BindError> {
-    let value = registry.wrapped_expression(let_statement.value_id);
-    bind_expression(bind_state, registry, value)?;
+    bind_expression(bind_state, registry, let_statement.value_id)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
         registry,
@@ -233,18 +230,34 @@ fn bind_let_statement(
 fn bind_expression(
     bind_state: &mut BindState,
     registry: &NodeRegistry,
-    expression: &WrappedExpression,
+    expression_id: ExpressionId,
 ) -> Result<(), BindError> {
-    match &expression.expression {
-        Expression::Identifier(identifier) => bind_identifier(bind_state, identifier)?,
-        Expression::Dot(dot) => bind_dot(bind_state, registry, dot)?,
-        Expression::Call(call) => bind_call(bind_state, registry, call)?,
-        Expression::Fun(fun) => bind_fun(bind_state, registry, fun)?,
-        Expression::Match(match_) => bind_match(bind_state, registry, match_)?,
-        Expression::Forall(forall) => bind_forall(bind_state, registry, forall)?,
+    match expression_id {
+        ExpressionId::Identifier(id) => {
+            let identifier = registry.identifier(id);
+            bind_identifier(bind_state, identifier)
+        }
+        ExpressionId::Dot(id) => {
+            let dot = registry.dot(id);
+            bind_dot(bind_state, registry, dot)
+        }
+        ExpressionId::Call(id) => {
+            let call = registry.call(id);
+            bind_call(bind_state, registry, call)
+        }
+        ExpressionId::Fun(id) => {
+            let fun = registry.fun(id);
+            bind_fun(bind_state, registry, fun)
+        }
+        ExpressionId::Match(id) => {
+            let match_ = registry.match_(id);
+            bind_match(bind_state, registry, match_)
+        }
+        ExpressionId::Forall(id) => {
+            let forall = registry.forall(id);
+            bind_forall(bind_state, registry, forall)
+        }
     }
-
-    Ok(())
 }
 
 fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Result<(), BindError> {
@@ -257,13 +270,15 @@ fn bind_dot(
     registry: &NodeRegistry,
     dot: &Dot,
 ) -> Result<(), BindError> {
-    let left = registry.wrapped_expression(dot.left_id);
     let right = registry.identifier(dot.right_id);
-    bind_expression(bind_state, registry, left)?;
-    let left_symbol = match &left.expression {
-        Expression::Identifier(identifier) => bind_state.identifier_symbols.get(identifier.id),
-        Expression::Dot(dot) => bind_state.identifier_symbols.get(dot.right_id),
-        _ => return Err(BindError::UnbindableDotExpressionLhs(left.id)),
+    bind_expression(bind_state, registry, dot.left_id)?;
+    let left_symbol = match dot.left_id {
+        ExpressionId::Identifier(identifier_id) => bind_state.identifier_symbols.get(identifier_id),
+        ExpressionId::Dot(subdot_id) => {
+            let subdot = registry.dot(subdot_id);
+            bind_state.identifier_symbols.get(subdot.right_id)
+        }
+        _ => return Err(BindError::UnbindableDotExpressionLhs(dot.left_id)),
     };
     let right_symbol = if let Some(s) = bind_state.dot_targets.get(left_symbol, &right.name) {
         s
@@ -279,12 +294,10 @@ fn bind_call(
     registry: &NodeRegistry,
     call: &Call,
 ) -> Result<(), BindError> {
-    let callee = registry.wrapped_expression(call.callee_id);
-    bind_expression(bind_state, registry, callee)?;
+    bind_expression(bind_state, registry, call.callee_id)?;
     let arg_ids = registry.expression_list(call.arg_list_id);
     for arg_id in arg_ids {
-        let arg = registry.wrapped_expression(*arg_id);
-        bind_expression(bind_state, registry, arg)?;
+        bind_expression(bind_state, registry, *arg_id)?;
     }
     Ok(())
 }
@@ -300,16 +313,14 @@ fn bind_fun(
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }
-    let return_type = registry.wrapped_expression(fun.return_type_id);
-    bind_expression(bind_state, registry, return_type)?;
+    bind_expression(bind_state, registry, fun.return_type_id)?;
     define_symbol_in_context_and_bind_to_identifier(
         bind_state,
         registry,
         fun.name_id,
         SymbolSource::Fun(fun.id),
     )?;
-    let body = registry.wrapped_expression(fun.body_id);
-    bind_expression(bind_state, registry, body)?;
+    bind_expression(bind_state, registry, fun.body_id)?;
     bind_state.context.pop_scope();
     Ok(())
 }
@@ -319,8 +330,7 @@ fn bind_match(
     registry: &NodeRegistry,
     match_: &Match,
 ) -> Result<(), BindError> {
-    let matchee = registry.wrapped_expression(match_.matchee_id);
-    bind_expression(bind_state, registry, matchee)?;
+    bind_expression(bind_state, registry, match_.matchee_id)?;
     let case_ids = registry.match_case_list(match_.case_list_id);
     for case_id in case_ids {
         let case = registry.match_case(*case_id);
@@ -344,8 +354,7 @@ fn bind_match_case(
             SymbolSource::UntypedParam(param_id),
         )?;
     }
-    let output = registry.wrapped_expression(case.output_id);
-    bind_expression(bind_state, registry, output)?;
+    bind_expression(bind_state, registry, case.output_id)?;
     bind_state.context.pop_scope();
     Ok(())
 }
@@ -361,8 +370,7 @@ fn bind_forall(
         let param = registry.param(*param_id);
         bind_param(bind_state, registry, param)?;
     }
-    let output = registry.wrapped_expression(forall.output_id);
-    bind_expression(bind_state, registry, output)?;
+    bind_expression(bind_state, registry, forall.output_id)?;
     bind_state.context.pop_scope();
     Ok(())
 }
