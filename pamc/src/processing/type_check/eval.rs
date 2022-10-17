@@ -6,7 +6,7 @@ pub fn evaluate_well_typed_expression(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    expression: NodeId<WrappedExpression>,
+    expression: ExpressionId,
 ) -> Result<NormalFormNodeId, TypeError> {
     let mut current = expression;
     loop {
@@ -27,7 +27,7 @@ pub fn evaluate_well_typed_expression(
 
 #[derive(Clone, Debug)]
 pub enum EvalStepResult {
-    Stepped(NodeId<WrappedExpression>),
+    Stepped(ExpressionId),
     CouldNotStepBecauseNormalForm(NormalFormNodeId),
 }
 
@@ -37,13 +37,13 @@ fn perform_eval_step_on_well_typed_expression(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    expression_id: NodeId<WrappedExpression>,
+    expression_id: ExpressionId,
 ) -> Result<EvalStepResult, TypeError> {
     fn perform_eval_step_on_identifier_or_dot_based_on_symbol(
         registry: &mut NodeRegistry,
         symbol_db: &mut SymbolDatabase,
         symbol: Symbol,
-        original_expression_id: NodeId<WrappedExpression>,
+        original_expression_id: ExpressionId,
     ) -> EvalStepResult {
         let source = *symbol_db
             .symbol_sources
@@ -116,7 +116,7 @@ fn perform_eval_step_on_well_typed_expression(
                 return Ok(EvalStepResult::Stepped(wrapped_stepped_id));
             }
 
-            let arg_ids = registry.wrapped_expression_list(arg_list_id).to_vec();
+            let arg_ids = registry.expression_list(arg_list_id).to_vec();
             let mut arg_nfids = Vec::with_capacity(arg_ids.len());
             for (arg_index, arg_id) in arg_ids.iter().copied().enumerate() {
                 let arg_step_result = perform_eval_step_on_well_typed_expression(
@@ -133,8 +133,7 @@ fn perform_eval_step_on_well_typed_expression(
                         stepped_arg_ids.extend(arg_ids[..arg_index].iter().copied());
                         stepped_arg_ids.push(stepped_arg_id);
                         stepped_arg_ids.extend(arg_ids[arg_index + 1..].iter().copied());
-                        let stepped_arg_list_id =
-                            registry.add_wrapped_expression_list(stepped_arg_ids);
+                        let stepped_arg_list_id = registry.add_expression_list(stepped_arg_ids);
                         let stepped_call_id = registry.add_call_and_overwrite_its_id(Call {
                             id: dummy_id(),
                             callee_id,
@@ -250,9 +249,8 @@ fn perform_eval_step_on_well_typed_expression(
                     let substitutions: Vec<Substitution> = {
                         let case_param_list_id = case.param_list_id;
                         let case_param_ids = registry.identifier_list(case_param_list_id).to_vec();
-                        let matchee_arg_ids = registry
-                            .wrapped_expression_list(matchee_arg_list_id)
-                            .to_vec();
+                        let matchee_arg_ids =
+                            registry.expression_list(matchee_arg_list_id).to_vec();
                         case_param_ids
                             .iter()
                             .copied()

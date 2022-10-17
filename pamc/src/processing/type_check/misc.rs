@@ -33,8 +33,8 @@ pub(super) fn normalize_type_checked_params(
 pub(super) fn register_wrapped_forall(
     state: &mut TypeCheckState,
     param_list_id: ListId<NodeId<Param>>,
-    output_id: NodeId<WrappedExpression>,
-) -> NodeId<WrappedExpression> {
+    output_id: ExpressionId,
+) -> ExpressionId {
     let forall_with_dummy_id = Forall {
         id: dummy_id(),
         param_list_id,
@@ -53,10 +53,7 @@ pub(super) fn register_wrapped_forall(
         .add_wrapped_expression_and_overwrite_its_id(wrapped_with_dummy_id)
 }
 
-pub(super) fn is_expression_type0_or_type1(
-    state: &TypeCheckState,
-    type_id: NodeId<WrappedExpression>,
-) -> bool {
+pub(super) fn is_expression_type0_or_type1(state: &TypeCheckState, type_id: ExpressionId) -> bool {
     let type_ = state.registry.wrapped_expression(type_id);
     match &type_.expression {
         Expression::Identifier(identifier) => {
@@ -201,12 +198,10 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
                         return false;
                     }
 
-                    let production_arg_ids = state
-                        .registry
-                        .wrapped_expression_list(production_call.arg_list_id);
-                    let requirement_arg_ids = state
-                        .registry
-                        .wrapped_expression_list(requirement_call.arg_list_id);
+                    let production_arg_ids =
+                        state.registry.expression_list(production_call.arg_list_id);
+                    let requirement_arg_ids =
+                        state.registry.expression_list(requirement_call.arg_list_id);
                     production_arg_ids
                         .iter()
                         .copied()
@@ -377,7 +372,7 @@ pub fn as_variant_call(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
     nfid: NormalFormNodeId,
-) -> Option<(NodeId<Variant>, ListId<NodeId<WrappedExpression>>)> {
+) -> Option<(NodeId<Variant>, ListId<ExpressionId>)> {
     let wrapped = registry.wrapped_expression(nfid.0);
     match &wrapped.expression {
         Expression::Call(call) => {
@@ -453,14 +448,14 @@ impl<T> MapGoalMismatchErr for Result<T, TypeError> {
 #[derive(Clone, Copy, Debug)]
 pub struct AlgebraicDataType {
     pub callee_id: NodeId<Identifier>,
-    pub arg_list_id: ListId<NodeId<WrappedExpression>>,
+    pub arg_list_id: ListId<ExpressionId>,
 }
 
 pub(super) fn as_algebraic_data_type(
     state: &mut TypeCheckState,
     term_id: NormalFormNodeId,
 ) -> Option<AlgebraicDataType> {
-    let empty_list_id = state.registry.add_wrapped_expression_list(Vec::new());
+    let empty_list_id = state.registry.add_expression_list(Vec::new());
 
     let term = state.registry.wrapped_expression(term_id.0);
     match &term.expression {
@@ -486,8 +481,8 @@ pub fn are_expressions_equal_ignoring_ids(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
-    a: NodeId<WrappedExpression>,
-    b: NodeId<WrappedExpression>,
+    a: ExpressionId,
+    b: ExpressionId,
 ) -> bool {
     let node_info = (registry, symbol_db);
     let a_sih = sih_cache.get_structural_identity_hash(a, node_info);
@@ -499,8 +494,8 @@ pub fn is_term_a_non_strict_subterm(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
     sih_cache: &mut NodeStructuralIdentityHashCache,
-    sub_id: NodeId<WrappedExpression>,
-    super_id: NodeId<WrappedExpression>,
+    sub_id: ExpressionId,
+    super_id: ExpressionId,
 ) -> bool {
     if are_expressions_equal_ignoring_ids(registry, symbol_db, sih_cache, sub_id, super_id) {
         return true;
@@ -515,7 +510,7 @@ pub fn is_term_a_non_strict_subterm(
             is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, dot.left_id)
         }
         Expression::Call(call) => {
-            let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+            let arg_ids = registry.expression_list(call.arg_list_id);
             is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, call.callee_id)
                 || arg_ids.iter().copied().any(|arg_id| {
                     is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, arg_id)

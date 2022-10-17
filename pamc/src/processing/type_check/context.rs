@@ -16,7 +16,7 @@ pub struct Substitution {
 #[derive(Clone, Copy, Debug)]
 pub enum SubstitutionLhs {
     Symbol(Symbol),
-    Expression(NodeId<WrappedExpression>),
+    Expression(ExpressionId),
 }
 
 #[derive(Clone, Debug)]

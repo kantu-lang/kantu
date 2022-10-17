@@ -6,7 +6,7 @@ use crate::data::{
 };
 
 #[derive(Clone, Debug)]
-pub struct IllegalVariantReturnTypeError(pub NodeId<WrappedExpression>);
+pub struct IllegalVariantReturnTypeError(pub ExpressionId);
 
 pub fn check_variant_return_types_for_file(
     symbol_db: &SymbolDatabase,

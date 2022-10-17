@@ -25,7 +25,7 @@ pub struct Param {
     pub id: NodeId<Self>,
     pub is_dashed: bool,
     pub name_id: NodeId<Identifier>,
-    pub type_id: NodeId<WrappedExpression>,
+    pub type_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,31 +33,24 @@ pub struct Variant {
     pub id: NodeId<Self>,
     pub name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Param>>,
-    pub return_type_id: NodeId<WrappedExpression>,
+    pub return_type_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub id: NodeId<Self>,
     pub name_id: NodeId<Identifier>,
-    pub value_id: NodeId<WrappedExpression>,
+    pub value_id: ExpressionId,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WrappedExpression {
-    pub id: NodeId<Self>,
-    // TODO: This should be `expression_id`.
-    pub expression: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Expression {
-    Identifier(Identifier),
-    Dot(Box<Dot>),
-    Call(Box<Call>),
-    Fun(Box<Fun>),
-    Match(Box<Match>),
-    Forall(Box<Forall>),
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ExpressionId {
+    Identifier(NodeId<Identifier>),
+    Dot(NodeId<Dot>),
+    Call(NodeId<Call>),
+    Fun(NodeId<Fun>),
+    Match(NodeId<Match>),
+    Forall(NodeId<Forall>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,15 +70,15 @@ pub use crate::data::unregistered_ast::ReservedIdentifierName;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dot {
     pub id: NodeId<Self>,
-    pub left_id: NodeId<WrappedExpression>,
+    pub left_id: ExpressionId,
     pub right_id: NodeId<Identifier>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
     pub id: NodeId<Self>,
-    pub callee_id: NodeId<WrappedExpression>,
-    pub arg_list_id: ListId<NodeId<WrappedExpression>>,
+    pub callee_id: ExpressionId,
+    pub arg_list_id: ListId<ExpressionId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -93,14 +86,14 @@ pub struct Fun {
     pub id: NodeId<Self>,
     pub name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Param>>,
-    pub return_type_id: NodeId<WrappedExpression>,
-    pub body_id: NodeId<WrappedExpression>,
+    pub return_type_id: ExpressionId,
+    pub body_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match {
     pub id: NodeId<Self>,
-    pub matchee_id: NodeId<WrappedExpression>,
+    pub matchee_id: ExpressionId,
     pub case_list_id: ListId<NodeId<MatchCase>>,
 }
 
@@ -109,12 +102,12 @@ pub struct MatchCase {
     pub id: NodeId<Self>,
     pub variant_name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Identifier>>,
-    pub output_id: NodeId<WrappedExpression>,
+    pub output_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
     pub id: NodeId<Self>,
     pub param_list_id: ListId<NodeId<Param>>,
-    pub output_id: NodeId<WrappedExpression>,
+    pub output_id: ExpressionId,
 }

@@ -8,8 +8,8 @@ pub enum FusionResult {
 
 pub(super) fn compute_ltr_fusion_of_well_typed_expressions(
     state: &mut TypeCheckState,
-    left_id: NodeId<WrappedExpression>,
-    right_id: NodeId<WrappedExpression>,
+    left_id: ExpressionId,
+    right_id: ExpressionId,
 ) -> Result<FusionResult, TypeError> {
     let normalized_left_id = evaluate_well_typed_expression(
         &mut state.registry,
@@ -232,11 +232,11 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                                     if left_callee_symbol == right_callee_symbol {
                                         let left_arg_ids = state
                                             .registry
-                                            .wrapped_expression_list(left_call.arg_list_id)
+                                            .expression_list(left_call.arg_list_id)
                                             .to_vec();
                                         let right_arg_ids = state
                                             .registry
-                                            .wrapped_expression_list(right_call.arg_list_id)
+                                            .expression_list(right_call.arg_list_id)
                                             .to_vec();
                                         let mut out = FusionResult::Fused(vec![]);
                                         for (left_arg_id, right_arg_id) in

@@ -116,43 +116,33 @@ pub fn register_let_statement(
 pub fn register_expression(
     registry: &mut NodeRegistry,
     unregistered: ur::Expression,
-) -> NodeId<WrappedExpression> {
-    let expression = match unregistered {
+) -> ExpressionId {
+    match unregistered {
         ur::Expression::Identifier(unregistered) => {
             let id = register_identifier(registry, unregistered);
-            let registered = registry.identifier(id);
-            Expression::Identifier(registered.clone())
+            ExpressionId::Identifier(id)
         }
         ur::Expression::Dot(unregistered) => {
             let id = register_dot(registry, *unregistered);
-            let registered = registry.dot(id).clone();
-            Expression::Dot(Box::new(registered))
+            ExpressionId::Dot(id)
         }
         ur::Expression::Call(unregistered) => {
             let id = register_call(registry, *unregistered);
-            let registered = registry.call(id).clone();
-            Expression::Call(Box::new(registered))
+            ExpressionId::Call(id)
         }
         ur::Expression::Fun(unregistered) => {
             let id = register_fun(registry, *unregistered);
-            let registered = registry.fun(id).clone();
-            Expression::Fun(Box::new(registered))
+            ExpressionId::Fun(id)
         }
         ur::Expression::Match(unregistered) => {
             let id = register_match(registry, *unregistered);
-            let registered = registry.match_(id).clone();
-            Expression::Match(Box::new(registered))
+            ExpressionId::Match(id)
         }
         ur::Expression::Forall(unregistered) => {
             let id = register_forall(registry, *unregistered);
-            let registered = registry.forall(id).clone();
-            Expression::Forall(Box::new(registered))
+            ExpressionId::Forall(id)
         }
-    };
-    registry.add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-        id: dummy_id(),
-        expression,
-    })
+    }
 }
 
 pub fn register_dot(registry: &mut NodeRegistry, unregistered: ur::Dot) -> NodeId<Dot> {
@@ -172,7 +162,7 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: ur::Call) -> Nod
         .into_iter()
         .map(|unregistered| register_expression(registry, unregistered))
         .collect();
-    let arg_list_id = registry.add_wrapped_expression_list(arg_ids);
+    let arg_list_id = registry.add_expression_list(arg_ids);
     registry.add_call_and_overwrite_its_id(Call {
         id: dummy_id(),
         callee_id,

@@ -14,7 +14,7 @@ pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
     NameClash(NameClashError),
     NameNotFound(NameNotFoundError),
-    UnbindableDotExpressionLhs(NodeId<WrappedExpression>),
+    UnbindableDotExpressionLhs(ExpressionId),
     InvalidDotExpressionRhs(NodeId<Identifier>),
 }
 
@@ -281,7 +281,7 @@ fn bind_call(
 ) -> Result<(), BindError> {
     let callee = registry.wrapped_expression(call.callee_id);
     bind_expression(bind_state, registry, callee)?;
-    let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+    let arg_ids = registry.expression_list(call.arg_list_id);
     for arg_id in arg_ids {
         let arg = registry.wrapped_expression(*arg_id);
         bind_expression(bind_state, registry, arg)?;

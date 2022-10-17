@@ -166,7 +166,7 @@ fn type_check_let_statement(
 
 fn type_check_expression(
     state: &mut TypeCheckState,
-    id: NodeId<WrappedExpression>,
+    id: ExpressionId,
     goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
     match &state.registry.wrapped_expression(id).expression {
@@ -199,7 +199,7 @@ fn type_check_expression(
                 }
             };
             let param_ids = state.registry.param_list(callee_type.param_list_id);
-            let arg_ids = state.registry.wrapped_expression_list(arg_list_id);
+            let arg_ids = state.registry.expression_list(arg_list_id);
             if param_ids.len() != arg_ids.len() {
                 return Err(TypeError::WrongNumberOfArguments {
                     call_id: call_id,
@@ -208,15 +208,16 @@ fn type_check_expression(
                 });
             }
 
-            let arg_ids_and_arg_type_ids: Vec<(NodeId<WrappedExpression>, NormalFormNodeId)> =
-                arg_ids
-                    .to_vec()
-                    .iter()
-                    .map(|arg_id| -> Result<(NodeId<WrappedExpression>, NormalFormNodeId), TypeError> {
+            let arg_ids_and_arg_type_ids: Vec<(ExpressionId, NormalFormNodeId)> = arg_ids
+                .to_vec()
+                .iter()
+                .map(
+                    |arg_id| -> Result<(ExpressionId, NormalFormNodeId), TypeError> {
                         // TODO: Infer arg goal using callee (i.e., current) goal
                         Ok((*arg_id, type_check_expression(state, *arg_id, None)?))
-                    })
-                    .collect::<Result<Vec<_>, TypeError>>()?;
+                    },
+                )
+                .collect::<Result<Vec<_>, TypeError>>()?;
 
             let param_ids = state
                 .registry
@@ -524,75 +525,74 @@ fn type_check_match_case(
         });
     };
 
-    let case_constructed_type_arg_ids: Vec<NodeId<WrappedExpression>> =
-        match state.variant_db.get(variant_id) {
-            VariantReturnType::Call {
-                arg_list_id: variant_return_type_arg_list_id,
-                ..
-            } => {
-                let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
-                let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
-                let case_param_list_id = state.registry.match_case(case_id).param_list_id;
-                let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
-                if variant_param_ids.len() != case_param_ids.len() {
-                    return Err(TypeError::WrongNumberOfMatchCaseParams {
-                        case_id: case_id,
-                        variant_id,
-                        expected_arity: variant_param_ids.len(),
-                        actual_arity: case_param_ids.len(),
-                    });
-                }
-                let substitutions: Vec<Substitution> = variant_param_ids
-                    .into_iter()
-                    .zip(case_param_ids.into_iter())
-                    .map(|(variant_param_id, case_param_id)| {
-                        let variant_param = state.registry.param(variant_param_id);
-                        let variant_param_symbol = state
-                            .symbol_db
-                            .identifier_symbols
-                            .get(variant_param.name_id);
-                        let case_param = state.registry.identifier(case_param_id).clone();
-                        let wrapped_case_param_id = state
-                            .registry
-                            .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
-                                id: dummy_id(),
-                                expression: Expression::Identifier(case_param),
-                            });
-                        // This is safe because an identifier defined by a match case param declaration
-                        // is always a normal form.
-                        let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
-                        Substitution {
-                            from: SubstitutionLhs::Symbol(variant_param_symbol),
-                            to: wrapped_case_param_id,
-                        }
-                    })
-                    .collect();
-
-                let variant_return_type_arg_ids = state
-                    .registry
-                    .wrapped_expression_list(*variant_return_type_arg_list_id)
-                    .to_vec();
-                variant_return_type_arg_ids
-                    .into_iter()
-                    .map(|variant_return_type_arg_id| {
-                        apply_substitutions(
-                            &mut state.registry,
-                            &mut state.symbol_db,
-                            &mut state.sih_cache,
-                            &mut state.fv_cache,
-                            state.type0_identifier_id,
-                            variant_return_type_arg_id,
-                            substitutions.clone(),
-                        )
-                    })
-                    .collect::<Vec<_>>()
+    let case_constructed_type_arg_ids: Vec<ExpressionId> = match state.variant_db.get(variant_id) {
+        VariantReturnType::Call {
+            arg_list_id: variant_return_type_arg_list_id,
+            ..
+        } => {
+            let variant_param_list_id = state.registry.variant(variant_id).param_list_id;
+            let variant_param_ids = state.registry.param_list(variant_param_list_id).to_vec();
+            let case_param_list_id = state.registry.match_case(case_id).param_list_id;
+            let case_param_ids = state.registry.identifier_list(case_param_list_id).to_vec();
+            if variant_param_ids.len() != case_param_ids.len() {
+                return Err(TypeError::WrongNumberOfMatchCaseParams {
+                    case_id: case_id,
+                    variant_id,
+                    expected_arity: variant_param_ids.len(),
+                    actual_arity: case_param_ids.len(),
+                });
             }
-            VariantReturnType::Identifier { .. } => vec![],
-        };
+            let substitutions: Vec<Substitution> = variant_param_ids
+                .into_iter()
+                .zip(case_param_ids.into_iter())
+                .map(|(variant_param_id, case_param_id)| {
+                    let variant_param = state.registry.param(variant_param_id);
+                    let variant_param_symbol = state
+                        .symbol_db
+                        .identifier_symbols
+                        .get(variant_param.name_id);
+                    let case_param = state.registry.identifier(case_param_id).clone();
+                    let wrapped_case_param_id = state
+                        .registry
+                        .add_wrapped_expression_and_overwrite_its_id(WrappedExpression {
+                            id: dummy_id(),
+                            expression: Expression::Identifier(case_param),
+                        });
+                    // This is safe because an identifier defined by a match case param declaration
+                    // is always a normal form.
+                    let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);
+                    Substitution {
+                        from: SubstitutionLhs::Symbol(variant_param_symbol),
+                        to: wrapped_case_param_id,
+                    }
+                })
+                .collect();
+
+            let variant_return_type_arg_ids = state
+                .registry
+                .expression_list(*variant_return_type_arg_list_id)
+                .to_vec();
+            variant_return_type_arg_ids
+                .into_iter()
+                .map(|variant_return_type_arg_id| {
+                    apply_substitutions(
+                        &mut state.registry,
+                        &mut state.symbol_db,
+                        &mut state.sih_cache,
+                        &mut state.fv_cache,
+                        state.type0_identifier_id,
+                        variant_return_type_arg_id,
+                        substitutions.clone(),
+                    )
+                })
+                .collect::<Vec<_>>()
+        }
+        VariantReturnType::Identifier { .. } => vec![],
+    };
 
     let matchee_type_arg_ids = state
         .registry
-        .wrapped_expression_list(matchee_type.arg_list_id)
+        .expression_list(matchee_type.arg_list_id)
         .to_vec();
 
     assert_eq!(matchee_type_arg_ids.len(), case_constructed_type_arg_ids.len(), "The number of type arguments of the matchee type and the number of type arguments of the constructed type should be the same. But they were different. This indicates a serious logic error.");

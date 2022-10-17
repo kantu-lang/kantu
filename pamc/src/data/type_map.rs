@@ -2,7 +2,7 @@ use crate::data::{node_registry::NodeId, registered_ast::*, symbol_database::Sym
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Copy, Debug)]
-pub struct NormalFormNodeId(pub NodeId<WrappedExpression>);
+pub struct NormalFormNodeId(pub ExpressionId);
 
 #[derive(Clone, Debug)]
 pub struct TypeMap {

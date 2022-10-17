@@ -23,13 +23,23 @@ use std::hash::Hasher;
 /// using this struct.
 #[derive(Clone, Debug)]
 pub struct NodeStructuralIdentityHashCache {
-    wrapped_expression_hashes: Vec<Option<u64>>,
+    identifier_hashes: Vec<Option<u64>>,
+    dot_hashes: Vec<Option<u64>>,
+    call_hashes: Vec<Option<u64>>,
+    fun_hashes: Vec<Option<u64>>,
+    match_hashes: Vec<Option<u64>>,
+    forall_hashes: Vec<Option<u64>>,
 }
 
 impl NodeStructuralIdentityHashCache {
     pub fn empty() -> Self {
         Self {
-            wrapped_expression_hashes: Vec::new(),
+            identifier_hashes: Vec::new(),
+            dot_hashes: Vec::new(),
+            call_hashes: Vec::new(),
+            fun_hashes: Vec::new(),
+            match_hashes: Vec::new(),
+            forall_hashes: Vec::new(),
         }
     }
 }
@@ -37,7 +47,7 @@ impl NodeStructuralIdentityHashCache {
 impl NodeStructuralIdentityHashCache {
     pub fn get_structural_identity_hash(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
+        node_id: ExpressionId,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
         if let Some(cached) = self.get_cached_structural_identity_hash(node_id) {
@@ -47,19 +57,20 @@ impl NodeStructuralIdentityHashCache {
         }
     }
 
-    fn get_cached_structural_identity_hash(
-        &mut self,
-        node_id: NodeId<WrappedExpression>,
-    ) -> Option<u64> {
-        self.wrapped_expression_hashes
-            .get(node_id.raw)
-            .copied()
-            .flatten()
+    fn get_cached_structural_identity_hash(&mut self, node_id: ExpressionId) -> Option<u64> {
+        match node_id {
+            ExpressionId::Identifier(id) => self.identifier_hashes[id.raw],
+            ExpressionId::Dot(id) => self.dot_hashes[id.raw],
+            ExpressionId::Call(id) => self.call_hashes[id.raw],
+            ExpressionId::Fun(id) => self.fun_hashes[id.raw],
+            ExpressionId::Match(id) => self.match_hashes[id.raw],
+            ExpressionId::Forall(id) => self.forall_hashes[id.raw],
+        }
     }
 
     fn compute_hash_and_cache(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
+        node_id: ExpressionId,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
         let hash = self.compute_wrapped_expression_hash(node_id, node_info);
@@ -69,20 +80,16 @@ impl NodeStructuralIdentityHashCache {
 
     fn compute_wrapped_expression_hash(
         &mut self,
-        node_id: NodeId<WrappedExpression>,
+        node_id: ExpressionId,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
-        let (registry, _) = node_info;
-        let node = registry.wrapped_expression(node_id);
-        match &node.expression {
-            Expression::Identifier(identifier) => {
-                self.compute_identifier_hash(identifier.id, node_info)
-            }
-            Expression::Dot(dot) => self.compute_dot_hash(dot.id, node_info),
-            Expression::Call(call) => self.compute_call_hash(call.id, node_info),
-            Expression::Fun(fun) => self.compute_fun_hash(fun.id, node_info),
-            Expression::Match(match_) => self.compute_match_hash(match_.id, node_info),
-            Expression::Forall(forall) => self.compute_forall_hash(forall.id, node_info),
+        match node_id {
+            ExpressionId::Identifier(id) => self.compute_identifier_hash(id, node_info),
+            ExpressionId::Dot(id) => self.compute_dot_hash(id, node_info),
+            ExpressionId::Call(id) => self.compute_call_hash(id, node_info),
+            ExpressionId::Fun(id) => self.compute_fun_hash(id, node_info),
+            ExpressionId::Match(id) => self.compute_match_hash(id, node_info),
+            ExpressionId::Forall(id) => self.compute_forall_hash(id, node_info),
         }
     }
 
@@ -124,7 +131,7 @@ impl NodeStructuralIdentityHashCache {
         let (registry, _) = node_info;
         let call = registry.call(node_id);
         let callee_hash = self.get_structural_identity_hash(call.callee_id, node_info);
-        let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+        let arg_ids = registry.expression_list(call.arg_list_id);
 
         let mut hasher = FxHasher::default();
         hash_u64(callee_hash, &mut hasher);
@@ -215,12 +222,20 @@ impl NodeStructuralIdentityHashCache {
         hasher.finish()
     }
 
-    fn set_wrapped_expression_hash(&mut self, node_id: NodeId<WrappedExpression>, hash: u64) {
-        let min_len = node_id.raw + 1;
-        if self.wrapped_expression_hashes.len() < min_len {
-            self.wrapped_expression_hashes.resize(min_len, None);
+    fn set_wrapped_expression_hash(&mut self, node_id: ExpressionId, hash: u64) {
+        let (index, vec) = match node_id {
+            ExpressionId::Identifier(id) => (id.raw, &mut self.identifier_hashes),
+            ExpressionId::Dot(id) => (id.raw, &mut self.dot_hashes),
+            ExpressionId::Call(id) => (id.raw, &mut self.call_hashes),
+            ExpressionId::Fun(id) => (id.raw, &mut self.fun_hashes),
+            ExpressionId::Match(id) => (id.raw, &mut self.match_hashes),
+            ExpressionId::Forall(id) => (id.raw, &mut self.forall_hashes),
+        };
+        let min_len = index + 1;
+        if vec.len() < min_len {
+            vec.resize(min_len, None);
         }
-        self.wrapped_expression_hashes[node_id.raw] = Some(hash);
+        vec[index] = Some(hash);
     }
 }
 

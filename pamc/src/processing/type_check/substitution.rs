@@ -7,9 +7,9 @@ pub fn apply_substitutions(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
+    target_id: ExpressionId,
     substitutions: impl IntoIterator<Item = Substitution>,
-) -> NodeId<WrappedExpression> {
+) -> ExpressionId {
     let mut target_id = target_id;
     for substitution in substitutions {
         target_id = apply_substitution(
@@ -38,9 +38,9 @@ pub fn apply_substitution(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
+    target_id: ExpressionId,
     substitutions: Substitution,
-) -> NodeId<WrappedExpression> {
+) -> ExpressionId {
     let mut target_id = target_id;
     loop {
         let new_id = apply_single_substitution(
@@ -65,9 +65,9 @@ fn apply_single_substitution(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
+    target_id: ExpressionId,
     substitution: Substitution,
-) -> NodeId<WrappedExpression> {
+) -> ExpressionId {
     match substitution.from {
         SubstitutionLhs::Expression(from) => apply_single_substitution_using_lhs_expression(
             registry,
@@ -181,10 +181,10 @@ fn apply_single_substitution_using_lhs_expression(
     sih_cache: &mut NodeStructuralIdentityHashCache,
     fv_cache: &mut NodeFreeVariableCache,
     type0_identifier_id: NormalFormNodeId,
-    target_id: NodeId<WrappedExpression>,
-    from_id: NodeId<WrappedExpression>,
-    to_id: NodeId<WrappedExpression>,
-) -> NodeId<WrappedExpression> {
+    target_id: ExpressionId,
+    from_id: ExpressionId,
+    to_id: ExpressionId,
+) -> ExpressionId {
     // We can avoid capture avoiding by checking if `substitution.to` includes a bound variable
     // any time we enter a node with params (e.g., fun, forall, match case).
     // Or, we could just always substitute said params with new params to avoid capture.
@@ -216,8 +216,8 @@ fn apply_single_substitution_using_lhs_expression(
                 to_id,
             );
             let new_arg_list_id = {
-                let old_arg_ids = registry.wrapped_expression_list(old_arg_list_id).to_vec();
-                let new_arg_ids: Vec<NodeId<WrappedExpression>> = old_arg_ids
+                let old_arg_ids = registry.expression_list(old_arg_list_id).to_vec();
+                let new_arg_ids: Vec<ExpressionId> = old_arg_ids
                     .iter()
                     .copied()
                     .map(|arg_id| {
@@ -245,7 +245,7 @@ fn apply_single_substitution_using_lhs_expression(
                 {
                     old_arg_list_id
                 } else {
-                    registry.add_wrapped_expression_list(new_arg_ids)
+                    registry.add_expression_list(new_arg_ids)
                 }
             };
             if old_callee_id == new_callee_id && old_arg_list_id == new_arg_list_id {

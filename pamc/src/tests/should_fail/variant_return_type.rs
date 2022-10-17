@@ -67,7 +67,7 @@ fn foreign_non_nullary_type() {
         include_str!("../sample_code/should_fail/variant_return_type/foreign_non_nullary_type.ph");
     expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
         Expression::Call(call) => {
-            let arg_ids = registry.wrapped_expression_list(call.arg_list_id);
+            let arg_ids = registry.expression_list(call.arg_list_id);
             assert_eq!(arg_ids.len(), 1);
             let callee = &registry.wrapped_expression(call.callee_id);
             match &callee.expression {
