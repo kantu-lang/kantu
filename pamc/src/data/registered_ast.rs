@@ -43,25 +43,7 @@ pub struct LetStatement {
     pub value_id: ExpressionId,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum ExpressionId {
-    Identifier(NodeId<Identifier>),
-    Dot(NodeId<Dot>),
-    Call(NodeId<Call>),
-    Fun(NodeId<Fun>),
-    Match(NodeId<Match>),
-    Forall(NodeId<Forall>),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ExpressionRef<'a> {
-    Identifier(&'a Identifier),
-    Dot(&'a Dot),
-    Call(&'a Call),
-    Fun(&'a Fun),
-    Match(&'a Match),
-    Forall(&'a Forall),
-}
+pub type ExpressionId = crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {

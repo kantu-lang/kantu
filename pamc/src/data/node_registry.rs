@@ -1,5 +1,7 @@
 use crate::data::registered_ast::*;
 
+// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
+// since #[derive] only works if T implements the respective traits.
 #[derive(Debug, PartialEq, Eq)]
 pub struct NodeId<T> {
     pub raw: usize,
@@ -38,6 +40,16 @@ pub enum FileItemNodeId {
     Let(NodeId<LetStatement>),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ExpressionId {
+    Identifier(NodeId<Identifier>),
+    Dot(NodeId<Dot>),
+    Call(NodeId<Call>),
+    Fun(NodeId<Fun>),
+    Match(NodeId<Match>),
+    Forall(NodeId<Forall>),
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct ListId<T> {
     pub start: usize,
@@ -70,8 +82,15 @@ impl<T> std::hash::Hash for ListId<T> {
     }
 }
 
-// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
-// since #[derive] only works if T implements the respective traits.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExpressionRef<'a> {
+    Identifier(&'a Identifier),
+    Dot(&'a Dot),
+    Call(&'a Call),
+    Fun(&'a Fun),
+    Match(&'a Match),
+    Forall(&'a Forall),
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NodeRegistry {
