@@ -8,12 +8,21 @@ pub enum SimplifyAstError {
 pub fn simplify_file(unsimplified: ast::File) -> Result<File, SimplifyAstError> {
     Ok(File {
         id: unsimplified.id,
-        items: unsimplified
-            .items
-            .into_iter()
-            .map(simplify_file_item)
-            .collect::<Result<Vec<_>, SimplifyAstError>>()?,
+        items: vec_result_map(unsimplified.items, simplify_file_item)?,
     })
+}
+
+/// Returns `Ok` if `f(x)` returns `Ok` for all `x` in `vec`.
+/// Otherwise, returns `Err` with the first `Err` returned by `f`.
+fn vec_result_map<T, U, E, F>(vec: Vec<T>, mut f: F) -> Result<Vec<U>, E>
+where
+    F: FnMut(T) -> Result<U, E>,
+{
+    let mut result = Vec::with_capacity(vec.len());
+    for item in vec {
+        result.push(f(item)?);
+    }
+    Ok(result)
 }
 
 fn simplify_file_item(unsimplified: ast::FileItem) -> Result<FileItem, SimplifyAstError> {
@@ -26,21 +35,10 @@ fn simplify_file_item(unsimplified: ast::FileItem) -> Result<FileItem, SimplifyA
 fn simplify_type_statement(
     unsimplified: ast::TypeStatement,
 ) -> Result<TypeStatement, SimplifyAstError> {
-    let name = unsimplified.name;
-    let params = unsimplified
-        .params
-        .into_iter()
-        .map(simplify_param)
-        .collect::<Result<Vec<_>, SimplifyAstError>>()?;
-    let variants = unsimplified
-        .variants
-        .into_iter()
-        .map(simplify_variant)
-        .collect::<Result<Vec<_>, SimplifyAstError>>()?;
     Ok(TypeStatement {
-        name,
-        params,
-        variants,
+        name: unsimplified.name,
+        params: vec_result_map(unsimplified.params, simplify_param)?,
+        variants: vec_result_map(unsimplified.variants, simplify_variant)?,
     })
 }
 
@@ -53,14 +51,9 @@ fn simplify_param(unsimplified: ast::Param) -> Result<Param, SimplifyAstError> {
 }
 
 fn simplify_variant(unsimplified: ast::Variant) -> Result<Variant, SimplifyAstError> {
-    let params = unsimplified
-        .params
-        .into_iter()
-        .map(simplify_param)
-        .collect::<Result<Vec<_>, SimplifyAstError>>()?;
     Ok(Variant {
         name: unsimplified.name,
-        params,
+        params: vec_result_map(unsimplified.params, simplify_param)?,
         return_type: simplify_expression(unsimplified.return_type)?,
     })
 }
@@ -119,22 +112,14 @@ fn simplify_dot(unsimplified: Box<ast::Dot>) -> Result<Expression, SimplifyAstEr
 fn simplify_call(unsimplified: ast::Call) -> Result<Expression, SimplifyAstError> {
     Ok(Expression::Call(Box::new(Call {
         callee: simplify_expression(unsimplified.callee)?,
-        args: unsimplified
-            .args
-            .into_iter()
-            .map(simplify_expression)
-            .collect::<Result<Vec<_>, SimplifyAstError>>()?,
+        args: vec_result_map(unsimplified.args, simplify_expression)?,
     })))
 }
 
 fn simplify_fun(unsimplified: ast::Fun) -> Result<Expression, SimplifyAstError> {
     Ok(Expression::Fun(Box::new(Fun {
         name: unsimplified.name,
-        params: unsimplified
-            .params
-            .into_iter()
-            .map(simplify_param)
-            .collect::<Result<Vec<_>, SimplifyAstError>>()?,
+        params: vec_result_map(unsimplified.params, simplify_param)?,
         return_type: simplify_expression(unsimplified.return_type)?,
         body: simplify_expression(unsimplified.body)?,
     })))
@@ -143,11 +128,7 @@ fn simplify_fun(unsimplified: ast::Fun) -> Result<Expression, SimplifyAstError> 
 fn simplify_match(unsimplified: ast::Match) -> Result<Expression, SimplifyAstError> {
     Ok(Expression::Match(Box::new(Match {
         matchee: simplify_expression(unsimplified.matchee)?,
-        cases: unsimplified
-            .cases
-            .into_iter()
-            .map(simplify_match_case)
-            .collect::<Result<Vec<_>, SimplifyAstError>>()?,
+        cases: vec_result_map(unsimplified.cases, simplify_match_case)?,
     })))
 }
 
@@ -161,11 +142,7 @@ fn simplify_match_case(unsimplified: ast::MatchCase) -> Result<MatchCase, Simpli
 
 fn simplify_forall(unsimplified: ast::Forall) -> Result<Expression, SimplifyAstError> {
     Ok(Expression::Forall(Box::new(Forall {
-        params: unsimplified
-            .params
-            .into_iter()
-            .map(simplify_param)
-            .collect::<Result<Vec<_>, SimplifyAstError>>()?,
+        params: vec_result_map(unsimplified.params, simplify_param)?,
         output: simplify_expression(unsimplified.output)?,
     })))
 }
