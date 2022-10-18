@@ -25,15 +25,14 @@ fn rec_fun_same_param() {
             callee: callee_id,
             arg: arg_id,
         } => {
-            let callee = registry.identifier(callee_id);
             let arg = &registry.expression_ref(arg_id);
             assert_eq!(
-                callee.name,
-                standard_ident_name("x"),
+                component_identifier_names(registry, callee_id),
+                vec![standard_ident_name("x")],
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, ExpressionRef::Identifier(identifier) if identifier.name == standard_ident_name("a")),
+                matches!(arg, ExpressionRef::Name(name) if component_identifier_names(registry, name.id) == vec![standard_ident_name("a")]),
                 "Unexpected arg: {:#?}",
                 arg
             );
@@ -50,15 +49,14 @@ fn rec_fun_non_substruct() {
             callee: callee_id,
             arg: arg_id,
         } => {
-            let callee = registry.identifier(callee_id);
             let arg = &registry.expression_ref(arg_id);
             assert_eq!(
-                callee.name,
-                standard_ident_name("x"),
+                component_identifier_names(registry, callee_id),
+                vec![standard_ident_name("x")],
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, ExpressionRef::Identifier(identifier) if identifier.name == standard_ident_name("b")),
+                matches!(arg, ExpressionRef::Name(name) if component_identifier_names(registry, name.id) == vec![standard_ident_name("b")]),
                 "Unexpected arg: {:#?}",
                 arg
             );
@@ -75,15 +73,14 @@ fn rec_fun_non_ident() {
             callee: callee_id,
             arg: arg_id,
         } => {
-            let callee = registry.identifier(callee_id);
             let arg = &registry.expression_ref(arg_id);
             assert_eq!(
-                callee.name,
-                standard_ident_name("x"),
+                component_identifier_names(registry, callee_id),
+                vec![standard_ident_name("x")],
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, ExpressionRef::Dot(dot) if registry.identifier(dot.right_id).name == standard_ident_name("O")),
+                matches!(arg, ExpressionRef::Name(name) if component_identifier_names(registry, name.id) == vec![standard_ident_name("Nat"), standard_ident_name("O")]),
                 "Unexpected arg: {:#?}",
                 arg
             );
@@ -100,10 +97,9 @@ fn rec_fun_no_decreasing_param() {
         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
             callee: callee_id,
         } => {
-            let callee = registry.identifier(callee_id);
             assert_eq!(
-                callee.name,
-                standard_ident_name("x"),
+                component_identifier_names(registry, callee_id),
+                vec![standard_ident_name("x")],
                 "Unexpected param name"
             );
         }

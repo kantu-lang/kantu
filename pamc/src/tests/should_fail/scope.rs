@@ -205,7 +205,9 @@ fn duplicate_match_case_params() {
     expect_name_clash_error(src, "x", SymbolSourceKind::Param, SymbolSourceKind::Param);
 }
 
+// TODO: Move this to the AST simplification test.
 #[test]
+#[ignore]
 fn reference_unbindable_dot_lhs() {
     let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
     expect_bind_error(src, |err, registry| match err {
