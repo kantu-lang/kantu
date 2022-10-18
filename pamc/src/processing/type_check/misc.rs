@@ -559,3 +559,22 @@ pub fn is_term_a_non_strict_subterm(
         }
     }
 }
+
+pub fn identifier_id_to_expression_id(
+    registry: &mut NodeRegistry,
+    identifier_id: NodeId<Identifier>,
+) -> ExpressionId {
+    let component_list_id = registry.add_identifier_list(vec![identifier_id]);
+    let name_id = registry.add_name_expression_and_overwrite_its_id(NameExpression {
+        id: dummy_id(),
+        component_list_id,
+    });
+    ExpressionId::Name(name_id)
+}
+
+pub fn identifier_id_to_nfid(
+    registry: &mut NodeRegistry,
+    identifier_id: NodeId<Identifier>,
+) -> NormalFormNodeId {
+    NormalFormNodeId(identifier_id_to_expression_id(registry, identifier_id))
+}

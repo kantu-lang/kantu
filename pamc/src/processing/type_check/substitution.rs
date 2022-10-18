@@ -111,27 +111,26 @@ fn get_wrapped_identifier_id_for_symbol(
         .get(&symbol)
         .expect("Symbol not found");
     match source {
-        // type variant typed_param untyped_param let fun builtin_type_title_case
         SymbolSource::Type(id) => {
             let type_ = registry.type_statement(id);
-            NormalFormNodeId(ExpressionId::Identifier(type_.name_id))
+            identifier_id_to_nfid(registry, type_.name_id)
         }
         SymbolSource::Variant(id) => {
             let variant = registry.variant(id);
-            NormalFormNodeId(ExpressionId::Identifier(variant.name_id))
+            identifier_id_to_nfid(registry, variant.name_id)
         }
         SymbolSource::TypedParam(id) => {
             let param = registry.param(id);
-            NormalFormNodeId(ExpressionId::Identifier(param.name_id))
+            identifier_id_to_nfid(registry, param.name_id)
         }
-        SymbolSource::UntypedParam(id) => NormalFormNodeId(ExpressionId::Identifier(id)),
+        SymbolSource::UntypedParam(id) => identifier_id_to_nfid(registry, id),
         SymbolSource::Let(id) => {
             let let_ = registry.let_statement(id);
-            NormalFormNodeId(ExpressionId::Identifier(let_.name_id))
+            identifier_id_to_nfid(registry, let_.name_id)
         }
         SymbolSource::Fun(id) => {
             let fun = registry.fun(id);
-            NormalFormNodeId(ExpressionId::Identifier(fun.name_id))
+            identifier_id_to_nfid(registry, fun.name_id)
         }
         SymbolSource::BuiltinTypeTitleCase => type0_identifier_id,
     }
@@ -157,11 +156,7 @@ fn apply_single_substitution_using_lhs_expression(
     }
 
     match target_id {
-        ExpressionId::Identifier(_) => target_id,
-        // TODO: In the future, if we allow arbitrary
-        // expressions in the lhs of Dot expression,
-        // we will need to handle that here.
-        ExpressionId::Dot(_) => target_id,
+        ExpressionId::Name(_) => target_id,
         ExpressionId::Call(call_id) => {
             let call = registry.call(call_id);
             let old_callee_id = call.callee_id;
@@ -442,7 +437,14 @@ fn apply_single_substitution_using_lhs_expression(
                     new_name_id
                 };
                 let renamed_body_id = {
-                    let wrapped_new_name_id = ExpressionId::Identifier(new_name_id);
+                    let new_name_id = {
+                        let component_list_id = registry.add_identifier_list(vec![new_name_id]);
+                        registry.add_name_expression_and_overwrite_its_id(NameExpression {
+                            id: dummy_id(),
+                            component_list_id,
+                        })
+                    };
+                    let wrapped_new_name_id = ExpressionId::Name(new_name_id);
                     apply_single_substitution_using_lhs_expression(
                         registry,
                         symbol_db,
