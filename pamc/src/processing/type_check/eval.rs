@@ -71,18 +71,9 @@ fn perform_eval_step_on_well_typed_expression(
     }
 
     match expression_id {
-        ExpressionId::Identifier(identifier_id) => {
-            let symbol = symbol_db.identifier_symbols.get(identifier_id);
-            Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
-                registry,
-                symbol_db,
-                symbol,
-                expression_id,
-            ))
-        }
-        ExpressionId::Dot(dot_id) => {
-            let dot = registry.dot(dot_id);
-            let symbol = symbol_db.identifier_symbols.get(dot.right_id);
+        ExpressionId::Name(name_expression_id) => {
+            let rightmost_component_id = registry.rightmost_component(name_expression_id).id;
+            let symbol = symbol_db.identifier_symbols.get(rightmost_component_id);
             Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
                 registry,
                 symbol_db,
@@ -145,8 +136,10 @@ fn perform_eval_step_on_well_typed_expression(
             }
 
             match callee_id {
-                ExpressionId::Identifier(callee_identifier_id) => {
-                    let callee_symbol = symbol_db.identifier_symbols.get(callee_identifier_id);
+                ExpressionId::Name(callee_name_expression_id) => {
+                    let callee_name_rightmost_component_id =
+                        registry.rightmost_component(callee_name_expression_id).id;
+                    let callee_symbol = symbol_db.identifier_symbols.get(callee_name_rightmost_component_id);
                     let callee_source = *symbol_db.symbol_sources.get(&callee_symbol).expect("Symbol referenced in identifier expression should have a source.");
                     let callee_fun_id: NodeId<Fun> = match callee_source {
                         SymbolSource::Fun(fun_id) => fun_id,
@@ -183,8 +176,15 @@ fn perform_eval_step_on_well_typed_expression(
         }
         ExpressionId::Fun(fun_id) => {
             let fun = registry.fun(fun_id);
-            let name_id = fun.name_id;
-            let wrapped_name_id = ExpressionId::Identifier(name_id);
+            let wrapped_name_id = {
+                let component_list_id = registry.add_identifier_list(vec![fun.name_id]);
+                ExpressionId::Name(registry.add_name_expression_and_overwrite_its_id(
+                    NameExpression {
+                        id: dummy_id(),
+                        component_list_id,
+                    },
+                ))
+            };
             Ok(EvalStepResult::Stepped(wrapped_name_id))
         }
         ExpressionId::Match(match_id) => {
