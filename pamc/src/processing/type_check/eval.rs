@@ -176,15 +176,7 @@ fn perform_eval_step_on_well_typed_expression(
         }
         ExpressionId::Fun(fun_id) => {
             let fun = registry.fun(fun_id);
-            let wrapped_name_id = {
-                let component_list_id = registry.add_identifier_list(vec![fun.name_id]);
-                ExpressionId::Name(registry.add_name_expression_and_overwrite_its_id(
-                    NameExpression {
-                        id: dummy_id(),
-                        component_list_id,
-                    },
-                ))
-            };
+            let wrapped_name_id = identifier_id_to_expression_id(registry, fun.name_id);
             Ok(EvalStepResult::Stepped(wrapped_name_id))
         }
         ExpressionId::Match(match_id) => {

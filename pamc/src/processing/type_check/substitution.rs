@@ -437,14 +437,7 @@ fn apply_single_substitution_using_lhs_expression(
                     new_name_id
                 };
                 let renamed_body_id = {
-                    let new_name_id = {
-                        let component_list_id = registry.add_identifier_list(vec![new_name_id]);
-                        registry.add_name_expression_and_overwrite_its_id(NameExpression {
-                            id: dummy_id(),
-                            component_list_id,
-                        })
-                    };
-                    let wrapped_new_name_id = ExpressionId::Name(new_name_id);
+                    let wrapped_new_name_id = identifier_id_to_expression_id(registry, new_name_id);
                     apply_single_substitution_using_lhs_expression(
                         registry,
                         symbol_db,
