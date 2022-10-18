@@ -3,7 +3,7 @@ use crate::data::{
     node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ListId, NodeId, NodeRegistry},
     registered_sst::*,
-    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
+    symbol_database::{IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
     variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
 };

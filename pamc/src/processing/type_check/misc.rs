@@ -52,7 +52,7 @@ pub(super) fn is_expression_type0_or_type1(state: &TypeCheckState, type_id: Expr
             let symbol = state
                 .symbol_db
                 .identifier_symbols
-                .get((name_id, &*state.registry));
+                .get_from_rightmost((name_id, &*state.registry));
             symbol == state.symbol_db.provider.type0_symbol()
                 || symbol == state.symbol_db.provider.type1_symbol()
         }
@@ -69,7 +69,7 @@ pub(super) fn get_variant_id_corresponding_to_match_case(
     let callee_symbol = state
         .symbol_db
         .identifier_symbols
-        .get((matchee_type.callee_id, &*state.registry));
+        .get_from_rightmost((matchee_type.callee_id, &*state.registry));
     let variant_name = &state.registry.identifier(case.variant_name_id).name;
     let target_symbol = state
         .symbol_db
@@ -177,11 +177,11 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
                     let production_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get((production_callee_name_id, &*state.registry));
+                        .get_from_rightmost((production_callee_name_id, &*state.registry));
                     let requirement_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get((requirement_callee_name_id, &*state.registry));
+                        .get_from_rightmost((requirement_callee_name_id, &*state.registry));
                     if production_callee_symbol != requirement_callee_symbol {
                         return false;
                     }
@@ -270,7 +270,7 @@ fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) ->
             let symbol = state
                 .symbol_db
                 .identifier_symbols
-                .get((name_id, &*state.registry));
+                .get_from_rightmost((name_id, &*state.registry));
             let source = *state
                 .symbol_db
                 .symbol_sources
@@ -293,7 +293,7 @@ fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) ->
                     let symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get((callee_name_id, &*state.registry));
+                        .get_from_rightmost((callee_name_id, &*state.registry));
                     let source = *state
                         .symbol_db
                         .symbol_sources
@@ -380,7 +380,9 @@ pub fn as_variant_call(
             let call = registry.call(call_id);
             match call.callee_id {
                 ExpressionId::Name(callee_name_id) => {
-                    let symbol = symbol_db.identifier_symbols.get((callee_name_id, registry));
+                    let symbol = symbol_db
+                        .identifier_symbols
+                        .get_from_rightmost((callee_name_id, registry));
                     let symbol_source = symbol_db
                         .symbol_sources
                         .get(&symbol)
@@ -577,4 +579,32 @@ pub fn identifier_id_to_nfid(
     identifier_id: NodeId<Identifier>,
 ) -> NormalFormNodeId {
     NormalFormNodeId(identifier_id_to_expression_id(registry, identifier_id))
+}
+
+trait RightmostIdentifierId {
+    fn rightmost_identifier_id(&self) -> NodeId<Identifier>;
+}
+
+impl RightmostIdentifierId for NodeId<Identifier> {
+    fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
+        *self
+    }
+}
+
+impl RightmostIdentifierId for (NodeId<NameExpression>, &'_ NodeRegistry) {
+    fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
+        self.1.rightmost_component(self.0).id
+    }
+}
+
+impl IdentifierToSymbolMap {
+    // TODO: Refactor consumer code to use this new generic `get`
+    // instead of manually calling `registry.rightmost_component`
+    pub fn get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
+        self.get(r.rightmost_identifier_id())
+    }
+
+    pub fn try_get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
+        self.try_get(r.rightmost_identifier_id())
+    }
 }

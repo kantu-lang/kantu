@@ -1,7 +1,4 @@
-use crate::data::{
-    node_registry::{NodeId, NodeRegistry},
-    registered_sst::*,
-};
+use crate::data::{node_registry::NodeId, registered_sst::*};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Symbol(pub usize);
@@ -75,35 +72,15 @@ mod identifier_to_symbol_map {
         }
     }
 
-    trait RightmostIdentifierId {
-        fn rightmost_identifier_id(&self) -> NodeId<Identifier>;
-    }
-
-    impl RightmostIdentifierId for NodeId<Identifier> {
-        fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
-            *self
-        }
-    }
-
-    impl RightmostIdentifierId for (NodeId<NameExpression>, &'_ NodeRegistry) {
-        fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
-            self.1.rightmost_component(self.0).id
-        }
-    }
-
     impl IdentifierToSymbolMap {
-        // TODO: Refactor consumer code to use this new generic `get`
-        // instead of manually calling `registry.rightmost_component`
-        pub fn get(&self, r: impl RightmostIdentifierId) -> Symbol {
-            let identifier_id = r.rightmost_identifier_id();
+        pub fn get(&self, identifier_id: NodeId<Identifier>) -> Symbol {
             self.try_get(identifier_id).expect(&format!(
                 "Symbol could not be found for {:?}",
                 identifier_id
             ))
         }
 
-        pub fn try_get(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
-            let identifier_id = r.rightmost_identifier_id();
+        pub fn try_get(&self, identifier_id: NodeId<Identifier>) -> Option<Symbol> {
             if identifier_id.raw >= self.map.len() {
                 None
             } else {
