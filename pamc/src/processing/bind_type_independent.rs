@@ -52,6 +52,9 @@ impl From<NameNotFoundError> for BindError {
     }
 }
 
+/// If this function returns `Ok`, then every identifier in the program is bound to a symbol,
+/// EXCEPT for the identifiers that appear as the variant name in a match case node.
+/// The reason we cannot bind variant names is because we don't know the type of the matchee.
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
