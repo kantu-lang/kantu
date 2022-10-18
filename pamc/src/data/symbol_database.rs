@@ -92,6 +92,8 @@ mod identifier_to_symbol_map {
     }
 
     impl IdentifierToSymbolMap {
+        // TODO: Refactor consumer code to use this new generic `get`
+        // instead of manually calling `registry.rightmost_component`
         pub fn get(&self, r: impl RightmostIdentifierId) -> Symbol {
             let identifier_id = r.rightmost_identifier_id();
             self.try_get(identifier_id).expect(&format!(
