@@ -6,6 +6,8 @@ pub mod symbol_database;
 pub mod token;
 pub mod type_map;
 pub mod unregistered_ast;
+/// "SST" stands for "simplified syntax tree".
+pub mod unregistered_sst;
 pub mod variant_return_type;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
