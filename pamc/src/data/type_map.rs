@@ -1,4 +1,4 @@
-use crate::data::{registered_ast::*, symbol_database::Symbol};
+use crate::data::{registered_sst::*, symbol_database::Symbol};
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Copy, Debug)]

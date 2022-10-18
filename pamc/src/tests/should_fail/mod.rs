@@ -19,7 +19,7 @@ use crate::{
 };
 
 use crate::{
-    data::{registered_ast::*, token::TokenKind},
+    data::{registered_sst::*, token::TokenKind},
     processing::{parse::ParseError, validate_fun_recursion::IllegalFunRecursionError},
 };
 

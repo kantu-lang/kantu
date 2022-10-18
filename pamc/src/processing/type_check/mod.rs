@@ -2,7 +2,7 @@ use crate::data::{
     node_free_variable_cache::NodeFreeVariableCache,
     node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ListId, NodeId, NodeRegistry},
-    registered_ast::*,
+    registered_sst::*,
     symbol_database::{Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
     variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},

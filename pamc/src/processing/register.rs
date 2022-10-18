@@ -1,6 +1,6 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
-    registered_ast::*,
+    registered_sst::*,
     unregistered_ast as ur,
 };
 

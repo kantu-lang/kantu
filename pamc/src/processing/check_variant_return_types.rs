@@ -1,6 +1,6 @@
 use crate::data::{
     node_registry::NodeRegistry,
-    registered_ast::*,
+    registered_sst::*,
     symbol_database::SymbolDatabase,
     variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
 };
