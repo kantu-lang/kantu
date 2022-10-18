@@ -53,10 +53,10 @@ fn get_variant_type_args(
     let type_symbol = symbol_db.identifier_symbols.get(type_statement.name_id);
     let return_type_id = variant.return_type_id;
     match return_type_id {
-        ExpressionId::Name(name_expression_id) => {
+        ExpressionId::Name(name_id) => {
             let identifier_symbol = symbol_db
                 .identifier_symbols
-                .get_using_rightmost((name_expression_id, registry));
+                .get_using_rightmost((name_id, registry));
             if identifier_symbol == type_symbol {
                 Ok(VariantReturnType::Identifier {
                     identifier_id: return_type_id,
@@ -68,10 +68,10 @@ fn get_variant_type_args(
         ExpressionId::Call(call_id) => {
             let call = registry.call(call_id);
             match call.callee_id {
-                ExpressionId::Name(name_expression_id) => {
+                ExpressionId::Name(name_id) => {
                     let identifier_symbol = symbol_db
                         .identifier_symbols
-                        .get_using_rightmost((name_expression_id, registry));
+                        .get_using_rightmost((name_id, registry));
                     if identifier_symbol == type_symbol {
                         Ok(VariantReturnType::Call {
                             callee_id: call.callee_id,

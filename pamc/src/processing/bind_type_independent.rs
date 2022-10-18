@@ -237,8 +237,8 @@ fn bind_expression(
 ) -> Result<(), BindError> {
     match expression_id {
         ExpressionId::Name(id) => {
-            let name_expression = registry.name_expression(id);
-            bind_name_expression(bind_state, registry, name_expression)
+            let name = registry.name_expression(id);
+            bind_name_expression(bind_state, registry, name)
         }
         ExpressionId::Call(id) => {
             let call = registry.call(id);
@@ -267,9 +267,9 @@ fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Resul
 fn bind_name_expression(
     bind_state: &mut BindState,
     registry: &NodeRegistry,
-    name_expression: &NameExpression,
+    name: &NameExpression,
 ) -> Result<(), BindError> {
-    let component_ids = registry.identifier_list(name_expression.component_list_id);
+    let component_ids = registry.identifier_list(name.component_list_id);
     assert_ne!(
         component_ids.len(),
         0,

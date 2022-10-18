@@ -95,8 +95,8 @@ impl NodeStructuralIdentityHashCache {
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
         let (registry, symbol_db) = node_info;
-        let name_expression = registry.name_expression(node_id);
-        let component_ids = registry.identifier_list(name_expression.component_list_id);
+        let name = registry.name_expression(node_id);
+        let component_ids = registry.identifier_list(name.component_list_id);
 
         let mut hasher = FxHasher::default();
         for component_id in component_ids {

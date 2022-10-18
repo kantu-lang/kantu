@@ -91,11 +91,11 @@ fn validate_fun_recursion_in_expression(
     expression_id: ExpressionId,
 ) -> Result<(), IllegalFunRecursionError> {
     match expression_id {
-        ExpressionId::Name(name_expression_id) => {
-            if state.reference_restriction(name_expression_id).is_some() {
+        ExpressionId::Name(name_id) => {
+            if state.reference_restriction(name_id).is_some() {
                 return Err(
                     IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
-                        reference: name_expression_id,
+                        reference: name_id,
                     },
                 );
             }

@@ -365,8 +365,6 @@ pub fn is_normal_form_a_variant_call(
     as_variant_call(registry, symbol_db, nfid).is_some()
 }
 
-// TODO: Replace name_expression_id with name_id
-
 // TODO: Check if we need to make it `as_variant_instantiation`,
 // since not all instantiations are calls (i.e., there's the nullary case).
 /// If the expression referenced by `nfid` is not a variant call, returns `None`.
