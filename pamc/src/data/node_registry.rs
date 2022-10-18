@@ -201,10 +201,15 @@ impl NodeRegistry {
         id
     }
 
+    /// Panics if the provided name expression has zero components.
     pub fn add_name_expression_and_overwrite_its_id(
         &mut self,
         mut name_expression: NameExpression,
     ) -> NodeId<NameExpression> {
+        if name_expression.component_list_id.len == 0 {
+            panic!("NameExpression must have at least one component");
+        }
+
         let id = NodeId::<NameExpression>::new(self.name_expressions.len());
         name_expression.id = id;
         self.name_expressions.push(name_expression);
@@ -385,6 +390,18 @@ impl NodeRegistry {
             ExpressionId::Match(id) => ExpressionRef::Match(self.match_(id)),
             ExpressionId::Forall(id) => ExpressionRef::Forall(self.forall(id)),
         }
+    }
+}
+
+impl NodeRegistry {
+    pub fn rightmost_component(&self, id: NodeId<NameExpression>) -> &Identifier {
+        let name_expression = self.name_expression(id);
+        let component_ids = self.identifier_list(name_expression.component_list_id);
+        let rightmost_component_id= *component_ids
+            .last()
+            .expect("A name expression should always have at least one component. This condition should have been checked by NodeRegistry::add_name_expression_and_overwrite_its_id. The fact that a zero-component name expression was successfully registered indicates a serious logic error.")
+            ;
+        self.identifier(rightmost_component_id)
     }
 }
 
