@@ -278,11 +278,10 @@ mod state {
             &self,
             referent_id: NodeId<NameExpression>,
         ) -> Option<&ReferenceRestriction> {
-            let rightmost_component_id = self.registry.rightmost_component(referent_id).id;
             let referent_symbol = self
                 .symbol_db
                 .identifier_symbols
-                .get(rightmost_component_id);
+                .get_from_rightmost((referent_id, self.registry));
             self.internal.reference_restriction(referent_symbol)
         }
 
@@ -293,12 +292,10 @@ mod state {
             possible_substruct: NodeId<NameExpression>,
             possible_superstruct: Symbol,
         ) -> bool {
-            let possible_substruct_rightmost_component_id =
-                self.registry.rightmost_component(possible_substruct).id;
             let possible_substruct_symbol = self
                 .symbol_db
                 .identifier_symbols
-                .get(possible_substruct_rightmost_component_id);
+                .get_from_rightmost((possible_substruct, self.registry));
             self.internal.is_substruct_of_restricted_superstruct(
                 possible_substruct_symbol,
                 possible_superstruct,
@@ -363,11 +360,10 @@ mod state {
                 }
             }
 
-            let matchee_rightmost_component_id = self.registry.rightmost_component(matchee).id;
             let matchee_symbol = self
                 .symbol_db
                 .identifier_symbols
-                .get(matchee_rightmost_component_id);
+                .get_from_rightmost((matchee, self.registry));
             if let Some(substruct_symbols) = self.internal.matchee_substructs_mut(matchee_symbol) {
                 Some(PushAndConvertToSymbol {
                     symbol_db: &self.symbol_db,

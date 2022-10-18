@@ -581,7 +581,7 @@ pub fn identifier_id_to_nfid(
     NormalFormNodeId(identifier_id_to_expression_id(registry, identifier_id))
 }
 
-trait RightmostIdentifierId {
+pub(crate) trait RightmostIdentifierId {
     fn rightmost_identifier_id(&self) -> NodeId<Identifier>;
 }
 
@@ -598,13 +598,11 @@ impl RightmostIdentifierId for (NodeId<NameExpression>, &'_ NodeRegistry) {
 }
 
 impl IdentifierToSymbolMap {
-    // TODO: Refactor consumer code to use this new generic `get`
-    // instead of manually calling `registry.rightmost_component`
-    pub fn get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
+    pub(crate) fn get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
         self.get(r.rightmost_identifier_id())
     }
 
-    pub fn try_get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
+    pub(crate) fn try_get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
         self.try_get(r.rightmost_identifier_id())
     }
 }
