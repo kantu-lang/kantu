@@ -1,6 +1,6 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
-    registered_ast::*,
+    registered_sst::*,
     symbol_database::{Symbol, SymbolDatabase},
 };
 
@@ -23,8 +23,7 @@ use std::hash::Hasher;
 /// using this struct.
 #[derive(Clone, Debug)]
 pub struct NodeStructuralIdentityHashCache {
-    identifier_hashes: Vec<Option<u64>>,
-    dot_hashes: Vec<Option<u64>>,
+    name_expression_hashes: Vec<Option<u64>>,
     call_hashes: Vec<Option<u64>>,
     fun_hashes: Vec<Option<u64>>,
     match_hashes: Vec<Option<u64>>,
@@ -34,8 +33,7 @@ pub struct NodeStructuralIdentityHashCache {
 impl NodeStructuralIdentityHashCache {
     pub fn empty() -> Self {
         Self {
-            identifier_hashes: Vec::new(),
-            dot_hashes: Vec::new(),
+            name_expression_hashes: Vec::new(),
             call_hashes: Vec::new(),
             fun_hashes: Vec::new(),
             match_hashes: Vec::new(),
@@ -59,8 +57,7 @@ impl NodeStructuralIdentityHashCache {
 
     fn get_cached_structural_identity_hash(&mut self, node_id: ExpressionId) -> Option<u64> {
         match node_id {
-            ExpressionId::Identifier(id) => self.identifier_hashes[id.raw],
-            ExpressionId::Dot(id) => self.dot_hashes[id.raw],
+            ExpressionId::Name(id) => self.name_expression_hashes[id.raw],
             ExpressionId::Call(id) => self.call_hashes[id.raw],
             ExpressionId::Fun(id) => self.fun_hashes[id.raw],
             ExpressionId::Match(id) => self.match_hashes[id.raw],
@@ -84,8 +81,7 @@ impl NodeStructuralIdentityHashCache {
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
         match node_id {
-            ExpressionId::Identifier(id) => self.compute_identifier_hash(id, node_info),
-            ExpressionId::Dot(id) => self.compute_dot_hash(id, node_info),
+            ExpressionId::Name(id) => self.compute_name_expression_hash(id, node_info),
             ExpressionId::Call(id) => self.compute_call_hash(id, node_info),
             ExpressionId::Fun(id) => self.compute_fun_hash(id, node_info),
             ExpressionId::Match(id) => self.compute_match_hash(id, node_info),
@@ -93,33 +89,21 @@ impl NodeStructuralIdentityHashCache {
         }
     }
 
-    fn compute_identifier_hash(
+    fn compute_name_expression_hash(
         &mut self,
-        node_id: NodeId<Identifier>,
+        node_id: NodeId<NameExpression>,
         node_info: (&NodeRegistry, &SymbolDatabase),
     ) -> u64 {
         let (registry, symbol_db) = node_info;
-        let identifier = registry.identifier(node_id);
-        let symbol = symbol_db.identifier_symbols.get(identifier.id);
+        let name = registry.name_expression(node_id);
+        let component_ids = registry.identifier_list(name.component_list_id);
 
         let mut hasher = FxHasher::default();
-        hash_symbol(symbol, &mut hasher);
-        hasher.finish()
-    }
-
-    fn compute_dot_hash(
-        &mut self,
-        node_id: NodeId<Dot>,
-        node_info: (&NodeRegistry, &SymbolDatabase),
-    ) -> u64 {
-        let (registry, symbol_db) = node_info;
-        let dot = registry.dot(node_id);
-        let left_hash = self.get_structural_identity_hash(dot.left_id, node_info);
-        let right_symbol = symbol_db.identifier_symbols.get(dot.right_id);
-
-        let mut hasher = FxHasher::default();
-        hash_u64(left_hash, &mut hasher);
-        hash_symbol(right_symbol, &mut hasher);
+        for component_id in component_ids {
+            let identifier = registry.identifier(*component_id);
+            let symbol = symbol_db.identifier_symbols.get(identifier.id);
+            hash_symbol(symbol, &mut hasher);
+        }
         hasher.finish()
     }
 
@@ -224,8 +208,7 @@ impl NodeStructuralIdentityHashCache {
 
     fn set_wrapped_expression_hash(&mut self, node_id: ExpressionId, hash: u64) {
         let (index, vec) = match node_id {
-            ExpressionId::Identifier(id) => (id.raw, &mut self.identifier_hashes),
-            ExpressionId::Dot(id) => (id.raw, &mut self.dot_hashes),
+            ExpressionId::Name(id) => (id.raw, &mut self.name_expression_hashes),
             ExpressionId::Call(id) => (id.raw, &mut self.call_hashes),
             ExpressionId::Fun(id) => (id.raw, &mut self.fun_hashes),
             ExpressionId::Match(id) => (id.raw, &mut self.match_hashes),

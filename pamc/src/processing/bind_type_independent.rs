@@ -1,6 +1,6 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
-    registered_ast::*,
+    registered_sst::*,
     symbol_database::{
         IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolProvider, SymbolSource,
         SymbolSourceMap, SymbolToDotTargetsMap,
@@ -52,6 +52,9 @@ impl From<NameNotFoundError> for BindError {
     }
 }
 
+/// If this function returns `Ok`, then every identifier in the program is bound to a symbol,
+/// EXCEPT for the identifiers that appear as the variant name in a match case node.
+/// The reason we cannot bind variant names is because we don't know the type of the matchee.
 pub fn bind_symbols_to_identifiers(
     registry: &NodeRegistry,
     file_node_ids: Vec<NodeId<File>>,
@@ -233,13 +236,9 @@ fn bind_expression(
     expression_id: ExpressionId,
 ) -> Result<(), BindError> {
     match expression_id {
-        ExpressionId::Identifier(id) => {
-            let identifier = registry.identifier(id);
-            bind_identifier(bind_state, identifier)
-        }
-        ExpressionId::Dot(id) => {
-            let dot = registry.dot(id);
-            bind_dot(bind_state, registry, dot)
+        ExpressionId::Name(id) => {
+            let name = registry.name_expression(id);
+            bind_name_expression(bind_state, registry, name)
         }
         ExpressionId::Call(id) => {
             let call = registry.call(id);
@@ -260,32 +259,31 @@ fn bind_expression(
     }
 }
 
-fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Result<(), BindError> {
-    lookup_symbol_from_context_and_bind_to_identifier(bind_state, identifier)?;
-    Ok(())
-}
-
-fn bind_dot(
+fn bind_name_expression(
     bind_state: &mut BindState,
     registry: &NodeRegistry,
-    dot: &Dot,
+    name: &NameExpression,
 ) -> Result<(), BindError> {
-    let right = registry.identifier(dot.right_id);
-    bind_expression(bind_state, registry, dot.left_id)?;
-    let left_symbol = match dot.left_id {
-        ExpressionId::Identifier(identifier_id) => bind_state.identifier_symbols.get(identifier_id),
-        ExpressionId::Dot(subdot_id) => {
-            let subdot = registry.dot(subdot_id);
-            bind_state.identifier_symbols.get(subdot.right_id)
+    let component_ids = registry.identifier_list(name.component_list_id);
+    assert_ne!(
+        component_ids.len(),
+        0,
+        "Error: A name expression must have at least one component."
+    );
+    let first_component_id = component_ids[0];
+    let first_component = registry.identifier(first_component_id);
+    let mut right_symbol =
+        lookup_symbol_from_context_and_bind_to_identifier(bind_state, first_component)?;
+
+    for component_id in component_ids[1..].iter().copied() {
+        let component = registry.identifier(component_id);
+        if let Some(component_symbol) = bind_state.dot_targets.get(right_symbol, &component.name) {
+            bind_symbol_to_identifier(bind_state, component_symbol, component);
+            right_symbol = component_symbol;
+        } else {
+            return Err(BindError::InvalidDotExpressionRhs(component_id));
         }
-        _ => return Err(BindError::UnbindableDotExpressionLhs(dot.left_id)),
-    };
-    let right_symbol = if let Some(s) = bind_state.dot_targets.get(left_symbol, &right.name) {
-        s
-    } else {
-        return Err(BindError::InvalidDotExpressionRhs(right.id));
-    };
-    bind_symbol_to_identifier(bind_state, right_symbol, right);
+    }
     Ok(())
 }
 

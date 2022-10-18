@@ -6,6 +6,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
+    let file = simplify_file(file).expect("AST Simplification failed");
     let mut registry = NodeRegistry::empty();
     let file_id = register_file(&mut registry, file);
     let file = registry.file(file_id);
@@ -19,11 +20,11 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
 #[test]
 fn param() {
     let src = include_str!("../sample_code/should_fail/variant_return_type/param.ph");
-    expect_type_arg_extraction_error(src, |return_type, _registry| match return_type {
-        ExpressionRef::Identifier(identifier) => {
+    expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
+        ExpressionRef::Name(name) => {
             assert_eq!(
-                identifier.name,
-                standard_ident_name("a"),
+                component_identifier_names(registry, name.id),
+                vec![standard_ident_name("a")],
                 "Unexpected variant return type: {:#?}",
                 return_type
             );
@@ -48,11 +49,11 @@ fn complex_expression() {
 fn foreign_nullary_type() {
     let src =
         include_str!("../sample_code/should_fail/variant_return_type/foreign_nullary_type.ph");
-    expect_type_arg_extraction_error(src, |return_type, _registry| match return_type {
-        ExpressionRef::Identifier(identifier) => {
+    expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
+        ExpressionRef::Name(name) => {
             assert_eq!(
-                identifier.name,
-                standard_ident_name("U"),
+                component_identifier_names(registry, name.id),
+                vec![standard_ident_name("U")],
                 "Unexpected variant return type: {:#?}",
                 return_type
             );
@@ -71,10 +72,10 @@ fn foreign_non_nullary_type() {
             assert_eq!(arg_ids.len(), 1);
             let callee = registry.expression_ref(call.callee_id);
             match callee {
-                ExpressionRef::Identifier(identifier) => {
+                ExpressionRef::Name(name) => {
                     assert_eq!(
-                        identifier.name,
-                        standard_ident_name("T"),
+                        component_identifier_names(registry, name.id),
+                        vec![standard_ident_name("T")],
                         "Unexpected variant return type: {:#?}",
                         return_type
                     );

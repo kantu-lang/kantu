@@ -14,7 +14,7 @@ pub fn type_check_file(
             start: None,
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
         });
-        let wrapped_id = ExpressionId::Identifier(type0_identifier_id);
+        let wrapped_id = identifier_id_to_expression_id(registry, type0_identifier_id);
         symbol_db
             .identifier_symbols
             .insert(type0_identifier_id, symbol_db.provider.type0_symbol());
@@ -165,14 +165,11 @@ fn type_check_expression(
     goal: Option<NormalFormNodeId>,
 ) -> Result<NormalFormNodeId, TypeError> {
     match id {
-        ExpressionId::Identifier(identifier_id) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier_id);
-            let type_id = get_normalized_type(state, symbol)?;
-            ok_unless_contradicts_goal(state, type_id, goal)
-        }
-        ExpressionId::Dot(dot_id) => {
-            let dot = state.registry.dot(dot_id);
-            let symbol = state.symbol_db.identifier_symbols.get(dot.right_id);
+        ExpressionId::Name(name_id) => {
+            let symbol = state
+                .symbol_db
+                .identifier_symbols
+                .get_using_rightmost((name_id, &*state.registry));
             let type_id = get_normalized_type(state, symbol)?;
             ok_unless_contradicts_goal(state, type_id, goal)
         }
@@ -445,7 +442,7 @@ fn verify_all_match_cases_were_covered(
     let matchee_type_callee_symbol = state
         .symbol_db
         .identifier_symbols
-        .get(matchee_type.callee_id);
+        .get_using_rightmost((matchee_type.callee_id, &*state.registry));
     let uncovered_case = match state
         .symbol_db
         .symbol_dot_targets
@@ -543,7 +540,8 @@ fn type_check_match_case(
                         .symbol_db
                         .identifier_symbols
                         .get(variant_param.name_id);
-                    let wrapped_case_param_id = ExpressionId::Identifier(case_param_id);
+                    let wrapped_case_param_id =
+                        identifier_id_to_expression_id(state.registry, case_param_id);
                     // This is safe because an identifier defined by a match case param declaration
                     // is always a normal form.
                     let wrapped_case_param_id = NormalFormNodeId(wrapped_case_param_id);

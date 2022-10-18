@@ -2,8 +2,8 @@ use crate::data::{
     node_free_variable_cache::NodeFreeVariableCache,
     node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ListId, NodeId, NodeRegistry},
-    registered_ast::*,
-    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
+    registered_sst::*,
+    symbol_database::{IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
     variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
 };
@@ -46,7 +46,7 @@ pub enum TypeError {
         matchee_type_id: NormalFormNodeId,
     },
     UnrecognizedVariant {
-        adt_callee_id: NodeId<Identifier>,
+        adt_callee_id: NodeId<NameExpression>,
         variant_name_id: NodeId<Identifier>,
     },
     DuplicateMatchCases {

@@ -1,6 +1,6 @@
 use crate::data::{
     node_registry::{ListId, NodeId},
-    registered_ast::*,
+    registered_sst::*,
 };
 
 // TODO: Delete this.

@@ -1,20 +1,20 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
-    registered_ast::*,
+    registered_sst::*,
     symbol_database::SymbolDatabase,
 };
 
 #[derive(Clone, Debug)]
 pub enum IllegalFunRecursionError {
     RecursiveReferenceWasNotDirectCall {
-        reference: NodeId<Identifier>,
+        reference: NodeId<NameExpression>,
     },
     NonSubstructPassedToDecreasingParam {
-        callee: NodeId<Identifier>,
+        callee: NodeId<NameExpression>,
         arg: ExpressionId,
     },
     RecursivelyCalledFunctionWithoutDecreasingParam {
-        callee: NodeId<Identifier>,
+        callee: NodeId<NameExpression>,
     },
 }
 
@@ -70,7 +70,7 @@ fn validate_fun_recursion_in_param(
     registry: &NodeRegistry,
     param: &Param,
 ) -> Result<(), IllegalFunRecursionError> {
-    let mut state = ValidationState::new(symbol_db);
+    let mut state = ValidationState::new(registry, symbol_db);
     validate_fun_recursion_in_expression(&mut state, registry, param.type_id)?;
     Ok(())
 }
@@ -80,7 +80,7 @@ fn validate_fun_recursion_in_let_statement(
     registry: &NodeRegistry,
     let_statement: &LetStatement,
 ) -> Result<(), IllegalFunRecursionError> {
-    let mut state = ValidationState::new(symbol_db);
+    let mut state = ValidationState::new(registry, symbol_db);
     validate_fun_recursion_in_expression(&mut state, registry, let_statement.value_id)?;
     Ok(())
 }
@@ -91,24 +91,22 @@ fn validate_fun_recursion_in_expression(
     expression_id: ExpressionId,
 ) -> Result<(), IllegalFunRecursionError> {
     match expression_id {
-        ExpressionId::Identifier(identifier_id) => {
-            let identifier = registry.identifier(identifier_id);
-            if state.reference_restriction(identifier.id).is_some() {
+        ExpressionId::Name(name_id) => {
+            if state.reference_restriction(name_id).is_some() {
                 return Err(
                     IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
-                        reference: identifier.id,
+                        reference: name_id,
                     },
                 );
             }
             Ok(())
         }
-        ExpressionId::Dot(_) => Ok(()),
         ExpressionId::Call(call_id) => {
             let call = registry.call(call_id);
             let is_call_restricted = match call.callee_id {
-                ExpressionId::Identifier(callee_identifier_id) => {
-                    let callee_identifier = registry.identifier(callee_identifier_id);
-                    if let Some(restriction) = state.reference_restriction(callee_identifier.id) {
+                ExpressionId::Name(callee_name_id) => {
+                    let callee_name = registry.name_expression(callee_name_id);
+                    if let Some(restriction) = state.reference_restriction(callee_name_id) {
                         match restriction {
                             ReferenceRestriction::MustCallWithSubstruct {
                                 arg_position,
@@ -120,15 +118,15 @@ fn validate_fun_recursion_in_expression(
                                     let expected_substruct_id = arg_ids[*arg_position];
                                     let err = Err(
                                         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-                                          callee: callee_identifier.id,
+                                          callee: callee_name_id,
                                           arg: expected_substruct_id,
                                         },
                                     );
                                     match expected_substruct_id {
-                                        ExpressionId::Identifier(expected_substruct_identifier_id) => {
+                                        ExpressionId::Name(expected_substruct_name_id) => {
                                             if !state.is_substruct_of_restricted_superstruct(
-                                                expected_substruct_identifier_id,
-                                               *superstruct,
+                                                expected_substruct_name_id,
+                                                *superstruct,
                                             ) {
                                                 return err;
                                             }
@@ -138,7 +136,7 @@ fn validate_fun_recursion_in_expression(
                                 }
                             }
                             ReferenceRestriction::CannotCall {..}=> return Err(IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
-                                callee: callee_identifier.id,
+                                callee: callee_name.id,
                             }),
                         }
                         true
@@ -200,10 +198,8 @@ fn validate_fun_recursion_in_expression(
             validate_fun_recursion_in_expression(state, registry, match_.matchee_id)?;
             let case_ids = registry.match_case_list(match_.case_list_id);
             match match_.matchee_id {
-                ExpressionId::Identifier(matchee_identifier_id) => {
-                    if let Some(mut substructs) =
-                        state.matchee_substructs_mut(matchee_identifier_id)
-                    {
+                ExpressionId::Name(matchee_name_id) => {
+                    if let Some(mut substructs) = state.matchee_substructs_mut(matchee_name_id) {
                         for case_id in case_ids {
                             let case = registry.match_case(*case_id);
                             let param_ids = registry.identifier_list(case.param_list_id);
@@ -259,13 +255,18 @@ mod state {
     // symbols, so the consumer won't have to deal with symbols.
     #[derive(Clone, Debug)]
     pub struct ValidationState<'a> {
+        registry: &'a NodeRegistry,
         symbol_db: &'a SymbolDatabase,
         internal: SymbolicState,
     }
 
-    impl ValidationState<'_> {
-        pub fn new(symbol_db: &SymbolDatabase) -> ValidationState {
+    impl<'a> ValidationState<'a> {
+        pub fn new(
+            registry: &'a NodeRegistry,
+            symbol_db: &'a SymbolDatabase,
+        ) -> ValidationState<'a> {
             ValidationState {
+                registry,
                 symbol_db,
                 internal: SymbolicState::empty(),
             }
@@ -275,9 +276,12 @@ mod state {
     impl ValidationState<'_> {
         pub fn reference_restriction(
             &self,
-            referent: NodeId<Identifier>,
+            referent_id: NodeId<NameExpression>,
         ) -> Option<&ReferenceRestriction> {
-            let referent_symbol = self.symbol_db.identifier_symbols.get(referent);
+            let referent_symbol = self
+                .symbol_db
+                .identifier_symbols
+                .get_using_rightmost((referent_id, self.registry));
             self.internal.reference_restriction(referent_symbol)
         }
 
@@ -285,11 +289,13 @@ mod state {
         /// reference restriction.
         pub fn is_substruct_of_restricted_superstruct(
             &self,
-            possible_substruct: NodeId<Identifier>,
+            possible_substruct: NodeId<NameExpression>,
             possible_superstruct: Symbol,
         ) -> bool {
-            let possible_substruct_symbol =
-                self.symbol_db.identifier_symbols.get(possible_substruct);
+            let possible_substruct_symbol = self
+                .symbol_db
+                .identifier_symbols
+                .get_using_rightmost((possible_substruct, self.registry));
             self.internal.is_substruct_of_restricted_superstruct(
                 possible_substruct_symbol,
                 possible_superstruct,
@@ -340,7 +346,7 @@ mod state {
     impl ValidationState<'_> {
         pub fn matchee_substructs_mut(
             &mut self,
-            matchee: NodeId<Identifier>,
+            matchee: NodeId<NameExpression>,
         ) -> Option<impl Push<NodeId<Identifier>> + '_> {
             struct PushAndConvertToSymbol<'a> {
                 symbol_db: &'a SymbolDatabase,
@@ -354,7 +360,10 @@ mod state {
                 }
             }
 
-            let matchee_symbol = self.symbol_db.identifier_symbols.get(matchee);
+            let matchee_symbol = self
+                .symbol_db
+                .identifier_symbols
+                .get_using_rightmost((matchee, self.registry));
             if let Some(substruct_symbols) = self.internal.matchee_substructs_mut(matchee_symbol) {
                 Some(PushAndConvertToSymbol {
                     symbol_db: &self.symbol_db,

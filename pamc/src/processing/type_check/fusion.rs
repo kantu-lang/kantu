@@ -63,8 +63,11 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
             right_id: ExpressionId,
         ) -> FusionCase {
             match right_id {
-                ExpressionId::Identifier(right_identifier_id) => {
-                    let right_symbol = state.symbol_db.identifier_symbols.get(right_identifier_id);
+                ExpressionId::Name(right_name_id) => {
+                    let right_symbol = state
+                        .symbol_db
+                        .identifier_symbols
+                        .get_using_rightmost((right_name_id, &*state.registry));
                     let right_source = *state
                         .symbol_db
                         .symbol_sources
@@ -91,8 +94,11 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
         }
 
         match left_id.0 {
-            ExpressionId::Identifier(left_identifier_id) => {
-                let left_symbol = state.symbol_db.identifier_symbols.get(left_identifier_id);
+            ExpressionId::Name(left_name_id) => {
+                let left_symbol = state
+                    .symbol_db
+                    .identifier_symbols
+                    .get_using_rightmost((left_name_id, &*state.registry));
                 let left_source = *state
                     .symbol_db
                     .symbol_sources
@@ -200,34 +206,33 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                 SubstitutionLhs::Expression(left_id.0),
             );
             let fusion_implied_by_constructors = match (left_id.0, right_id.0) {
+                // TODO: Check for nullary constructor case
                 (ExpressionId::Call(left_call_id), ExpressionId::Call(right_call_id)) => {
                     let left_call = state.registry.call(left_call_id);
                     let right_call = state.registry.call(right_call_id);
                     match (left_call.callee_id, right_call.callee_id) {
                         (
-                            ExpressionId::Dot(left_callee_dot_id),
-                            ExpressionId::Dot(right_callee_dot_id),
+                            ExpressionId::Name(left_callee_name_id),
+                            ExpressionId::Name(right_callee_name_id),
                         ) => {
-                            let left_callee_dot = state.registry.dot(left_callee_dot_id);
-                            let right_callee_dot = state.registry.dot(right_callee_dot_id);
                             let left_callee_symbol = state
                                 .symbol_db
                                 .identifier_symbols
-                                .get(left_callee_dot.right_id);
+                                .get_using_rightmost((left_callee_name_id, &*state.registry));
                             let left_callee_source = *state
                                 .symbol_db
                                 .symbol_sources
                                 .get(&left_callee_symbol)
-                                .expect("An dot RHS's symbol should have source.");
+                                .expect("A callee name expression's symbol should have source.");
                             let right_callee_symbol = state
                                 .symbol_db
                                 .identifier_symbols
-                                .get(right_callee_dot.right_id);
+                                .get_using_rightmost((right_callee_name_id, &*state.registry));
                             let right_callee_source = *state
                                 .symbol_db
                                 .symbol_sources
                                 .get(&right_callee_symbol)
-                                .expect("An dot RHS's symbol should have source.");
+                                .expect("A callee name expression's should have source.");
                             match (left_callee_source, right_callee_source) {
                                 (SymbolSource::Variant(_), SymbolSource::Variant(_)) => {
                                     if left_callee_symbol == right_callee_symbol {

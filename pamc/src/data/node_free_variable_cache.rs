@@ -1,13 +1,12 @@
 use crate::data::{
     node_registry::NodeRegistry,
-    registered_ast::*,
+    registered_sst::*,
     symbol_database::{Symbol, SymbolDatabase},
 };
 
 #[derive(Clone, Debug)]
 pub struct NodeFreeVariableCache {
-    identifier_hashes: Vec<Option<FreeVariableSet>>,
-    dot_hashes: Vec<Option<FreeVariableSet>>,
+    name_expression_hashes: Vec<Option<FreeVariableSet>>,
     call_hashes: Vec<Option<FreeVariableSet>>,
     fun_hashes: Vec<Option<FreeVariableSet>>,
     match_hashes: Vec<Option<FreeVariableSet>>,
@@ -17,8 +16,7 @@ pub struct NodeFreeVariableCache {
 impl NodeFreeVariableCache {
     pub fn empty() -> Self {
         Self {
-            identifier_hashes: Vec::new(),
-            dot_hashes: Vec::new(),
+            name_expression_hashes: Vec::new(),
             call_hashes: Vec::new(),
             fun_hashes: Vec::new(),
             match_hashes: Vec::new(),
@@ -89,10 +87,10 @@ impl NodeFreeVariableCache {
 
     fn get_cached_free_variables(&self, node_id: ExpressionId) -> Option<&FreeVariableSet> {
         match node_id {
-            ExpressionId::Identifier(id) => {
-                self.identifier_hashes.get(id.raw).and_then(Option::as_ref)
-            }
-            ExpressionId::Dot(id) => self.dot_hashes.get(id.raw).and_then(Option::as_ref),
+            ExpressionId::Name(id) => self
+                .name_expression_hashes
+                .get(id.raw)
+                .and_then(Option::as_ref),
             ExpressionId::Call(id) => self.call_hashes.get(id.raw).and_then(Option::as_ref),
             ExpressionId::Fun(id) => self.fun_hashes.get(id.raw).and_then(Option::as_ref),
             ExpressionId::Match(id) => self.match_hashes.get(id.raw).and_then(Option::as_ref),
@@ -123,8 +121,7 @@ impl NodeFreeVariableCache {
         free_variables: FreeVariableSet,
     ) -> &FreeVariableSet {
         let (index, vec) = match node_id {
-            ExpressionId::Identifier(id) => (id.raw, &mut self.identifier_hashes),
-            ExpressionId::Dot(id) => (id.raw, &mut self.dot_hashes),
+            ExpressionId::Name(id) => (id.raw, &mut self.name_expression_hashes),
             ExpressionId::Call(id) => (id.raw, &mut self.call_hashes),
             ExpressionId::Fun(id) => (id.raw, &mut self.fun_hashes),
             ExpressionId::Match(id) => (id.raw, &mut self.match_hashes),
