@@ -6,6 +6,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
+    let file = simplify_file(file).expect("AST Simplification failed");
     let mut registry = NodeRegistry::empty();
     let file_id = register_file(&mut registry, file);
     let file = registry.file(file_id);

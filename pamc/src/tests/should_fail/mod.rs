@@ -14,6 +14,7 @@ use crate::{
         lex::lex,
         parse::parse_file,
         register::register_file,
+        simplify_ast::simplify_file,
         validate_fun_recursion::validate_fun_recursion_in_file,
     },
 };

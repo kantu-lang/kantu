@@ -55,6 +55,7 @@ fn expect_bind_error(src: &str, panicker: impl Fn(BindError, &NodeRegistry)) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
+    let file = simplify_file(file).expect("AST Simplification failed");
     let mut registry = NodeRegistry::empty();
     let file_id = register_file(&mut registry, file);
     let err = bind_symbols_to_identifiers(&registry, vec![file_id])
