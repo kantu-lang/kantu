@@ -74,7 +74,7 @@ fn perform_eval_step_on_well_typed_expression(
         ExpressionId::Name(name_id) => {
             let symbol = symbol_db
                 .identifier_symbols
-                .get_from_rightmost((name_id, &*registry));
+                .get_using_rightmost((name_id, &*registry));
             Ok(perform_eval_step_on_identifier_or_dot_based_on_symbol(
                 registry,
                 symbol_db,
@@ -138,7 +138,7 @@ fn perform_eval_step_on_well_typed_expression(
 
             match callee_id {
                 ExpressionId::Name(callee_name_id) => {
-                    let callee_symbol = symbol_db.identifier_symbols.get_from_rightmost((callee_name_id, &*registry));
+                    let callee_symbol = symbol_db.identifier_symbols.get_using_rightmost((callee_name_id, &*registry));
                     let callee_source = *symbol_db.symbol_sources.get(&callee_symbol).expect("Symbol referenced in identifier expression should have a source.");
                     let callee_fun_id: NodeId<Fun> = match callee_source {
                         SymbolSource::Fun(fun_id) => fun_id,

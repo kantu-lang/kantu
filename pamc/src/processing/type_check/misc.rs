@@ -52,7 +52,7 @@ pub(super) fn is_expression_type0_or_type1(state: &TypeCheckState, type_id: Expr
             let symbol = state
                 .symbol_db
                 .identifier_symbols
-                .get_from_rightmost((name_id, &*state.registry));
+                .get_using_rightmost((name_id, &*state.registry));
             symbol == state.symbol_db.provider.type0_symbol()
                 || symbol == state.symbol_db.provider.type1_symbol()
         }
@@ -69,7 +69,7 @@ pub(super) fn get_variant_id_corresponding_to_match_case(
     let callee_symbol = state
         .symbol_db
         .identifier_symbols
-        .get_from_rightmost((matchee_type.callee_id, &*state.registry));
+        .get_using_rightmost((matchee_type.callee_id, &*state.registry));
     let variant_name = &state.registry.identifier(case.variant_name_id).name;
     let target_symbol = state
         .symbol_db
@@ -177,11 +177,11 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
                     let production_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get_from_rightmost((production_callee_name_id, &*state.registry));
+                        .get_using_rightmost((production_callee_name_id, &*state.registry));
                     let requirement_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get_from_rightmost((requirement_callee_name_id, &*state.registry));
+                        .get_using_rightmost((requirement_callee_name_id, &*state.registry));
                     if production_callee_symbol != requirement_callee_symbol {
                         return false;
                     }
@@ -270,7 +270,7 @@ fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) ->
             let symbol = state
                 .symbol_db
                 .identifier_symbols
-                .get_from_rightmost((name_id, &*state.registry));
+                .get_using_rightmost((name_id, &*state.registry));
             let source = *state
                 .symbol_db
                 .symbol_sources
@@ -293,7 +293,7 @@ fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) ->
                     let symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get_from_rightmost((callee_name_id, &*state.registry));
+                        .get_using_rightmost((callee_name_id, &*state.registry));
                     let source = *state
                         .symbol_db
                         .symbol_sources
@@ -382,7 +382,7 @@ pub fn as_variant_call(
                 ExpressionId::Name(callee_name_id) => {
                     let symbol = symbol_db
                         .identifier_symbols
-                        .get_from_rightmost((callee_name_id, registry));
+                        .get_using_rightmost((callee_name_id, registry));
                     let symbol_source = symbol_db
                         .symbol_sources
                         .get(&symbol)
@@ -598,11 +598,11 @@ impl RightmostIdentifierId for (NodeId<NameExpression>, &'_ NodeRegistry) {
 }
 
 impl IdentifierToSymbolMap {
-    pub(crate) fn get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
+    pub(crate) fn get_using_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
         self.get(r.rightmost_identifier_id())
     }
 
-    pub(crate) fn try_get_from_rightmost(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
+    pub(crate) fn try_get_using_rightmost(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
         self.try_get(r.rightmost_identifier_id())
     }
 }

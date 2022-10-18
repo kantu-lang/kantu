@@ -281,7 +281,7 @@ mod state {
             let referent_symbol = self
                 .symbol_db
                 .identifier_symbols
-                .get_from_rightmost((referent_id, self.registry));
+                .get_using_rightmost((referent_id, self.registry));
             self.internal.reference_restriction(referent_symbol)
         }
 
@@ -295,7 +295,7 @@ mod state {
             let possible_substruct_symbol = self
                 .symbol_db
                 .identifier_symbols
-                .get_from_rightmost((possible_substruct, self.registry));
+                .get_using_rightmost((possible_substruct, self.registry));
             self.internal.is_substruct_of_restricted_superstruct(
                 possible_substruct_symbol,
                 possible_superstruct,
@@ -363,7 +363,7 @@ mod state {
             let matchee_symbol = self
                 .symbol_db
                 .identifier_symbols
-                .get_from_rightmost((matchee, self.registry));
+                .get_using_rightmost((matchee, self.registry));
             if let Some(substruct_symbols) = self.internal.matchee_substructs_mut(matchee_symbol) {
                 Some(PushAndConvertToSymbol {
                     symbol_db: &self.symbol_db,

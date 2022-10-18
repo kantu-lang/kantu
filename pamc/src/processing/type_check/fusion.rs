@@ -67,7 +67,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                     let right_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get_from_rightmost((right_name_id, &*state.registry));
+                        .get_using_rightmost((right_name_id, &*state.registry));
                     let right_source = *state
                         .symbol_db
                         .symbol_sources
@@ -98,7 +98,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                 let left_symbol = state
                     .symbol_db
                     .identifier_symbols
-                    .get_from_rightmost((left_name_id, &*state.registry));
+                    .get_using_rightmost((left_name_id, &*state.registry));
                 let left_source = *state
                     .symbol_db
                     .symbol_sources
@@ -222,7 +222,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                             let left_callee_symbol = state
                                 .symbol_db
                                 .identifier_symbols
-                                .get_from_rightmost((left_callee_name_id, &*state.registry));
+                                .get_using_rightmost((left_callee_name_id, &*state.registry));
                             let left_callee_source = *state
                                 .symbol_db
                                 .symbol_sources
@@ -231,7 +231,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                             let right_callee_symbol = state
                                 .symbol_db
                                 .identifier_symbols
-                                .get_from_rightmost((right_callee_name_id, &*state.registry));
+                                .get_using_rightmost((right_callee_name_id, &*state.registry));
                             let right_callee_source = *state
                                 .symbol_db
                                 .symbol_sources
