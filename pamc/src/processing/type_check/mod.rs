@@ -46,7 +46,7 @@ pub enum TypeError {
         matchee_type_id: NormalFormNodeId,
     },
     UnrecognizedVariant {
-        adt_callee_id: NodeId<Identifier>,
+        adt_callee_id: NodeId<NameExpression>,
         variant_name_id: NodeId<Identifier>,
     },
     DuplicateMatchCases {
