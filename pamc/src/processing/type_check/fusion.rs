@@ -215,10 +215,6 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                             ExpressionId::Name(left_callee_name_id),
                             ExpressionId::Name(right_callee_name_id),
                         ) => {
-                            let left_callee_name =
-                                state.registry.name_expression(left_callee_name_id);
-                            let right_callee_name =
-                                state.registry.name_expression(right_callee_name_id);
                             let left_callee_symbol = state
                                 .symbol_db
                                 .identifier_symbols

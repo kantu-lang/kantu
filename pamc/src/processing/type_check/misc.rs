@@ -599,8 +599,4 @@ impl IdentifierToSymbolMap {
     pub(crate) fn get_using_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
         self.get(r.rightmost_identifier_id())
     }
-
-    pub(crate) fn try_get_using_rightmost(&self, r: impl RightmostIdentifierId) -> Option<Symbol> {
-        self.try_get(r.rightmost_identifier_id())
-    }
 }

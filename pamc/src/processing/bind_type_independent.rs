@@ -259,11 +259,6 @@ fn bind_expression(
     }
 }
 
-fn bind_identifier(bind_state: &mut BindState, identifier: &Identifier) -> Result<(), BindError> {
-    lookup_symbol_from_context_and_bind_to_identifier(bind_state, identifier)?;
-    Ok(())
-}
-
 fn bind_name_expression(
     bind_state: &mut BindState,
     registry: &NodeRegistry,

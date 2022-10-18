@@ -175,7 +175,8 @@ fn perform_eval_step_on_well_typed_expression(
         }
         ExpressionId::Fun(fun_id) => {
             let fun = registry.fun(fun_id);
-            let wrapped_name_id = identifier_id_to_expression_id(registry, fun.name_id);
+            let fun_name_id = fun.name_id;
+            let wrapped_name_id = identifier_id_to_expression_id(registry, fun_name_id);
             Ok(EvalStepResult::Stepped(wrapped_name_id))
         }
         ExpressionId::Match(match_id) => {

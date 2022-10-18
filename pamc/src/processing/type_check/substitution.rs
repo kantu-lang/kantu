@@ -112,25 +112,25 @@ fn get_wrapped_identifier_id_for_symbol(
         .expect("Symbol not found");
     match source {
         SymbolSource::Type(id) => {
-            let type_ = registry.type_statement(id);
-            identifier_id_to_nfid(registry, type_.name_id)
+            let type_name_id = registry.type_statement(id).name_id;
+            identifier_id_to_nfid(registry, type_name_id)
         }
         SymbolSource::Variant(id) => {
-            let variant = registry.variant(id);
-            identifier_id_to_nfid(registry, variant.name_id)
+            let variant_name_id = registry.variant(id).name_id;
+            identifier_id_to_nfid(registry, variant_name_id)
         }
         SymbolSource::TypedParam(id) => {
-            let param = registry.param(id);
-            identifier_id_to_nfid(registry, param.name_id)
+            let param_name_id = registry.param(id).name_id;
+            identifier_id_to_nfid(registry, param_name_id)
         }
         SymbolSource::UntypedParam(id) => identifier_id_to_nfid(registry, id),
         SymbolSource::Let(id) => {
-            let let_ = registry.let_statement(id);
-            identifier_id_to_nfid(registry, let_.name_id)
+            let let_name_id = registry.let_statement(id).name_id;
+            identifier_id_to_nfid(registry, let_name_id)
         }
         SymbolSource::Fun(id) => {
-            let fun = registry.fun(id);
-            identifier_id_to_nfid(registry, fun.name_id)
+            let fun_name_id = registry.fun(id).name_id;
+            identifier_id_to_nfid(registry, fun_name_id)
         }
         SymbolSource::BuiltinTypeTitleCase => type0_identifier_id,
     }
