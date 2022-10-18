@@ -48,8 +48,11 @@ pub(super) fn register_wrapped_forall(
 
 pub(super) fn is_expression_type0_or_type1(state: &TypeCheckState, type_id: ExpressionId) -> bool {
     match type_id {
-        ExpressionId::Identifier(identifier_id) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier_id);
+        ExpressionId::Name(name_id) => {
+            let symbol = state
+                .symbol_db
+                .identifier_symbols
+                .get((name_id, &*state.registry));
             symbol == state.symbol_db.provider.type0_symbol()
                 || symbol == state.symbol_db.provider.type1_symbol()
         }
@@ -66,7 +69,7 @@ pub(super) fn get_variant_id_corresponding_to_match_case(
     let callee_symbol = state
         .symbol_db
         .identifier_symbols
-        .get(matchee_type.callee_id);
+        .get((matchee_type.callee_id, &*state.registry));
     let variant_name = &state.registry.identifier(case.variant_name_id).name;
     let target_symbol = state
         .symbol_db
@@ -158,7 +161,7 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
     }
 
     match (production_type_id.0, requirement_type_id.0) {
-        (ExpressionId::Identifier(_), ExpressionId::Identifier(_)) => {
+        (ExpressionId::Name(_), ExpressionId::Name(_)) => {
             // The production and requirement identifiers must be different,
             // since `are_expressions_equal_ignoring_ids` returned false.
             false
@@ -168,17 +171,17 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
             let requirement_call = state.registry.call(requirement_call_id);
             match (production_call.callee_id, requirement_call.callee_id) {
                 (
-                    ExpressionId::Identifier(production_callee_identifier_id),
-                    ExpressionId::Identifier(requirement_callee_identifier_id),
+                    ExpressionId::Name(production_callee_name_id),
+                    ExpressionId::Name(requirement_callee_name_id),
                 ) => {
                     let production_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get(production_callee_identifier_id);
+                        .get((production_callee_name_id, &*state.registry));
                     let requirement_callee_symbol = state
                         .symbol_db
                         .identifier_symbols
-                        .get(requirement_callee_identifier_id);
+                        .get((requirement_callee_name_id, &*state.registry));
                     if production_callee_symbol != requirement_callee_symbol {
                         return false;
                     }
@@ -263,8 +266,11 @@ fn are_types_equivalent_up_to_renaming_of_forall_params(
 
 fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) -> bool {
     match type_id.0 {
-        ExpressionId::Identifier(identifier_id) => {
-            let symbol = state.symbol_db.identifier_symbols.get(identifier_id);
+        ExpressionId::Name(name_id) => {
+            let symbol = state
+                .symbol_db
+                .identifier_symbols
+                .get((name_id, &*state.registry));
             let source = *state
                 .symbol_db
                 .symbol_sources
@@ -283,8 +289,11 @@ fn is_type_trivially_empty(state: &TypeCheckState, type_id: NormalFormNodeId) ->
         ExpressionId::Call(call_id) => {
             let call = state.registry.call(call_id);
             match call.callee_id {
-                ExpressionId::Identifier(callee_identifier_id) => {
-                    let symbol = state.symbol_db.identifier_symbols.get(callee_identifier_id);
+                ExpressionId::Name(callee_name_id) => {
+                    let symbol = state
+                        .symbol_db
+                        .identifier_symbols
+                        .get((callee_name_id, &*state.registry));
                     let source = *state
                         .symbol_db
                         .symbol_sources
@@ -356,6 +365,10 @@ pub fn is_normal_form_a_variant_call(
     as_variant_call(registry, symbol_db, nfid).is_some()
 }
 
+// TODO: Replace name_expression_id with name_id
+
+// TODO: Check if we need to make it `as_variant_instantiation`,
+// since not all instantiations are calls (i.e., there's the nullary case).
 /// If the expression referenced by `nfid` is not a variant call, returns `None`.
 pub fn as_variant_call(
     registry: &NodeRegistry,
@@ -366,9 +379,8 @@ pub fn as_variant_call(
         ExpressionId::Call(call_id) => {
             let call = registry.call(call_id);
             match call.callee_id {
-                ExpressionId::Dot(callee_dot_id) => {
-                    let callee_dot = registry.dot(callee_dot_id);
-                    let symbol = symbol_db.identifier_symbols.get(callee_dot.right_id);
+                ExpressionId::Name(callee_name_id) => {
+                    let symbol = symbol_db.identifier_symbols.get((callee_name_id, registry));
                     let symbol_source = symbol_db
                         .symbol_sources
                         .get(&symbol)
@@ -436,7 +448,7 @@ impl<T> MapGoalMismatchErr for Result<T, TypeError> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct AlgebraicDataType {
-    pub callee_id: NodeId<Identifier>,
+    pub callee_id: NodeId<NameExpression>,
     pub arg_list_id: ListId<ExpressionId>,
 }
 
@@ -447,14 +459,14 @@ pub(super) fn as_algebraic_data_type(
     let empty_list_id = state.registry.add_expression_list(Vec::new());
 
     match term_id.0 {
-        ExpressionId::Identifier(identifier_id) => Some(AlgebraicDataType {
-            callee_id: identifier_id,
+        ExpressionId::Name(name_id) => Some(AlgebraicDataType {
+            callee_id: name_id,
             arg_list_id: empty_list_id,
         }),
         ExpressionId::Call(call_id) => {
             let call = state.registry.call(call_id);
             match call.callee_id {
-                ExpressionId::Identifier(callee_identifier_id) => Some(AlgebraicDataType {
+                ExpressionId::Name(callee_identifier_id) => Some(AlgebraicDataType {
                     callee_id: callee_identifier_id,
                     arg_list_id: call.arg_list_id,
                 }),
@@ -492,11 +504,7 @@ pub fn is_term_a_non_strict_subterm(
     // TODO: We should probably cache this too.
 
     match super_id {
-        ExpressionId::Identifier(_) => false,
-        ExpressionId::Dot(dot_id) => {
-            let dot = registry.dot(dot_id);
-            is_term_a_non_strict_subterm(registry, symbol_db, sih_cache, sub_id, dot.left_id)
-        }
+        ExpressionId::Name(_) => false,
         ExpressionId::Call(call_id) => {
             let call = registry.call(call_id);
             let arg_ids = registry.expression_list(call.arg_list_id);
