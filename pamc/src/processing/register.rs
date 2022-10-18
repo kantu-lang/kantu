@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{NodeId, NodeRegistry},
     registered_sst::*,
-    unregistered_ast as ur,
+    unregistered_sst as ur,
 };
 
 fn dummy_id<T>() -> NodeId<T> {
@@ -118,13 +118,9 @@ pub fn register_expression(
     unregistered: ur::Expression,
 ) -> ExpressionId {
     match unregistered {
-        ur::Expression::Identifier(unregistered) => {
-            let id = register_identifier(registry, unregistered);
-            ExpressionId::Identifier(id)
-        }
-        ur::Expression::Dot(unregistered) => {
-            let id = register_dot(registry, *unregistered);
-            ExpressionId::Dot(id)
+        ur::Expression::Name(unregistered) => {
+            let id = register_name_expression(registry, unregistered);
+            ExpressionId::Name(id)
         }
         ur::Expression::Call(unregistered) => {
             let id = register_call(registry, *unregistered);
@@ -145,13 +141,19 @@ pub fn register_expression(
     }
 }
 
-pub fn register_dot(registry: &mut NodeRegistry, unregistered: ur::Dot) -> NodeId<Dot> {
-    let left_id = register_expression(registry, unregistered.left);
-    let right_id = register_identifier(registry, unregistered.right);
-    registry.add_dot_and_overwrite_its_id(Dot {
+pub fn register_name_expression(
+    registry: &mut NodeRegistry,
+    unregistered: ur::NameExpression,
+) -> NodeId<NameExpression> {
+    let component_ids = unregistered
+        .components
+        .into_iter()
+        .map(|unregistered| register_identifier(registry, unregistered))
+        .collect();
+    let component_list_id = registry.add_identifier_list(component_ids);
+    registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
-        left_id,
-        right_id,
+        component_list_id,
     })
 }
 
