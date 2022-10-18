@@ -1,3 +1,4 @@
+mod ast_simplification;
 mod empty_params;
 mod fun_recursion;
 mod scope;
@@ -14,7 +15,7 @@ use crate::{
         lex::lex,
         parse::parse_file,
         register::register_file,
-        simplify_ast::simplify_file,
+        simplify_ast::{simplify_file, SimplifyAstError},
         validate_fun_recursion::validate_fun_recursion_in_file,
     },
 };

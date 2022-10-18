@@ -204,21 +204,3 @@ fn duplicate_match_case_params() {
     let src = include_str!("../sample_code/should_fail/scope/duplicate_match_case_params.ph");
     expect_name_clash_error(src, "x", SymbolSourceKind::Param, SymbolSourceKind::Param);
 }
-
-// TODO: Move this to the AST simplification test.
-#[test]
-#[ignore]
-fn reference_unbindable_dot_lhs() {
-    let src = include_str!("../sample_code/should_fail/scope/unbindable_dot_lhs.ph");
-    expect_bind_error(src, |err, registry| match err {
-        BindError::UnbindableDotExpressionLhs(lhs_id) => {
-            let invalid_lhs = &registry.expression_ref(lhs_id);
-            assert!(
-                matches!(invalid_lhs, ExpressionRef::Match(_)),
-                "Unexpected lhs {:?}",
-                invalid_lhs
-            );
-        }
-        _ => panic!("Unexpected error: {:#?}", err),
-    });
-}
