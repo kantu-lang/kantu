@@ -1,4 +1,4 @@
-use crate::data::registered_ast::*;
+use crate::data::registered_sst::*;
 
 // TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
 // since #[derive] only works if T implements the respective traits.
@@ -42,8 +42,7 @@ pub enum FileItemNodeId {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ExpressionId {
-    Identifier(NodeId<Identifier>),
-    Dot(NodeId<Dot>),
+    Name(NodeId<NameExpression>),
     Call(NodeId<Call>),
     Fun(NodeId<Fun>),
     Match(NodeId<Match>),
@@ -84,8 +83,7 @@ impl<T> std::hash::Hash for ListId<T> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExpressionRef<'a> {
-    Identifier(&'a Identifier),
-    Dot(&'a Dot),
+    Name(&'a NameExpression),
     Call(&'a Call),
     Fun(&'a Fun),
     Match(&'a Match),
@@ -100,7 +98,7 @@ pub struct NodeRegistry {
     params: Vec<Param>,
     variants: Vec<Variant>,
     let_statements: Vec<LetStatement>,
-    dots: Vec<Dot>,
+    name_expressions: Vec<NameExpression>,
     calls: Vec<Call>,
     funs: Vec<Fun>,
     matches: Vec<Match>,
@@ -124,7 +122,7 @@ impl NodeRegistry {
             params: Vec::new(),
             variants: Vec::new(),
             let_statements: Vec::new(),
-            dots: Vec::new(),
+            name_expressions: Vec::new(),
             calls: Vec::new(),
             funs: Vec::new(),
             matches: Vec::new(),
@@ -203,10 +201,13 @@ impl NodeRegistry {
         id
     }
 
-    pub fn add_dot_and_overwrite_its_id(&mut self, mut dot: Dot) -> NodeId<Dot> {
-        let id = NodeId::<Dot>::new(self.dots.len());
-        dot.id = id;
-        self.dots.push(dot);
+    pub fn add_name_expression_and_overwrite_its_id(
+        &mut self,
+        mut name_expression: NameExpression,
+    ) -> NodeId<NameExpression> {
+        let id = NodeId::<NameExpression>::new(self.name_expressions.len());
+        name_expression.id = id;
+        self.name_expressions.push(name_expression);
         id
     }
 
@@ -274,8 +275,8 @@ impl NodeRegistry {
         &self.let_statements[id.raw]
     }
 
-    pub fn dot(&self, id: NodeId<Dot>) -> &Dot {
-        &self.dots[id.raw]
+    pub fn name_expression(&self, id: NodeId<NameExpression>) -> &NameExpression {
+        &self.name_expressions[id.raw]
     }
 
     pub fn call(&self, id: NodeId<Call>) -> &Call {
@@ -378,8 +379,7 @@ impl NodeRegistry {
 impl NodeRegistry {
     pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
         match id {
-            ExpressionId::Identifier(id) => ExpressionRef::Identifier(self.identifier(id)),
-            ExpressionId::Dot(id) => ExpressionRef::Dot(self.dot(id)),
+            ExpressionId::Name(id) => ExpressionRef::Name(self.name_expression(id)),
             ExpressionId::Call(id) => ExpressionRef::Call(self.call(id)),
             ExpressionId::Fun(id) => ExpressionRef::Fun(self.fun(id)),
             ExpressionId::Match(id) => ExpressionRef::Match(self.match_(id)),

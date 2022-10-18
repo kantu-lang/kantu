@@ -46,6 +46,12 @@ pub struct LetStatement {
 pub type ExpressionId = crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NameExpression {
+    pub id: NodeId<Self>,
+    pub component_list_id: ListId<NodeId<Identifier>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
     pub id: NodeId<Self>,
     /// This is `None` if the identifier is either
@@ -55,16 +61,9 @@ pub struct Identifier {
     pub name: IdentifierName,
 }
 
-pub use crate::data::unregistered_ast::IdentifierName;
+pub use crate::data::unregistered_sst::IdentifierName;
 
-pub use crate::data::unregistered_ast::ReservedIdentifierName;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Dot {
-    pub id: NodeId<Self>,
-    pub left_id: ExpressionId,
-    pub right_id: NodeId<Identifier>,
-}
+pub use crate::data::unregistered_sst::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
