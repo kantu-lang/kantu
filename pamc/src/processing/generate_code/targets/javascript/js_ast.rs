@@ -31,6 +31,7 @@ pub enum Expression {
     Call(Box<Call>),
     Function(Box<Function>),
     BinaryOp(Box<BinaryOp>),
+    Dot(Box<Dot>),
     Ternary(Box<Ternary>),
     Array(Box<Array>),
     Object(Box<Object>),
@@ -52,6 +53,13 @@ pub struct BinaryOp {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum BinaryOpKind {
     TripleEqual,
+    Index,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Dot {
+    pub left: Expression,
+    pub right: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
