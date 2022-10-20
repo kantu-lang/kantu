@@ -29,24 +29,53 @@ fn generate_code_for_file(
 ) -> Result<js_ast::File, CompileToJavaScriptError> {
     let file = context.registry.file(file_id);
     let item_ids = context.registry.file_item_list(file.item_list_id);
-    let items = item_ids
-        .iter()
-        .copied()
-        .filter_map(|item_id| match item_id {
-            FileItemNodeId::Type(_) => None,
-            FileItemNodeId::Let(let_id) => Some(
-                generate_code_for_let_declaration(context, state, let_id)
-                    .map(js_ast::FileItem::Const),
-            ),
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let items = {
+        let mut out = vec![];
+        for item_id in item_ids {
+            match *item_id {
+                FileItemNodeId::Type(type_id) => {
+                    out.extend(generate_code_for_type_statement(context, state, type_id)?);
+                }
+                FileItemNodeId::Let(let_id) => {
+                    out.push(js_ast::FileItem::Const(generate_code_for_let_statement(
+                        context, state, let_id,
+                    )?));
+                }
+            }
+        }
+        out
+    };
     Ok(js_ast::File {
         id: file.file_id,
         items,
     })
 }
 
-fn generate_code_for_let_declaration(
+/// This produces a Const for the type constructor,
+/// plus a Const for each variant constructor.
+///
+/// For example if we have
+/// ```pamlihu
+/// type List(T: Type) {
+///    .Nil(T: Type): List(T),
+///    .Cons(T: Type; car: T, cdr: List(T)): List(T),
+/// }
+/// ```
+/// then we need to emit something like:
+/// ```js
+/// const List_37 = (T_38) => ({ type_: "List_37", args: [T_38] });
+/// const List_37__Nil_39 = (T_40) => (["Nil", T_40]);
+/// const List_37__Cons_41 = (T_42, car_43, cdr_44) => (["Cons", T_42, car_43, cdr_44]);
+/// ```
+fn generate_code_for_type_statement(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    type_id: NodeId<TypeStatement>,
+) -> Result<Vec<js_ast::FileItem>, CompileToJavaScriptError> {
+    unimplemented!()
+}
+
+fn generate_code_for_let_statement(
     context: &CodeGenContext,
     state: &mut CodeGenState,
     let_id: NodeId<LetStatement>,
