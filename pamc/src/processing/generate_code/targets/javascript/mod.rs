@@ -1,13 +1,15 @@
 use crate::data::{
     node_free_variable_cache::NodeFreeVariableCache,
     node_hash_cache::NodeStructuralIdentityHashCache,
-    node_registry::{ListId, NodeId, NodeRegistry},
+    node_registry::{ExpressionRef, ListId, NodeId, NodeRegistry},
     registered_sst::*,
     symbol_database::{IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource},
     variant_return_type::VariantReturnTypeDatabase,
     FileId,
 };
 use crate::processing::generate_code::CompileTarget;
+
+use rustc_hash::FxHashMap;
 
 pub mod js_ast;
 

@@ -72,9 +72,33 @@ fn generate_code_for_let_declaration(
 fn generate_code_for_expression(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    let_id: ExpressionId,
+    id: ExpressionId,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
-    unimplemented!()
+    let CodeGenContext {
+        symbol_db,
+        registry,
+        ..
+    } = context;
+    Ok(match registry.expression_ref(id) {
+        ExpressionRef::Name(name) => {
+            let identifier_name = {
+                let symbol = symbol_db
+                    .identifier_symbols
+                    .get_using_rightmost((name.id, *registry));
+
+                let component_ids = registry.identifier_list(name.component_list_id);
+                let preferred_name = component_ids
+                    .iter()
+                    .rev()
+                    .map(|x| registry.identifier(*x).name.to_js_name())
+                    .collect::<Vec<_>>()
+                    .join("__");
+                state.unique_identifier_name(symbol, Some(&preferred_name))
+            };
+            js_ast::Expression::Identifier(identifier_name)
+        }
+        _ => unimplemented!(),
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -86,17 +110,28 @@ struct CodeGenContext<'a> {
 }
 
 #[derive(Clone, Debug)]
-struct CodeGenState;
+struct CodeGenState {
+    unique_identifier_names: FxHashMap<Symbol, String>,
+}
 
 impl CodeGenState {
     fn new() -> Self {
-        Self {}
+        Self {
+            unique_identifier_names: Default::default(),
+        }
     }
 }
 
 impl CodeGenState {
     fn unique_identifier_name(&mut self, symbol: Symbol, preferred_name: Option<&str>) -> String {
-        format!("{}_{}", preferred_name.unwrap_or("anonymous"), symbol.0)
+        if let Some(existing) = self.unique_identifier_names.get(&symbol) {
+            return existing.clone();
+        }
+
+        let new_name = format!("{}_{}", preferred_name.unwrap_or("anonymous"), symbol.0);
+        self.unique_identifier_names
+            .insert(symbol, new_name.clone());
+        new_name
     }
 }
 
