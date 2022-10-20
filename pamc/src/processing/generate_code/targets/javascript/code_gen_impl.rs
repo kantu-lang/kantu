@@ -188,27 +188,48 @@ struct CodeGenContext<'a> {
 
 #[derive(Clone, Debug)]
 struct CodeGenState {
-    unique_identifier_names: FxHashMap<Symbol, String>,
+    fully_qualified_names: FxHashMap<Symbol, String>,
 }
 
 impl CodeGenState {
     fn new() -> Self {
         Self {
-            unique_identifier_names: Default::default(),
+            fully_qualified_names: Default::default(),
         }
     }
 }
 
 impl CodeGenState {
     fn unique_identifier_name(&mut self, symbol: Symbol, preferred_name: Option<&str>) -> String {
-        if let Some(existing) = self.unique_identifier_names.get(&symbol) {
+        if let Some(existing) = self.fully_qualified_names.get(&symbol) {
             return existing.clone();
         }
 
-        let new_name = format!("{}_{}", preferred_name.unwrap_or("anonymous"), symbol.0);
-        self.unique_identifier_names
-            .insert(symbol, new_name.clone());
-        new_name
+        const DEFAULT_NAME: &str = "anonymous";
+        const NAME_SYMBOL_SEPARATOR: char = '_';
+
+        // To prevent the possibility of collisions, an unqualified name
+        // must not end with `NAME_SYMBOL_SEPARATOR`.
+        let safe_unqualified_name: String = match preferred_name {
+            Some(mut name) => loop {
+                if name.is_empty() {
+                    return DEFAULT_NAME.to_owned();
+                }
+                if name.ends_with(NAME_SYMBOL_SEPARATOR) {
+                    name = &name[..name.len() - 1];
+                    continue;
+                }
+                break name.to_owned();
+            },
+            None => DEFAULT_NAME.to_owned(),
+        };
+        let fully_qualified_name = format!(
+            "{}{}{}",
+            safe_unqualified_name, NAME_SYMBOL_SEPARATOR, symbol.0
+        );
+        self.fully_qualified_names
+            .insert(symbol, fully_qualified_name.clone());
+        fully_qualified_name
     }
 }
 
