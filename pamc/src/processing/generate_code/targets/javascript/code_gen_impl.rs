@@ -27,17 +27,31 @@ fn generate_code_for_file(
     state: &mut CodeGenState,
     file_id: NodeId<File>,
 ) -> Result<js_ast::File, CompileToJavaScriptError> {
+    let file = context.registry.file(file_id);
+    let item_ids = context.registry.file_item_list(file.item_list_id);
+    let items = item_ids
+        .iter()
+        .copied()
+        .filter_map(|item_id| match item_id {
+            FileItemNodeId::Type(_) => None,
+            FileItemNodeId::Let(let_id) => Some(
+                generate_code_for_let_declaration(context, state, let_id)
+                    .map(js_ast::FileItem::Const),
+            ),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(js_ast::File {
+        id: file.file_id,
+        items,
+    })
+}
+
+fn generate_code_for_let_declaration(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    let_id: NodeId<LetStatement>,
+) -> Result<js_ast::ConstStatement, CompileToJavaScriptError> {
     unimplemented!()
-    // let file = context.registry.get_node(file_id);
-    // let items = file
-    //     .items
-    //     .iter()
-    //     .map(|item_id| generate_code_for_file_item(context, state, *item_id))
-    //     .collect::<Result<Vec<_>, _>>()?;
-    // Ok(js_ast::File {
-    //     id: file_id,
-    //     items,
-    // })
 }
 
 #[derive(Clone, Debug)]
