@@ -77,7 +77,10 @@ fn generate_code_for_expression(
     let expression = context.registry.expression_ref(id);
     match expression {
         ExpressionRef::Name(name) => generate_code_for_name_expression(context, state, name),
-        _ => unimplemented!(),
+        ExpressionRef::Call(call) => generate_code_for_call(context, state, call),
+        ExpressionRef::Fun(fun) => generate_code_for_fun(context, state, fun),
+        ExpressionRef::Match(match_) => generate_code_for_match(context, state, match_),
+        ExpressionRef::Forall(forall) => generate_code_for_forall(context, state, forall),
     }
 }
 
@@ -106,6 +109,38 @@ fn generate_code_for_name_expression(
         state.unique_identifier_name(symbol, Some(&preferred_name))
     };
     Ok(js_ast::Expression::Identifier(identifier_name))
+}
+
+fn generate_code_for_call(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    name: &Call,
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    unimplemented!()
+}
+
+fn generate_code_for_fun(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    name: &Fun,
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    unimplemented!()
+}
+
+fn generate_code_for_match(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    name: &Match,
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    unimplemented!()
+}
+
+fn generate_code_for_forall(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    name: &Forall,
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    unimplemented!()
 }
 
 #[derive(Clone, Debug)]
