@@ -51,6 +51,29 @@ fn generate_code_for_let_declaration(
     state: &mut CodeGenState,
     let_id: NodeId<LetStatement>,
 ) -> Result<js_ast::ConstStatement, CompileToJavaScriptError> {
+    let CodeGenContext {
+        symbol_db,
+        registry,
+        ..
+    } = context;
+    let let_statement = registry.let_statement(let_id);
+    let identifier_name = {
+        let symbol = symbol_db.identifier_symbols.get(let_statement.name_id);
+        let preferred_name = registry.identifier(let_statement.name_id).name.to_js_name();
+        state.unique_identifier_name(symbol, Some(&preferred_name))
+    };
+    let value = generate_code_for_expression(context, state, let_statement.value_id)?;
+    Ok(js_ast::ConstStatement {
+        name: identifier_name,
+        value,
+    })
+}
+
+fn generate_code_for_expression(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    let_id: ExpressionId,
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
     unimplemented!()
 }
 
@@ -68,5 +91,21 @@ struct CodeGenState;
 impl CodeGenState {
     fn new() -> Self {
         Self {}
+    }
+}
+
+impl CodeGenState {
+    fn unique_identifier_name(&mut self, symbol: Symbol, preferred_name: Option<&str>) -> String {
+        unimplemented!();
+    }
+}
+
+impl IdentifierName {
+    fn to_js_name(&self) -> String {
+        match self {
+            IdentifierName::Standard(s) => s.to_owned(),
+            IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_".to_owned(),
+            IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => "Type0".to_owned(),
+        }
     }
 }
