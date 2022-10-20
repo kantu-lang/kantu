@@ -12,13 +12,6 @@ pub enum FileItem {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Function {
-    pub name: String,
-    pub params: Vec<String>,
-    pub body: Expression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstStatement {
     pub name: String,
     pub value: Expression,
@@ -40,6 +33,13 @@ pub enum Expression {
 pub struct Call {
     pub callee: Expression,
     pub args: Vec<Expression>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Function {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

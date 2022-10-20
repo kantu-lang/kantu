@@ -63,9 +63,15 @@ fn generate_code_for_file(
 /// ```
 /// then we need to emit something like:
 /// ```js
-/// const List_37 = (T_38) => ({ type_: "List_37", args: [T_38] });
-/// const List_37__Nil_39 = (T_40) => (["Nil", T_40]);
-/// const List_37__Cons_41 = (T_42, car_43, cdr_44) => (["Cons", T_42, car_43, cdr_44]);
+/// const List_37 = function List_37(T_38) {
+///     return { type_: "List_37", args: [T_38] };
+/// };
+/// const List_37__Nil_39 = function List_37__Nil_39(T_40) {
+///     return ["Nil", T_40];
+/// };
+/// const List_37__Cons_41 = function List_37__Cons_41(T_42, car_43, cdr_44) {
+///     return ["Cons", T_42, car_43, cdr_44];
+/// };
 /// ```
 fn generate_code_for_type_statement(
     context: &CodeGenContext,
