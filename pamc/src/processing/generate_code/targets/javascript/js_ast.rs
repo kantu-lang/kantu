@@ -35,6 +35,7 @@ pub enum Expression {
     Ternary(Box<Ternary>),
     Array(Box<Array>),
     Object(Box<Object>),
+    Arrow(Box<Arrow>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -81,3 +82,9 @@ pub struct Object {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ObjectEntry(String, Expression);
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Arrow {
+    pub params: Vec<String>,
+    pub body: Expression,
+}
