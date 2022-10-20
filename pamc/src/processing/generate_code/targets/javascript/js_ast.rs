@@ -8,7 +8,6 @@ pub struct File {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
-    Function(Function),
     Const(ConstStatement),
 }
 
