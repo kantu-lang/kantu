@@ -74,31 +74,38 @@ fn generate_code_for_expression(
     state: &mut CodeGenState,
     id: ExpressionId,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    let expression = context.registry.expression_ref(id);
+    match expression {
+        ExpressionRef::Name(name) => generate_code_for_name_expression(context, state, name),
+        _ => unimplemented!(),
+    }
+}
+
+fn generate_code_for_name_expression(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    name: &NameExpression,
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
     let CodeGenContext {
         symbol_db,
         registry,
         ..
     } = context;
-    Ok(match registry.expression_ref(id) {
-        ExpressionRef::Name(name) => {
-            let identifier_name = {
-                let symbol = symbol_db
-                    .identifier_symbols
-                    .get_using_rightmost((name.id, *registry));
+    let identifier_name = {
+        let symbol = symbol_db
+            .identifier_symbols
+            .get_using_rightmost((name.id, *registry));
 
-                let component_ids = registry.identifier_list(name.component_list_id);
-                let preferred_name = component_ids
-                    .iter()
-                    .rev()
-                    .map(|x| registry.identifier(*x).name.to_js_name())
-                    .collect::<Vec<_>>()
-                    .join("__");
-                state.unique_identifier_name(symbol, Some(&preferred_name))
-            };
-            js_ast::Expression::Identifier(identifier_name)
-        }
-        _ => unimplemented!(),
-    })
+        let component_ids = registry.identifier_list(name.component_list_id);
+        let preferred_name = component_ids
+            .iter()
+            .rev()
+            .map(|x| registry.identifier(*x).name.to_js_name())
+            .collect::<Vec<_>>()
+            .join("__");
+        state.unique_identifier_name(symbol, Some(&preferred_name))
+    };
+    Ok(js_ast::Expression::Identifier(identifier_name))
 }
 
 #[derive(Clone, Debug)]
