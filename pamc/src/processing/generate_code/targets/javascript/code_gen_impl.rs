@@ -96,7 +96,7 @@ impl CodeGenState {
 
 impl CodeGenState {
     fn unique_identifier_name(&mut self, symbol: Symbol, preferred_name: Option<&str>) -> String {
-        unimplemented!();
+        format!("{}_{}", preferred_name.unwrap_or("anonymous"), symbol.0)
     }
 }
 
