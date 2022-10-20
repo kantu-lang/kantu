@@ -200,6 +200,8 @@ impl CodeGenState {
 }
 
 impl CodeGenState {
+    /// Guarantees that every Symbol will have exactly one name, and that every name will
+    /// have at most one Symbol.
     fn unique_identifier_name(&mut self, symbol: Symbol, preferred_name: Option<&str>) -> String {
         if let Some(existing) = self.fully_qualified_names.get(&symbol) {
             return existing.clone();
@@ -208,24 +210,12 @@ impl CodeGenState {
         const DEFAULT_NAME: &str = "anonymous";
         const NAME_SYMBOL_SEPARATOR: char = '_';
 
-        // To prevent the possibility of collisions, an unqualified name
-        // must not end with `NAME_SYMBOL_SEPARATOR`.
-        let safe_unqualified_name: String = match preferred_name {
-            Some(mut name) => loop {
-                if name.is_empty() {
-                    return DEFAULT_NAME.to_owned();
-                }
-                if name.ends_with(NAME_SYMBOL_SEPARATOR) {
-                    name = &name[..name.len() - 1];
-                    continue;
-                }
-                break name.to_owned();
-            },
-            None => DEFAULT_NAME.to_owned(),
-        };
+        let unqualified_name = preferred_name.unwrap_or(DEFAULT_NAME);
         let fully_qualified_name = format!(
-            "{}{}{}",
-            safe_unqualified_name, NAME_SYMBOL_SEPARATOR, symbol.0
+            "{unq}{sep}{sym}",
+            unq = unqualified_name,
+            sep = NAME_SYMBOL_SEPARATOR,
+            sym = symbol.0
         );
         self.fully_qualified_names
             .insert(symbol, fully_qualified_name.clone());
