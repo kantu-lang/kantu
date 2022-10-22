@@ -130,11 +130,12 @@ fn generate_code_for_type_constructor(
 
     Ok(ConstStatement {
         name: type_js_name.clone(),
-        value: Expression::Function(Box::new(Function {
+        value: Function {
             name: type_js_name,
             params: params,
             return_value,
-        })),
+        }
+        .into_return_value_if_nullary(),
     })
 }
 
@@ -167,11 +168,12 @@ fn generate_code_for_variant_constructor(
 
     Ok(ConstStatement {
         name: variant_js_name.clone(),
-        value: Expression::Function(Box::new(Function {
+        value: Function {
             name: variant_js_name,
             params: params,
             return_value,
-        })),
+        }
+        .into_return_value_if_nullary(),
     })
 }
 
@@ -342,6 +344,21 @@ fn generate_code_for_forall(
 
 fn js_constant_zero() -> Expression {
     Expression::Literal(Literal::Number(0))
+}
+
+impl Function {
+    /// Invocations of nullary type constructors and variant constructors
+    /// are represented as identifiers, not calls.
+    /// Thus, when we're declaring these constructors, we must make sure
+    /// to declare non-nullary constructors as values rather than nullary
+    /// functions.
+    fn into_return_value_if_nullary(self) -> Expression {
+        if self.params.is_empty() {
+            self.return_value
+        } else {
+            Expression::Function(Box::new(self))
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
