@@ -149,9 +149,20 @@ fn generate_code_for_name_expression(
 fn generate_code_for_call(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    name: &Call,
+    call: &Call,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
-    unimplemented!()
+    let callee = generate_code_for_expression(context, state, call.callee_id)?;
+    let args = {
+        let arg_ids = context.registry.expression_list(call.arg_list_id);
+        arg_ids
+            .iter()
+            .map(|arg_id| generate_code_for_expression(context, state, *arg_id))
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    Ok(js_ast::Expression::Call(Box::new(js_ast::Call {
+        callee,
+        args,
+    })))
 }
 
 fn generate_code_for_fun(
