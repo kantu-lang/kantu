@@ -13,16 +13,16 @@ pub trait CompileTarget {
     type Error;
 
     fn generate_code_with_options(
-        symbol_db: &SymbolDatabase,
         registry: &NodeRegistry,
+        symbol_db: &SymbolDatabase,
         variant_db: &VariantReturnTypeDatabase,
         file_ids: &[NodeId<File>],
         options: Self::Options,
     ) -> Result<Self::Ok, Self::Error>;
 
     fn generate_code(
-        symbol_db: &SymbolDatabase,
         registry: &NodeRegistry,
+        symbol_db: &SymbolDatabase,
         variant_db: &VariantReturnTypeDatabase,
         file_ids: &[NodeId<File>],
     ) -> Result<Self::Ok, Self::Error>
@@ -30,8 +30,8 @@ pub trait CompileTarget {
         Self::Options: Default,
     {
         Self::generate_code_with_options(
-            symbol_db,
             registry,
+            symbol_db,
             variant_db,
             file_ids,
             Default::default(),

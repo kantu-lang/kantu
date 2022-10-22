@@ -27,14 +27,14 @@ impl CompileTarget for JavaScript {
     type Error = CompileToJavaScriptError;
 
     fn generate_code_with_options(
-        symbol_db: &SymbolDatabase,
         registry: &NodeRegistry,
+        symbol_db: &SymbolDatabase,
         variant_db: &VariantReturnTypeDatabase,
         file_ids: &[NodeId<rst::File>],
         options: Self::Options,
     ) -> Result<Self::Ok, Self::Error> {
         code_gen_impl::generate_code_with_options(
-            symbol_db, registry, variant_db, file_ids, options,
+            registry, symbol_db, variant_db, file_ids, options,
         )
     }
 }

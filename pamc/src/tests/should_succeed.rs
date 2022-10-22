@@ -38,6 +38,6 @@ fn expect_success(src: &str) {
     validate_fun_recursion_in_file(&symbol_db, &registry, file)
         .expect("Fun recursion validation failed");
     let _js_ast =
-        JavaScript::generate_code(&symbol_db, &registry, &variant_return_type_map, &[file_id])
+        JavaScript::generate_code(&registry, &symbol_db, &variant_return_type_map, &[file_id])
             .expect("Code generation failed");
 }

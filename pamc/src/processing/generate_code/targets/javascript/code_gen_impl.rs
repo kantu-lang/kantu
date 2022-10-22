@@ -3,15 +3,15 @@ use super::*;
 type Options = <JavaScript as CompileTarget>::Options;
 
 pub fn generate_code_with_options(
-    symbol_db: &SymbolDatabase,
     registry: &NodeRegistry,
+    symbol_db: &SymbolDatabase,
     variant_db: &VariantReturnTypeDatabase,
     file_ids: &[NodeId<rst::File>],
     options: Options,
 ) -> Result<Vec<File>, CompileToJavaScriptError> {
     let context = CodeGenContext {
-        symbol_db,
         registry,
+        symbol_db,
         variant_db,
         options: &options,
     };
@@ -344,8 +344,8 @@ fn js_constant_zero() -> Expression {
 
 #[derive(Clone, Debug)]
 struct CodeGenContext<'a> {
-    symbol_db: &'a SymbolDatabase,
     registry: &'a NodeRegistry,
+    symbol_db: &'a SymbolDatabase,
     variant_db: &'a VariantReturnTypeDatabase,
     options: &'a Options,
 }
