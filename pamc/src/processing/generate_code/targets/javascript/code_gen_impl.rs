@@ -222,19 +222,7 @@ fn generate_code_for_name_expression(
         registry,
         ..
     } = context;
-    let identifier_name = {
-        let symbol = symbol_db
-            .identifier_symbols
-            .get_using_rightmost((name.id, *registry));
-
-        let component_ids = registry.identifier_list(name.component_list_id);
-        let preferred_name = component_ids
-            .iter()
-            .map(|name_id| name_id.symbol_js_name(context, state))
-            .collect::<Vec<_>>()
-            .join("__");
-        state.unique_identifier_name(symbol, Some(&preferred_name))
-    };
+    let identifier_name = name.id.symbol_js_name(context, state);
     Ok(Expression::Identifier(identifier_name))
 }
 
