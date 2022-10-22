@@ -405,12 +405,6 @@ impl NodeRegistry {
     }
 }
 
-impl RightmostIdentifierId for (NodeId<NameExpression>, &'_ NodeRegistry) {
-    fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
-        self.1.rightmost_component(self.0).id
-    }
-}
-
 impl NodeRegistry {
     // TODO: Delete after we're done debugging.
     #[allow(non_snake_case)]
