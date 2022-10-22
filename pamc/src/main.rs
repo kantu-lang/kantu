@@ -90,6 +90,7 @@ fn main() {
                                     match variant_return_type_validation_result {
                                         Ok(variant_db) => {
                                             println!("Variant return type validation success!");
+                                            print_separator();
 
                                             let rec_validation_result = pamc::processing::validate_fun_recursion::validate_fun_recursion_in_file(
                                         &symbol_db,
@@ -134,6 +135,13 @@ fn main() {
                                                         Ok(js_ast) => {
                                                             println!("Code generation success!");
                                                             println!("{:#?}", js_ast);
+                                                            print_separator();
+
+                                                            let code = pamc::processing::generate_code::targets::javascript::format::format_file(
+                                                                &js_ast[0],
+                                                                &pamc::processing::generate_code::targets::javascript::format::FormatOptions { indentation: 4 },
+                                                            );
+                                                            println!("Code:\n\n\n\n{}", code);
                                                         }
                                                         Err(err) => {
                                                             println!(

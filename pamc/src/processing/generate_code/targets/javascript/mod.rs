@@ -11,6 +11,7 @@ use js_ast::*;
 
 use rustc_hash::FxHashMap;
 
+pub mod format;
 pub mod js_ast;
 
 mod code_gen_impl;

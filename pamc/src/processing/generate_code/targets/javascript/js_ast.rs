@@ -20,6 +20,7 @@ pub struct ConstStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
     Literal(Literal),
+    /// The name is guaranteed to be a valid JavaScript identifier.
     Identifier(String),
     Call(Box<Call>),
     Function(Box<Function>),
