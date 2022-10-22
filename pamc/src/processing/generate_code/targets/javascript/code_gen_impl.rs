@@ -145,7 +145,7 @@ fn generate_code_for_variant_constructor(
     variant_id: NodeId<rst::Variant>,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
     let variant = context.registry.variant(variant_id);
-    let variant_js_name = variant.name_id.symbol_js_name(context, state);
+    let variant_symbol_js_name = variant.name_id.symbol_js_name(context, state);
     let params: Vec<String> = {
         let param_ids = context.registry.param_list(variant.param_list_id);
         param_ids
@@ -156,7 +156,12 @@ fn generate_code_for_variant_constructor(
     let return_value = {
         let mut items = Vec::with_capacity(params.len() + 1);
         items.push(Expression::Literal(Literal::String {
-            unescaped: variant_js_name.clone(),
+            // We must use the JS name instead of the Symbol JS name
+            // since we won't know the Symbol of the match case patterns
+            // (at the time of writing, the type checker isn't complete,
+            // so we don't have that information during code generation).
+            // Later, we can fix this.
+            unescaped: variant.name_id.js_name(context),
         }));
         items.extend(
             params
@@ -167,9 +172,9 @@ fn generate_code_for_variant_constructor(
     };
 
     Ok(ConstStatement {
-        name: variant_js_name.clone(),
+        name: variant_symbol_js_name.clone(),
         value: Function {
-            name: variant_js_name,
+            name: variant_symbol_js_name,
             params: params,
             return_value,
         }
@@ -497,6 +502,12 @@ impl SymbolJsName for NodeId<rst::NameExpression> {
             .collect::<Vec<_>>()
             .join("__");
         state.unique_identifier_name(symbol, Some(&preferred_name))
+    }
+}
+
+impl NodeId<rst::Identifier> {
+    fn js_name(&self, context: &CodeGenContext) -> String {
+        context.registry.identifier(*self).name.js_name()
     }
 }
 
