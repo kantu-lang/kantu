@@ -112,7 +112,9 @@ fn generate_code_for_type_constructor(
         entries: vec![
             ObjectEntry {
                 key: TYPE_SPECIES_KEY.to_string(),
-                value: Expression::Identifier(type_js_name.clone()),
+                value: Expression::Literal(Literal::String {
+                    unescaped: type_js_name.clone(),
+                }),
             },
             ObjectEntry {
                 key: TYPE_ARGS_KEY.to_string(),
