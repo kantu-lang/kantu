@@ -92,11 +92,7 @@ fn generate_code_for_let_statement(
         ..
     } = context;
     let let_statement = registry.let_statement(let_id);
-    let identifier_name = {
-        let symbol = symbol_db.identifier_symbols.get(let_statement.name_id);
-        let preferred_name = registry.identifier(let_statement.name_id).name.to_js_name();
-        state.unique_identifier_name(symbol, Some(&preferred_name))
-    };
+    let identifier_name = let_statement.name_id.js_name(context, state);
     let value = generate_code_for_expression(context, state, let_statement.value_id)?;
     Ok(js_ast::ConstStatement {
         name: identifier_name,
@@ -137,8 +133,7 @@ fn generate_code_for_name_expression(
         let component_ids = registry.identifier_list(name.component_list_id);
         let preferred_name = component_ids
             .iter()
-            .rev()
-            .map(|x| registry.identifier(*x).name.to_js_name())
+            .map(|name_id| name_id.js_name(context, state))
             .collect::<Vec<_>>()
             .join("__");
         state.unique_identifier_name(symbol, Some(&preferred_name))
@@ -170,26 +165,13 @@ fn generate_code_for_fun(
     state: &mut CodeGenState,
     fun: &Fun,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
-    let CodeGenContext {
-        symbol_db,
-        registry,
-        ..
-    } = context;
-    let name = {
-        let symbol = symbol_db.identifier_symbols.get(fun.name_id);
-        let preferred_name = registry.identifier(fun.name_id).name.to_js_name();
-        state.unique_identifier_name(symbol, Some(&preferred_name))
-    };
+    let CodeGenContext { registry, .. } = context;
+    let name = fun.name_id.js_name(context, state);
     let param_names = {
         let param_ids = registry.param_list(fun.param_list_id);
         param_ids
             .iter()
-            .map(|param_id| {
-                let param = registry.param(*param_id);
-                let symbol = symbol_db.identifier_symbols.get(param.name_id);
-                let preferred_name = registry.identifier(param.name_id).name.to_js_name();
-                state.unique_identifier_name(symbol, Some(&preferred_name))
-            })
+            .map(|param_id| param_id.js_name(context, state))
             .collect::<Vec<_>>()
     };
     let body = generate_code_for_expression(context, state, fun.body_id)?;
@@ -261,8 +243,53 @@ impl CodeGenState {
     }
 }
 
-impl IdentifierName {
-    fn to_js_name(&self) -> String {
+trait JsName {
+    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String;
+}
+
+impl JsName for NodeId<Identifier> {
+    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+        let CodeGenContext {
+            symbol_db,
+            registry,
+            ..
+        } = context;
+        let symbol = symbol_db.identifier_symbols.get(*self);
+        let preferred_name = registry.identifier(*self).name.js_name(context, state);
+        state.unique_identifier_name(symbol, Some(&preferred_name))
+    }
+}
+
+impl JsName for NodeId<Param> {
+    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+        let param = context.registry.param(*self);
+        param.name_id.js_name(context, state)
+    }
+}
+
+impl JsName for NodeId<NameExpression> {
+    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+        let CodeGenContext {
+            symbol_db,
+            registry,
+            ..
+        } = context;
+        let symbol = symbol_db
+            .identifier_symbols
+            .get_using_rightmost((*self, context.registry));
+        let component_ids =
+            registry.identifier_list(registry.name_expression(*self).component_list_id);
+        let preferred_name = component_ids
+            .iter()
+            .map(|x| registry.identifier(*x).name.js_name(context, state))
+            .collect::<Vec<_>>()
+            .join("__");
+        state.unique_identifier_name(symbol, Some(&preferred_name))
+    }
+}
+
+impl JsName for IdentifierName {
+    fn js_name(&self, _: &CodeGenContext, _: &mut CodeGenState) -> String {
         match self {
             IdentifierName::Standard(s) => s.to_owned(),
             IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_".to_owned(),
