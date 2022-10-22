@@ -374,8 +374,10 @@ impl CodeGenState {
         const DEFAULT_NAME: &str = "anonymous";
         const NAME_SYMBOL_SEPARATOR: char = '_';
 
-        // TODO: Sanitize the name to make sure it's a valid JS identifier.
-        let unqualified_name = preferred_name.unwrap_or(DEFAULT_NAME);
+        let unqualified_name = {
+            let unsanitized = preferred_name.unwrap_or(DEFAULT_NAME);
+            sanitize_js_identifier_name(unsanitized).expect("Preferred name should never be empty.")
+        };
         let fully_qualified_name = format!(
             "{unq}{sep}{sym}",
             unq = unqualified_name,
@@ -393,6 +395,28 @@ impl CodeGenState {
         /// Since this does not end with a digit, it is guaranteed to not collide.
         const EXPLOSION_THROWER_NAME: &str = "unreachable_path";
         EXPLOSION_THROWER_NAME.to_owned()
+    }
+}
+
+/// Returns an `Err` if the string is empty.
+fn sanitize_js_identifier_name(name: &str) -> Result<String, ()> {
+    if name.is_empty() {
+        return Err(());
+    }
+
+    let without_illegal_chars = name.replace(
+        |c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '$'),
+        "_",
+    );
+
+    let first_char = without_illegal_chars
+        .chars()
+        .next()
+        .expect("non-empty string");
+    if first_char.is_ascii_digit() {
+        Ok(format!("_{}", without_illegal_chars))
+    } else {
+        Ok(without_illegal_chars)
     }
 }
 
