@@ -98,23 +98,46 @@ fn main() {
                                     );
                                             match rec_validation_result {
                                                 Ok(()) => {
-                                                    println!("Recursion validation success!");
-                                                    let mut symbol_db = symbol_db;
-                                                    let type_check_result =
-                                                pamc::processing::type_check::type_check_file(
-                                                    &mut registry,
-                                                    &mut symbol_db,
-                                                    &variant_db,
-                                                    file_node_id,
-                                                );
-                                                    match type_check_result {
-                                                        Ok(type_map) => {
-                                                            println!("Type check success!");
-                                                            println!("{:#?}", type_map);
+                                                    // TODO: Restore type checking once we finish
+                                                    // implementing the type checker.
+
+                                                    //     println!("Recursion validation success!");
+                                                    //     let mut symbol_db = symbol_db;
+                                                    //     let type_check_result =
+                                                    // pamc::processing::type_check::type_check_file(
+                                                    //     &mut registry,
+                                                    //     &mut symbol_db,
+                                                    //     &variant_db,
+                                                    //     file_node_id,
+                                                    // );
+                                                    //     match type_check_result {
+                                                    //         Ok(type_map) => {
+                                                    //             println!("Type check success!");
+                                                    //             println!("{:#?}", type_map);
+                                                    //         }
+                                                    //         Err(err) => {
+                                                    //             println!(
+                                                    //                 "Type check error: {:#?}",
+                                                    //                 err
+                                                    //             );
+                                                    //         }
+                                                    //     }
+
+                                                    use pamc::processing::generate_code::CompileTarget;
+                                                    let code_gen_result = pamc::processing::generate_code::targets::javascript::JavaScript::generate_code(
+                                                        &registry,
+                                                        &symbol_db,
+                                                        &variant_db,
+                                                        &[file_node_id],
+                                                    );
+                                                    match code_gen_result {
+                                                        Ok(js_ast) => {
+                                                            println!("Code generation success!");
+                                                            println!("{:#?}", js_ast);
                                                         }
                                                         Err(err) => {
                                                             println!(
-                                                                "Type check error: {:#?}",
+                                                                "Code generation error: {:#?}",
                                                                 err
                                                             );
                                                         }
