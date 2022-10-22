@@ -74,11 +74,103 @@ fn generate_code_for_file(
 /// };
 /// ```
 fn generate_code_for_type_statement(
-    _context: &CodeGenContext,
-    _state: &mut CodeGenState,
-    _type_id: NodeId<rst::TypeStatement>,
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    type_id: NodeId<rst::TypeStatement>,
 ) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
-    unimplemented!()
+    let type_ = context.registry.type_statement(type_id);
+    let variant_ids = context.registry.variant_list(type_.variant_list_id);
+    let mut out = Vec::with_capacity(variant_ids.len() + 1);
+
+    let type_constructor = generate_code_for_type_constructor(context, state, type_id)?;
+    out.push(FileItem::Const(type_constructor));
+
+    for variant_id in variant_ids {
+        let variant_constructor =
+            generate_code_for_variant_constructor(context, state, *variant_id)?;
+        out.push(FileItem::Const(variant_constructor));
+    }
+
+    Ok(out)
+}
+
+fn generate_code_for_type_constructor(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    type_id: NodeId<rst::TypeStatement>,
+) -> Result<ConstStatement, CompileToJavaScriptError> {
+    let type_ = context.registry.type_statement(type_id);
+    let type_js_name = type_.name_id.symbol_js_name(context, state);
+    let params: Vec<String> = {
+        let type_param_ids = context.registry.param_list(type_.param_list_id);
+        type_param_ids
+            .iter()
+            .map(|id| id.symbol_js_name(context, state))
+            .collect()
+    };
+    let return_value = Expression::Object(Box::new(Object {
+        entries: vec![
+            ObjectEntry {
+                key: TYPE_SPECIES_KEY.to_string(),
+                value: Expression::Identifier(type_js_name.clone()),
+            },
+            ObjectEntry {
+                key: TYPE_ARGS_KEY.to_string(),
+                value: Expression::Array(Box::new(Array {
+                    items: params
+                        .iter()
+                        .map(|param| Expression::Identifier(param.clone()))
+                        .collect(),
+                })),
+            },
+        ],
+    }));
+
+    Ok(ConstStatement {
+        name: type_js_name.clone(),
+        value: Expression::Function(Box::new(Function {
+            name: type_js_name,
+            params: params,
+            return_value,
+        })),
+    })
+}
+
+fn generate_code_for_variant_constructor(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    variant_id: NodeId<rst::Variant>,
+) -> Result<ConstStatement, CompileToJavaScriptError> {
+    let variant = context.registry.variant(variant_id);
+    let variant_js_name = variant.name_id.symbol_js_name(context, state);
+    let params: Vec<String> = {
+        let param_ids = context.registry.param_list(variant.param_list_id);
+        param_ids
+            .iter()
+            .map(|id| id.symbol_js_name(context, state))
+            .collect()
+    };
+    let return_value = {
+        let mut items = Vec::with_capacity(params.len() + 1);
+        items.push(Expression::Literal(Literal::String {
+            unescaped: variant_js_name.clone(),
+        }));
+        items.extend(
+            params
+                .iter()
+                .map(|param| Expression::Identifier(param.clone())),
+        );
+        Expression::Array(Box::new(Array { items }))
+    };
+
+    Ok(ConstStatement {
+        name: variant_js_name.clone(),
+        value: Expression::Function(Box::new(Function {
+            name: variant_js_name,
+            params: params,
+            return_value,
+        })),
+    })
 }
 
 fn generate_code_for_let_statement(
@@ -167,11 +259,11 @@ fn generate_code_for_fun(
             .map(|param_id| param_id.symbol_js_name(context, state))
             .collect::<Vec<_>>()
     };
-    let body = generate_code_for_expression(context, state, fun.body_id)?;
+    let return_value = generate_code_for_expression(context, state, fun.body_id)?;
     Ok(Expression::Function(Box::new(Function {
         name,
         params: param_names,
-        body,
+        return_value,
     })))
 }
 
@@ -227,6 +319,10 @@ fn generate_code_for_explosion_error(_: &CodeGenContext, state: &mut CodeGenStat
     }))
 }
 
+const TYPE_SPECIES_KEY: &str = "type_species";
+const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
+const TYPE_ARGS_KEY: &str = "type_args";
+
 fn generate_code_for_forall(
     _context: &CodeGenContext,
     _state: &mut CodeGenState,
@@ -234,9 +330,9 @@ fn generate_code_for_forall(
 ) -> Result<Expression, CompileToJavaScriptError> {
     Ok(Expression::Object(Box::new(Object {
         entries: vec![ObjectEntry {
-            key: "type_species".to_owned(),
+            key: TYPE_SPECIES_KEY.to_owned(),
             value: Expression::Literal(Literal::String {
-                unescaped: "forall".to_owned(),
+                unescaped: TYPE_SPECIES_VALUE__FORALL.to_owned(),
             }),
         }],
     })))
@@ -278,6 +374,7 @@ impl CodeGenState {
         const DEFAULT_NAME: &str = "anonymous";
         const NAME_SYMBOL_SEPARATOR: char = '_';
 
+        // TODO: Sanitize the name to make sure it's a valid JS identifier.
         let unqualified_name = preferred_name.unwrap_or(DEFAULT_NAME);
         let fully_qualified_name = format!(
             "{unq}{sep}{sym}",

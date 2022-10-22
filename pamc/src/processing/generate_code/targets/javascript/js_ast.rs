@@ -47,7 +47,7 @@ pub struct Call {
 pub struct Function {
     pub name: String,
     pub params: Vec<String>,
-    pub body: Expression,
+    pub return_value: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
