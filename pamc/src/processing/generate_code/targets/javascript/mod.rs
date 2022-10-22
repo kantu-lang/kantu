@@ -2,12 +2,14 @@ use crate::data::{
     node_free_variable_cache::NodeFreeVariableCache,
     node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ExpressionRef, ListId, NodeId, NodeRegistry},
-    registered_sst::*,
+    registered_sst as rst,
     symbol_database::{IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource},
     variant_return_type::VariantReturnTypeDatabase,
     FileId,
 };
 use crate::processing::generate_code::CompileTarget;
+
+use js_ast::*;
 
 use rustc_hash::FxHashMap;
 
@@ -30,7 +32,7 @@ impl CompileTarget for JavaScript {
         symbol_db: &SymbolDatabase,
         registry: &NodeRegistry,
         variant_db: &VariantReturnTypeDatabase,
-        file_ids: &[NodeId<File>],
+        file_ids: &[NodeId<rst::File>],
         options: Self::Options,
     ) -> Result<Self::Ok, Self::Error> {
         code_gen_impl::generate_code_with_options(

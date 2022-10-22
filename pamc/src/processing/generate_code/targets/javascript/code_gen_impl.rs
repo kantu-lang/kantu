@@ -1,5 +1,4 @@
 use super::*;
-// TODO: Use js_ast::* instead of registered_sst::*.
 
 type Options = <JavaScript as CompileTarget>::Options;
 
@@ -7,9 +6,9 @@ pub fn generate_code_with_options(
     symbol_db: &SymbolDatabase,
     registry: &NodeRegistry,
     variant_db: &VariantReturnTypeDatabase,
-    file_ids: &[NodeId<File>],
+    file_ids: &[NodeId<rst::File>],
     options: Options,
-) -> Result<Vec<js_ast::File>, CompileToJavaScriptError> {
+) -> Result<Vec<File>, CompileToJavaScriptError> {
     let context = CodeGenContext {
         symbol_db,
         registry,
@@ -26,19 +25,19 @@ pub fn generate_code_with_options(
 fn generate_code_for_file(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    file_id: NodeId<File>,
-) -> Result<js_ast::File, CompileToJavaScriptError> {
+    file_id: NodeId<rst::File>,
+) -> Result<File, CompileToJavaScriptError> {
     let file = context.registry.file(file_id);
     let item_ids = context.registry.file_item_list(file.item_list_id);
     let items = {
         let mut out = vec![];
         for item_id in item_ids {
             match *item_id {
-                FileItemNodeId::Type(type_id) => {
+                rst::FileItemNodeId::Type(type_id) => {
                     out.extend(generate_code_for_type_statement(context, state, type_id)?);
                 }
-                FileItemNodeId::Let(let_id) => {
-                    out.push(js_ast::FileItem::Const(generate_code_for_let_statement(
+                rst::FileItemNodeId::Let(let_id) => {
+                    out.push(FileItem::Const(generate_code_for_let_statement(
                         context, state, let_id,
                     )?));
                 }
@@ -46,7 +45,7 @@ fn generate_code_for_file(
         }
         out
     };
-    Ok(js_ast::File {
+    Ok(File {
         id: file.file_id,
         items,
     })
@@ -77,16 +76,16 @@ fn generate_code_for_file(
 fn generate_code_for_type_statement(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    type_id: NodeId<TypeStatement>,
-) -> Result<Vec<js_ast::FileItem>, CompileToJavaScriptError> {
+    type_id: NodeId<rst::TypeStatement>,
+) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
     unimplemented!()
 }
 
 fn generate_code_for_let_statement(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    let_id: NodeId<LetStatement>,
-) -> Result<js_ast::ConstStatement, CompileToJavaScriptError> {
+    let_id: NodeId<rst::LetStatement>,
+) -> Result<ConstStatement, CompileToJavaScriptError> {
     let CodeGenContext {
         symbol_db,
         registry,
@@ -95,7 +94,7 @@ fn generate_code_for_let_statement(
     let let_statement = registry.let_statement(let_id);
     let identifier_name = let_statement.name_id.js_name(context, state);
     let value = generate_code_for_expression(context, state, let_statement.value_id)?;
-    Ok(js_ast::ConstStatement {
+    Ok(ConstStatement {
         name: identifier_name,
         value,
     })
@@ -104,8 +103,8 @@ fn generate_code_for_let_statement(
 fn generate_code_for_expression(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    id: ExpressionId,
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    id: rst::ExpressionId,
+) -> Result<Expression, CompileToJavaScriptError> {
     let expression = context.registry.expression_ref(id);
     match expression {
         ExpressionRef::Name(name) => generate_code_for_name_expression(context, state, name),
@@ -119,8 +118,8 @@ fn generate_code_for_expression(
 fn generate_code_for_name_expression(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    name: &NameExpression,
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    name: &rst::NameExpression,
+) -> Result<Expression, CompileToJavaScriptError> {
     let CodeGenContext {
         symbol_db,
         registry,
@@ -139,14 +138,14 @@ fn generate_code_for_name_expression(
             .join("__");
         state.unique_identifier_name(symbol, Some(&preferred_name))
     };
-    Ok(js_ast::Expression::Identifier(identifier_name))
+    Ok(Expression::Identifier(identifier_name))
 }
 
 fn generate_code_for_call(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    call: &Call,
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    call: &rst::Call,
+) -> Result<Expression, CompileToJavaScriptError> {
     let callee = generate_code_for_expression(context, state, call.callee_id)?;
     let args = {
         let arg_ids = context.registry.expression_list(call.arg_list_id);
@@ -155,17 +154,14 @@ fn generate_code_for_call(
             .map(|arg_id| generate_code_for_expression(context, state, *arg_id))
             .collect::<Result<Vec<_>, _>>()?
     };
-    Ok(js_ast::Expression::Call(Box::new(js_ast::Call {
-        callee,
-        args,
-    })))
+    Ok(Expression::Call(Box::new(Call { callee, args })))
 }
 
 fn generate_code_for_fun(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    fun: &Fun,
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    fun: &rst::Fun,
+) -> Result<Expression, CompileToJavaScriptError> {
     let CodeGenContext { registry, .. } = context;
     let name = fun.name_id.js_name(context, state);
     let param_names = {
@@ -176,7 +172,7 @@ fn generate_code_for_fun(
             .collect::<Vec<_>>()
     };
     let body = generate_code_for_expression(context, state, fun.body_id)?;
-    Ok(js_ast::Expression::Function(Box::new(js_ast::Function {
+    Ok(Expression::Function(Box::new(Function {
         name,
         params: param_names,
         body,
@@ -186,8 +182,8 @@ fn generate_code_for_fun(
 fn generate_code_for_match(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    match_: &Match,
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    match_: &rst::Match,
+) -> Result<Expression, CompileToJavaScriptError> {
     let case_ids = context.registry.match_case_list(match_.case_list_id);
     let matchee = generate_code_for_expression(context, state, match_.matchee_id)?;
     generate_ternary_for_match_cases(context, state, &matchee, case_ids)
@@ -196,9 +192,9 @@ fn generate_code_for_match(
 fn generate_ternary_for_match_cases(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    matchee: &js_ast::Expression,
-    case_ids: &[NodeId<MatchCase>],
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    matchee: &Expression,
+    case_ids: &[NodeId<rst::MatchCase>],
+) -> Result<Expression, CompileToJavaScriptError> {
     if case_ids.is_empty() {
         return Ok(generate_code_for_explosion_error(context, state));
     }
@@ -207,21 +203,21 @@ fn generate_ternary_for_match_cases(
 
     let case = registry.match_case(case_ids[0]);
     let case_variant_name: String = registry.identifier(case.variant_name_id).name.js_name();
-    let condition = js_ast::Expression::BinaryOp(Box::new(js_ast::BinaryOp {
-        left: js_ast::Expression::BinaryOp(Box::new(js_ast::BinaryOp {
+    let condition = Expression::BinaryOp(Box::new(BinaryOp {
+        left: Expression::BinaryOp(Box::new(BinaryOp {
             left: matchee.clone(),
-            op: js_ast::BinaryOpKind::Index,
+            op: BinaryOpKind::Index,
             right: js_constant_zero(),
         })),
-        op: js_ast::BinaryOpKind::TripleEqual,
-        right: js_ast::Expression::Literal(js_ast::Literal::String {
+        op: BinaryOpKind::TripleEqual,
+        right: Expression::Literal(Literal::String {
             unescaped: case_variant_name,
         }),
     }));
     let true_body = generate_code_for_expression(context, state, case.output_id)?;
     let false_body = generate_ternary_for_match_cases(context, state, matchee, &case_ids[1..])?;
 
-    Ok(js_ast::Expression::Ternary(Box::new(js_ast::Ternary {
+    Ok(Expression::Ternary(Box::new(Ternary {
         condition,
         true_body,
         false_body,
@@ -231,9 +227,9 @@ fn generate_ternary_for_match_cases(
 fn generate_code_for_explosion_error(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-) -> js_ast::Expression {
-    js_ast::Expression::Call(Box::new(js_ast::Call {
-        callee: js_ast::Expression::Identifier(state.explosion_error_thrower_function_name()),
+) -> Expression {
+    Expression::Call(Box::new(Call {
+        callee: Expression::Identifier(state.explosion_error_thrower_function_name()),
         args: vec![],
     }))
 }
@@ -241,13 +237,13 @@ fn generate_code_for_explosion_error(
 fn generate_code_for_forall(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    name: &Forall,
-) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    name: &rst::Forall,
+) -> Result<Expression, CompileToJavaScriptError> {
     unimplemented!()
 }
 
-fn js_constant_zero() -> js_ast::Expression {
-    js_ast::Expression::Literal(js_ast::Literal::Number(0))
+fn js_constant_zero() -> Expression {
+    Expression::Literal(Literal::Number(0))
 }
 
 #[derive(Clone, Debug)]
@@ -307,7 +303,7 @@ trait JsName {
     fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String;
 }
 
-impl JsName for NodeId<Identifier> {
+impl JsName for NodeId<rst::Identifier> {
     fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
         let CodeGenContext {
             symbol_db,
@@ -320,14 +316,14 @@ impl JsName for NodeId<Identifier> {
     }
 }
 
-impl JsName for NodeId<Param> {
+impl JsName for NodeId<rst::Param> {
     fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
         let param = context.registry.param(*self);
         param.name_id.js_name(context, state)
     }
 }
 
-impl JsName for NodeId<NameExpression> {
+impl JsName for NodeId<rst::NameExpression> {
     fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
         let CodeGenContext {
             symbol_db,
@@ -348,12 +344,16 @@ impl JsName for NodeId<NameExpression> {
     }
 }
 
-impl IdentifierName {
+impl rst::IdentifierName {
     fn js_name(&self) -> String {
         match self {
-            IdentifierName::Standard(s) => s.to_owned(),
-            IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_".to_owned(),
-            IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => "Type0".to_owned(),
+            rst::IdentifierName::Standard(s) => s.to_owned(),
+            rst::IdentifierName::Reserved(rst::ReservedIdentifierName::Underscore) => {
+                "_".to_owned()
+            }
+            rst::IdentifierName::Reserved(rst::ReservedIdentifierName::TypeTitleCase) => {
+                "Type0".to_owned()
+            }
         }
     }
 }
