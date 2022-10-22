@@ -74,9 +74,9 @@ fn generate_code_for_file(
 /// };
 /// ```
 fn generate_code_for_type_statement(
-    context: &CodeGenContext,
-    state: &mut CodeGenState,
-    type_id: NodeId<rst::TypeStatement>,
+    _context: &CodeGenContext,
+    _state: &mut CodeGenState,
+    _type_id: NodeId<rst::TypeStatement>,
 ) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
     unimplemented!()
 }
@@ -86,11 +86,7 @@ fn generate_code_for_let_statement(
     state: &mut CodeGenState,
     let_id: NodeId<rst::LetStatement>,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
-    let CodeGenContext {
-        symbol_db,
-        registry,
-        ..
-    } = context;
+    let CodeGenContext { registry, .. } = context;
     let let_statement = registry.let_statement(let_id);
     let identifier_name = let_statement.name_id.js_name(context, state);
     let value = generate_code_for_expression(context, state, let_statement.value_id)?;
@@ -224,10 +220,7 @@ fn generate_ternary_for_match_cases(
     })))
 }
 
-fn generate_code_for_explosion_error(
-    context: &CodeGenContext,
-    state: &mut CodeGenState,
-) -> Expression {
+fn generate_code_for_explosion_error(_: &CodeGenContext, state: &mut CodeGenState) -> Expression {
     Expression::Call(Box::new(Call {
         callee: Expression::Identifier(state.explosion_error_thrower_function_name()),
         args: vec![],
@@ -235,9 +228,9 @@ fn generate_code_for_explosion_error(
 }
 
 fn generate_code_for_forall(
-    context: &CodeGenContext,
-    state: &mut CodeGenState,
-    name: &rst::Forall,
+    _context: &CodeGenContext,
+    _state: &mut CodeGenState,
+    _name: &rst::Forall,
 ) -> Result<Expression, CompileToJavaScriptError> {
     unimplemented!()
 }

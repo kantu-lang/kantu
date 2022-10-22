@@ -1,9 +1,7 @@
 use crate::data::{
-    node_free_variable_cache::NodeFreeVariableCache,
-    node_hash_cache::NodeStructuralIdentityHashCache,
-    node_registry::{ExpressionRef, ListId, NodeId, NodeRegistry},
+    node_registry::{ExpressionRef, NodeId, NodeRegistry},
     registered_sst as rst,
-    symbol_database::{IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource},
+    symbol_database::{Symbol, SymbolDatabase},
     variant_return_type::VariantReturnTypeDatabase,
     FileId,
 };
