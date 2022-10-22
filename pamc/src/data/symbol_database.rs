@@ -162,7 +162,7 @@ mod symbol_source {
         Type(NodeId<TypeStatement>),
         Variant(NodeId<Variant>),
         TypedParam(NodeId<Param>),
-        UntypedParam(NodeId<Identifier>),
+        MatchCaseParam(NodeId<Identifier>, NodeId<MatchCase>, NodeId<Match>),
         Let(NodeId<LetStatement>),
         Fun(NodeId<Fun>),
         BuiltinTypeTitleCase,

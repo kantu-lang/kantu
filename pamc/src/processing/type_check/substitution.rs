@@ -123,7 +123,9 @@ fn get_wrapped_identifier_id_for_symbol(
             let param_name_id = registry.param(id).name_id;
             identifier_id_to_nfid(registry, param_name_id)
         }
-        SymbolSource::UntypedParam(id) => identifier_id_to_nfid(registry, id),
+        SymbolSource::MatchCaseParam(id, _case_id, _match_id) => {
+            identifier_id_to_nfid(registry, id)
+        }
         SymbolSource::Let(id) => {
             let let_name_id = registry.let_statement(id).name_id;
             identifier_id_to_nfid(registry, let_name_id)

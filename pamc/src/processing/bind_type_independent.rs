@@ -332,7 +332,7 @@ fn bind_match(
     let case_ids = registry.match_case_list(match_.case_list_id);
     for case_id in case_ids {
         let case = registry.match_case(*case_id);
-        bind_match_case(bind_state, registry, case)?;
+        bind_match_case(bind_state, registry, case, match_)?;
     }
     Ok(())
 }
@@ -341,6 +341,7 @@ fn bind_match_case(
     bind_state: &mut BindState,
     registry: &NodeRegistry,
     case: &MatchCase,
+    match_: &Match,
 ) -> Result<(), BindError> {
     bind_state.context.push_scope();
     let param_ids = registry.identifier_list(case.param_list_id);
@@ -349,7 +350,7 @@ fn bind_match_case(
             bind_state,
             registry,
             param_id,
-            SymbolSource::UntypedParam(param_id),
+            SymbolSource::MatchCaseParam(param_id, case.id, match_.id),
         )?;
     }
     bind_expression(bind_state, registry, case.output_id)?;

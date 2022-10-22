@@ -53,7 +53,7 @@ fn perform_eval_step_on_well_typed_expression(
             SymbolSource::Type(_)
             | SymbolSource::Variant(_)
             | SymbolSource::TypedParam(_)
-            | SymbolSource::UntypedParam(_)
+            | SymbolSource::MatchCaseParam(_, _, _)
             | SymbolSource::Fun(_)
             | SymbolSource::BuiltinTypeTitleCase => {
                 // This is safe because a identifier expression with

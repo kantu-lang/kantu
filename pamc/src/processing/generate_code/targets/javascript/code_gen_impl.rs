@@ -222,8 +222,41 @@ fn generate_code_for_name_expression(
         registry,
         ..
     } = context;
-    let identifier_name = name.id.symbol_js_name(context, state);
-    Ok(Expression::Identifier(identifier_name))
+    let symbol = symbol_db
+        .identifier_symbols
+        .get_using_rightmost((name.id, context.registry));
+    let source = *symbol_db
+        .symbol_sources
+        .get(&symbol)
+        .expect("A symbol bound to a name expression should have a source.");
+    match source {
+        // TODO: Come up with a more robust test to see if the symbol
+        // was defined by a match case.
+        // Currently, the only source of untyped params is match cases,
+        // so this works.
+        // But if this changes in the future, this will break.
+        SymbolSource::MatchCaseParam(_param_id, case_id, match_id) => {
+            let case = registry.match_case(case_id);
+            let param_ids = registry.identifier_list(case.param_list_id);
+            let param_index = param_ids
+                .iter()
+                .position(|id| symbol == symbol_db.identifier_symbols.get(*id))
+                .expect("The param list of a match case should contain the param id.");
+            let matchee_id = registry.match_(match_id).matchee_id;
+            Ok(Expression::BinaryOp(Box::new(BinaryOp {
+                left: generate_code_for_expression(context, state, matchee_id)?,
+                op: BinaryOpKind::Index,
+                right: Expression::Literal(Literal::Number(
+                    i32::try_from(param_index + 1)
+                        .expect("param index should not be absurdly large"),
+                )),
+            })))
+        }
+        _ => {
+            let identifier_name = name.id.symbol_js_name(context, state);
+            Ok(Expression::Identifier(identifier_name))
+        }
+    }
 }
 
 fn generate_code_for_call(

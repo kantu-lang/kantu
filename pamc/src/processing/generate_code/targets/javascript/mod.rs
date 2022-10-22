@@ -1,7 +1,7 @@
 use crate::data::{
     node_registry::{ExpressionRef, NodeId, NodeRegistry},
     registered_sst as rst,
-    symbol_database::{Symbol, SymbolDatabase},
+    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
     variant_return_type::VariantReturnTypeDatabase,
     FileId,
 };

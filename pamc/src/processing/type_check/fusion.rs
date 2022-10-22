@@ -84,7 +84,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                             // `right` cannot be replaced.
                             FusionCase::NeitherReplacable
                         }
-                        SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
+                        SymbolSource::TypedParam(_) | SymbolSource::MatchCaseParam(_, _, _) => {
                             FusionCase::LeftIrreplacableRightReplacable { right_symbol }
                         }
                     }
@@ -114,7 +114,7 @@ fn compute_ltr_fusion_of_well_typed_normal_forms(
                     | SymbolSource::BuiltinTypeTitleCase => {
                         get_fusion_case_assuming_left_is_irreplacable(state, right_id.0)
                     }
-                    SymbolSource::TypedParam(_) | SymbolSource::UntypedParam(_) => {
+                    SymbolSource::TypedParam(_) | SymbolSource::MatchCaseParam(_, _, _) => {
                         FusionCase::LeftReplacable { left_symbol }
                     }
                 }

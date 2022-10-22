@@ -119,7 +119,7 @@ fn expect_name_clash_error(
                 let name_id = registry.param(param_id).name_id;
                 (&registry.identifier(name_id).name, SymbolSourceKind::Param)
             }
-            SymbolSource::UntypedParam(param_id) => {
+            SymbolSource::MatchCaseParam(param_id, _case_id, _match_id) => {
                 (&registry.identifier(param_id).name, SymbolSourceKind::Param)
             }
             SymbolSource::Let(let_id) => {
