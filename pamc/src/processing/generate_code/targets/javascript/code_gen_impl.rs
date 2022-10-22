@@ -232,7 +232,14 @@ fn generate_code_for_forall(
     _state: &mut CodeGenState,
     _name: &rst::Forall,
 ) -> Result<Expression, CompileToJavaScriptError> {
-    unimplemented!()
+    Ok(Expression::Object(Box::new(Object {
+        entries: vec![ObjectEntry {
+            key: "type_species".to_owned(),
+            value: Expression::Literal(Literal::String {
+                unescaped: "forall".to_owned(),
+            }),
+        }],
+    })))
 }
 
 fn js_constant_zero() -> Expression {

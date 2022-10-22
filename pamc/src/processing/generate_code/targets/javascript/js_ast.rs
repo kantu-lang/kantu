@@ -32,6 +32,7 @@ pub enum Expression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Literal {
+    Boolean(bool),
     Number(i32),
     String { unescaped: String },
 }
@@ -86,4 +87,7 @@ pub struct Object {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ObjectEntry(String, Expression);
+pub struct ObjectEntry {
+    pub key: String,
+    pub value: Expression,
+}
