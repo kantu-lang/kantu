@@ -88,7 +88,7 @@ fn generate_code_for_let_statement(
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
     let CodeGenContext { registry, .. } = context;
     let let_statement = registry.let_statement(let_id);
-    let identifier_name = let_statement.name_id.js_name(context, state);
+    let identifier_name = let_statement.name_id.symbol_js_name(context, state);
     let value = generate_code_for_expression(context, state, let_statement.value_id)?;
     Ok(ConstStatement {
         name: identifier_name,
@@ -129,7 +129,7 @@ fn generate_code_for_name_expression(
         let component_ids = registry.identifier_list(name.component_list_id);
         let preferred_name = component_ids
             .iter()
-            .map(|name_id| name_id.js_name(context, state))
+            .map(|name_id| name_id.symbol_js_name(context, state))
             .collect::<Vec<_>>()
             .join("__");
         state.unique_identifier_name(symbol, Some(&preferred_name))
@@ -159,12 +159,12 @@ fn generate_code_for_fun(
     fun: &rst::Fun,
 ) -> Result<Expression, CompileToJavaScriptError> {
     let CodeGenContext { registry, .. } = context;
-    let name = fun.name_id.js_name(context, state);
+    let name = fun.name_id.symbol_js_name(context, state);
     let param_names = {
         let param_ids = registry.param_list(fun.param_list_id);
         param_ids
             .iter()
-            .map(|param_id| param_id.js_name(context, state))
+            .map(|param_id| param_id.symbol_js_name(context, state))
             .collect::<Vec<_>>()
     };
     let body = generate_code_for_expression(context, state, fun.body_id)?;
@@ -299,12 +299,14 @@ impl CodeGenState {
     }
 }
 
-trait JsName {
-    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String;
+trait SymbolJsName {
+    /// Guarantees that every Symbol will have exactly one name, and that every name will
+    /// have at most one Symbol.
+    fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String;
 }
 
-impl JsName for NodeId<rst::Identifier> {
-    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+impl SymbolJsName for NodeId<rst::Identifier> {
+    fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
         let CodeGenContext {
             symbol_db,
             registry,
@@ -316,15 +318,15 @@ impl JsName for NodeId<rst::Identifier> {
     }
 }
 
-impl JsName for NodeId<rst::Param> {
-    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+impl SymbolJsName for NodeId<rst::Param> {
+    fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
         let param = context.registry.param(*self);
-        param.name_id.js_name(context, state)
+        param.name_id.symbol_js_name(context, state)
     }
 }
 
-impl JsName for NodeId<rst::NameExpression> {
-    fn js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+impl SymbolJsName for NodeId<rst::NameExpression> {
+    fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
         let CodeGenContext {
             symbol_db,
             registry,
