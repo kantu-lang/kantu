@@ -168,9 +168,36 @@ fn generate_code_for_call(
 fn generate_code_for_fun(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    name: &Fun,
+    fun: &Fun,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
-    unimplemented!()
+    let CodeGenContext {
+        symbol_db,
+        registry,
+        ..
+    } = context;
+    let name = {
+        let symbol = symbol_db.identifier_symbols.get(fun.name_id);
+        let preferred_name = registry.identifier(fun.name_id).name.to_js_name();
+        state.unique_identifier_name(symbol, Some(&preferred_name))
+    };
+    let param_names = {
+        let param_ids = registry.param_list(fun.param_list_id);
+        param_ids
+            .iter()
+            .map(|param_id| {
+                let param = registry.param(*param_id);
+                let symbol = symbol_db.identifier_symbols.get(param.name_id);
+                let preferred_name = registry.identifier(param.name_id).name.to_js_name();
+                state.unique_identifier_name(symbol, Some(&preferred_name))
+            })
+            .collect::<Vec<_>>()
+    };
+    let body = generate_code_for_expression(context, state, fun.body_id)?;
+    Ok(js_ast::Expression::Function(Box::new(js_ast::Function {
+        name,
+        params: param_names,
+        body,
+    })))
 }
 
 fn generate_code_for_match(
