@@ -1,4 +1,5 @@
 use super::*;
+// TODO: Use js_ast::* instead of registered_sst::*.
 
 type Options = <JavaScript as CompileTarget>::Options;
 
@@ -185,9 +186,56 @@ fn generate_code_for_fun(
 fn generate_code_for_match(
     context: &CodeGenContext,
     state: &mut CodeGenState,
-    name: &Match,
+    match_: &Match,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
-    unimplemented!()
+    let case_ids = context.registry.match_case_list(match_.case_list_id);
+    let matchee = generate_code_for_expression(context, state, match_.matchee_id)?;
+    generate_ternary_for_match_cases(context, state, &matchee, case_ids)
+}
+
+fn generate_ternary_for_match_cases(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+    matchee: &js_ast::Expression,
+    case_ids: &[NodeId<MatchCase>],
+) -> Result<js_ast::Expression, CompileToJavaScriptError> {
+    if case_ids.is_empty() {
+        return Ok(generate_code_for_explosion_error(context, state));
+    }
+
+    let CodeGenContext { registry, .. } = context;
+
+    let case = registry.match_case(case_ids[0]);
+    let case_variant_name: String = registry.identifier(case.variant_name_id).name.js_name();
+    let condition = js_ast::Expression::BinaryOp(Box::new(js_ast::BinaryOp {
+        left: js_ast::Expression::BinaryOp(Box::new(js_ast::BinaryOp {
+            left: matchee.clone(),
+            op: js_ast::BinaryOpKind::Index,
+            right: js_constant_zero(),
+        })),
+        op: js_ast::BinaryOpKind::TripleEqual,
+        right: js_ast::Expression::Literal(js_ast::Literal::String {
+            unescaped: case_variant_name,
+        }),
+    }));
+    let true_body = generate_code_for_expression(context, state, case.output_id)?;
+    let false_body = generate_ternary_for_match_cases(context, state, matchee, &case_ids[1..])?;
+
+    Ok(js_ast::Expression::Ternary(Box::new(js_ast::Ternary {
+        condition,
+        true_body,
+        false_body,
+    })))
+}
+
+fn generate_code_for_explosion_error(
+    context: &CodeGenContext,
+    state: &mut CodeGenState,
+) -> js_ast::Expression {
+    js_ast::Expression::Call(Box::new(js_ast::Call {
+        callee: js_ast::Expression::Identifier(state.explosion_error_thrower_function_name()),
+        args: vec![],
+    }))
 }
 
 fn generate_code_for_forall(
@@ -196,6 +244,10 @@ fn generate_code_for_forall(
     name: &Forall,
 ) -> Result<js_ast::Expression, CompileToJavaScriptError> {
     unimplemented!()
+}
+
+fn js_constant_zero() -> js_ast::Expression {
+    js_ast::Expression::Literal(js_ast::Literal::Number(0))
 }
 
 #[derive(Clone, Debug)]
@@ -241,6 +293,14 @@ impl CodeGenState {
             .insert(symbol, fully_qualified_name.clone());
         fully_qualified_name
     }
+
+    fn explosion_error_thrower_function_name(&mut self) -> String {
+        /// This is safe because all non-special identifier names end with `_`
+        /// followed by one or more digits.
+        /// Since this does not end with a digit, it is guaranteed to not collide.
+        const EXPLOSION_THROWER_NAME: &str = "unreachable_path";
+        EXPLOSION_THROWER_NAME.to_owned()
+    }
 }
 
 trait JsName {
@@ -255,7 +315,7 @@ impl JsName for NodeId<Identifier> {
             ..
         } = context;
         let symbol = symbol_db.identifier_symbols.get(*self);
-        let preferred_name = registry.identifier(*self).name.js_name(context, state);
+        let preferred_name = registry.identifier(*self).name.js_name();
         state.unique_identifier_name(symbol, Some(&preferred_name))
     }
 }
@@ -281,15 +341,15 @@ impl JsName for NodeId<NameExpression> {
             registry.identifier_list(registry.name_expression(*self).component_list_id);
         let preferred_name = component_ids
             .iter()
-            .map(|x| registry.identifier(*x).name.js_name(context, state))
+            .map(|x| registry.identifier(*x).name.js_name())
             .collect::<Vec<_>>()
             .join("__");
         state.unique_identifier_name(symbol, Some(&preferred_name))
     }
 }
 
-impl JsName for IdentifierName {
-    fn js_name(&self, _: &CodeGenContext, _: &mut CodeGenState) -> String {
+impl IdentifierName {
+    fn js_name(&self) -> String {
         match self {
             IdentifierName::Standard(s) => s.to_owned(),
             IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_".to_owned(),

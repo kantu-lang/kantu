@@ -19,6 +19,7 @@ pub struct ConstStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
+    Literal(Literal),
     Identifier(String),
     Call(Box<Call>),
     Function(Box<Function>),
@@ -27,6 +28,12 @@ pub enum Expression {
     Ternary(Box<Ternary>),
     Array(Box<Array>),
     Object(Box<Object>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Literal {
+    Number(i32),
+    String { unescaped: String },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
