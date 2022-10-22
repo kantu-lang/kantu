@@ -578,25 +578,3 @@ pub fn identifier_id_to_nfid(
 ) -> NormalFormNodeId {
     NormalFormNodeId(identifier_id_to_expression_id(registry, identifier_id))
 }
-
-pub(crate) trait RightmostIdentifierId {
-    fn rightmost_identifier_id(&self) -> NodeId<Identifier>;
-}
-
-impl RightmostIdentifierId for NodeId<Identifier> {
-    fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
-        *self
-    }
-}
-
-impl RightmostIdentifierId for (NodeId<NameExpression>, &'_ NodeRegistry) {
-    fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
-        self.1.rightmost_component(self.0).id
-    }
-}
-
-impl IdentifierToSymbolMap {
-    pub(crate) fn get_using_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
-        self.get(r.rightmost_identifier_id())
-    }
-}

@@ -102,3 +102,13 @@ pub struct Forall {
     pub param_list_id: ListId<NodeId<Param>>,
     pub output_id: ExpressionId,
 }
+
+pub trait RightmostIdentifierId {
+    fn rightmost_identifier_id(&self) -> NodeId<Identifier>;
+}
+
+impl RightmostIdentifierId for NodeId<Identifier> {
+    fn rightmost_identifier_id(&self) -> NodeId<Identifier> {
+        *self
+    }
+}

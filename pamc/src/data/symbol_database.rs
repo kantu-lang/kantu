@@ -103,6 +103,12 @@ mod identifier_to_symbol_map {
             is_newly_inserted
         }
     }
+
+    impl IdentifierToSymbolMap {
+        pub(crate) fn get_using_rightmost(&self, r: impl RightmostIdentifierId) -> Symbol {
+            self.get(r.rightmost_identifier_id())
+        }
+    }
 }
 
 pub use dot_targets::*;
