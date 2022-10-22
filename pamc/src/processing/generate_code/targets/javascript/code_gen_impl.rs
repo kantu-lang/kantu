@@ -1,19 +1,13 @@
 use super::*;
 
-type Options = <JavaScript as CompileTarget>::Options;
-
 pub fn generate_code_with_options(
     registry: &NodeRegistry,
     symbol_db: &SymbolDatabase,
-    variant_db: &VariantReturnTypeDatabase,
     file_ids: &[NodeId<rst::File>],
-    options: Options,
 ) -> Result<Vec<File>, CompileToJavaScriptError> {
     let context = CodeGenContext {
         registry,
         symbol_db,
-        variant_db,
-        options: &options,
     };
     let mut state = CodeGenState::new();
     file_ids
@@ -405,8 +399,6 @@ impl Function {
 struct CodeGenContext<'a> {
     registry: &'a NodeRegistry,
     symbol_db: &'a SymbolDatabase,
-    variant_db: &'a VariantReturnTypeDatabase,
-    options: &'a Options,
 }
 
 #[derive(Clone, Debug)]
