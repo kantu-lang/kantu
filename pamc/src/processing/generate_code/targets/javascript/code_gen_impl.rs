@@ -124,7 +124,7 @@ fn generate_code_for_type_constructor(
 
     Ok(ConstStatement {
         name: type_js_name.clone(),
-        value: Function {
+        value: SimpleFunction {
             name: type_js_name,
             params: params,
             return_value,
@@ -167,7 +167,7 @@ fn generate_code_for_variant_constructor(
 
     Ok(ConstStatement {
         name: variant_symbol_js_name.clone(),
-        value: Function {
+        value: SimpleFunction {
             name: variant_symbol_js_name,
             params: params,
             return_value,
@@ -284,7 +284,7 @@ fn generate_code_for_fun(
             .collect::<Vec<_>>()
     };
     let return_value = generate_code_for_expression(context, state, fun.body_id)?;
-    Ok(Expression::Function(Box::new(Function {
+    Ok(Expression::SimpleFunction(Box::new(SimpleFunction {
         name,
         params: param_names,
         return_value,
@@ -380,7 +380,7 @@ fn js_constant_zero() -> Expression {
     Expression::Literal(Literal::Number(0))
 }
 
-impl Function {
+impl SimpleFunction {
     /// Invocations of nullary type constructors and variant constructors
     /// are represented as identifiers, not calls.
     /// Thus, when we're declaring these constructors, we must make sure
@@ -390,7 +390,7 @@ impl Function {
         if self.params.is_empty() {
             self.return_value
         } else {
-            Expression::Function(Box::new(self))
+            Expression::SimpleFunction(Box::new(self))
         }
     }
 }

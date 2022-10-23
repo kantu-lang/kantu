@@ -37,7 +37,7 @@ fn write_expression(out: &mut Writer, expression: &Expression, options: &FormatO
         Expression::Literal(literal) => write_literal(out, literal),
         Expression::Identifier(identifier) => out.push_str(identifier),
         Expression::Call(call) => write_call(out, call, options),
-        Expression::Function(function) => write_function(out, function, options),
+        Expression::SimpleFunction(function) => write_simple_function(out, function, options),
         Expression::BinaryOp(binary_op) => write_binary_op(out, binary_op, options),
         Expression::Dot(dot) => write_dot(out, dot, options),
         Expression::Ternary(ternary) => write_ternary(out, ternary, options),
@@ -101,7 +101,7 @@ fn write_call(out: &mut Writer, call: &Call, options: &FormatOptions) {
     out.push_str(")");
 }
 
-fn write_function(out: &mut Writer, function: &Function, options: &FormatOptions) {
+fn write_simple_function(out: &mut Writer, function: &SimpleFunction, options: &FormatOptions) {
     out.push_str("function ");
     out.push_str(&function.name);
     out.push_str("(");
