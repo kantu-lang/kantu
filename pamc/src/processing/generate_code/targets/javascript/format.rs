@@ -37,7 +37,7 @@ fn write_expression(out: &mut Writer, expression: &Expression, options: &FormatO
         Expression::Literal(literal) => write_literal(out, literal),
         Expression::Identifier(identifier) => out.push_str(identifier),
         Expression::Call(call) => write_call(out, call, options),
-        Expression::SimpleFunction(function) => write_simple_function(out, function, options),
+        Expression::Function(function) => write_simple_function(out, function, options),
         Expression::BinaryOp(binary_op) => write_binary_op(out, binary_op, options),
         Expression::Dot(dot) => write_dot(out, dot, options),
         Expression::Ternary(ternary) => write_ternary(out, ternary, options),
@@ -101,7 +101,7 @@ fn write_call(out: &mut Writer, call: &Call, options: &FormatOptions) {
     out.push_str(")");
 }
 
-fn write_simple_function(out: &mut Writer, function: &SimpleFunction, options: &FormatOptions) {
+fn write_simple_function(out: &mut Writer, function: &Function, options: &FormatOptions) {
     out.push_str("function ");
     out.push_str(&function.name);
     out.push_str("(");
@@ -115,13 +115,41 @@ fn write_simple_function(out: &mut Writer, function: &SimpleFunction, options: &
 
     out.increase_indentation_level();
     out.indent();
-    out.push_str("return ");
-    write_expression(out, &function.return_value, options);
+    for statement in &function.body {
+        write_function_statement(out, statement, options);
+        out.push_str("\n");
+    }
     out.push_str(";\n");
     out.decrease_indentation_level();
 
     out.indent();
     out.push_str("}");
+}
+
+fn write_function_statement(
+    out: &mut Writer,
+    statement: &FunctionStatement,
+    options: &FormatOptions,
+) {
+    match statement {
+        FunctionStatement::Const(const_) => write_const_statement(out, const_, options),
+        FunctionStatement::Return(return_value) => {
+            write_return_statement(out, return_value, options)
+        }
+        FunctionStatement::Throw(throw_value) => write_throw_statement(out, throw_value, options),
+    }
+}
+
+fn write_return_statement(out: &mut Writer, return_value: &Expression, options: &FormatOptions) {
+    out.push_str("return ");
+    write_expression(out, return_value, options);
+    out.push_str(";");
+}
+
+fn write_throw_statement(out: &mut Writer, throw_value: &Expression, options: &FormatOptions) {
+    out.push_str("throw ");
+    write_expression(out, throw_value, options);
+    out.push_str(";");
 }
 
 fn write_binary_op(out: &mut Writer, binary_op: &BinaryOp, options: &FormatOptions) {

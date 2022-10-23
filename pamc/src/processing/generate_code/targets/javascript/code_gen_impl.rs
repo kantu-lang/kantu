@@ -124,12 +124,12 @@ fn generate_code_for_type_constructor(
 
     Ok(ConstStatement {
         name: type_js_name.clone(),
-        value: SimpleFunction {
+        value: Function {
             name: type_js_name,
             params: params,
-            return_value,
+            body: vec![FunctionStatement::Return(return_value)],
         }
-        .into_return_value_if_nullary(),
+        .into_return_value_if_simple_nullary(),
     })
 }
 
@@ -167,12 +167,12 @@ fn generate_code_for_variant_constructor(
 
     Ok(ConstStatement {
         name: variant_symbol_js_name.clone(),
-        value: SimpleFunction {
+        value: Function {
             name: variant_symbol_js_name,
             params: params,
-            return_value,
+            body: vec![FunctionStatement::Return(return_value)],
         }
-        .into_return_value_if_nullary(),
+        .into_return_value_if_simple_nullary(),
     })
 }
 
@@ -284,10 +284,10 @@ fn generate_code_for_fun(
             .collect::<Vec<_>>()
     };
     let return_value = generate_code_for_expression(context, state, fun.body_id)?;
-    Ok(Expression::SimpleFunction(Box::new(SimpleFunction {
+    Ok(Expression::Function(Box::new(Function {
         name,
         params: param_names,
-        return_value,
+        body: vec![FunctionStatement::Return(return_value)],
     })))
 }
 
@@ -380,17 +380,25 @@ fn js_constant_zero() -> Expression {
     Expression::Literal(Literal::Number(0))
 }
 
-impl SimpleFunction {
+impl Function {
+    /// A "simple" function is one that has a body that has a return statement
+    /// and no other statements.
+    /// This method returns the return value of the function if it is a simple
+    /// function with zero parameters, otherwise it returns the function itself.
+    ///
     /// Invocations of nullary type constructors and variant constructors
     /// are represented as identifiers, not calls.
     /// Thus, when we're declaring these constructors, we must make sure
     /// to declare non-nullary constructors as values rather than nullary
     /// functions.
-    fn into_return_value_if_nullary(self) -> Expression {
-        if self.params.is_empty() {
-            self.return_value
+    fn into_return_value_if_simple_nullary(self) -> Expression {
+        if self.params.is_empty() && matches!(&self.body[..], [FunctionStatement::Return(_)]) {
+            match self.body.into_iter().next() {
+                Some(FunctionStatement::Return(value)) => value,
+                _ => unreachable!(),
+            }
         } else {
-            Expression::SimpleFunction(Box::new(self))
+            Expression::Function(Box::new(self))
         }
     }
 }

@@ -23,7 +23,7 @@ pub enum Expression {
     /// The name is guaranteed to be a valid JavaScript identifier.
     Identifier(String),
     Call(Box<Call>),
-    SimpleFunction(Box<SimpleFunction>),
+    Function(Box<Function>),
     BinaryOp(Box<BinaryOp>),
     Dot(Box<Dot>),
     Ternary(Box<Ternary>),
@@ -45,10 +45,17 @@ pub struct Call {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct SimpleFunction {
+pub struct Function {
     pub name: String,
     pub params: Vec<String>,
-    pub return_value: Expression,
+    pub body: Vec<FunctionStatement>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum FunctionStatement {
+    Const(ConstStatement),
+    Return(Expression),
+    Throw(Expression),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
