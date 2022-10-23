@@ -25,6 +25,7 @@ fn generate_code_for_file(
     let item_ids = context.registry.file_item_list(file.item_list_id);
     let items = {
         let mut out = vec![];
+        out.extend(generate_code_for_explosion_thrower(context, state));
         for item_id in item_ids {
             match *item_id {
                 rst::FileItemNodeId::Type(type_id) => {
@@ -43,6 +44,26 @@ fn generate_code_for_file(
         id: file.file_id,
         items,
     })
+}
+
+fn generate_code_for_explosion_thrower(
+    _context: &CodeGenContext,
+    state: &mut CodeGenState,
+) -> Vec<FileItem> {
+    let thrower_name = state.explosion_error_thrower_function_name();
+    vec![FileItem::Const(ConstStatement {
+        name: thrower_name.clone(),
+        value: Expression::Function(Box::new(Function {
+            name: thrower_name,
+            params: vec![],
+            body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
+                callee: Expression::Identifier("Error".to_string()),
+                args: vec![Expression::Literal(Literal::String {
+                    unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions.".to_string(),
+                })],
+            })))],
+        })),
+    })]
 }
 
 /// This produces a Const for the type constructor,

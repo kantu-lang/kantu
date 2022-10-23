@@ -23,6 +23,7 @@ pub enum Expression {
     /// The name is guaranteed to be a valid JavaScript identifier.
     Identifier(String),
     Call(Box<Call>),
+    New(Box<Call>),
     Function(Box<Function>),
     BinaryOp(Box<BinaryOp>),
     Dot(Box<Dot>),

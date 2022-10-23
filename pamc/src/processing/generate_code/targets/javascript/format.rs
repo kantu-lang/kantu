@@ -37,6 +37,7 @@ fn write_expression(out: &mut Writer, expression: &Expression, options: &FormatO
         Expression::Literal(literal) => write_literal(out, literal),
         Expression::Identifier(identifier) => out.push_str(identifier),
         Expression::Call(call) => write_call(out, call, options),
+        Expression::New(call) => write_new_call(out, call, options),
         Expression::Function(function) => write_simple_function(out, function, options),
         Expression::BinaryOp(binary_op) => write_binary_op(out, binary_op, options),
         Expression::Dot(dot) => write_dot(out, dot, options),
@@ -101,6 +102,26 @@ fn write_call(out: &mut Writer, call: &Call, options: &FormatOptions) {
     out.push_str(")");
 }
 
+fn write_new_call(out: &mut Writer, call: &Call, options: &FormatOptions) {
+    out.push_str("new ");
+    if let Expression::Identifier(_) = call.callee {
+        write_expression(out, &call.callee, options);
+    } else {
+        out.push_str("(");
+        write_expression(out, &call.callee, options);
+        out.push_str(")");
+    }
+
+    out.push_str("(");
+    for (i, arg) in call.args.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        write_expression(out, arg, options);
+    }
+    out.push_str(")");
+}
+
 fn write_simple_function(out: &mut Writer, function: &Function, options: &FormatOptions) {
     out.push_str("function ");
     out.push_str(&function.name);
@@ -111,19 +132,22 @@ fn write_simple_function(out: &mut Writer, function: &Function, options: &Format
         }
         out.push_str(param);
     }
-    out.push_str(") {\n");
+    out.push_str(") {");
 
-    out.increase_indentation_level();
-    out.indent();
-    for statement in &function.body {
-        write_function_statement(out, statement, options);
+    if function.body.is_empty() {
+        out.push_str("}");
+    } else {
         out.push_str("\n");
+        out.increase_indentation_level();
+        out.indent();
+        for statement in &function.body {
+            write_function_statement(out, statement, options);
+            out.push_str("\n");
+        }
+        out.decrease_indentation_level();
+        out.indent();
+        out.push_str("}");
     }
-    out.push_str(";\n");
-    out.decrease_indentation_level();
-
-    out.indent();
-    out.push_str("}");
 }
 
 fn write_function_statement(
