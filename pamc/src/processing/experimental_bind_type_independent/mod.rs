@@ -195,8 +195,28 @@ fn bind_call_expression(state: &mut State, call: ub::Call) -> Result<Expression,
     Ok(Expression::Call(Box::new(Call { callee, args })))
 }
 
-fn bind_fun(_state: &mut State, _fun: ub::Fun) -> Result<Expression, BindError> {
-    unimplemented!()
+fn bind_fun(state: &mut State, fun: ub::Fun) -> Result<Expression, BindError> {
+    state.push_scope();
+
+    let params = fun
+        .params
+        .into_iter()
+        .map(|param| bind_param(state, param))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    let return_type = bind_expression(state, fun.return_type)?;
+
+    let name = create_name_and_add_to_scope(state, &fun.name)?;
+
+    let body = bind_expression(state, fun.body)?;
+    let fun = Expression::Fun(Box::new(Fun {
+        name,
+        params,
+        return_type,
+        body,
+    }));
+
+    state.pop_scope_or_panic();
+    Ok(fun)
 }
 
 fn bind_match(_state: &mut State, _match_: ub::Match) -> Result<Expression, BindError> {
