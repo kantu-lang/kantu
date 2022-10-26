@@ -1,3 +1,4 @@
+pub mod bound_ast;
 pub mod light_ast;
 pub mod node_free_variable_cache;
 pub mod node_hash_cache;
