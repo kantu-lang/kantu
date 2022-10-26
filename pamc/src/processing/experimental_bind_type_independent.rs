@@ -75,7 +75,9 @@ fn bind_type_statement(
         out
     };
 
-    let name = state.context.declare_name(&type_statement.name)?;
+    let name = state
+        .context
+        .create_name_and_push_symbol_to_scope(&type_statement.name)?;
     let variants = type_statement
         .variants
         .into_iter()
@@ -99,7 +101,9 @@ fn bind_type_statement(
 
 fn bind_param(state: &mut BindState, param: ub::Param) -> Result<Param, BindError> {
     let type_ = bind_expression(state, param.type_)?;
-    let name = state.context.declare_name(&param.name)?;
+    let name = state
+        .context
+        .create_name_and_push_symbol_to_scope(&param.name)?;
     Ok(Param {
         is_dashed: param.is_dashed,
         name,
@@ -121,7 +125,9 @@ fn bind_variant_without_declaring_dot_target(
     state.context.pop_scope_or_panic();
 
     Ok(Variant {
-        name: state.context.create_name_without_declaring(&variant.name),
+        name: state
+            .context
+            .create_name_without_pushing_symbol_to_scope(&variant.name),
         params,
         return_type,
     })
@@ -132,7 +138,9 @@ fn bind_let_statement(
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(state, let_statement.value)?;
-    let name = state.context.declare_name(&let_statement.name)?;
+    let name = state
+        .context
+        .create_name_and_push_symbol_to_scope(&let_statement.name)?;
     Ok(LetStatement { name, value })
 }
 
@@ -140,6 +148,35 @@ fn bind_expression(
     state: &mut BindState,
     expression: ub::Expression,
 ) -> Result<Expression, BindError> {
+    match expression {
+        ub::Expression::Name(name) => bind_name_expression(state, name),
+        ub::Expression::Call(call) => bind_call_expression(state, *call),
+        ub::Expression::Fun(fun) => bind_fun(state, *fun),
+        ub::Expression::Match(match_) => bind_match(state, *match_),
+        ub::Expression::Forall(forall) => bind_forall(state, *forall),
+    }
+}
+
+fn bind_name_expression(
+    state: &mut BindState,
+    name: ub::NameExpression,
+) -> Result<Expression, BindError> {
+    unimplemented!()
+}
+
+fn bind_call_expression(state: &mut BindState, call: ub::Call) -> Result<Expression, BindError> {
+    unimplemented!()
+}
+
+fn bind_fun(state: &mut BindState, fun: ub::Fun) -> Result<Expression, BindError> {
+    unimplemented!()
+}
+
+fn bind_match(state: &mut BindState, match_: ub::Match) -> Result<Expression, BindError> {
+    unimplemented!()
+}
+
+fn bind_forall(state: &mut BindState, forall: ub::Forall) -> Result<Expression, BindError> {
     unimplemented!()
 }
 
@@ -209,35 +246,46 @@ mod context {
             unimplemented!()
         }
 
-        pub fn declare_name(
+        pub fn create_name_and_push_symbol_to_scope(
             &mut self,
-            name: &ub::Identifier,
+            identifier: &ub::Identifier,
         ) -> Result<SingletonName, NameClashError> {
-            if let Some((existing_source, _)) = self.get(&name.name) {
-                return Err(NameClashError {
-                    old: existing_source,
-                    new: OwnedSymbolSource::Identifier(name.clone()),
-                });
-            }
+            self.check_for_name_clash(identifier)?;
 
-            let symbol = self.provider.new_symbol();
+            let name = self.create_name_without_pushing_symbol_to_scope(&identifier);
+
             self.scope_stack
                 .last_mut()
                 .expect("Tried to declare name in a zero-scope context.")
                 .0
                 .insert(
-                    name.name.clone(),
-                    (OwnedSymbolSource::Identifier(name.clone()), symbol),
+                    name.component.name.clone(),
+                    (
+                        OwnedSymbolSource::Identifier(name.component.clone()),
+                        name.symbol,
+                    ),
                 );
-            Ok(SingletonName {
-                component: name.clone(),
-                symbol,
-            })
+
+            Ok(name)
         }
 
-        pub fn create_name_without_declaring(&mut self, name: &ub::Identifier) -> SingletonName {
+        fn check_for_name_clash(&self, identifier: &ub::Identifier) -> Result<(), NameClashError> {
+            if let Some((existing_source, _)) = self.get(&identifier.name) {
+                return Err(NameClashError {
+                    old: existing_source,
+                    new: OwnedSymbolSource::Identifier(identifier.clone()),
+                });
+            } else {
+                Ok(())
+            }
+        }
+
+        pub fn create_name_without_pushing_symbol_to_scope(
+            &mut self,
+            identifier: &ub::Identifier,
+        ) -> SingletonName {
             SingletonName {
-                component: name.clone(),
+                component: identifier.clone(),
                 symbol: self.provider.new_symbol(),
             }
         }
