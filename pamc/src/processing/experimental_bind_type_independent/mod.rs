@@ -219,7 +219,17 @@ fn bind_fun(state: &mut State, fun: ub::Fun) -> Result<Expression, BindError> {
     Ok(fun)
 }
 
-fn bind_match(_state: &mut State, _match_: ub::Match) -> Result<Expression, BindError> {
+fn bind_match(state: &mut State, match_: ub::Match) -> Result<Expression, BindError> {
+    let matchee = bind_expression(state, match_.matchee)?;
+    let cases = match_
+        .cases
+        .into_iter()
+        .map(|case| bind_match_case(state, case))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    Ok(Expression::Match(Box::new(Match { matchee, cases })))
+}
+
+fn bind_match_case(state: &mut State, case: ub::MatchCase) -> Result<MatchCase, BindError> {
     unimplemented!()
 }
 
