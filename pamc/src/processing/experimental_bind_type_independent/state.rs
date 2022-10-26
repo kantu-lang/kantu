@@ -125,7 +125,7 @@ impl State {
         None
     }
 
-    pub fn add_dot_target_to_scope(
+    pub fn add_restricted_dot_target_to_scope(
         &mut self,
         input: (Symbol, IdentifierName),
         output: (Symbol, OwnedSymbolSource),
@@ -135,7 +135,7 @@ impl State {
         self.scope_stack
             .last_mut()
             .expect("Tried to declare name in a zero-scope state.")
-            .insert_dot_target(input, output);
+            .insert_restricted_dot_target(input, output);
 
         Ok(())
     }
@@ -153,6 +153,14 @@ impl State {
         } else {
             Ok(())
         }
+    }
+
+    /// Panics if there is no entry corresponding to the given input.
+    pub fn lift_dot_target_restriction(&mut self, input: (Symbol, &IdentifierName)) {
+        self.scope_stack
+            .last_mut()
+            .expect("Tried to declare name in a zero-scope state.")
+            .lift_dot_target_restriction(input);
     }
 }
 
@@ -221,7 +229,7 @@ mod scope {
         /// ...`Nat` is the only unqualified name (excluding the implicitly defined `Type`, of course).
         unqualified_names: FxHashMap<IdentifierName, SymbolData>,
 
-        dot_targets: FxHashMap<(Symbol, IdentifierName), SymbolData>,
+        dot_targets: FxHashMap<(Symbol, IdentifierName), (IsRestricted, SymbolData)>,
     }
 
     #[derive(Clone, Debug)]
@@ -230,6 +238,9 @@ mod scope {
         pub symbol: Symbol,
         pub index_within_scope: usize,
     }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct IsRestricted(bool);
 
     impl Scope {
         pub fn empty() -> Self {
@@ -248,7 +259,7 @@ mod scope {
         pub fn get_symbol_data_by_symbol(&self, symbol: Symbol) -> Option<&SymbolData> {
             self.unqualified_names
                 .values()
-                .chain(self.dot_targets.values())
+                .chain(self.dot_targets.values().map(|(_, data)| data))
                 .find(|data| data.symbol == symbol)
         }
 
@@ -275,7 +286,7 @@ mod scope {
         }
 
         /// Panics if the name is already in the scope.
-        pub fn insert_dot_target(
+        pub fn insert_restricted_dot_target(
             &mut self,
             input: (Symbol, IdentifierName),
             output: (Symbol, OwnedSymbolSource),
@@ -285,20 +296,32 @@ mod scope {
                 source: output.1,
                 index_within_scope: self.len(),
             };
-            self.dot_targets.insert(input, data);
+            self.dot_targets.insert(input, (IsRestricted(true), data));
+        }
+
+        pub fn lift_dot_target_restriction(&mut self, input: (Symbol, &IdentifierName)) {
+            if let Some(entry) = self.dot_targets.get_mut(&(input.0, input.1.clone())) {
+                entry.0 = IsRestricted(false);
+            } else {
+                panic!("Tried to lift a restriction on a name that doesn't exist in the scope.");
+            }
         }
 
         pub fn get_dot_target_symbol_data(
             &self,
             input: (Symbol, &IdentifierName),
         ) -> Option<&SymbolData> {
-            self.dot_targets.get(&(input.0, input.1.clone()))
+            Some(&self.dot_targets.get(&(input.0, input.1.clone()))?.1)
         }
     }
 
     impl Scope {
-        pub fn into_dot_targets(self) -> FxHashMap<(Symbol, IdentifierName), SymbolData> {
+        pub fn into_dot_targets(
+            self,
+        ) -> impl IntoIterator<Item = ((Symbol, IdentifierName), SymbolData)> {
             self.dot_targets
+                .into_iter()
+                .map(|(left, (_, data))| (left, data))
         }
     }
 }

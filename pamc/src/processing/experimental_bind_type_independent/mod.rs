@@ -72,33 +72,20 @@ fn bind_type_statement(
         out
     };
 
-    let name = create_name_and_add_to_scope(state, type_statement.name)?;
+    let type_name = create_name_and_add_to_scope(state, type_statement.name)?;
 
-    let (variants, original_names): (Vec<Variant>, Vec<ub::Identifier>) = {
-        let variants_with_original_names: Vec<(Variant, ub::Identifier)> = type_statement
-            .variants
-            .into_iter()
-            .map(|unbound| {
-                let original_name = unbound.name.clone();
-                let variant = bind_variant_without_declaring_dot_target(state, unbound)?;
-                Ok((variant, original_name))
-            })
-            .collect::<Result<Vec<_>, BindError>>()?;
-        variants_with_original_names.into_iter().unzip()
-    };
+    let variants = type_statement
+        .variants
+        .into_iter()
+        .map(|unbound| bind_variant_and_add_restricted_dot_target(state, unbound, type_name.symbol))
+        .collect::<Result<Vec<_>, BindError>>()?;
 
-    for (variant, original_name) in variants.iter().zip(original_names.into_iter()) {
-        state.add_dot_target_to_scope(
-            (name.symbol, variant.name.component.name.clone()),
-            (
-                variant.name.symbol,
-                OwnedSymbolSource::Identifier(original_name.clone()),
-            ),
-        )?;
+    for variant in &variants {
+        state.lift_dot_target_restriction((type_name.symbol, &variant.name.component.name));
     }
 
     Ok(TypeStatement {
-        name,
+        name: type_name,
         params,
         variants,
     })
@@ -114,9 +101,10 @@ fn bind_param(state: &mut State, param: ub::Param) -> Result<Param, BindError> {
     })
 }
 
-fn bind_variant_without_declaring_dot_target(
+fn bind_variant_and_add_restricted_dot_target(
     state: &mut State,
     variant: ub::Variant,
+    type_symbol: Symbol,
 ) -> Result<Variant, BindError> {
     state.push_scope();
     let params = variant
@@ -127,8 +115,16 @@ fn bind_variant_without_declaring_dot_target(
     let return_type = bind_expression(state, variant.return_type)?;
     state.pop_scope_or_panic();
 
+    let unbound_name = variant.name;
+    let name = create_name_without_adding_to_scope(state, unbound_name.clone());
+
+    state.add_restricted_dot_target_to_scope(
+        (type_symbol, name.component.name.clone()),
+        (name.symbol, OwnedSymbolSource::Identifier(unbound_name)),
+    )?;
+
     Ok(Variant {
-        name: create_name_without_adding_to_scope(state, variant.name),
+        name,
         params,
         return_type,
     })
