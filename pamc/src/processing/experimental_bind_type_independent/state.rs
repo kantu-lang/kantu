@@ -157,8 +157,18 @@ impl State {
 }
 
 impl State {
-    /// Returns the De Bruijn index of the given symbol.
+    /// Returns the zero-based De Bruijn index of the given symbol,
+    /// where index zero corresponds to the **top** symbol.
     pub fn get_db_index(&self, symbol: Symbol) -> Option<usize> {
+        let bottom_index = self.get_db_level(symbol)?;
+        Some(self.len() - bottom_index - 1)
+    }
+
+    /// Returns the zero-based De Bruijn level of the given symbol.
+    /// A "De Bruijn _level_" is like a De Bruijn _index_, except that
+    /// levels count from the bottom of the stack, rather than the top.
+    /// That is, level zero corresponds to the **bottom** symbol.
+    fn get_db_level(&self, symbol: Symbol) -> Option<usize> {
         for (scope_index, scope) in self.scope_stack.iter().enumerate().rev() {
             if let Some(data) = scope.get_symbol_data_by_symbol(symbol) {
                 let local_index = data.index_within_scope;
@@ -170,6 +180,10 @@ impl State {
             }
         }
         None
+    }
+
+    pub fn len(&self) -> usize {
+        self.scope_stack.iter().map(|scope| scope.len()).sum()
     }
 }
 

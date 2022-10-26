@@ -51,7 +51,6 @@ fn main() {
                                 Ok((files, _symbol_provider, _dot_targets)) => {
                                     println!("Bind success!");
                                     println!("{:#?}", &files[0]);
-                                    print_separator();
                                 }
                                 Err(err) => {
                                     println!("Bind error: {:?}", err);
