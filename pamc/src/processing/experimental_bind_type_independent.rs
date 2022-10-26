@@ -50,6 +50,56 @@ fn bind_file(state: &mut BindState, file: ub::File) -> Result<File, BindError> {
 }
 
 fn bind_file_item(state: &mut BindState, item: ub::FileItem) -> Result<FileItem, BindError> {
+    match item {
+        ub::FileItem::Type(type_statement) => {
+            Ok(FileItem::Type(bind_type_statement(state, type_statement)?))
+        }
+        ub::FileItem::Let(let_statement) => {
+            Ok(FileItem::Let(bind_let_statement(state, let_statement)?))
+        }
+    }
+}
+
+fn bind_type_statement(
+    state: &mut BindState,
+    type_statement: ub::TypeStatement,
+) -> Result<TypeStatement, BindError> {
+    let params = {
+        state.context.push_scope();
+        let out = type_statement
+            .params
+            .into_iter()
+            .map(|param| bind_param(state, param))
+            .collect::<Result<Vec<_>, BindError>>()?;
+        state.context.pop_scope_or_panic();
+        out
+    };
+
+    let name = state.context.declare_name(&type_statement.name)?;
+    let variants = type_statement
+        .variants
+        .into_iter()
+        .map(|variant| bind_variant(state, variant))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    Ok(TypeStatement {
+        name,
+        params,
+        variants,
+    })
+}
+
+fn bind_param(state: &mut BindState, param: ub::Param) -> Result<Param, BindError> {
+    unimplemented!()
+}
+
+fn bind_variant(state: &mut BindState, variant: ub::Variant) -> Result<Variant, BindError> {
+    unimplemented!()
+}
+
+fn bind_let_statement(
+    state: &mut BindState,
+    let_statement: ub::LetStatement,
+) -> Result<LetStatement, BindError> {
     unimplemented!()
 }
 
@@ -66,17 +116,7 @@ mod context {
     }
 
     #[derive(Clone, Debug)]
-    struct Scope {
-        map: FxHashMap<IdentifierName, (OwnedSymbolSource, Symbol)>,
-    }
-
-    impl Scope {
-        fn empty() -> Self {
-            Self {
-                map: FxHashMap::default(),
-            }
-        }
-    }
+    struct Scope(FxHashMap<IdentifierName, (OwnedSymbolSource, Symbol)>);
 
     #[derive(Clone, Debug)]
     pub enum OwnedSymbolSource {
@@ -87,8 +127,8 @@ mod context {
     impl Context {
         pub fn with_builtins() -> Self {
             let mut provider = SymbolProvider::new();
-            let mut bottom_scope = Scope::empty();
-            bottom_scope.map.insert(
+            let mut bottom_scope = Scope(FxHashMap::default());
+            bottom_scope.0.insert(
                 IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                 (
                     OwnedSymbolSource::Builtin(ReservedIdentifierName::TypeTitleCase),
@@ -105,13 +145,54 @@ mod context {
 
     impl Context {
         pub fn push_scope(&mut self) {
-            self.scope_stack.push(Scope::empty());
+            self.scope_stack.push(Scope(FxHashMap::default()));
         }
 
         pub fn pop_scope_or_panic(&mut self) {
             self.scope_stack
                 .pop()
                 .expect("Tried to pop scope from empty stack");
+        }
+
+        /// The total number of names in the context.
+        pub fn len(&self) -> usize {
+            self.scope_stack.iter().map(|scope| scope.0.len()).sum()
+        }
+    }
+
+    impl Context {
+        pub fn get_symbol(&self, name: &IdentifierName) -> Result<Symbol, NameNotFoundError> {
+            unimplemented!()
+        }
+
+        fn get(&self, name: &IdentifierName) -> Option<(OwnedSymbolSource, Symbol)> {
+            unimplemented!()
+        }
+
+        pub fn declare_name(
+            &mut self,
+            name: &ub::Identifier,
+        ) -> Result<SingletonName, NameClashError> {
+            if let Some((existing_source, _)) = self.get(&name.name) {
+                return Err(NameClashError {
+                    old: existing_source,
+                    new: OwnedSymbolSource::Identifier(name.clone()),
+                });
+            }
+
+            let symbol = self.provider.new_symbol();
+            self.scope_stack
+                .last_mut()
+                .expect("Tried to declare name in a zero-scope context.")
+                .0
+                .insert(
+                    name.name.clone(),
+                    (OwnedSymbolSource::Identifier(name.clone()), symbol),
+                );
+            Ok(SingletonName {
+                component: name.clone(),
+                symbol,
+            })
         }
     }
 
