@@ -74,7 +74,7 @@ fn bind_type_statement(
         out
     };
 
-    let name = create_name_and_add_to_scope(state, &type_statement.name)?;
+    let name = create_name_and_add_to_scope(state, type_statement.name)?;
 
     let (variants, original_names): (Vec<Variant>, Vec<ub::Identifier>) = {
         let variants_with_original_names: Vec<(Variant, ub::Identifier)> = type_statement
@@ -108,7 +108,7 @@ fn bind_type_statement(
 
 fn bind_param(state: &mut State, param: ub::Param) -> Result<Param, BindError> {
     let type_ = bind_expression(state, param.type_)?;
-    let name = create_name_and_add_to_scope(state, &param.name)?;
+    let name = create_name_and_add_to_scope(state, param.name)?;
     Ok(Param {
         is_dashed: param.is_dashed,
         name,
@@ -130,7 +130,7 @@ fn bind_variant_without_declaring_dot_target(
     state.pop_scope_or_panic();
 
     Ok(Variant {
-        name: create_name_without_adding_to_scope(state, &variant.name),
+        name: create_name_without_adding_to_scope(state, variant.name),
         params,
         return_type,
     })
@@ -141,7 +141,7 @@ fn bind_let_statement(
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(state, let_statement.value)?;
-    let name = create_name_and_add_to_scope(state, &let_statement.name)?;
+    let name = create_name_and_add_to_scope(state, let_statement.name)?;
     Ok(LetStatement { name, value })
 }
 
@@ -205,7 +205,7 @@ fn bind_fun(state: &mut State, fun: ub::Fun) -> Result<Expression, BindError> {
         .collect::<Result<Vec<_>, BindError>>()?;
     let return_type = bind_expression(state, fun.return_type)?;
 
-    let name = create_name_and_add_to_scope(state, &fun.name)?;
+    let name = create_name_and_add_to_scope(state, fun.name)?;
 
     let body = bind_expression(state, fun.body)?;
     let fun = Expression::Fun(Box::new(Fun {
@@ -229,21 +229,21 @@ fn bind_forall(_state: &mut State, _forall: ub::Forall) -> Result<Expression, Bi
 
 fn create_name_without_adding_to_scope(
     state: &mut State,
-    identifier: &ub::Identifier,
+    identifier: ub::Identifier,
 ) -> SingletonName {
     SingletonName {
-        component: identifier.clone(),
+        component: identifier,
         symbol: state.new_symbol(),
     }
 }
 
 fn create_name_and_add_to_scope(
     state: &mut State,
-    identifier: &ub::Identifier,
+    identifier: ub::Identifier,
 ) -> Result<SingletonName, NameClashError> {
-    let symbol = state.add_name_to_scope(identifier)?;
+    let symbol = state.add_name_to_scope(&identifier)?;
     Ok(SingletonName {
-        component: identifier.clone(),
+        component: identifier,
         symbol,
     })
 }
