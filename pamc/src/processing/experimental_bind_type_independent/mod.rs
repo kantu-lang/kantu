@@ -13,7 +13,7 @@ pub use error::*;
 mod error;
 
 /// The returned `Vec<File>` is not guaranteed to be in any particular order.
-pub fn bind_symbols_to_identifiers(
+pub fn bind_files(
     files: Vec<ub::File>,
 ) -> Result<(Vec<File>, SymbolProvider, SymbolToDotTargetsMap), BindError> {
     let file_node_ids = sort_by_dependencies(files)?;
