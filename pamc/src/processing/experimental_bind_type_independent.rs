@@ -39,6 +39,17 @@ struct BindState {
 }
 
 fn bind_file(state: &mut BindState, file: ub::File) -> Result<File, BindError> {
+    state.context.push_scope();
+    let items = file
+        .items
+        .into_iter()
+        .map(|item| bind_file_item(state, item))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    state.context.pop_scope_or_panic();
+    Ok(File { id: file.id, items })
+}
+
+fn bind_file_item(state: &mut BindState, item: ub::FileItem) -> Result<FileItem, BindError> {
     unimplemented!()
 }
 
@@ -59,6 +70,14 @@ mod context {
         map: FxHashMap<IdentifierName, (OwnedSymbolSource, Symbol)>,
     }
 
+    impl Scope {
+        fn empty() -> Self {
+            Self {
+                map: FxHashMap::default(),
+            }
+        }
+    }
+
     #[derive(Clone, Debug)]
     pub enum OwnedSymbolSource {
         Identifier(ub::Identifier),
@@ -68,9 +87,7 @@ mod context {
     impl Context {
         pub fn with_builtins() -> Self {
             let mut provider = SymbolProvider::new();
-            let mut bottom_scope = Scope {
-                map: FxHashMap::default(),
-            };
+            let mut bottom_scope = Scope::empty();
             bottom_scope.map.insert(
                 IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                 (
@@ -87,13 +104,25 @@ mod context {
     }
 
     impl Context {
+        pub fn push_scope(&mut self) {
+            self.scope_stack.push(Scope::empty());
+        }
+
+        pub fn pop_scope_or_panic(&mut self) {
+            self.scope_stack
+                .pop()
+                .expect("Tried to pop scope from empty stack");
+        }
+    }
+
+    impl Context {
         pub fn into_provider(self) -> SymbolProvider {
             self.provider
         }
     }
 }
 
-use error::*;
+pub use error::*;
 mod error {
     use super::*;
 
