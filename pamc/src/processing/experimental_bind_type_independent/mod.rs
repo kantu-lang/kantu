@@ -223,8 +223,19 @@ fn bind_match(_state: &mut State, _match_: ub::Match) -> Result<Expression, Bind
     unimplemented!()
 }
 
-fn bind_forall(_state: &mut State, _forall: ub::Forall) -> Result<Expression, BindError> {
-    unimplemented!()
+fn bind_forall(state: &mut State, forall: ub::Forall) -> Result<Expression, BindError> {
+    state.push_scope();
+
+    let params = forall
+        .params
+        .into_iter()
+        .map(|param| bind_param(state, param))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    let output = bind_expression(state, forall.output)?;
+    let forall = Expression::Forall(Box::new(Forall { params, output }));
+
+    state.pop_scope_or_panic();
+    Ok(forall)
 }
 
 fn create_name_without_adding_to_scope(
