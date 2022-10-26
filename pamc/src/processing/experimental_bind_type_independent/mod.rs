@@ -185,8 +185,14 @@ fn split_first_and_rest<T>(components: &[T]) -> Option<(&T, &[T])> {
     Some((&components[0], &components[1..]))
 }
 
-fn bind_call_expression(_state: &mut State, _call: ub::Call) -> Result<Expression, BindError> {
-    unimplemented!()
+fn bind_call_expression(state: &mut State, call: ub::Call) -> Result<Expression, BindError> {
+    let callee = bind_expression(state, call.callee)?;
+    let args = call
+        .args
+        .into_iter()
+        .map(|arg| bind_expression(state, arg))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    Ok(Expression::Call(Box::new(Call { callee, args })))
 }
 
 fn bind_fun(_state: &mut State, _fun: ub::Fun) -> Result<Expression, BindError> {
