@@ -12,8 +12,6 @@ mod state;
 pub use error::*;
 mod error;
 
-// TODO: Forbid fun return type from using the fun it declares.
-
 /// The returned `Vec<File>` is not guaranteed to be in any particular order.
 pub fn bind_symbols_to_identifiers(
     files: Vec<ub::File>,
