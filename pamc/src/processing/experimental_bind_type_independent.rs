@@ -112,6 +112,15 @@ fn bind_let_statement(
     state: &mut BindState,
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
+    let value = bind_expression(state, let_statement.value)?;
+    let name = state.context.declare_name(&let_statement.name)?;
+    Ok(LetStatement { name, value })
+}
+
+fn bind_expression(
+    state: &mut BindState,
+    expression: ub::Expression,
+) -> Result<Expression, BindError> {
     unimplemented!()
 }
 
