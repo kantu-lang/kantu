@@ -98,7 +98,13 @@ fn bind_type_statement(
 }
 
 fn bind_param(state: &mut BindState, param: ub::Param) -> Result<Param, BindError> {
-    unimplemented!()
+    let type_ = bind_expression(state, param.type_)?;
+    let name = state.context.declare_name(&param.name)?;
+    Ok(Param {
+        is_dashed: param.is_dashed,
+        name,
+        type_,
+    })
 }
 
 fn bind_variant_without_declaring_dot_target(
