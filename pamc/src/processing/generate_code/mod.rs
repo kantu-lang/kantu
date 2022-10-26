@@ -1,6 +1,6 @@
 use crate::data::{
+    light_ast::*,
     node_registry::{NodeId, NodeRegistry},
-    registered_sst::*,
     symbol_database::SymbolDatabase,
     variant_return_type::VariantReturnTypeDatabase,
 };

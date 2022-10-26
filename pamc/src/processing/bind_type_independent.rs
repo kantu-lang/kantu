@@ -1,6 +1,6 @@
 use crate::data::{
+    light_ast::*,
     node_registry::{NodeId, NodeRegistry},
-    registered_sst::*,
     symbol_database::{
         IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolProvider, SymbolSource,
         SymbolSourceMap, SymbolToDotTargetsMap,

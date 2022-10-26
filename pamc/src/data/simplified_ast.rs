@@ -53,11 +53,11 @@ pub struct NameExpression {
     pub components: Vec<Identifier>,
 }
 
-pub use crate::data::unregistered_ast::Identifier;
+pub use crate::data::unsimplified_ast::Identifier;
 
-pub use crate::data::unregistered_ast::IdentifierName;
+pub use crate::data::unsimplified_ast::IdentifierName;
 
-pub use crate::data::unregistered_ast::ReservedIdentifierName;
+pub use crate::data::unsimplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {

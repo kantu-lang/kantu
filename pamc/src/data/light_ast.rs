@@ -61,9 +61,9 @@ pub struct Identifier {
     pub name: IdentifierName,
 }
 
-pub use crate::data::unregistered_sst::IdentifierName;
+pub use crate::data::simplified_ast::IdentifierName;
 
-pub use crate::data::unregistered_sst::ReservedIdentifierName;
+pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {

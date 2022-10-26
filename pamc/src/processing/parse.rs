@@ -1,6 +1,6 @@
 use crate::data::{
     token::{Token, TokenKind},
-    unregistered_ast::*,
+    unsimplified_ast::*,
     FileId, TextPosition,
 };
 

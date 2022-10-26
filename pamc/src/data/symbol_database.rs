@@ -1,4 +1,4 @@
-use crate::data::{node_registry::NodeId, registered_sst::*};
+use crate::data::{light_ast::*, node_registry::NodeId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Symbol(pub usize);

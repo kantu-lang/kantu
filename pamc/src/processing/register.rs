@@ -1,7 +1,8 @@
 use crate::data::{
+    light_ast::*,
     node_registry::{NodeId, NodeRegistry},
-    registered_sst::*,
-    unregistered_sst as ur,
+    // `ur` stands for "unregistered".
+    simplified_ast as ur,
 };
 
 fn dummy_id<T>() -> NodeId<T> {

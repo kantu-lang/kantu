@@ -1,4 +1,4 @@
-use crate::data::registered_sst::*;
+use crate::data::light_ast::*;
 
 // TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
 // since #[derive] only works if T implements the respective traits.

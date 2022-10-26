@@ -1,8 +1,8 @@
 use crate::data::{
+    light_ast::*,
     node_free_variable_cache::NodeFreeVariableCache,
     node_hash_cache::NodeStructuralIdentityHashCache,
     node_registry::{ListId, NodeId, NodeRegistry},
-    registered_sst::*,
     symbol_database::{IdentifierToSymbolMap, Symbol, SymbolDatabase, SymbolSource},
     type_map::{NormalFormNodeId, TypeMap},
     variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},

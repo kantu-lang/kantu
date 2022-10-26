@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::data::unregistered_ast as ast;
+use crate::data::unsimplified_ast as ust;
 
 fn expect_simplification_error(src: &str, panicker: impl Fn(SimplifyAstError)) {
     let file_id = FileId(0);
@@ -16,7 +16,7 @@ fn illegal_dot_lhs() {
     expect_simplification_error(src, |err| match err {
         SimplifyAstError::IllegalDotLhs(lhs) => {
             assert!(
-                matches!(lhs, ast::Expression::Match(_)),
+                matches!(lhs, ust::Expression::Match(_)),
                 "Unexpected lhs {:?}",
                 lhs
             );
