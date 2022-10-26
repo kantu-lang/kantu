@@ -79,8 +79,17 @@ fn bind_type_statement(
     let variants = type_statement
         .variants
         .into_iter()
-        .map(|variant| bind_variant(state, variant))
+        .map(|variant| bind_variant_without_declaring_dot_target(state, variant))
         .collect::<Result<Vec<_>, BindError>>()?;
+
+    for variant in &variants {
+        state.dot_targets.insert(
+            name.symbol,
+            variant.name.component.name.clone(),
+            variant.name.symbol,
+        );
+    }
+
     Ok(TypeStatement {
         name,
         params,
@@ -92,7 +101,10 @@ fn bind_param(state: &mut BindState, param: ub::Param) -> Result<Param, BindErro
     unimplemented!()
 }
 
-fn bind_variant(state: &mut BindState, variant: ub::Variant) -> Result<Variant, BindError> {
+fn bind_variant_without_declaring_dot_target(
+    state: &mut BindState,
+    variant: ub::Variant,
+) -> Result<Variant, BindError> {
     unimplemented!()
 }
 
