@@ -230,7 +230,22 @@ fn bind_match(state: &mut State, match_: ub::Match) -> Result<Expression, BindEr
 }
 
 fn bind_match_case(state: &mut State, case: ub::MatchCase) -> Result<MatchCase, BindError> {
-    unimplemented!()
+    state.push_scope();
+    let variant_name = UnresolvedSingletonName {
+        component: case.variant_name,
+    };
+    let params = case
+        .params
+        .into_iter()
+        .map(|param| create_name_and_add_to_scope(state, param))
+        .collect::<Result<Vec<_>, _>>()?;
+    let output = bind_expression(state, case.output)?;
+    state.pop_scope_or_panic();
+    Ok(MatchCase {
+        variant_name,
+        params,
+        output,
+    })
 }
 
 fn bind_forall(state: &mut State, forall: ub::Forall) -> Result<Expression, BindError> {
