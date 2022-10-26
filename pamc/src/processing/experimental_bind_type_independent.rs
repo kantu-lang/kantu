@@ -111,7 +111,20 @@ fn bind_variant_without_declaring_dot_target(
     state: &mut BindState,
     variant: ub::Variant,
 ) -> Result<Variant, BindError> {
-    unimplemented!()
+    state.context.push_scope();
+    let params = variant
+        .params
+        .into_iter()
+        .map(|param| bind_param(state, param))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    let return_type = bind_expression(state, variant.return_type)?;
+    state.context.pop_scope_or_panic();
+
+    Ok(Variant {
+        name: state.context.create_name_without_declaring(&variant.name),
+        params,
+        return_type,
+    })
 }
 
 fn bind_let_statement(
@@ -220,6 +233,13 @@ mod context {
                 component: name.clone(),
                 symbol,
             })
+        }
+
+        pub fn create_name_without_declaring(&mut self, name: &ub::Identifier) -> SingletonName {
+            SingletonName {
+                component: name.clone(),
+                symbol: self.provider.new_symbol(),
+            }
         }
     }
 
