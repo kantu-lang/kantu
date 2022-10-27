@@ -54,6 +54,15 @@ fn type_check_type_constructor(
 }
 
 fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param>, TypeCheckError> {
+    let normalized = normalize_params_and_leave_params_in_context(context, params)?;
+    context.pop_n(params.len());
+    Ok(normalized)
+}
+
+fn normalize_params_and_leave_params_in_context(
+    context: &mut Context,
+    params: &[Param],
+) -> Result<Vec<Param>, TypeCheckError> {
     let normalized = params
         .iter()
         .map(|param| {
@@ -66,7 +75,6 @@ fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
-    context.pop_n(params.len());
     Ok(normalized)
 }
 
@@ -80,11 +88,21 @@ fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeChec
     Ok(())
 }
 
-fn type_check_type_variant(
-    _context: &mut Context,
-    _variant: &Variant,
-) -> Result<(), TypeCheckError> {
-    unimplemented!()
+fn type_check_type_variant(context: &mut Context, variant: &Variant) -> Result<(), TypeCheckError> {
+    let arity = variant.params.len();
+    let params = normalize_params_and_leave_params_in_context(context, &variant.params)?;
+    type_check_expression(context, &variant.return_type)?;
+    let return_type = evaluate_well_typed_expression(context, &variant.return_type);
+    let type_ = NormalForm::unchecked_new(
+        Forall {
+            params,
+            output: return_type.into(),
+        }
+        .collapse_if_nullary(),
+    );
+    context.pop_n(arity);
+    context.push(type_);
+    Ok(())
 }
 
 fn type_check_let_statement(
