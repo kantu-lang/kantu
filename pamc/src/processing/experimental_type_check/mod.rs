@@ -59,9 +59,6 @@ fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param
         .map(|param| {
             type_check_param(context, param)?;
             let type_ = context[0].clone();
-            if !is_term_a_member_of_type0_or_type1(context, &type_) {
-                return Err(TypeCheckError::IllegalTypeExpression(type_));
-            }
             Ok(Param {
                 is_dashed: param.is_dashed,
                 name: param.name.clone(),
@@ -73,8 +70,14 @@ fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param
     Ok(normalized)
 }
 
-fn type_check_param(_context: &mut Context, _param: &Param) -> Result<(), TypeCheckError> {
-    unimplemented!()
+fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeCheckError> {
+    type_check_expression(context, &param.type_)?;
+    let type_ = evaluate_well_typed_expression(context, &param.type_)?;
+    if !is_term_a_member_of_type0_or_type1(context, &type_) {
+        return Err(TypeCheckError::IllegalTypeExpression(type_.into()));
+    }
+    context.push(type_);
+    Ok(())
 }
 
 fn type_check_type_variant(
@@ -88,6 +91,20 @@ fn type_check_let_statement(
     _context: &mut Context,
     _let_statement: &LetStatement,
 ) -> Result<(), TypeCheckError> {
+    unimplemented!()
+}
+
+fn type_check_expression(
+    _context: &mut Context,
+    _expression: &Expression,
+) -> Result<(), TypeCheckError> {
+    unimplemented!()
+}
+
+fn evaluate_well_typed_expression(
+    _context: &mut Context,
+    _expression: &Expression,
+) -> Result<NormalForm, TypeCheckError> {
     unimplemented!()
 }
 
