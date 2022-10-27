@@ -72,7 +72,7 @@ fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param
 
 fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeCheckError> {
     type_check_expression(context, &param.type_)?;
-    let type_ = evaluate_well_typed_expression(context, &param.type_)?;
+    let type_ = evaluate_well_typed_expression(context, &param.type_);
     if !is_term_a_member_of_type0_or_type1(context, &type_) {
         return Err(TypeCheckError::IllegalTypeExpression(type_.into()));
     }
@@ -101,10 +101,7 @@ fn type_check_expression(
     unimplemented!()
 }
 
-fn evaluate_well_typed_expression(
-    _context: &mut Context,
-    _expression: &Expression,
-) -> Result<NormalForm, TypeCheckError> {
+fn evaluate_well_typed_expression(_context: &mut Context, _expression: &Expression) -> NormalForm {
     unimplemented!()
 }
 
