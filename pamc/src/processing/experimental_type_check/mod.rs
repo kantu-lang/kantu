@@ -266,7 +266,26 @@ mod context {
 
     impl Context {
         pub fn with_builtins() -> Self {
-            Self { stack: Vec::new() }
+            // We should will never retrieve the type of `Type1`, since it is undefined.
+            // However, we need to store _some_ object in the stack, so that the indices
+            // of the other types are correct.
+            let dummy_type1_type = NormalForm::unchecked_new(Expression::Name(NameExpression {
+                components: vec![Identifier {
+                    name: IdentifierName::Standard("Type2".to_owned()),
+                    start: None,
+                }],
+                db_index: 0,
+            }));
+            let type0_type = NormalForm::unchecked_new(Expression::Name(NameExpression {
+                components: vec![Identifier {
+                    name: IdentifierName::Standard("Type1".to_owned()),
+                    start: None,
+                }],
+                db_index: 0,
+            }));
+            Self {
+                stack: vec![dummy_type1_type, type0_type],
+            }
         }
     }
 
@@ -303,7 +322,11 @@ mod context {
         type Output = NormalForm;
 
         fn index(&self, index: usize) -> &Self::Output {
-            &self.stack[self.stack.len() - index - 1]
+            let i = self.stack.len() - index - 1;
+            if i == 0 {
+                panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
+            }
+            &self.stack[i]
         }
     }
 }
