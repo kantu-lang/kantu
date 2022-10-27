@@ -58,7 +58,7 @@ fn type_check_type_constructor(
     let type_constructor_type = NormalForm::unchecked_new(
         Forall {
             params,
-            output: type0_expression(context),
+            output: type0_expression(context).into(),
         }
         .collapse_if_nullary(),
     );
@@ -234,10 +234,19 @@ fn get_type_of_match(
 }
 
 fn get_type_of_forall(
-    _context: &mut Context,
-    _forall: &Forall,
+    context: &mut Context,
+    forall: &Forall,
 ) -> Result<NormalForm, TypeCheckError> {
-    unimplemented!()
+    normalize_params_and_leave_params_in_context(context, &forall.params)?;
+
+    let output_type = get_type_of_expression(context, &forall.output)?;
+    if !is_term_a_member_of_type0_or_type1(context, output_type.as_ref()) {
+        return Err(TypeCheckError::IllegalTypeExpression(forall.output.clone()));
+    }
+
+    context.pop_n(forall.params.len());
+
+    Ok(type0_expression(context))
 }
 
 fn evaluate_well_typed_expression(_context: &mut Context, _expression: &Expression) -> NormalForm {
@@ -333,14 +342,14 @@ mod misc {
         }
     }
 
-    pub fn type0_expression(context: &Context) -> Expression {
-        Expression::Name(NameExpression {
+    pub fn type0_expression(context: &Context) -> NormalForm {
+        NormalForm::unchecked_new(Expression::Name(NameExpression {
             components: vec![Identifier {
                 name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                 start: None,
             }],
             db_index: context.type0_dbi(),
-        })
+        }))
     }
 
     impl Forall {
