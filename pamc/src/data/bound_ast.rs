@@ -105,20 +105,9 @@ pub struct Match {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
-    pub variant_name: UnresolvedSingletonName,
+    pub variant_name: Identifier,
     pub params: Vec<SingletonName>,
     pub output: Expression,
-}
-
-/// Sometimes a name cannot be resolved to a symbol
-/// during the binding phase.
-/// For example, a the symbol that a match case variant name
-/// refers to depends on the type of the match expression's matchee.
-/// Therefore, the symbol cannot be resolved until after the
-/// type checking phase.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UnresolvedSingletonName {
-    pub component: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

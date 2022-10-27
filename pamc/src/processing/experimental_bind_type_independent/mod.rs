@@ -230,9 +230,7 @@ fn bind_match(context: &mut Context, match_: ub::Match) -> Result<Expression, Bi
 
 fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCase, BindError> {
     context.push_scope();
-    let variant_name = UnresolvedSingletonName {
-        component: case.variant_name.into(),
-    };
+    let variant_name = case.variant_name.into();
     let params = case
         .params
         .into_iter()
