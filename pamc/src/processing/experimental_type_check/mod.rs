@@ -69,7 +69,7 @@ fn normalize_params_and_leave_params_in_context(
         .iter()
         .map(|param| {
             type_check_param(context, param)?;
-            let type_ = context[0].clone();
+            let type_: Expression = context[0].clone().into();
             Ok(Param {
                 is_dashed: param.is_dashed,
                 name: param.name.clone(),
@@ -129,8 +129,40 @@ fn type_check_expression(
 }
 
 fn get_type_of_expression(
+    context: &mut Context,
+    expression: &Expression,
+) -> Result<NormalForm, TypeCheckError> {
+    match expression {
+        Expression::Name(name) => Ok(get_type_of_name(context, name)),
+        Expression::Call(call) => get_type_of_call(context, call),
+        Expression::Fun(fun) => get_type_of_fun(context, fun),
+        Expression::Match(match_) => get_type_of_match(context, match_),
+        Expression::Forall(forall) => get_type_of_forall(context, forall),
+    }
+}
+
+fn get_type_of_name(context: &mut Context, name: &NameExpression) -> NormalForm {
+    context[name.db_index].clone()
+}
+
+fn get_type_of_call(_context: &mut Context, _call: &Call) -> Result<NormalForm, TypeCheckError> {
+    unimplemented!()
+}
+
+fn get_type_of_fun(_context: &mut Context, _fun: &Fun) -> Result<NormalForm, TypeCheckError> {
+    unimplemented!()
+}
+
+fn get_type_of_match(
     _context: &mut Context,
-    _expression: &Expression,
+    _match_: &Match,
+) -> Result<NormalForm, TypeCheckError> {
+    unimplemented!()
+}
+
+fn get_type_of_forall(
+    _context: &mut Context,
+    _forall: &Forall,
 ) -> Result<NormalForm, TypeCheckError> {
     unimplemented!()
 }
@@ -174,7 +206,7 @@ mod context {
     }
 
     impl Index<usize> for Context {
-        type Output = Expression;
+        type Output = NormalForm;
 
         fn index(&self, index: usize) -> &Self::Output {
             &self.stack[self.stack.len() - index - 1]
