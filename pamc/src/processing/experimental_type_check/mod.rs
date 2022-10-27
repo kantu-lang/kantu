@@ -80,7 +80,7 @@ fn normalize_params_and_leave_params_in_context(
         .iter()
         .map(|param| {
             type_check_param(context, param)?;
-            let type_: Expression = context[0].clone().into();
+            let type_: Expression = context.index(0).into();
             Ok(Param {
                 is_dashed: param.is_dashed,
                 name: param.name.clone(),
@@ -153,7 +153,7 @@ fn get_type_of_expression(
 }
 
 fn get_type_of_name(context: &mut Context, name: &NameExpression) -> NormalForm {
-    context[name.db_index].clone()
+    context.index(name.db_index)
 }
 
 fn get_type_of_call(context: &mut Context, call: &Call) -> Result<NormalForm, TypeCheckError> {
@@ -257,8 +257,6 @@ fn evaluate_well_typed_expression(_context: &mut Context, _expression: &Expressi
 use context::*;
 mod context {
     use super::*;
-
-    use std::ops::Index;
 
     pub struct Context {
         /// Each type in the stack is expressed "locally" (i.e., relative
@@ -367,15 +365,13 @@ mod context {
         }
     }
 
-    impl Index<usize> for Context {
-        type Output = NormalForm;
-
-        fn index(&self, index: usize) -> &Self::Output {
+    impl Context {
+        pub fn index(&self, index: usize) -> NormalForm {
             let level = self.index_to_level(index);
             if level == TYPE1_LEVEL {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
             }
-            &self.local_type_stack[level]
+            self.local_type_stack[level].clone().shift_up(index + 1)
         }
     }
 }
@@ -456,5 +452,21 @@ mod misc {
         _right: NormalFormRef,
     ) -> bool {
         unimplemented!()
+    }
+
+    impl NormalForm {
+        pub fn shift_up(self, amount: usize) -> Self {
+            Self::unchecked_new(self.0.shift_up(amount))
+        }
+    }
+
+    impl Expression {
+        pub fn shift_up(self, amount: usize) -> Expression {
+            self.shift_up_with_cutoff(amount, 0)
+        }
+
+        fn shift_up_with_cutoff(self, _amount: usize, _cutoff: usize) -> Expression {
+            unimplemented!()
+        }
     }
 }
