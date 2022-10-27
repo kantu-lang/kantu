@@ -203,6 +203,13 @@ fn get_type_of_fun(context: &mut Context, fun: &Fun) -> Result<NormalForm, TypeC
     }
     let return_type = evaluate_well_typed_expression(context, &fun.return_type);
 
+    let fun_type = NormalForm::unchecked_new(Expression::Forall(Box::new(Forall {
+        params,
+        output: return_type.clone().into(),
+    })));
+
+    context.push(fun_type.clone());
+
     let body_type = get_type_of_expression(context, &fun.body)?;
     if !is_left_type_assignable_to_right_type(
         context,
@@ -216,14 +223,8 @@ fn get_type_of_fun(context: &mut Context, fun: &Fun) -> Result<NormalForm, TypeC
         });
     }
 
-    let result = Ok(NormalForm::unchecked_new(Expression::Forall(Box::new(
-        Forall {
-            params,
-            output: return_type.into(),
-        },
-    ))));
-    context.pop_n(fun.params.len());
-    result
+    context.pop_n(fun.params.len() + 1);
+    Ok(fun_type)
 }
 
 fn get_type_of_match(
