@@ -44,12 +44,14 @@ fn type_check_type_constructor(
     type_statement: &TypeStatement,
 ) -> Result<(), TypeCheckError> {
     let params = normalize_params(context, &type_statement.params)?;
-    let type_constructor_type = Forall {
-        params,
-        output: type0_expression(context),
-    }
-    .collapse_if_nullary();
-    context.push(NormalForm::unchecked_new(type_constructor_type));
+    let type_constructor_type = NormalForm::unchecked_new(
+        Forall {
+            params,
+            output: type0_expression(context),
+        }
+        .collapse_if_nullary(),
+    );
+    context.push(type_constructor_type);
     Ok(())
 }
 
