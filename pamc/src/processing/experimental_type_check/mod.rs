@@ -261,7 +261,43 @@ mod context {
     use std::ops::Index;
 
     pub struct Context {
-        stack: Vec<NormalForm>,
+        /// Each type in the stack is expressed "locally" (i.e., relative
+        /// to its position within the stack).
+        ///
+        /// For example, consider the scenario where `local_type_stack[1] == NameExpression { db_index: 0 }`.
+        /// The local De Bruijn index `0` refers to the first symbol counting right-to-left _from position 1_.
+        /// Thus, if `local_type_stack.len() == 3`, for example, then the global De Bruijn index for `local_type_stack[1]` is `2`.
+        ///
+        /// If an illustration would help, consider the following:
+        /// ```text
+        /// Type1: DNE
+        /// Type0: Type1
+        /// Nat: Type0
+        ///
+        /// ----------------------
+        ///
+        /// local_type_stack: [Type1, Type0, Nat] = [DNE, 0, 0]
+        ///
+        /// ----------------------
+        ///
+        /// local_type(Type0) = Type1 = 0
+        /// // Why? - Count backwards from Type0 (not including Type0 itself):
+        ///
+        /// vvv
+        /// (0)
+        /// [Type1, Type0, Nat]
+        ///
+        /// ----------------------
+        ///
+        /// global_type(Type0) = Type1 = 2
+        /// // Why? - Count backwards from the end of the stack (including the last item):
+        ///
+        /// vvv
+        /// (2)     (1)    (0)
+        /// [Type1, Type0, Nat]
+        /// ```
+        ///
+        local_type_stack: Vec<NormalForm>,
     }
 
     const TYPE1_LEVEL: usize = 0;
@@ -287,7 +323,7 @@ mod context {
                 db_index: 0,
             }));
             Self {
-                stack: vec![dummy_type1_type, type0_type],
+                local_type_stack: vec![dummy_type1_type, type0_type],
             }
         }
     }
@@ -302,15 +338,15 @@ mod context {
                     self.len()
                 );
             }
-            self.stack.truncate(self.len() - n);
+            self.local_type_stack.truncate(self.len() - n);
         }
 
         pub fn push(&mut self, expression: NormalForm) {
-            self.stack.push(expression);
+            self.local_type_stack.push(expression);
         }
 
         pub fn len(&self) -> usize {
-            self.stack.len()
+            self.local_type_stack.len()
         }
     }
 
@@ -339,7 +375,7 @@ mod context {
             if level == TYPE1_LEVEL {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
             }
-            &self.stack[level]
+            &self.local_type_stack[level]
         }
     }
 }
