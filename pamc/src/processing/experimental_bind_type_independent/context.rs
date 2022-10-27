@@ -3,7 +3,7 @@ use super::*;
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
-pub struct State {
+pub struct Context {
     provider: SymbolProvider,
     scope_stack: Vec<Scope>,
 }
@@ -14,7 +14,7 @@ pub enum OwnedSymbolSource {
     Builtin(ReservedIdentifierName),
 }
 
-impl State {
+impl Context {
     pub fn with_builtins() -> Self {
         let provider = SymbolProvider::new();
         let mut bottom_scope = Scope::empty();
@@ -33,7 +33,7 @@ impl State {
     }
 }
 
-impl State {
+impl Context {
     pub fn push_scope(&mut self) {
         self.scope_stack.push(Scope::empty());
     }
@@ -45,7 +45,7 @@ impl State {
     }
 }
 
-impl State {
+impl Context {
     pub fn get_symbol(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {
         if let Some(data) = self.get_symbol_data_for_name(&identifier.name) {
             Ok(data.symbol)
@@ -99,7 +99,7 @@ impl State {
     }
 }
 
-impl State {
+impl Context {
     pub fn get_dot_target_symbol(
         &self,
         input: (Symbol, &Identifier),
@@ -164,7 +164,7 @@ impl State {
     }
 }
 
-impl State {
+impl Context {
     /// Returns the zero-based De Bruijn index of the given symbol,
     /// where index zero corresponds to the **top** symbol.
     pub fn get_db_index(&self, symbol: Symbol) -> Option<usize> {
@@ -195,7 +195,7 @@ impl State {
     }
 }
 
-impl State {
+impl Context {
     pub fn into_provider_and_dot_targets(self) -> (SymbolProvider, SymbolToDotTargetsMap) {
         let dot_targets = {
             let mut out = SymbolToDotTargetsMap::empty();
