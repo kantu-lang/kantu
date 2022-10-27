@@ -14,37 +14,28 @@ pub enum FileItem {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
-    pub name: SingletonName,
+    pub name: Identifier,
     pub params: Vec<Param>,
     pub variants: Vec<Variant>,
-}
-
-/// A singleton name is a name with exactly
-/// one component.
-/// For example, `Nat` is a singleton name,
-/// but `Nat.O` is not (since it has two components).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SingletonName {
-    pub component: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
     pub is_dashed: bool,
-    pub name: SingletonName,
+    pub name: Identifier,
     pub type_: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Variant {
-    pub name: SingletonName,
+    pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
-    pub name: SingletonName,
+    pub name: Identifier,
     pub value: Expression,
 }
 
@@ -91,7 +82,7 @@ pub struct Call {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
-    pub name: SingletonName,
+    pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
     pub body: Expression,
@@ -106,7 +97,7 @@ pub struct Match {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
     pub variant_name: Identifier,
-    pub params: Vec<SingletonName>,
+    pub params: Vec<Identifier>,
     pub output: Expression,
 }
 

@@ -84,7 +84,7 @@ fn bind_type_statement(
         .collect::<Result<Vec<_>, BindError>>()?;
 
     for variant in &variants {
-        context.lift_dot_target_restriction((type_name_symbol, &variant.name.component.name));
+        context.lift_dot_target_restriction((type_name_symbol, &variant.name.name));
     }
 
     Ok(TypeStatement {
@@ -122,7 +122,7 @@ fn bind_variant_and_add_restricted_dot_target(
     let (name, symbol) = create_name_without_adding_to_scope(context, unbound_name.clone());
 
     context.add_restricted_dot_target_to_scope(
-        (type_symbol, name.component.name.clone()),
+        (type_symbol, name.name.clone()),
         (symbol, OwnedSymbolSource::Identifier(unbound_name)),
     )?;
 
@@ -265,25 +265,15 @@ fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, 
 fn create_name_without_adding_to_scope(
     context: &mut Context,
     identifier: ub::Identifier,
-) -> (SingletonName, Symbol) {
+) -> (Identifier, Symbol) {
     let symbol = context.new_symbol();
-    (
-        SingletonName {
-            component: identifier.into(),
-        },
-        symbol,
-    )
+    (identifier.into(), symbol)
 }
 
 fn create_name_and_add_to_scope(
     context: &mut Context,
     identifier: ub::Identifier,
-) -> Result<(SingletonName, Symbol), NameClashError> {
+) -> Result<(Identifier, Symbol), NameClashError> {
     let symbol = context.add_name_to_scope(&identifier)?;
-    Ok((
-        SingletonName {
-            component: identifier.into(),
-        },
-        symbol,
-    ))
+    Ok((identifier.into(), symbol))
 }
