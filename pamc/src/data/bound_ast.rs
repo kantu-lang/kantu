@@ -1,4 +1,4 @@
-use crate::data::{symbol_database::Symbol, FileId};
+use crate::data::{FileId, TextPosition};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
@@ -26,7 +26,6 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SingletonName {
     pub component: Identifier,
-    pub symbol: Symbol,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -61,12 +60,24 @@ pub enum Expression {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NameExpression {
     pub components: Vec<Identifier>,
-    pub symbol: Symbol,
     /// De Bruijn index (zero-based).
     pub db_index: usize,
 }
 
-pub use crate::data::simplified_ast::Identifier;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Identifier {
+    pub start: Option<TextPosition>,
+    pub name: IdentifierName,
+}
+
+impl From<crate::data::simplified_ast::Identifier> for Identifier {
+    fn from(id: crate::data::simplified_ast::Identifier) -> Self {
+        Self {
+            start: Some(id.start),
+            name: id.name,
+        }
+    }
+}
 
 pub use crate::data::simplified_ast::IdentifierName;
 

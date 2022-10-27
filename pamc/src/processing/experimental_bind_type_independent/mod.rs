@@ -73,18 +73,18 @@ fn bind_type_statement(
         out
     };
 
-    let type_name = create_name_and_add_to_scope(context, type_statement.name)?;
+    let (type_name, type_name_symbol) = create_name_and_add_to_scope(context, type_statement.name)?;
 
     let variants = type_statement
         .variants
         .into_iter()
         .map(|unbound| {
-            bind_variant_and_add_restricted_dot_target(context, unbound, type_name.symbol)
+            bind_variant_and_add_restricted_dot_target(context, unbound, type_name_symbol)
         })
         .collect::<Result<Vec<_>, BindError>>()?;
 
     for variant in &variants {
-        context.lift_dot_target_restriction((type_name.symbol, &variant.name.component.name));
+        context.lift_dot_target_restriction((type_name_symbol, &variant.name.component.name));
     }
 
     Ok(TypeStatement {
@@ -96,7 +96,7 @@ fn bind_type_statement(
 
 fn bind_param(context: &mut Context, param: ub::Param) -> Result<Param, BindError> {
     let type_ = bind_expression(context, param.type_)?;
-    let name = create_name_and_add_to_scope(context, param.name)?;
+    let (name, _) = create_name_and_add_to_scope(context, param.name)?;
     Ok(Param {
         is_dashed: param.is_dashed,
         name,
@@ -119,11 +119,11 @@ fn bind_variant_and_add_restricted_dot_target(
     context.pop_scope_or_panic();
 
     let unbound_name = variant.name;
-    let name = create_name_without_adding_to_scope(context, unbound_name.clone());
+    let (name, symbol) = create_name_without_adding_to_scope(context, unbound_name.clone());
 
     context.add_restricted_dot_target_to_scope(
         (type_symbol, name.component.name.clone()),
-        (name.symbol, OwnedSymbolSource::Identifier(unbound_name)),
+        (symbol, OwnedSymbolSource::Identifier(unbound_name)),
     )?;
 
     Ok(Variant {
@@ -138,7 +138,7 @@ fn bind_let_statement(
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
-    let name = create_name_and_add_to_scope(context, let_statement.name)?;
+    let (name, _) = create_name_and_add_to_scope(context, let_statement.name)?;
     Ok(LetStatement { name, value })
 }
 
@@ -162,7 +162,7 @@ fn bind_name_expression(
     let (first, rest) = split_first_and_rest(&name.components)
         .expect("NameExpression must have at least one component.");
     let symbol = {
-        let mut current = context.get_symbol(&first)?;
+        let mut current = context.get_symbol(first)?;
         for component in rest {
             current = context.get_dot_target_symbol((current, &component))?;
         }
@@ -172,8 +172,7 @@ fn bind_name_expression(
         .get_db_index(symbol)
         .expect("Symbol should be within scope.");
     Ok(Expression::Name(NameExpression {
-        components: name.components,
-        symbol,
+        components: name.components.into_iter().map(Into::into).collect(),
         db_index,
     }))
 }
@@ -205,7 +204,7 @@ fn bind_fun(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError
         .collect::<Result<Vec<_>, BindError>>()?;
     let return_type = bind_expression(context, fun.return_type)?;
 
-    let name = create_name_and_add_to_scope(context, fun.name)?;
+    let (name, _) = create_name_and_add_to_scope(context, fun.name)?;
 
     let body = bind_expression(context, fun.body)?;
     let fun = Expression::Fun(Box::new(Fun {
@@ -232,12 +231,14 @@ fn bind_match(context: &mut Context, match_: ub::Match) -> Result<Expression, Bi
 fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCase, BindError> {
     context.push_scope();
     let variant_name = UnresolvedSingletonName {
-        component: case.variant_name,
+        component: case.variant_name.into(),
     };
     let params = case
         .params
         .into_iter()
-        .map(|param| create_name_and_add_to_scope(context, param))
+        .map(|param| -> Result<_, BindError> {
+            Ok(create_name_and_add_to_scope(context, param)?.0)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let output = bind_expression(context, case.output)?;
     context.pop_scope_or_panic();
@@ -266,20 +267,25 @@ fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, 
 fn create_name_without_adding_to_scope(
     context: &mut Context,
     identifier: ub::Identifier,
-) -> SingletonName {
-    SingletonName {
-        component: identifier,
-        symbol: context.new_symbol(),
-    }
+) -> (SingletonName, Symbol) {
+    let symbol = context.new_symbol();
+    (
+        SingletonName {
+            component: identifier.into(),
+        },
+        symbol,
+    )
 }
 
 fn create_name_and_add_to_scope(
     context: &mut Context,
     identifier: ub::Identifier,
-) -> Result<SingletonName, NameClashError> {
+) -> Result<(SingletonName, Symbol), NameClashError> {
     let symbol = context.add_name_to_scope(&identifier)?;
-    Ok(SingletonName {
-        component: identifier,
+    Ok((
+        SingletonName {
+            component: identifier.into(),
+        },
         symbol,
-    })
+    ))
 }

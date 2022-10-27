@@ -46,12 +46,12 @@ impl Context {
 }
 
 impl Context {
-    pub fn get_symbol(&self, identifier: &Identifier) -> Result<Symbol, NameNotFoundError> {
+    pub fn get_symbol(&self, identifier: &ub::Identifier) -> Result<Symbol, NameNotFoundError> {
         if let Some(data) = self.get_symbol_data_for_name(&identifier.name) {
             Ok(data.symbol)
         } else {
             Err(NameNotFoundError {
-                name: identifier.clone(),
+                name: identifier.clone().into(),
             })
         }
     }
@@ -102,13 +102,13 @@ impl Context {
 impl Context {
     pub fn get_dot_target_symbol(
         &self,
-        input: (Symbol, &Identifier),
+        input: (Symbol, &ub::Identifier),
     ) -> Result<Symbol, InvalidDotExpressionRhsError> {
         if let Some(data) = self.get_dot_target_symbol_data((input.0, &input.1.name)) {
             Ok(data.symbol)
         } else {
             Err(InvalidDotExpressionRhsError {
-                rhs: input.1.clone(),
+                rhs: input.1.clone().into(),
             })
         }
     }
