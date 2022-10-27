@@ -3,6 +3,18 @@ use crate::data::bound_ast::*;
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
     IllegalTypeExpression(Expression),
+    BadCallee(Expression),
+    WrongNumberOfArguments {
+        call: Call,
+        expected: usize,
+        actual: usize,
+    },
+    BadArgumentType {
+        call: Call,
+        arg_index: usize,
+        expected: NormalForm,
+        actual: NormalForm,
+    },
 }
 
 pub fn type_check_files(files: &[File]) -> Result<(), TypeCheckError> {
@@ -83,7 +95,7 @@ fn normalize_params_and_leave_params_in_context(
 fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeCheckError> {
     type_check_expression(context, &param.type_)?;
     let type_ = evaluate_well_typed_expression(context, &param.type_);
-    if !is_term_a_member_of_type0_or_type1(context, &type_) {
+    if !is_term_a_member_of_type0_or_type1(context, type_.as_ref()) {
         return Err(TypeCheckError::IllegalTypeExpression(type_.into()));
     }
     context.push(type_);
@@ -145,8 +157,40 @@ fn get_type_of_name(context: &mut Context, name: &NameExpression) -> NormalForm 
     context[name.db_index].clone()
 }
 
-fn get_type_of_call(_context: &mut Context, _call: &Call) -> Result<NormalForm, TypeCheckError> {
-    unimplemented!()
+fn get_type_of_call(context: &mut Context, call: &Call) -> Result<NormalForm, TypeCheckError> {
+    let callee_type = get_type_of_expression(context, &call.callee)?;
+    let callee_type = if let Expression::Forall(forall) = callee_type.into() {
+        forall
+    } else {
+        return Err(TypeCheckError::BadCallee(call.callee.clone()));
+    };
+    let arg_types = call
+        .args
+        .iter()
+        .map(|arg| get_type_of_expression(context, arg))
+        .collect::<Result<Vec<_>, _>>()?;
+    if callee_type.params.len() != arg_types.len() {
+        return Err(TypeCheckError::WrongNumberOfArguments {
+            call: call.clone(),
+            expected: callee_type.params.len(),
+            actual: arg_types.len(),
+        });
+    }
+    for (i, (param, arg_type)) in callee_type.params.iter().zip(arg_types.iter()).enumerate() {
+        if !is_left_type_assignable_to_right_type(
+            context,
+            arg_type.as_nf_ref(),
+            NormalFormRef::unchecked_new(&param.type_),
+        ) {
+            return Err(TypeCheckError::BadArgumentType {
+                call: call.clone(),
+                arg_index: i,
+                expected: NormalForm::unchecked_new(param.type_.clone()),
+                actual: arg_type.clone(),
+            });
+        }
+    }
+    Ok(NormalForm::unchecked_new(callee_type.output))
 }
 
 fn get_type_of_fun(_context: &mut Context, _fun: &Fun) -> Result<NormalForm, TypeCheckError> {
@@ -227,17 +271,36 @@ mod misc {
         }
     }
 
-    impl std::ops::Deref for NormalForm {
-        type Target = Expression;
-
-        fn deref(&self) -> &Self::Target {
+    impl std::convert::AsRef<Expression> for NormalForm {
+        fn as_ref(&self) -> &Expression {
             &self.0
+        }
+    }
+
+    impl NormalForm {
+        pub fn as_nf_ref(&self) -> NormalFormRef<'_> {
+            NormalFormRef::unchecked_new(&self.0)
         }
     }
 
     impl From<NormalForm> for Expression {
         fn from(normal_form: NormalForm) -> Self {
             normal_form.0
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct NormalFormRef<'a>(&'a Expression);
+
+    impl<'a> NormalFormRef<'a> {
+        pub fn unchecked_new(expression: &'a Expression) -> Self {
+            Self(expression)
+        }
+    }
+
+    impl NormalFormRef<'_> {
+        pub fn raw(&self) -> &Expression {
+            &self.0
         }
     }
 
@@ -262,6 +325,14 @@ mod misc {
     }
 
     pub fn is_term_a_member_of_type0_or_type1(_context: &Context, _term: &Expression) -> bool {
+        unimplemented!()
+    }
+
+    pub fn is_left_type_assignable_to_right_type(
+        _context: &Context,
+        _left: NormalFormRef,
+        _right: NormalFormRef,
+    ) -> bool {
         unimplemented!()
     }
 }
