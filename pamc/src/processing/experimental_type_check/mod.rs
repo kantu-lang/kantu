@@ -264,6 +264,9 @@ mod context {
         stack: Vec<NormalForm>,
     }
 
+    const TYPE1_LEVEL: usize = 0;
+    const TYPE0_LEVEL: usize = 1;
+
     impl Context {
         pub fn with_builtins() -> Self {
             // We should will never retrieve the type of `Type1`, since it is undefined.
@@ -314,7 +317,17 @@ mod context {
     impl Context {
         /// Returns the De Bruijn index of the `Type0` expression.
         pub fn type0_dbi(&self) -> usize {
-            unimplemented!()
+            self.level_to_index(TYPE0_LEVEL)
+        }
+    }
+
+    impl Context {
+        fn level_to_index(&self, level: usize) -> usize {
+            self.len() - level - 1
+        }
+
+        fn index_to_level(&self, index: usize) -> usize {
+            self.len() - index - 1
         }
     }
 
@@ -322,8 +335,8 @@ mod context {
         type Output = NormalForm;
 
         fn index(&self, index: usize) -> &Self::Output {
-            let level = self.stack.len() - index - 1;
-            if level == 0 {
+            let level = self.index_to_level(index);
+            if level == TYPE1_LEVEL {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
             }
             &self.stack[level]
