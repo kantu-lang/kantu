@@ -9,11 +9,10 @@ pub enum TypeCheckError {
         expected: usize,
         actual: usize,
     },
-    BadArgumentType {
-        call: Call,
-        arg_index: usize,
-        expected: NormalForm,
-        actual: NormalForm,
+    TypeMismatch {
+        expression: Expression,
+        expected_type: NormalForm,
+        actual_type: NormalForm,
     },
 }
 
@@ -182,19 +181,49 @@ fn get_type_of_call(context: &mut Context, call: &Call) -> Result<NormalForm, Ty
             arg_type.as_nf_ref(),
             NormalFormRef::unchecked_new(&param.type_),
         ) {
-            return Err(TypeCheckError::BadArgumentType {
-                call: call.clone(),
-                arg_index: i,
-                expected: NormalForm::unchecked_new(param.type_.clone()),
-                actual: arg_type.clone(),
+            return Err(TypeCheckError::TypeMismatch {
+                expression: call.args[i].clone(),
+                expected_type: NormalForm::unchecked_new(param.type_.clone()),
+                actual_type: arg_type.clone(),
             });
         }
     }
     Ok(NormalForm::unchecked_new(callee_type.output))
 }
 
-fn get_type_of_fun(_context: &mut Context, _fun: &Fun) -> Result<NormalForm, TypeCheckError> {
-    unimplemented!()
+fn get_type_of_fun(context: &mut Context, fun: &Fun) -> Result<NormalForm, TypeCheckError> {
+    let params = normalize_params_and_leave_params_in_context(context, &fun.params)?;
+    {
+        let return_type_type = get_type_of_expression(context, &fun.return_type)?;
+        if !is_term_a_member_of_type0_or_type1(context, return_type_type.as_ref()) {
+            return Err(TypeCheckError::IllegalTypeExpression(
+                fun.return_type.clone(),
+            ));
+        }
+    }
+    let return_type = evaluate_well_typed_expression(context, &fun.return_type);
+
+    let body_type = get_type_of_expression(context, &fun.body)?;
+    if !is_left_type_assignable_to_right_type(
+        context,
+        body_type.as_nf_ref(),
+        return_type.as_nf_ref(),
+    ) {
+        return Err(TypeCheckError::TypeMismatch {
+            expression: fun.body.clone(),
+            expected_type: return_type,
+            actual_type: body_type,
+        });
+    }
+
+    let result = Ok(NormalForm::unchecked_new(Expression::Forall(Box::new(
+        Forall {
+            params,
+            output: return_type.into(),
+        },
+    ))));
+    context.pop_n(fun.params.len());
+    result
 }
 
 fn get_type_of_match(
