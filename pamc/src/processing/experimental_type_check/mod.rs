@@ -1,7 +1,9 @@
 use crate::data::bound_ast::*;
 
 #[derive(Clone, Debug)]
-pub enum TypeCheckError {}
+pub enum TypeCheckError {
+    IllegalTypeExpression(Expression),
+}
 
 pub fn type_check_files(files: &[File]) -> Result<(), TypeCheckError> {
     let mut context = Context::with_builtins();
@@ -15,6 +17,7 @@ fn type_check_file(context: &mut Context, file: &File) -> Result<(), TypeCheckEr
     for item in &file.items {
         type_check_file_item(context, item)?;
     }
+    context.pop_n(file.items.len());
     Ok(())
 }
 
@@ -26,8 +29,57 @@ fn type_check_file_item(context: &mut Context, item: &FileItem) -> Result<(), Ty
 }
 
 fn type_check_type_statement(
+    context: &mut Context,
+    type_statement: &TypeStatement,
+) -> Result<(), TypeCheckError> {
+    type_check_type_constructor(context, type_statement)?;
+    for variant in &type_statement.variants {
+        type_check_type_variant(context, variant)?;
+    }
+    Ok(())
+}
+
+fn type_check_type_constructor(
+    context: &mut Context,
+    type_statement: &TypeStatement,
+) -> Result<(), TypeCheckError> {
+    let params = normalize_params(context, &type_statement.params)?;
+    let type_constructor_type = Forall {
+        params,
+        output: type0_expression(context),
+    }
+    .collapse_if_nullary();
+    context.push(NormalForm::unchecked_new(type_constructor_type));
+    Ok(())
+}
+
+fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param>, TypeCheckError> {
+    let normalized = params
+        .iter()
+        .map(|param| {
+            type_check_param(context, param)?;
+            let type_ = context[0].clone();
+            if !is_term_a_member_of_type0_or_type1(context, &type_) {
+                return Err(TypeCheckError::IllegalTypeExpression(type_));
+            }
+            Ok(Param {
+                is_dashed: param.is_dashed,
+                name: param.name.clone(),
+                type_,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    context.pop_n(params.len());
+    Ok(normalized)
+}
+
+fn type_check_param(_context: &mut Context, _param: &Param) -> Result<(), TypeCheckError> {
+    unimplemented!()
+}
+
+fn type_check_type_variant(
     _context: &mut Context,
-    _type_statement: &TypeStatement,
+    _variant: &Variant,
 ) -> Result<(), TypeCheckError> {
     unimplemented!()
 }
@@ -41,11 +93,95 @@ fn type_check_let_statement(
 
 use context::*;
 mod context {
-    pub struct Context {}
+    use super::*;
+
+    use std::ops::Index;
+
+    pub struct Context {
+        stack: Vec<NormalForm>,
+    }
 
     impl Context {
         pub fn with_builtins() -> Self {
-            Self {}
+            Self { stack: Vec::new() }
         }
+    }
+
+    impl Context {
+        /// Panics if `n > self.len()`.
+        pub fn pop_n(&mut self, _n: usize) {
+            unimplemented!()
+        }
+
+        pub fn push(&mut self, expression: NormalForm) {
+            self.stack.push(expression);
+        }
+    }
+
+    impl Context {
+        /// Returns the De Bruijn index of the `Type0` expression.
+        pub fn type0_dbi(&self) -> usize {
+            unimplemented!()
+        }
+    }
+
+    impl Index<usize> for Context {
+        type Output = Expression;
+
+        fn index(&self, index: usize) -> &Self::Output {
+            &self.stack[self.stack.len() - index - 1]
+        }
+    }
+}
+
+use misc::*;
+mod misc {
+    use super::*;
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub struct NormalForm(Expression);
+
+    impl NormalForm {
+        pub fn unchecked_new(expression: Expression) -> Self {
+            Self(expression)
+        }
+    }
+
+    impl std::ops::Deref for NormalForm {
+        type Target = Expression;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl From<NormalForm> for Expression {
+        fn from(normal_form: NormalForm) -> Self {
+            normal_form.0
+        }
+    }
+
+    pub fn type0_expression(context: &Context) -> Expression {
+        Expression::Name(NameExpression {
+            components: vec![Identifier {
+                name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
+                start: None,
+            }],
+            db_index: context.type0_dbi(),
+        })
+    }
+
+    impl Forall {
+        pub fn collapse_if_nullary(self) -> Expression {
+            if self.params.is_empty() {
+                self.output
+            } else {
+                Expression::Forall(Box::new(self))
+            }
+        }
+    }
+
+    pub fn is_term_a_member_of_type0_or_type1(_context: &Context, _term: &Expression) -> bool {
+        unimplemented!()
     }
 }
