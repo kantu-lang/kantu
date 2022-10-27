@@ -108,16 +108,30 @@ fn type_check_type_variant(context: &mut Context, variant: &Variant) -> Result<(
 }
 
 fn type_check_let_statement(
-    _context: &mut Context,
-    _let_statement: &LetStatement,
+    context: &mut Context,
+    let_statement: &LetStatement,
 ) -> Result<(), TypeCheckError> {
-    unimplemented!()
+    let type_ = get_type_of_expression(context, &let_statement.value)?;
+    context.push(type_);
+    Ok(())
 }
 
 fn type_check_expression(
+    context: &mut Context,
+    expression: &Expression,
+) -> Result<(), TypeCheckError> {
+    // In the future, we could implement a version of this that skips the
+    // allocations required by `get_type_of_expression`, since we don't
+    // actually use the returned type.
+    // But for now, we'll just reuse the existing code, for the sake of
+    // simplicity.
+    get_type_of_expression(context, expression).map(std::mem::drop)
+}
+
+fn get_type_of_expression(
     _context: &mut Context,
     _expression: &Expression,
-) -> Result<(), TypeCheckError> {
+) -> Result<NormalForm, TypeCheckError> {
     unimplemented!()
 }
 
