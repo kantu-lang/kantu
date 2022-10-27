@@ -322,11 +322,11 @@ mod context {
         type Output = NormalForm;
 
         fn index(&self, index: usize) -> &Self::Output {
-            let i = self.stack.len() - index - 1;
-            if i == 0 {
+            let level = self.stack.len() - index - 1;
+            if level == 0 {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
             }
-            &self.stack[i]
+            &self.stack[level]
         }
     }
 }
