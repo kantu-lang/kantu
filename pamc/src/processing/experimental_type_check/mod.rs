@@ -272,12 +272,23 @@ mod context {
 
     impl Context {
         /// Panics if `n > self.len()`.
-        pub fn pop_n(&mut self, _n: usize) {
-            unimplemented!()
+        pub fn pop_n(&mut self, n: usize) {
+            if n > self.len() {
+                panic!(
+                    "Tried to pop {} elements from a context with only {} elements",
+                    n,
+                    self.len()
+                );
+            }
+            self.stack.truncate(self.len() - n);
         }
 
         pub fn push(&mut self, expression: NormalForm) {
             self.stack.push(expression);
+        }
+
+        pub fn len(&self) -> usize {
+            self.stack.len()
         }
     }
 
