@@ -94,7 +94,7 @@ fn normalize_params_and_leave_params_in_context(
 fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeCheckError> {
     type_check_expression(context, &param.type_)?;
     let type_ = evaluate_well_typed_expression(context, &param.type_);
-    if !is_term_a_member_of_type0_or_type1(context, type_.as_ref()) {
+    if !is_term_a_member_of_type0_or_type1(context, type_.as_nf_ref()) {
         return Err(TypeCheckError::IllegalTypeExpression(type_.into()));
     }
     context.push(type_);
@@ -195,7 +195,7 @@ fn get_type_of_fun(context: &mut Context, fun: &Fun) -> Result<NormalForm, TypeC
     let params = normalize_params_and_leave_params_in_context(context, &fun.params)?;
     {
         let return_type_type = get_type_of_expression(context, &fun.return_type)?;
-        if !is_term_a_member_of_type0_or_type1(context, return_type_type.as_ref()) {
+        if !is_term_a_member_of_type0_or_type1(context, return_type_type.as_nf_ref()) {
             return Err(TypeCheckError::IllegalTypeExpression(
                 fun.return_type.clone(),
             ));
@@ -241,7 +241,7 @@ fn get_type_of_forall(
     normalize_params_and_leave_params_in_context(context, &forall.params)?;
 
     let output_type = get_type_of_expression(context, &forall.output)?;
-    if !is_term_a_member_of_type0_or_type1(context, output_type.as_ref()) {
+    if !is_term_a_member_of_type0_or_type1(context, output_type.as_nf_ref()) {
         return Err(TypeCheckError::IllegalTypeExpression(forall.output.clone()));
     }
 
@@ -353,6 +353,11 @@ mod context {
         pub fn type0_dbi(&self) -> usize {
             self.level_to_index(TYPE0_LEVEL)
         }
+
+        /// Returns the De Bruijn index of the `Type1` expression.
+        pub fn type1_dbi(&self) -> usize {
+            self.level_to_index(TYPE1_LEVEL)
+        }
     }
 
     impl Context {
@@ -442,8 +447,13 @@ mod misc {
         }
     }
 
-    pub fn is_term_a_member_of_type0_or_type1(_context: &Context, _term: &Expression) -> bool {
-        unimplemented!()
+    pub fn is_term_a_member_of_type0_or_type1(context: &Context, term: NormalFormRef) -> bool {
+        if let Expression::Name(name) = term.raw() {
+            let i = name.db_index;
+            i == context.type0_dbi() || i == context.type1_dbi()
+        } else {
+            false
+        }
     }
 
     pub fn is_left_type_assignable_to_right_type(
