@@ -16,10 +16,10 @@ mod error;
 pub fn bind_files(
     files: Vec<ub::File>,
 ) -> Result<(Vec<File>, SymbolProvider, SymbolToDotTargetsMap), BindError> {
-    let file_node_ids = sort_by_dependencies(files)?;
+    let files = sort_by_dependencies(files)?;
     let mut context = Context::with_builtins();
 
-    let files = file_node_ids
+    let files = files
         .into_iter()
         .map(|file| bind_file(&mut context, file))
         .collect::<Result<Vec<_>, BindError>>()?;
