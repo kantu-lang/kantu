@@ -42,7 +42,7 @@ pub struct NodeRegistry {
 
     identifiers: Vec<Identifier>,
 
-    file_item_lists: Vec<FileItemNodeId>,
+    file_item_lists: ListSubregistry<FileItemNodeId>,
     param_lists: Vec<NodeId<Param>>,
     variant_lists: Vec<NodeId<Variant>>,
     match_case_lists: Vec<NodeId<MatchCase>>,
@@ -67,7 +67,7 @@ impl NodeRegistry {
 
             identifiers: Vec::new(),
 
-            file_item_lists: Vec::new(),
+            file_item_lists: ListSubregistry::new(),
             param_lists: Vec::new(),
             variant_lists: Vec::new(),
             match_case_lists: Vec::new(),
@@ -203,10 +203,8 @@ impl NodeRegistry {
 }
 
 impl NodeRegistry {
-    pub fn add_file_item_list(&mut self, mut list: Vec<FileItemNodeId>) -> ListId<FileItemNodeId> {
-        let id = ListId::<FileItemNodeId>::new(self.file_item_lists.len(), list.len());
-        self.file_item_lists.append(&mut list);
-        id
+    pub fn add_file_item_list(&mut self, list: Vec<FileItemNodeId>) -> ListId<FileItemNodeId> {
+        self.file_item_lists.add(list)
     }
 
     pub fn add_param_list(&mut self, mut list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
@@ -248,8 +246,7 @@ impl NodeRegistry {
 
 impl NodeRegistry {
     pub fn file_item_list(&self, id: ListId<FileItemNodeId>) -> &[FileItemNodeId] {
-        let end = id.start + id.len;
-        &self.file_item_lists[id.start..end]
+        self.file_item_lists.get(id)
     }
 
     pub fn param_list(&self, id: ListId<NodeId<Param>>) -> &[NodeId<Param>] {
@@ -335,9 +332,9 @@ where
     }
 }
 
-impl<T: Strip + SetId> Subregistry<T>
+impl<T> Subregistry<T>
 where
-    T: Strip,
+    T: Strip + SetId,
     T::Output: Clone + Debug,
 {
     fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
@@ -348,6 +345,43 @@ where
             item.set_id(new_id);
             self.ids.insert(item.strip(), new_id);
             self.items.push(item);
+            new_id
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct ListSubregistry<T> {
+    flattened_items: Vec<T>,
+    ids: FxHashMap<Vec<T>, ListId<T>>,
+}
+
+impl<T> ListSubregistry<T> {
+    fn new() -> Self {
+        Self {
+            flattened_items: Vec::new(),
+            ids: FxHashMap::default(),
+        }
+    }
+}
+
+impl<T> ListSubregistry<T> {
+    fn get(&self, id: ListId<T>) -> &[T] {
+        &self.flattened_items[id.start..(id.start + id.len)]
+    }
+}
+
+impl<T> ListSubregistry<T>
+where
+    T: Clone + Eq + std::hash::Hash,
+{
+    fn add(&mut self, list: Vec<T>) -> ListId<T> {
+        if let Some(existing_id) = self.ids.get(&list) {
+            *existing_id
+        } else {
+            let new_id = ListId::<T>::new(self.flattened_items.len(), list.len());
+            self.flattened_items.extend(list.iter().cloned());
+            self.ids.insert(list, new_id);
             new_id
         }
     }
