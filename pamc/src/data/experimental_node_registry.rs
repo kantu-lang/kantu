@@ -43,11 +43,12 @@ pub struct NodeRegistry {
     identifiers: Vec<Identifier>,
 
     file_item_lists: ListSubregistry<FileItemNodeId>,
-    param_lists: Vec<NodeId<Param>>,
-    variant_lists: Vec<NodeId<Variant>>,
-    match_case_lists: Vec<NodeId<MatchCase>>,
+    param_lists: ListSubregistry<NodeId<Param>>,
+    variant_lists: ListSubregistry<NodeId<Variant>>,
+    match_case_lists: ListSubregistry<NodeId<MatchCase>>,
+    expression_lists: ListSubregistry<ExpressionId>,
+
     identifier_lists: Vec<NodeId<Identifier>>,
-    expression_lists: Vec<ExpressionId>,
 }
 
 impl NodeRegistry {
@@ -68,11 +69,12 @@ impl NodeRegistry {
             identifiers: Vec::new(),
 
             file_item_lists: ListSubregistry::new(),
-            param_lists: Vec::new(),
-            variant_lists: Vec::new(),
-            match_case_lists: Vec::new(),
+            param_lists: ListSubregistry::new(),
+            variant_lists: ListSubregistry::new(),
+            match_case_lists: ListSubregistry::new(),
+            expression_lists: ListSubregistry::new(),
+
             identifier_lists: Vec::new(),
-            expression_lists: Vec::new(),
         }
     }
 }
@@ -207,40 +209,23 @@ impl NodeRegistry {
         self.file_item_lists.add(list)
     }
 
-    pub fn add_param_list(&mut self, mut list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
-        let id = ListId::<NodeId<Param>>::new(self.param_lists.len(), list.len());
-        self.param_lists.append(&mut list);
-        id
+    pub fn add_param_list(&mut self, list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
+        self.param_lists.add(list)
     }
 
-    pub fn add_variant_list(&mut self, mut list: Vec<NodeId<Variant>>) -> ListId<NodeId<Variant>> {
-        let id = ListId::<NodeId<Variant>>::new(self.variant_lists.len(), list.len());
-        self.variant_lists.append(&mut list);
-        id
+    pub fn add_variant_list(&mut self, list: Vec<NodeId<Variant>>) -> ListId<NodeId<Variant>> {
+        self.variant_lists.add(list)
     }
 
     pub fn add_match_case_list(
         &mut self,
-        mut list: Vec<NodeId<MatchCase>>,
+        list: Vec<NodeId<MatchCase>>,
     ) -> ListId<NodeId<MatchCase>> {
-        let id = ListId::<NodeId<MatchCase>>::new(self.match_case_lists.len(), list.len());
-        self.match_case_lists.append(&mut list);
-        id
+        self.match_case_lists.add(list)
     }
 
-    pub fn add_identifier_list(
-        &mut self,
-        mut list: Vec<NodeId<Identifier>>,
-    ) -> ListId<NodeId<Identifier>> {
-        let id = ListId::<NodeId<Identifier>>::new(self.identifier_lists.len(), list.len());
-        self.identifier_lists.append(&mut list);
-        id
-    }
-
-    pub fn add_expression_list(&mut self, mut list: Vec<ExpressionId>) -> ListId<ExpressionId> {
-        let id = ListId::<ExpressionId>::new(self.expression_lists.len(), list.len());
-        self.expression_lists.append(&mut list);
-        id
+    pub fn add_expression_list(&mut self, list: Vec<ExpressionId>) -> ListId<ExpressionId> {
+        self.expression_lists.add(list)
     }
 }
 
@@ -250,28 +235,37 @@ impl NodeRegistry {
     }
 
     pub fn param_list(&self, id: ListId<NodeId<Param>>) -> &[NodeId<Param>] {
-        let end = id.start + id.len;
-        &self.param_lists[id.start..end]
+        self.param_lists.get(id)
     }
 
     pub fn variant_list(&self, id: ListId<NodeId<Variant>>) -> &[NodeId<Variant>] {
-        let end = id.start + id.len;
-        &self.variant_lists[id.start..end]
+        self.variant_lists.get(id)
     }
 
     pub fn match_case_list(&self, id: ListId<NodeId<MatchCase>>) -> &[NodeId<MatchCase>] {
-        let end = id.start + id.len;
-        &self.match_case_lists[id.start..end]
-    }
-
-    pub fn identifier_list(&self, id: ListId<NodeId<Identifier>>) -> &[NodeId<Identifier>] {
-        let end = id.start + id.len;
-        &self.identifier_lists[id.start..end]
+        self.match_case_lists.get(id)
     }
 
     pub fn expression_list(&self, id: ListId<ExpressionId>) -> &[ExpressionId] {
+        self.expression_lists.get(id)
+    }
+}
+
+impl NodeRegistry {
+    pub fn add_identifier_list(
+        &mut self,
+        mut list: Vec<NodeId<Identifier>>,
+    ) -> ListId<NodeId<Identifier>> {
+        let id = ListId::<NodeId<Identifier>>::new(self.identifier_lists.len(), list.len());
+        self.identifier_lists.append(&mut list);
+        id
+    }
+}
+
+impl NodeRegistry {
+    pub fn identifier_list(&self, id: ListId<NodeId<Identifier>>) -> &[NodeId<Identifier>] {
         let end = id.start + id.len;
-        &self.expression_lists[id.start..end]
+        &self.identifier_lists[id.start..end]
     }
 }
 
@@ -299,96 +293,106 @@ impl NodeRegistry {
     }
 }
 
-#[derive(Clone, Debug)]
-struct Subregistry<T>
-where
-    T: Strip,
-    T::Output: Clone + Debug,
-{
-    items: Vec<T>,
-    ids: FxHashMap<T::Output, NodeId<T>>,
-}
+use subregistry::*;
+mod subregistry {
+    use super::*;
 
-impl<T> Subregistry<T>
-where
-    T: Strip,
-    T::Output: Clone + Debug,
-{
-    fn new() -> Self {
-        Self {
-            items: Vec::new(),
-            ids: FxHashMap::default(),
+    #[derive(Clone, Debug)]
+    pub struct Subregistry<T>
+    where
+        T: Strip,
+        T::Output: Clone + Debug,
+    {
+        items: Vec<T>,
+        ids: FxHashMap<T::Output, NodeId<T>>,
+    }
+
+    impl<T> Subregistry<T>
+    where
+        T: Strip,
+        T::Output: Clone + Debug,
+    {
+        pub fn new() -> Self {
+            Self {
+                items: Vec::new(),
+                ids: FxHashMap::default(),
+            }
+        }
+    }
+
+    impl<T> Subregistry<T>
+    where
+        T: Strip,
+        T::Output: Clone + Debug,
+    {
+        pub fn get(&self, id: NodeId<T>) -> &T {
+            &self.items[id.raw]
+        }
+    }
+
+    impl<T> Subregistry<T>
+    where
+        T: Strip + SetId,
+        T::Output: Clone + Debug,
+    {
+        pub fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
+            if let Some(existing_id) = self.ids.get(&item.strip()) {
+                *existing_id
+            } else {
+                let new_id = NodeId::<T>::new(self.items.len());
+                item.set_id(new_id);
+                self.ids.insert(item.strip(), new_id);
+                self.items.push(item);
+                new_id
+            }
         }
     }
 }
 
-impl<T> Subregistry<T>
-where
-    T: Strip,
-    T::Output: Clone + Debug,
-{
-    fn get(&self, id: NodeId<T>) -> &T {
-        &self.items[id.raw]
-    }
-}
+use list_subregistry::*;
+mod list_subregistry {
+    use super::*;
 
-impl<T> Subregistry<T>
-where
-    T: Strip + SetId,
-    T::Output: Clone + Debug,
-{
-    fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
-        if let Some(existing_id) = self.ids.get(&item.strip()) {
-            *existing_id
-        } else {
-            let new_id = NodeId::<T>::new(self.items.len());
-            item.set_id(new_id);
-            self.ids.insert(item.strip(), new_id);
-            self.items.push(item);
-            new_id
+    #[derive(Clone, Debug)]
+    pub struct ListSubregistry<T> {
+        flattened_items: Vec<T>,
+        ids: FxHashMap<Vec<T>, ListId<T>>,
+    }
+
+    impl<T> ListSubregistry<T> {
+        pub fn new() -> Self {
+            Self {
+                flattened_items: Vec::new(),
+                ids: FxHashMap::default(),
+            }
+        }
+    }
+
+    impl<T> ListSubregistry<T> {
+        pub fn get(&self, id: ListId<T>) -> &[T] {
+            &self.flattened_items[id.start..(id.start + id.len)]
+        }
+    }
+
+    impl<T> ListSubregistry<T>
+    where
+        T: Clone + Eq + std::hash::Hash,
+    {
+        pub fn add(&mut self, list: Vec<T>) -> ListId<T> {
+            if let Some(existing_id) = self.ids.get(&list) {
+                *existing_id
+            } else {
+                let new_id = ListId::<T>::new(self.flattened_items.len(), list.len());
+                self.flattened_items.extend(list.iter().cloned());
+                self.ids.insert(list, new_id);
+                new_id
+            }
         }
     }
 }
 
-#[derive(Clone, Debug)]
-struct ListSubregistry<T> {
-    flattened_items: Vec<T>,
-    ids: FxHashMap<Vec<T>, ListId<T>>,
-}
-
-impl<T> ListSubregistry<T> {
-    fn new() -> Self {
-        Self {
-            flattened_items: Vec::new(),
-            ids: FxHashMap::default(),
-        }
-    }
-}
-
-impl<T> ListSubregistry<T> {
-    fn get(&self, id: ListId<T>) -> &[T] {
-        &self.flattened_items[id.start..(id.start + id.len)]
-    }
-}
-
-impl<T> ListSubregistry<T>
-where
-    T: Clone + Eq + std::hash::Hash,
-{
-    fn add(&mut self, list: Vec<T>) -> ListId<T> {
-        if let Some(existing_id) = self.ids.get(&list) {
-            *existing_id
-        } else {
-            let new_id = ListId::<T>::new(self.flattened_items.len(), list.len());
-            self.flattened_items.extend(list.iter().cloned());
-            self.ids.insert(list, new_id);
-            new_id
-        }
-    }
-}
-
-use traits::*;
-mod traits {
+use set_id::*;
+mod set_id {
     use super::*;
 
     pub trait SetId: Sized {
