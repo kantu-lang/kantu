@@ -10,8 +10,8 @@ pub mod type_map;
 pub mod unsimplified_ast;
 pub mod variant_return_type;
 
-pub mod experimental_light_ast;
-pub mod experimental_node_registry;
+pub mod x_light_ast;
+pub mod x_node_registry;
 pub mod x_stripped_ast;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

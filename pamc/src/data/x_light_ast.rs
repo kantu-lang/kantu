@@ -1,5 +1,5 @@
 use crate::data::{
-    experimental_node_registry::{ListId, NodeId},
+    x_node_registry::{ListId, NodeId},
     FileId, TextPosition,
 };
 
@@ -10,7 +10,7 @@ pub struct File {
     pub item_list_id: ListId<FileItemNodeId>,
 }
 
-pub type FileItemNodeId = crate::data::experimental_node_registry::FileItemNodeId;
+pub type FileItemNodeId = crate::data::x_node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
@@ -43,7 +43,7 @@ pub struct LetStatement {
     pub value_id: ExpressionId,
 }
 
-pub type ExpressionId = crate::data::experimental_node_registry::ExpressionId;
+pub type ExpressionId = crate::data::x_node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NameExpression {

@@ -8,5 +8,5 @@ pub mod simplify_ast;
 pub mod type_check;
 pub mod validate_fun_recursion;
 
-pub mod experimental_bind_type_independent;
-pub mod experimental_type_check;
+pub mod x_bind_type_independent;
+pub mod x_type_check;

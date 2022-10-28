@@ -1,4 +1,4 @@
-use crate::data::experimental_light_ast::*;
+use crate::data::x_light_ast::*;
 
 pub use crate::data::node_registry::FileItemNodeId;
 pub use crate::data::node_registry::ListId;

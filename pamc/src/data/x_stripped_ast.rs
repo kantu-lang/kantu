@@ -1,6 +1,6 @@
 use crate::data::{
-    experimental_light_ast as decorated,
-    experimental_node_registry::{ListId, NodeId},
+    x_light_ast as decorated,
+    x_node_registry::{ListId, NodeId},
     FileId,
 };
 
@@ -80,7 +80,7 @@ impl Strip for decorated::LetStatement {
     }
 }
 
-pub type ExpressionId = crate::data::experimental_node_registry::ExpressionId;
+pub type ExpressionId = crate::data::x_node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
