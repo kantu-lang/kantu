@@ -26,6 +26,10 @@ pub enum ExpressionRef<'a> {
     Forall(&'a Forall),
 }
 
+/// For any type `T`, if `T` implements `Strip`, then the
+/// registry guarantees that for any two `T`s `x` and `y`
+/// with respective `NodeId<T>`s `x_id` and `y_id`,
+/// `x.strip() == y.strip()` implies `x_id == y_id`.
 #[derive(Clone, Debug)]
 pub struct NodeRegistry {
     files: Subregistry<File>,
