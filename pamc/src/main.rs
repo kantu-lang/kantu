@@ -49,6 +49,12 @@ fn main() {
                                 Ok((files, _symbol_provider, _dot_targets)) => {
                                     println!("Bind success!");
                                     println!("{:#?}", &files[0]);
+
+                                    let _lightened_file = pamc::processing::x_lighten::lighten_file(
+                                        &mut pamc::data::x_node_registry::NodeRegistry::empty(),
+                                        files[0].clone(),
+                                    );
+                                    println!("Lightened file!");
                                 }
                                 Err(err) => {
                                     println!("Bind error: {:?}", err);
