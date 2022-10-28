@@ -1,12 +1,17 @@
 use crate::data::x_light_ast::*;
 
-pub use crate::data::node_registry::FileItemNodeId;
 pub use crate::data::node_registry::ListId;
 pub use crate::data::node_registry::NodeId;
 pub use crate::data::x_stripped_ast::Strip;
 
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FileItemNodeId {
+    Type(NodeId<TypeStatement>),
+    Let(NodeId<LetStatement>),
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ExpressionId {
