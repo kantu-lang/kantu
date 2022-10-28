@@ -1,0 +1,435 @@
+use crate::data::experimental_light_ast::*;
+
+pub use crate::data::node_registry::FileItemNodeId;
+pub use crate::data::node_registry::ListId;
+pub use crate::data::node_registry::NodeId;
+pub use crate::data::x_stripped_ast::Strip;
+
+use rustc_hash::FxHashMap;
+use std::fmt::Debug;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ExpressionId {
+    Name(NodeId<NameExpression>),
+    Call(NodeId<Call>),
+    Fun(NodeId<Fun>),
+    Match(NodeId<Match>),
+    Forall(NodeId<Forall>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExpressionRef<'a> {
+    Name(&'a NameExpression),
+    Call(&'a Call),
+    Fun(&'a Fun),
+    Match(&'a Match),
+    Forall(&'a Forall),
+}
+
+#[derive(Clone, Debug)]
+pub struct NodeRegistry {
+    files: Subregistry<File>,
+    type_statements: Subregistry<TypeStatement>,
+    params: Subregistry<Param>,
+    variants: Subregistry<Variant>,
+    let_statements: Subregistry<LetStatement>,
+    name_expressions: Subregistry<NameExpression>,
+    calls: Subregistry<Call>,
+    funs: Subregistry<Fun>,
+    matches: Subregistry<Match>,
+    match_cases: Subregistry<MatchCase>,
+    foralls: Subregistry<Forall>,
+
+    identifiers: Vec<Identifier>,
+
+    file_item_lists: Vec<FileItemNodeId>,
+    param_lists: Vec<NodeId<Param>>,
+    variant_lists: Vec<NodeId<Variant>>,
+    match_case_lists: Vec<NodeId<MatchCase>>,
+    identifier_lists: Vec<NodeId<Identifier>>,
+    expression_lists: Vec<ExpressionId>,
+}
+
+impl NodeRegistry {
+    pub fn empty() -> Self {
+        Self {
+            files: Subregistry::new(),
+            type_statements: Subregistry::new(),
+            params: Subregistry::new(),
+            variants: Subregistry::new(),
+            let_statements: Subregistry::new(),
+            name_expressions: Subregistry::new(),
+            calls: Subregistry::new(),
+            funs: Subregistry::new(),
+            matches: Subregistry::new(),
+            match_cases: Subregistry::new(),
+            foralls: Subregistry::new(),
+
+            identifiers: Vec::new(),
+
+            file_item_lists: Vec::new(),
+            param_lists: Vec::new(),
+            variant_lists: Vec::new(),
+            match_case_lists: Vec::new(),
+            identifier_lists: Vec::new(),
+            expression_lists: Vec::new(),
+        }
+    }
+}
+
+impl NodeRegistry {
+    pub fn add_file_and_overwrite_its_id(&mut self, file: File) -> NodeId<File> {
+        self.files.add_and_overwrite_id(file)
+    }
+
+    pub fn add_type_statement_and_overwrite_its_id(
+        &mut self,
+        type_statement: TypeStatement,
+    ) -> NodeId<TypeStatement> {
+        self.type_statements.add_and_overwrite_id(type_statement)
+    }
+
+    pub fn add_param_and_overwrite_its_id(&mut self, param: Param) -> NodeId<Param> {
+        self.params.add_and_overwrite_id(param)
+    }
+
+    pub fn add_variant_and_overwrite_its_id(&mut self, variant: Variant) -> NodeId<Variant> {
+        self.variants.add_and_overwrite_id(variant)
+    }
+
+    pub fn add_let_statement_and_overwrite_its_id(
+        &mut self,
+        let_statement: LetStatement,
+    ) -> NodeId<LetStatement> {
+        self.let_statements.add_and_overwrite_id(let_statement)
+    }
+
+    /// Panics if the provided name expression has zero components.
+    pub fn add_name_expression_and_overwrite_its_id(
+        &mut self,
+        name: NameExpression,
+    ) -> NodeId<NameExpression> {
+        if name.component_list_id.len == 0 {
+            panic!("NameExpression must have at least one component");
+        }
+
+        self.name_expressions.add_and_overwrite_id(name)
+    }
+
+    pub fn add_call_and_overwrite_its_id(&mut self, call: Call) -> NodeId<Call> {
+        self.calls.add_and_overwrite_id(call)
+    }
+
+    pub fn add_fun_and_overwrite_its_id(&mut self, fun: Fun) -> NodeId<Fun> {
+        self.funs.add_and_overwrite_id(fun)
+    }
+
+    pub fn add_match_and_overwrite_its_id(&mut self, match_: Match) -> NodeId<Match> {
+        self.matches.add_and_overwrite_id(match_)
+    }
+
+    pub fn add_match_case_and_overwrite_its_id(
+        &mut self,
+        match_case: MatchCase,
+    ) -> NodeId<MatchCase> {
+        self.match_cases.add_and_overwrite_id(match_case)
+    }
+
+    pub fn add_forall_and_overwrite_its_id(&mut self, forall: Forall) -> NodeId<Forall> {
+        self.foralls.add_and_overwrite_id(forall)
+    }
+}
+
+impl NodeRegistry {
+    pub fn file(&self, id: NodeId<File>) -> &File {
+        self.files.get(id)
+    }
+
+    pub fn type_statement(&self, id: NodeId<TypeStatement>) -> &TypeStatement {
+        self.type_statements.get(id)
+    }
+
+    pub fn param(&self, id: NodeId<Param>) -> &Param {
+        self.params.get(id)
+    }
+
+    pub fn variant(&self, id: NodeId<Variant>) -> &Variant {
+        self.variants.get(id)
+    }
+
+    pub fn let_statement(&self, id: NodeId<LetStatement>) -> &LetStatement {
+        self.let_statements.get(id)
+    }
+
+    pub fn name_expression(&self, id: NodeId<NameExpression>) -> &NameExpression {
+        self.name_expressions.get(id)
+    }
+
+    pub fn call(&self, id: NodeId<Call>) -> &Call {
+        self.calls.get(id)
+    }
+
+    pub fn fun(&self, id: NodeId<Fun>) -> &Fun {
+        self.funs.get(id)
+    }
+
+    pub fn match_(&self, id: NodeId<Match>) -> &Match {
+        self.matches.get(id)
+    }
+
+    pub fn match_case(&self, id: NodeId<MatchCase>) -> &MatchCase {
+        self.match_cases.get(id)
+    }
+
+    pub fn forall(&self, id: NodeId<Forall>) -> &Forall {
+        self.foralls.get(id)
+    }
+}
+
+impl NodeRegistry {
+    pub fn add_identifier_and_overwrite_its_id(
+        &mut self,
+        identifier: Identifier,
+    ) -> NodeId<Identifier> {
+        self.identifiers.push(identifier.clone());
+        NodeId::new(self.identifiers.len() - 1)
+    }
+}
+
+impl NodeRegistry {
+    pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
+        &self.identifiers[id.raw]
+    }
+}
+
+impl NodeRegistry {
+    pub fn add_file_item_list(&mut self, mut list: Vec<FileItemNodeId>) -> ListId<FileItemNodeId> {
+        let id = ListId::<FileItemNodeId>::new(self.file_item_lists.len(), list.len());
+        self.file_item_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_param_list(&mut self, mut list: Vec<NodeId<Param>>) -> ListId<NodeId<Param>> {
+        let id = ListId::<NodeId<Param>>::new(self.param_lists.len(), list.len());
+        self.param_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_variant_list(&mut self, mut list: Vec<NodeId<Variant>>) -> ListId<NodeId<Variant>> {
+        let id = ListId::<NodeId<Variant>>::new(self.variant_lists.len(), list.len());
+        self.variant_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_match_case_list(
+        &mut self,
+        mut list: Vec<NodeId<MatchCase>>,
+    ) -> ListId<NodeId<MatchCase>> {
+        let id = ListId::<NodeId<MatchCase>>::new(self.match_case_lists.len(), list.len());
+        self.match_case_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_identifier_list(
+        &mut self,
+        mut list: Vec<NodeId<Identifier>>,
+    ) -> ListId<NodeId<Identifier>> {
+        let id = ListId::<NodeId<Identifier>>::new(self.identifier_lists.len(), list.len());
+        self.identifier_lists.append(&mut list);
+        id
+    }
+
+    pub fn add_expression_list(&mut self, mut list: Vec<ExpressionId>) -> ListId<ExpressionId> {
+        let id = ListId::<ExpressionId>::new(self.expression_lists.len(), list.len());
+        self.expression_lists.append(&mut list);
+        id
+    }
+}
+
+impl NodeRegistry {
+    pub fn file_item_list(&self, id: ListId<FileItemNodeId>) -> &[FileItemNodeId] {
+        let end = id.start + id.len;
+        &self.file_item_lists[id.start..end]
+    }
+
+    pub fn param_list(&self, id: ListId<NodeId<Param>>) -> &[NodeId<Param>] {
+        let end = id.start + id.len;
+        &self.param_lists[id.start..end]
+    }
+
+    pub fn variant_list(&self, id: ListId<NodeId<Variant>>) -> &[NodeId<Variant>] {
+        let end = id.start + id.len;
+        &self.variant_lists[id.start..end]
+    }
+
+    pub fn match_case_list(&self, id: ListId<NodeId<MatchCase>>) -> &[NodeId<MatchCase>] {
+        let end = id.start + id.len;
+        &self.match_case_lists[id.start..end]
+    }
+
+    pub fn identifier_list(&self, id: ListId<NodeId<Identifier>>) -> &[NodeId<Identifier>] {
+        let end = id.start + id.len;
+        &self.identifier_lists[id.start..end]
+    }
+
+    pub fn expression_list(&self, id: ListId<ExpressionId>) -> &[ExpressionId] {
+        let end = id.start + id.len;
+        &self.expression_lists[id.start..end]
+    }
+}
+
+impl NodeRegistry {
+    pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
+        match id {
+            ExpressionId::Name(id) => ExpressionRef::Name(self.name_expression(id)),
+            ExpressionId::Call(id) => ExpressionRef::Call(self.call(id)),
+            ExpressionId::Fun(id) => ExpressionRef::Fun(self.fun(id)),
+            ExpressionId::Match(id) => ExpressionRef::Match(self.match_(id)),
+            ExpressionId::Forall(id) => ExpressionRef::Forall(self.forall(id)),
+        }
+    }
+}
+
+impl NodeRegistry {
+    pub fn rightmost_component(&self, id: NodeId<NameExpression>) -> &Identifier {
+        let name = self.name_expression(id);
+        let component_ids = self.identifier_list(name.component_list_id);
+        let rightmost_component_id = *component_ids
+            .last()
+            .expect("A name expression should always have at least one component. This condition should have been checked by NodeRegistry::add_name_expression_and_overwrite_its_id. The fact that a zero-component name expression was successfully registered indicates a serious logic error.")
+            ;
+        self.identifier(rightmost_component_id)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct Subregistry<T>
+where
+    T: Strip,
+    T::Output: Clone + Debug,
+{
+    items: Vec<T>,
+    ids: FxHashMap<T::Output, NodeId<T>>,
+}
+
+impl<T> Subregistry<T>
+where
+    T: Strip,
+    T::Output: Clone + Debug,
+{
+    fn new() -> Self {
+        Self {
+            items: Vec::new(),
+            ids: FxHashMap::default(),
+        }
+    }
+}
+
+impl<T> Subregistry<T>
+where
+    T: Strip,
+    T::Output: Clone + Debug,
+{
+    fn get(&self, id: NodeId<T>) -> &T {
+        &self.items[id.raw]
+    }
+}
+
+impl<T: Strip + SetId> Subregistry<T>
+where
+    T: Strip,
+    T::Output: Clone + Debug,
+{
+    fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
+        if let Some(existing_id) = self.ids.get(&item.strip()) {
+            *existing_id
+        } else {
+            let new_id = NodeId::<T>::new(self.items.len());
+            item.set_id(new_id);
+            self.ids.insert(item.strip(), new_id);
+            self.items.push(item);
+            new_id
+        }
+    }
+}
+
+use traits::*;
+mod traits {
+    use super::*;
+
+    pub trait SetId: Sized {
+        fn set_id(&mut self, id: NodeId<Self>);
+    }
+
+    impl SetId for File {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for TypeStatement {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Param {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Variant {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for LetStatement {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for NameExpression {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Identifier {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Call {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Fun {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Match {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for MatchCase {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Forall {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+}
