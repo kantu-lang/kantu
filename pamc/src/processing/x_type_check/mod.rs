@@ -119,7 +119,7 @@ fn normalize_params_and_leave_params_in_context(
         .copied()
         .map(|param_id| {
             type_check_param(context, registry, param_id)?;
-            let type_id: ExpressionId = context.index(0).raw();
+            let type_id: ExpressionId = context.index(0, registry).raw();
             let old_param = registry.param(param_id);
             let normalized_id = registry.add_param_and_overwrite_its_id(Param {
                 id: dummy_id(),
@@ -217,7 +217,7 @@ fn get_type_of_name(
     name_id: NodeId<NameExpression>,
 ) -> NormalFormId {
     let name = registry.name_expression(name_id);
-    context.index(name.db_index)
+    context.index(name.db_index, registry)
 }
 
 fn get_type_of_call(
@@ -263,6 +263,7 @@ fn get_type_of_call(
         let callee_type_param = registry.param(callee_type_param_id);
         if !is_left_type_assignable_to_right_type(
             context,
+            registry,
             arg_type_id,
             // This is safe because the param is the param of a normal
             // form Forall node, which guarantees that its type is a
@@ -309,6 +310,7 @@ fn get_type_of_fun(
     let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
     if !is_left_type_assignable_to_right_type(
         context,
+        registry,
         normalized_body_type_id,
         normalized_return_type_id,
     ) {
@@ -482,12 +484,14 @@ mod context {
     }
 
     impl Context {
-        pub fn index(&self, index: usize) -> NormalFormId {
+        pub fn index(&self, index: usize, registry: &mut NodeRegistry) -> NormalFormId {
             let level = self.index_to_level(index);
             if level == TYPE1_LEVEL {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
             }
-            self.local_type_stack[level].clone().shift_up(index + 1)
+            self.local_type_stack[level]
+                .clone()
+                .shift_up(index + 1, registry)
         }
     }
 }
@@ -572,15 +576,16 @@ mod misc {
 
     pub fn is_left_type_assignable_to_right_type(
         _context: &Context,
-        _left: NormalFormRef,
-        _right: NormalFormRef,
+        _registry: &NodeRegistry,
+        _left: NormalFormId,
+        _right: NormalFormId,
     ) -> bool {
         unimplemented!()
     }
 
     impl NormalFormId {
-        pub fn shift_up(self, amount: usize) -> Self {
-            Self::unchecked_new(self.0.shift_up(amount))
+        pub fn shift_up(self, amount: usize, registry: &mut NodeRegistry) -> Self {
+            Self::unchecked_new(self.0.shift_up(amount, registry))
         }
     }
 
