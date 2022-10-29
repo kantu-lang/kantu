@@ -50,8 +50,10 @@ fn main() {
                                     println!("Bind success!");
                                     println!("{:#?}", &files[0]);
 
+                                    let mut registry =
+                                        pamc::data::x_node_registry::NodeRegistry::empty();
                                     let lightened_file = pamc::processing::x_lighten::lighten_file(
-                                        &mut pamc::data::x_node_registry::NodeRegistry::empty(),
+                                        &mut registry,
                                         files[0].clone(),
                                     );
                                     println!("Lightened file!");
@@ -59,7 +61,7 @@ fn main() {
 
                                     let type_check_result =
                                         pamc::processing::x_type_check::type_check_files(
-                                            &mut pamc::data::x_node_registry::NodeRegistry::empty(),
+                                            &mut registry,
                                             &[lightened_file],
                                         );
                                     match type_check_result {
