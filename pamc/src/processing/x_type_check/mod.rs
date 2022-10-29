@@ -82,7 +82,7 @@ fn type_check_type_constructor(
     registry: &mut NodeRegistry,
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeCheckError> {
-    let type_statement = registry.type_statement(type_statement_id);
+    let type_statement = registry.type_statement(type_statement_id).clone();
     let normalized_param_list_id =
         normalize_params(context, registry, type_statement.param_list_id)?;
     let type_constructor_type = NormalFormId::unchecked_new(
@@ -121,12 +121,14 @@ fn normalize_params_and_leave_params_in_context(
             type_check_param(context, registry, param_id)?;
             let type_id: ExpressionId = context.index(0, registry).raw();
             let old_param = registry.param(param_id);
-            let normalized_id = registry.add_param_and_overwrite_its_id(Param {
+            let normalized_param_with_dummy_id = Param {
                 id: dummy_id(),
                 is_dashed: old_param.is_dashed,
                 name_id: old_param.name_id,
                 type_id,
-            });
+            };
+            let normalized_id =
+                registry.add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
             Ok(normalized_id)
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -138,7 +140,7 @@ fn type_check_param(
     registry: &mut NodeRegistry,
     param_id: NodeId<Param>,
 ) -> Result<(), TypeCheckError> {
-    let param = registry.param(param_id);
+    let param = registry.param(param_id).clone();
     let param_type_type_id = get_type_of_expression(context, registry, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(context, registry, param_type_type_id) {
         return Err(TypeCheckError::IllegalTypeExpression(param.type_id));
@@ -154,7 +156,7 @@ fn type_check_type_variant(
     registry: &mut NodeRegistry,
     variant_id: NodeId<Variant>,
 ) -> Result<(), TypeCheckError> {
-    let variant = registry.variant(variant_id);
+    let variant = registry.variant(variant_id).clone();
     let arity = variant.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(context, registry, variant.param_list_id)?;
@@ -178,7 +180,7 @@ fn type_check_let_statement(
     registry: &mut NodeRegistry,
     let_statement_id: NodeId<LetStatement>,
 ) -> Result<(), TypeCheckError> {
-    let let_statement = registry.let_statement(let_statement_id);
+    let let_statement = registry.let_statement(let_statement_id).clone();
     let type_ = get_type_of_expression(context, registry, let_statement.value_id)?;
     context.push(type_);
     Ok(())
@@ -225,7 +227,7 @@ fn get_type_of_call(
     registry: &mut NodeRegistry,
     call_id: NodeId<Call>,
 ) -> Result<NormalFormId, TypeCheckError> {
-    let call = registry.call(call_id);
+    let call = registry.call(call_id).clone();
     let callee_type_id = get_type_of_expression(context, registry, call.callee_id)?;
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
@@ -285,7 +287,7 @@ fn get_type_of_fun(
     registry: &mut NodeRegistry,
     fun_id: NodeId<Fun>,
 ) -> Result<NormalFormId, TypeCheckError> {
-    let fun = registry.fun(fun_id);
+    let fun = registry.fun(fun_id).clone();
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(context, registry, fun.param_list_id)?;
     {
@@ -327,7 +329,7 @@ fn get_type_of_fun(
 
 fn get_type_of_match(
     _context: &mut Context,
-    registry: &mut NodeRegistry,
+    _registry: &mut NodeRegistry,
     _match_id: NodeId<Match>,
 ) -> Result<NormalFormId, TypeCheckError> {
     unimplemented!()
@@ -338,7 +340,7 @@ fn get_type_of_forall(
     registry: &mut NodeRegistry,
     forall_id: NodeId<Forall>,
 ) -> Result<NormalFormId, TypeCheckError> {
-    let forall = registry.forall(forall_id);
+    let forall = registry.forall(forall_id).clone();
     normalize_params_and_leave_params_in_context(context, registry, forall.param_list_id)?;
 
     let output_type_id = get_type_of_expression(context, registry, forall.output_id)?;
