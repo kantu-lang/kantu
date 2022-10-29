@@ -55,9 +55,11 @@ pub struct NameExpression {
     pub db_index: DbIndex,
 }
 
+/// De Bruijn index (zero-based).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DbIndex(pub usize);
 
+/// De Bruijn level (zero-based).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DbLevel(pub usize);
 
