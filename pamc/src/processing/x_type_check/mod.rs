@@ -313,6 +313,8 @@ fn get_type_of_fun(
     registry: &mut NodeRegistry,
     fun_id: NodeId<Fun>,
 ) -> Result<NormalFormId, TypeCheckError> {
+    let original_context_len = context.len();
+
     let fun = registry.fun(fun_id).clone();
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(context, registry, fun.param_list_id)?;
@@ -335,8 +337,9 @@ fn get_type_of_fun(
 
     context.push(ContextEntry {
         type_id: fun_type_id,
-        // TODO: Shift up
-        definition: ContextEntryDefinition::Fun(fun_id),
+        definition: ContextEntryDefinition::Fun(
+            fun_id.upshift(context.len() - original_context_len, registry),
+        ),
     });
 
     let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
@@ -684,6 +687,87 @@ mod shift {
     }
 
     impl Shift for ExpressionId {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
+            self,
+            amount: usize,
+            cutoff: usize,
+            registry: &mut NodeRegistry,
+        ) -> Self {
+            match self {
+                ExpressionId::Name(name_id) => {
+                    ExpressionId::Name(name_id.upshift_with_cutoff(amount, cutoff, registry))
+                }
+                ExpressionId::Call(call_id) => {
+                    ExpressionId::Call(call_id.upshift_with_cutoff(amount, cutoff, registry))
+                }
+                ExpressionId::Fun(fun_id) => {
+                    ExpressionId::Fun(fun_id.upshift_with_cutoff(amount, cutoff, registry))
+                }
+                ExpressionId::Match(match_id) => {
+                    ExpressionId::Match(match_id.upshift_with_cutoff(amount, cutoff, registry))
+                }
+                ExpressionId::Forall(forall_id) => {
+                    ExpressionId::Forall(forall_id.upshift_with_cutoff(amount, cutoff, registry))
+                }
+            }
+        }
+    }
+
+    impl Shift for NodeId<NameExpression> {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
+            self,
+            _amount: usize,
+            _cutoff: usize,
+            _registry: &mut NodeRegistry,
+        ) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Shift for NodeId<Call> {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
+            self,
+            _amount: usize,
+            _cutoff: usize,
+            _registry: &mut NodeRegistry,
+        ) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Shift for NodeId<Fun> {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
+            self,
+            _amount: usize,
+            _cutoff: usize,
+            _registry: &mut NodeRegistry,
+        ) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Shift for NodeId<Match> {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
+            self,
+            _amount: usize,
+            _cutoff: usize,
+            _registry: &mut NodeRegistry,
+        ) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Shift for NodeId<Forall> {
         type Output = Self;
 
         fn upshift_with_cutoff(
