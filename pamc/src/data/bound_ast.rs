@@ -52,8 +52,14 @@ pub enum Expression {
 pub struct NameExpression {
     pub components: Vec<Identifier>,
     /// De Bruijn index (zero-based).
-    pub db_index: usize,
+    pub db_index: DeBruijnIndex,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DeBruijnIndex(pub usize);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DeBruijnLevel(pub usize);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
