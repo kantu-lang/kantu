@@ -167,9 +167,9 @@ impl Context {
 impl Context {
     /// Returns the zero-based De Bruijn index of the given symbol,
     /// where index zero corresponds to the **top** symbol.
-    pub fn get_db_index(&self, symbol: Symbol) -> Option<DeBruijnIndex> {
+    pub fn get_db_index(&self, symbol: Symbol) -> Option<DbIndex> {
         let bottom_index = self.get_db_level(symbol)?;
-        Some(DeBruijnIndex(self.len() - bottom_index - 1))
+        Some(DbIndex(self.len() - bottom_index - 1))
     }
 
     /// Returns the zero-based De Bruijn level of the given symbol.

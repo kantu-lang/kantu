@@ -85,7 +85,7 @@ pub type ExpressionId = crate::data::x_node_registry::ExpressionId;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     /// De Bruijn index (zero-based).
-    pub db_index: DeBruijnIndex,
+    pub db_index: DbIndex,
 }
 impl Strip for decorated::NameExpression {
     type Output = NameExpression;
@@ -96,7 +96,7 @@ impl Strip for decorated::NameExpression {
     }
 }
 
-pub use crate::data::bound_ast::{DeBruijnIndex, DeBruijnLevel};
+pub use crate::data::bound_ast::{DbIndex, DbLevel};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {

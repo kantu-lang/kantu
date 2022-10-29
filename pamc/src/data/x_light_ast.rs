@@ -50,10 +50,10 @@ pub struct NameExpression {
     pub id: NodeId<Self>,
     pub component_list_id: ListId<NodeId<Identifier>>,
     /// De Bruijn index (zero-based).
-    pub db_index: DeBruijnIndex,
+    pub db_index: DbIndex,
 }
 
-pub use crate::data::bound_ast::{DeBruijnIndex, DeBruijnLevel};
+pub use crate::data::bound_ast::{DbIndex, DbLevel};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {

@@ -119,7 +119,7 @@ fn normalize_params_and_leave_params_in_context(
         .copied()
         .map(|param_id| {
             type_check_param(context, registry, param_id)?;
-            let type_id: ExpressionId = context.index(DeBruijnIndex(0), registry).raw();
+            let type_id: ExpressionId = context.index(DbIndex(0), registry).raw();
             let old_param = registry.param(param_id);
             let normalized_param_with_dummy_id = Param {
                 id: dummy_id(),
@@ -405,8 +405,8 @@ mod context {
         local_type_stack: Vec<NormalFormId>,
     }
 
-    const TYPE1_LEVEL: DeBruijnLevel = DeBruijnLevel(0);
-    const TYPE0_LEVEL: DeBruijnLevel = DeBruijnLevel(1);
+    const TYPE1_LEVEL: DbLevel = DbLevel(0);
+    const TYPE0_LEVEL: DbLevel = DbLevel(1);
 
     impl Context {
         pub fn with_builtins(registry: &mut NodeRegistry) -> Self {
@@ -421,7 +421,7 @@ mod context {
                         name: IdentifierName::Standard("Type2".to_owned()),
                         start: None,
                     }],
-                    DeBruijnIndex(0),
+                    DbIndex(0),
                 ),
             ));
             let type0_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
@@ -432,7 +432,7 @@ mod context {
                         name: IdentifierName::Standard("Type1".to_owned()),
                         start: None,
                     }],
-                    DeBruijnIndex(0),
+                    DbIndex(0),
                 ),
             ));
             Self {
@@ -465,28 +465,28 @@ mod context {
 
     impl Context {
         /// Returns the De Bruijn index of the `Type0` expression.
-        pub fn type0_dbi(&self) -> DeBruijnIndex {
+        pub fn type0_dbi(&self) -> DbIndex {
             self.level_to_index(TYPE0_LEVEL)
         }
 
         /// Returns the De Bruijn index of the `Type1` expression.
-        pub fn type1_dbi(&self) -> DeBruijnIndex {
+        pub fn type1_dbi(&self) -> DbIndex {
             self.level_to_index(TYPE1_LEVEL)
         }
     }
 
     impl Context {
-        fn level_to_index(&self, level: DeBruijnLevel) -> DeBruijnIndex {
-            DeBruijnIndex(self.len() - level.0 - 1)
+        fn level_to_index(&self, level: DbLevel) -> DbIndex {
+            DbIndex(self.len() - level.0 - 1)
         }
 
-        fn index_to_level(&self, index: DeBruijnIndex) -> DeBruijnLevel {
-            DeBruijnLevel(self.len() - index.0 - 1)
+        fn index_to_level(&self, index: DbIndex) -> DbLevel {
+            DbLevel(self.len() - index.0 - 1)
         }
     }
 
     impl Context {
-        pub fn index(&self, index: DeBruijnIndex, registry: &mut NodeRegistry) -> NormalFormId {
+        pub fn index(&self, index: DbIndex, registry: &mut NodeRegistry) -> NormalFormId {
             let level = self.index_to_level(index);
             if level == TYPE1_LEVEL {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
@@ -533,7 +533,7 @@ mod misc {
     pub fn add_name_expression_and_overwrite_component_ids(
         registry: &mut NodeRegistry,
         components: Vec<Identifier>,
-        db_index: DeBruijnIndex,
+        db_index: DbIndex,
     ) -> NodeId<NameExpression> {
         let component_ids = components
             .into_iter()
