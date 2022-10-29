@@ -85,7 +85,7 @@ fn type_check_type_constructor(
     let type_statement = registry.type_statement(type_statement_id).clone();
     let normalized_param_list_id =
         normalize_params(context, registry, type_statement.param_list_id)?;
-    let type_constructor_type = NormalFormId::unchecked_new(
+    let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
             param_list_id: normalized_param_list_id,
@@ -93,7 +93,7 @@ fn type_check_type_constructor(
         }
         .collapse_if_nullary(registry),
     );
-    context.push(type_constructor_type);
+    context.push(type_constructor_type_id);
     Ok(())
 }
 
@@ -102,10 +102,10 @@ fn normalize_params(
     registry: &mut NodeRegistry,
     param_list_id: ListId<NodeId<Param>>,
 ) -> Result<ListId<NodeId<Param>>, TypeCheckError> {
-    let normalized =
+    let normalized_list_id =
         normalize_params_and_leave_params_in_context(context, registry, param_list_id)?;
     context.pop_n(param_list_id.len);
-    Ok(normalized)
+    Ok(normalized_list_id)
 }
 
 fn normalize_params_and_leave_params_in_context(
@@ -181,8 +181,8 @@ fn type_check_let_statement(
     let_statement_id: NodeId<LetStatement>,
 ) -> Result<(), TypeCheckError> {
     let let_statement = registry.let_statement(let_statement_id).clone();
-    let type_ = get_type_of_expression(context, registry, let_statement.value_id)?;
-    context.push(type_);
+    let type_id = get_type_of_expression(context, registry, let_statement.value_id)?;
+    context.push(type_id);
     Ok(())
 }
 
@@ -299,7 +299,7 @@ fn get_type_of_fun(
     let normalized_return_type_id =
         evaluate_well_typed_expression(context, registry, fun.return_type_id);
 
-    let fun_type = NormalFormId::unchecked_new(ExpressionId::Forall(
+    let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
         registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
             param_list_id: normalized_param_list_id,
@@ -307,7 +307,7 @@ fn get_type_of_fun(
         }),
     ));
 
-    context.push(fun_type.clone());
+    context.push(fun_type_id.clone());
 
     let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
     if !is_left_type_assignable_to_right_type(
@@ -324,7 +324,7 @@ fn get_type_of_fun(
     }
 
     context.pop_n(fun.param_list_id.len + 1);
-    Ok(fun_type)
+    Ok(fun_type_id)
 }
 
 fn get_type_of_match(
@@ -413,7 +413,7 @@ mod context {
             // We should will never retrieve the type of `Type1`, since it is undefined.
             // However, we need to store _some_ object in the stack, so that the indices
             // of the other types are correct.
-            let dummy_type1_type = NormalFormId::unchecked_new(ExpressionId::Name(
+            let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
                     vec![Identifier {
@@ -424,7 +424,7 @@ mod context {
                     0,
                 ),
             ));
-            let type0_type = NormalFormId::unchecked_new(ExpressionId::Name(
+            let type0_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
                     vec![Identifier {
@@ -436,7 +436,7 @@ mod context {
                 ),
             ));
             Self {
-                local_type_stack: vec![dummy_type1_type, type0_type],
+                local_type_stack: vec![dummy_type1_type_id, type0_type_id],
             }
         }
     }
