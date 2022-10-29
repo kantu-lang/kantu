@@ -50,11 +50,26 @@ fn main() {
                                     println!("Bind success!");
                                     println!("{:#?}", &files[0]);
 
-                                    let _lightened_file = pamc::processing::x_lighten::lighten_file(
+                                    let lightened_file = pamc::processing::x_lighten::lighten_file(
                                         &mut pamc::data::x_node_registry::NodeRegistry::empty(),
                                         files[0].clone(),
                                     );
                                     println!("Lightened file!");
+                                    print_separator();
+
+                                    let type_check_result =
+                                        pamc::processing::x_type_check::type_check_files(
+                                            &mut pamc::data::x_node_registry::NodeRegistry::empty(),
+                                            &[lightened_file],
+                                        );
+                                    match type_check_result {
+                                        Ok(_) => {
+                                            println!("Type check success!");
+                                        }
+                                        Err(err) => {
+                                            println!("Type check error: {:?}", err);
+                                        }
+                                    }
                                 }
                                 Err(err) => {
                                     println!("Bind error: {:?}", err);
