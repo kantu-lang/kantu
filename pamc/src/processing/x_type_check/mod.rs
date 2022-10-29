@@ -1,97 +1,144 @@
-use crate::data::bound_ast::*;
+use crate::data::{
+    x_light_ast::*,
+    x_node_registry::{ListId, NodeId, NodeRegistry},
+};
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
-    IllegalTypeExpression(Expression),
-    BadCallee(Expression),
+    IllegalTypeExpression(ExpressionId),
+    BadCallee(ExpressionId),
     WrongNumberOfArguments {
-        call: Call,
+        call: NodeId<Call>,
         expected: usize,
         actual: usize,
     },
     TypeMismatch {
-        expression: Expression,
+        expression: ExpressionId,
         expected_type: NormalForm,
         actual_type: NormalForm,
     },
 }
 
-pub fn type_check_files(files: &[File]) -> Result<(), TypeCheckError> {
+pub fn type_check_files(
+    registry: &mut NodeRegistry,
+    file_ids: &[NodeId<File>],
+) -> Result<(), TypeCheckError> {
     let mut context = Context::with_builtins();
-    for file in files {
-        type_check_file(&mut context, file)?;
+    for &id in file_ids {
+        type_check_file(&mut context, registry, id)?;
     }
     Ok(())
 }
 
-fn type_check_file(context: &mut Context, file: &File) -> Result<(), TypeCheckError> {
-    for item in &file.items {
-        type_check_file_item(context, item)?;
+fn type_check_file(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    file_id: NodeId<File>,
+) -> Result<(), TypeCheckError> {
+    let file = registry.file(file_id);
+    let items = registry.file_item_list(file.item_list_id).to_vec();
+    for &item_id in &items {
+        type_check_file_item(context, registry, item_id)?;
     }
-    context.pop_n(file.items.len());
+    context.pop_n(items.len());
     Ok(())
 }
 
-fn type_check_file_item(context: &mut Context, item: &FileItem) -> Result<(), TypeCheckError> {
+fn type_check_file_item(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    item: FileItemNodeId,
+) -> Result<(), TypeCheckError> {
     match item {
-        FileItem::Type(type_statement) => type_check_type_statement(context, type_statement),
-        FileItem::Let(let_statement) => type_check_let_statement(context, let_statement),
+        FileItemNodeId::Type(type_statement) => {
+            type_check_type_statement(context, registry, type_statement)
+        }
+        FileItemNodeId::Let(let_statement) => {
+            type_check_let_statement(context, registry, let_statement)
+        }
     }
 }
 
 fn type_check_type_statement(
     context: &mut Context,
-    type_statement: &TypeStatement,
+    registry: &mut NodeRegistry,
+    type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeCheckError> {
-    type_check_type_constructor(context, type_statement)?;
-    for variant in &type_statement.variants {
-        type_check_type_variant(context, variant)?;
+    type_check_type_constructor(context, registry, type_statement_id)?;
+
+    let type_statement = registry.type_statement(type_statement_id);
+    let variant_ids = registry
+        .variant_list(type_statement.variant_list_id)
+        .to_vec();
+    for variant_id in variant_ids {
+        type_check_type_variant(context, registry, variant_id)?;
     }
+
     Ok(())
 }
 
 fn type_check_type_constructor(
     context: &mut Context,
-    type_statement: &TypeStatement,
+    registry: &mut NodeRegistry,
+    type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeCheckError> {
-    let params = normalize_params(context, &type_statement.params)?;
+    let type_statement = registry.type_statement(type_statement_id);
+    let normalized_param_list_id =
+        normalize_params(context, registry, type_statement.param_list_id)?;
     let type_constructor_type = NormalForm::unchecked_new(
         Forall {
-            params,
-            output: type0_expression(context).into(),
+            id: dummy_id(),
+            param_list_id: normalized_param_list_id,
+            output_id: type0_expression(context, registry).raw(),
         }
-        .collapse_if_nullary(),
+        .collapse_if_nullary(registry),
     );
     context.push(type_constructor_type);
     Ok(())
 }
 
-fn normalize_params(context: &mut Context, params: &[Param]) -> Result<Vec<Param>, TypeCheckError> {
-    let normalized = normalize_params_and_leave_params_in_context(context, params)?;
-    context.pop_n(params.len());
+fn normalize_params(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_list_id: ListId<NodeId<Param>>,
+) -> Result<ListId<NodeId<Param>>, TypeCheckError> {
+    let normalized =
+        normalize_params_and_leave_params_in_context(context, registry, param_list_id)?;
+    context.pop_n(param_list_id.len);
     Ok(normalized)
 }
 
 fn normalize_params_and_leave_params_in_context(
     context: &mut Context,
-    params: &[Param],
-) -> Result<Vec<Param>, TypeCheckError> {
-    let normalized = params
+    registry: &mut NodeRegistry,
+    param_list_id: ListId<NodeId<Param>>,
+) -> Result<ListId<NodeId<Param>>, TypeCheckError> {
+    let param_ids = registry.param_list(param_list_id).to_vec();
+    let normalized_ids = param_ids
         .iter()
-        .map(|param| {
-            type_check_param(context, param)?;
-            let type_: Expression = context.index(0).into();
-            Ok(Param {
-                is_dashed: param.is_dashed,
-                name: param.name.clone(),
-                type_,
-            })
+        .copied()
+        .map(|param_id| {
+            type_check_param(context, registry, param_id)?;
+            let type_id: ExpressionId = context.index(0).raw();
+            let old_param = registry.param(param_id);
+            let normalized_id = registry.add_param_and_overwrite_its_id(Param {
+                id: dummy_id(),
+                is_dashed: old_param.is_dashed,
+                name_id: old_param.name_id,
+                type_id,
+            });
+            Ok(normalized_id)
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(normalized)
+    registry.add_param_list(normalized_ids)
 }
 
-fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeCheckError> {
+fn type_check_param(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_id: NodeId<Param>,
+) -> Result<(), TypeCheckError> {
+    let param = registry.param(param_id);
     type_check_expression(context, &param.type_)?;
     let type_ = evaluate_well_typed_expression(context, &param.type_);
     if !is_term_a_member_of_type0_or_type1(context, type_.as_nf_ref()) {
@@ -101,7 +148,12 @@ fn type_check_param(context: &mut Context, param: &Param) -> Result<(), TypeChec
     Ok(())
 }
 
-fn type_check_type_variant(context: &mut Context, variant: &Variant) -> Result<(), TypeCheckError> {
+fn type_check_type_variant(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    variant_id: NodeId<Variant>,
+) -> Result<(), TypeCheckError> {
+    let variant = registry.variant(variant_id);
     let arity = variant.params.len();
     let params = normalize_params_and_leave_params_in_context(context, &variant.params)?;
     type_check_expression(context, &variant.return_type)?;
@@ -120,44 +172,58 @@ fn type_check_type_variant(context: &mut Context, variant: &Variant) -> Result<(
 
 fn type_check_let_statement(
     context: &mut Context,
-    let_statement: &LetStatement,
+    registry: &mut NodeRegistry,
+    let_statement_id: NodeId<LetStatement>,
 ) -> Result<(), TypeCheckError> {
-    let type_ = get_type_of_expression(context, &let_statement.value)?;
+    let let_statement = registry.let_statement(let_statement_id);
+    let type_ = get_type_of_expression(context, registry, let_statement.value_id)?;
     context.push(type_);
     Ok(())
 }
 
 fn type_check_expression(
     context: &mut Context,
-    expression: &Expression,
+    registry: &mut NodeRegistry,
+    expression: ExpressionId,
 ) -> Result<(), TypeCheckError> {
     // In the future, we could implement a version of this that skips the
     // allocations required by `get_type_of_expression`, since we don't
     // actually use the returned type.
     // But for now, we'll just reuse the existing code, for the sake of
     // simplicity.
-    get_type_of_expression(context, expression).map(std::mem::drop)
+    get_type_of_expression(context, registry, expression).map(std::mem::drop)
 }
 
 fn get_type_of_expression(
     context: &mut Context,
-    expression: &Expression,
+    registry: &mut NodeRegistry,
+    id: ExpressionId,
 ) -> Result<NormalForm, TypeCheckError> {
-    match expression {
-        Expression::Name(name) => Ok(get_type_of_name(context, name)),
-        Expression::Call(call) => get_type_of_call(context, call),
-        Expression::Fun(fun) => get_type_of_fun(context, fun),
-        Expression::Match(match_) => get_type_of_match(context, match_),
-        Expression::Forall(forall) => get_type_of_forall(context, forall),
+    match id {
+        ExpressionId::Name(name) => Ok(get_type_of_name(context, registry, name)),
+        ExpressionId::Call(call) => get_type_of_call(context, registry, call),
+        ExpressionId::Fun(fun) => get_type_of_fun(context, registry, fun),
+        ExpressionId::Match(match_) => get_type_of_match(context, registry, match_),
+        ExpressionId::Forall(forall) => get_type_of_forall(context, registry, forall),
     }
 }
 
-fn get_type_of_name(context: &mut Context, name: &NameExpression) -> NormalForm {
+fn get_type_of_name(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    name_id: NodeId<NameExpression>,
+) -> NormalForm {
+    let name = registry.name_expression(name_id);
     context.index(name.db_index)
 }
 
-fn get_type_of_call(context: &mut Context, call: &Call) -> Result<NormalForm, TypeCheckError> {
-    let callee_type = get_type_of_expression(context, &call.callee)?;
+fn get_type_of_call(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    call_id: NodeId<Call>,
+) -> Result<NormalForm, TypeCheckError> {
+    let call = registry.call(call_id);
+    let callee_type = get_type_of_expression(context, registry, &call.callee)?;
     let callee_type = if let Expression::Forall(forall) = callee_type.into() {
         forall
     } else {
@@ -191,7 +257,11 @@ fn get_type_of_call(context: &mut Context, call: &Call) -> Result<NormalForm, Ty
     Ok(NormalForm::unchecked_new(callee_type.output))
 }
 
-fn get_type_of_fun(context: &mut Context, fun: &Fun) -> Result<NormalForm, TypeCheckError> {
+fn get_type_of_fun(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    fun: &Fun,
+) -> Result<NormalForm, TypeCheckError> {
     let params = normalize_params_and_leave_params_in_context(context, &fun.params)?;
     {
         let return_type_type = get_type_of_expression(context, &fun.return_type)?;
@@ -229,6 +299,7 @@ fn get_type_of_fun(context: &mut Context, fun: &Fun) -> Result<NormalForm, TypeC
 
 fn get_type_of_match(
     _context: &mut Context,
+    registry: &mut NodeRegistry,
     _match_: &Match,
 ) -> Result<NormalForm, TypeCheckError> {
     unimplemented!()
@@ -236,6 +307,7 @@ fn get_type_of_match(
 
 fn get_type_of_forall(
     context: &mut Context,
+    registry: &mut NodeRegistry,
     forall: &Forall,
 ) -> Result<NormalForm, TypeCheckError> {
     normalize_params_and_leave_params_in_context(context, &forall.params)?;
@@ -250,7 +322,11 @@ fn get_type_of_forall(
     Ok(type0_expression(context))
 }
 
-fn evaluate_well_typed_expression(_context: &mut Context, _expression: &Expression) -> NormalForm {
+fn evaluate_well_typed_expression(
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _expression: &Expression,
+) -> NormalForm {
     unimplemented!()
 }
 
@@ -385,64 +461,62 @@ use misc::*;
 mod misc {
     use super::*;
 
-    #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct NormalForm(Expression);
-
-    impl NormalForm {
-        pub fn unchecked_new(expression: Expression) -> Self {
-            Self(expression)
-        }
-    }
-
-    impl std::convert::AsRef<Expression> for NormalForm {
-        fn as_ref(&self) -> &Expression {
-            &self.0
-        }
-    }
-
-    impl NormalForm {
-        pub fn as_nf_ref(&self) -> NormalFormRef<'_> {
-            NormalFormRef::unchecked_new(&self.0)
-        }
-    }
-
-    impl From<NormalForm> for Expression {
-        fn from(normal_form: NormalForm) -> Self {
-            normal_form.0
-        }
-    }
-
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct NormalFormRef<'a>(&'a Expression);
+    pub struct NormalForm(ExpressionId);
 
-    impl<'a> NormalFormRef<'a> {
-        pub fn unchecked_new(expression: &'a Expression) -> Self {
+    impl NormalForm {
+        pub fn unchecked_new(expression: ExpressionId) -> Self {
             Self(expression)
         }
     }
 
-    impl NormalFormRef<'_> {
-        pub fn raw(&self) -> &Expression {
-            &self.0
+    impl NormalForm {
+        pub fn raw(self) -> ExpressionId {
+            self.0
         }
     }
 
-    pub fn type0_expression(context: &Context) -> NormalForm {
-        NormalForm::unchecked_new(Expression::Name(NameExpression {
-            components: vec![Identifier {
+    pub fn type0_expression(context: &Context, registry: &mut NodeRegistry) -> NormalForm {
+        let name_id = get_name_expression(
+            registry,
+            vec![Identifier {
+                id: dummy_id(),
                 name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                 start: None,
             }],
-            db_index: context.type0_dbi(),
-        }))
+            context.type0_dbi(),
+        );
+        NormalForm::unchecked_new(ExpressionId::Name(name_id))
+    }
+
+    fn get_name_expression(
+        registry: &mut NodeRegistry,
+        components: Vec<Identifier>,
+        db_index: usize,
+    ) -> NodeId<NameExpression> {
+        let component_ids = components
+            .into_iter()
+            .map(|component| registry.add_identifier_and_overwrite_its_id(component))
+            .collect();
+        let component_list_id = registry.add_identifier_list(component_ids);
+        registry.add_name_expression_and_overwrite_its_id(NameExpression {
+            id: dummy_id(),
+            component_list_id,
+            db_index,
+        })
+    }
+
+    pub fn dummy_id<T>() -> NodeId<T> {
+        NodeId::new(0)
     }
 
     impl Forall {
-        pub fn collapse_if_nullary(self) -> Expression {
-            if self.params.is_empty() {
-                self.output
+        pub fn collapse_if_nullary(self, registry: &mut NodeRegistry) -> ExpressionId {
+            if self.param_list_id.len == 0 {
+                self.output_id
             } else {
-                Expression::Forall(Box::new(self))
+                let forall_id = registry.add_forall_and_overwrite_its_id(self);
+                ExpressionId::Forall(forall_id)
             }
         }
     }
