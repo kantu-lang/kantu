@@ -339,14 +339,14 @@ fn get_type_of_forall(
     let forall = registry.forall(forall_id);
     normalize_params_and_leave_params_in_context(context, registry, forall.param_list_id)?;
 
-    let output_type = get_type_of_expression(context, &forall.output)?;
-    if !is_term_a_member_of_type0_or_type1(context, output_type.as_nf_ref()) {
-        return Err(TypeCheckError::IllegalTypeExpression(forall.output.clone()));
+    let output_type_id = get_type_of_expression(context, registry, forall.output_id)?;
+    if !is_term_equal_to_type0_or_type1(context, registry, output_type_id) {
+        return Err(TypeCheckError::IllegalTypeExpression(forall.output_id));
     }
 
-    context.pop_n(forall.params.len());
+    context.pop_n(forall.param_list_id.len);
 
-    Ok(type0_expression(context))
+    Ok(type0_expression(context, registry))
 }
 
 fn evaluate_well_typed_expression(
