@@ -93,7 +93,20 @@ fn type_check_type_constructor(
         }
         .collapse_if_nullary(registry),
     );
-    context.push(type_constructor_type_id);
+    let variant_name_list_id = {
+        let variant_ids = registry.variant_list(type_statement.variant_list_id);
+        let variant_name_ids = variant_ids
+            .iter()
+            .map(|&variant_id| registry.variant(variant_id).name_id)
+            .collect();
+        registry.add_identifier_list(variant_name_ids)
+    };
+    context.push(ContextEntry {
+        type_id: type_constructor_type_id,
+        metadata: ContextEntryMetadata::Adt {
+            variant_name_list_id,
+        },
+    });
     Ok(())
 }
 
@@ -119,7 +132,7 @@ fn normalize_params_and_leave_params_in_context(
         .copied()
         .map(|param_id| {
             type_check_param(context, registry, param_id)?;
-            let type_id: ExpressionId = context.index(DbIndex(0), registry).raw();
+            let type_id: ExpressionId = context.get_type(DbIndex(0), registry).raw();
             let old_param = registry.param(param_id);
             let normalized_param_with_dummy_id = Param {
                 id: dummy_id(),
@@ -147,7 +160,10 @@ fn type_check_param(
     }
 
     let normalized_type_id = evaluate_well_typed_expression(context, registry, param.type_id);
-    context.push(normalized_type_id);
+    context.push(ContextEntry {
+        type_id: normalized_type_id,
+        metadata: ContextEntryMetadata::Uninterpreted,
+    });
     Ok(())
 }
 
@@ -171,7 +187,10 @@ fn type_check_type_variant(
         .collapse_if_nullary(registry),
     );
     context.pop_n(arity);
-    context.push(type_id);
+    context.push(ContextEntry {
+        type_id,
+        metadata: ContextEntryMetadata::Uninterpreted,
+    });
     Ok(())
 }
 
@@ -182,7 +201,14 @@ fn type_check_let_statement(
 ) -> Result<(), TypeCheckError> {
     let let_statement = registry.let_statement(let_statement_id).clone();
     let type_id = get_type_of_expression(context, registry, let_statement.value_id)?;
-    context.push(type_id);
+    let normalized_value_id =
+        evaluate_well_typed_expression(context, registry, let_statement.value_id);
+    context.push(ContextEntry {
+        type_id,
+        metadata: ContextEntryMetadata::Alias {
+            value_id: normalized_value_id,
+        },
+    });
     Ok(())
 }
 
@@ -219,7 +245,7 @@ fn get_type_of_name(
     name_id: NodeId<NameExpression>,
 ) -> NormalFormId {
     let name = registry.name_expression(name_id);
-    context.index(name.db_index, registry)
+    context.get_type(name.db_index, registry)
 }
 
 fn get_type_of_call(
@@ -307,7 +333,11 @@ fn get_type_of_fun(
         }),
     ));
 
-    context.push(fun_type_id.clone());
+    context.push(ContextEntry {
+        type_id: fun_type_id,
+        // TODO: Shift up
+        metadata: ContextEntryMetadata::Fun(fun_id),
+    });
 
     let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
     if !is_left_type_assignable_to_right_type(
@@ -402,7 +432,26 @@ mod context {
         /// [Type1, Type0, Nat]
         /// ```
         ///
-        local_type_stack: Vec<NormalFormId>,
+        local_type_stack: Vec<ContextEntry>,
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct ContextEntry {
+        pub type_id: NormalFormId,
+        pub metadata: ContextEntryMetadata,
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum ContextEntryMetadata {
+        Alias {
+            value_id: NormalFormId,
+        },
+        /// Algebraic data type declaration
+        Adt {
+            variant_name_list_id: ListId<NodeId<Identifier>>,
+        },
+        Fun(NodeId<Fun>),
+        Uninterpreted,
     }
 
     const TYPE1_LEVEL: DbLevel = DbLevel(0);
@@ -413,30 +462,42 @@ mod context {
             // We should will never retrieve the type of `Type1`, since it is undefined.
             // However, we need to store _some_ object in the stack, so that the indices
             // of the other types are correct.
-            let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
-                add_name_expression_and_overwrite_component_ids(
-                    registry,
-                    vec![Identifier {
-                        id: dummy_id(),
-                        name: IdentifierName::Standard("Type2".to_owned()),
-                        start: None,
-                    }],
-                    DbIndex(0),
-                ),
-            ));
-            let type0_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
-                add_name_expression_and_overwrite_component_ids(
-                    registry,
-                    vec![Identifier {
-                        id: dummy_id(),
-                        name: IdentifierName::Standard("Type1".to_owned()),
-                        start: None,
-                    }],
-                    DbIndex(0),
-                ),
-            ));
+            let type1_entry = {
+                let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
+                    add_name_expression_and_overwrite_component_ids(
+                        registry,
+                        vec![Identifier {
+                            id: dummy_id(),
+                            name: IdentifierName::Standard("Type2".to_owned()),
+                            start: None,
+                        }],
+                        DbIndex(0),
+                    ),
+                ));
+                ContextEntry {
+                    type_id: dummy_type1_type_id,
+                    metadata: ContextEntryMetadata::Uninterpreted,
+                }
+            };
+            let type0_entry = {
+                let type0_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
+                    add_name_expression_and_overwrite_component_ids(
+                        registry,
+                        vec![Identifier {
+                            id: dummy_id(),
+                            name: IdentifierName::Standard("Type1".to_owned()),
+                            start: None,
+                        }],
+                        DbIndex(0),
+                    ),
+                ));
+                ContextEntry {
+                    type_id: type0_type_id,
+                    metadata: ContextEntryMetadata::Uninterpreted,
+                }
+            };
             Self {
-                local_type_stack: vec![dummy_type1_type_id, type0_type_id],
+                local_type_stack: vec![type1_entry, type0_entry],
             }
         }
     }
@@ -454,8 +515,8 @@ mod context {
             self.local_type_stack.truncate(self.len() - n);
         }
 
-        pub fn push(&mut self, expression: NormalFormId) {
-            self.local_type_stack.push(expression);
+        pub fn push(&mut self, entry: ContextEntry) {
+            self.local_type_stack.push(entry);
         }
 
         pub fn len(&self) -> usize {
@@ -486,12 +547,13 @@ mod context {
     }
 
     impl Context {
-        pub fn index(&self, index: DbIndex, registry: &mut NodeRegistry) -> NormalFormId {
+        pub fn get_type(&self, index: DbIndex, registry: &mut NodeRegistry) -> NormalFormId {
             let level = self.index_to_level(index);
             if level == TYPE1_LEVEL {
                 panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
             }
             self.local_type_stack[level.0]
+                .type_id
                 .clone()
                 .shift_up(index.0 + 1, registry)
         }
