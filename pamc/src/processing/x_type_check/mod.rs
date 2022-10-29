@@ -293,11 +293,9 @@ fn get_type_of_fun(
     let params =
         normalize_params_and_leave_params_in_context(context, registry, fun.param_list_id)?;
     {
-        let return_type_type = get_type_of_expression(context, &fun.return_type)?;
-        if !is_term_a_member_of_type0_or_type1(context, return_type_type.as_nf_ref()) {
-            return Err(TypeCheckError::IllegalTypeExpression(
-                fun.return_type.clone(),
-            ));
+        let return_type_type = get_type_of_expression(context, registry, fun.return_type_id)?;
+        if !is_term_a_member_of_type0_or_type1(context, registry, return_type_type) {
+            return Err(TypeCheckError::IllegalTypeExpression(fun.return_type_id));
         }
     }
     let return_type = evaluate_well_typed_expression(context, &fun.return_type);
