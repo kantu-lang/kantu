@@ -555,7 +555,7 @@ mod context {
             self.local_type_stack[level.0]
                 .type_id
                 .clone()
-                .shift_up(index.0 + 1, registry)
+                .upshift(index.0 + 1, registry)
         }
     }
 }
@@ -646,24 +646,52 @@ mod misc {
     ) -> bool {
         unimplemented!()
     }
+}
 
-    impl NormalFormId {
-        pub fn shift_up(self, amount: usize, registry: &mut NodeRegistry) -> Self {
-            Self::unchecked_new(self.0.shift_up(amount, registry))
+use shift::*;
+mod shift {
+    use super::*;
+
+    pub trait Shift {
+        type Output;
+
+        fn upshift_with_cutoff(
+            self,
+            amount: usize,
+            cutoff: usize,
+            registry: &mut NodeRegistry,
+        ) -> Self::Output;
+
+        fn upshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
+        where
+            Self: Sized,
+        {
+            self.upshift_with_cutoff(amount, 0, registry)
         }
     }
 
-    impl ExpressionId {
-        pub fn shift_up(self, amount: usize, registry: &mut NodeRegistry) -> ExpressionId {
-            self.shift_up_with_cutoff(amount, 0, registry)
-        }
+    impl Shift for NormalFormId {
+        type Output = Self;
 
-        fn shift_up_with_cutoff(
+        fn upshift_with_cutoff(
+            self,
+            amount: usize,
+            cutoff: usize,
+            registry: &mut NodeRegistry,
+        ) -> Self {
+            Self::unchecked_new(self.raw().upshift_with_cutoff(amount, cutoff, registry))
+        }
+    }
+
+    impl Shift for ExpressionId {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
             self,
             _amount: usize,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
-        ) -> ExpressionId {
+        ) -> Self {
             unimplemented!()
         }
     }
