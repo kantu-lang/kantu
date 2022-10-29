@@ -23,7 +23,7 @@ pub fn type_check_files(
     registry: &mut NodeRegistry,
     file_ids: &[NodeId<File>],
 ) -> Result<(), TypeCheckError> {
-    let mut context = Context::with_builtins();
+    let mut context = Context::with_builtins(registry);
     for &id in file_ids {
         type_check_file(&mut context, registry, id)?;
     }
@@ -405,24 +405,32 @@ mod context {
     const TYPE0_LEVEL: usize = 1;
 
     impl Context {
-        pub fn with_builtins() -> Self {
+        pub fn with_builtins(registry: &mut NodeRegistry) -> Self {
             // We should will never retrieve the type of `Type1`, since it is undefined.
             // However, we need to store _some_ object in the stack, so that the indices
             // of the other types are correct.
-            let dummy_type1_type = NormalFormId::unchecked_new(Expression::Name(NameExpression {
-                components: vec![Identifier {
-                    name: IdentifierName::Standard("Type2".to_owned()),
-                    start: None,
-                }],
-                db_index: 0,
-            }));
-            let type0_type = NormalFormId::unchecked_new(Expression::Name(NameExpression {
-                components: vec![Identifier {
-                    name: IdentifierName::Standard("Type1".to_owned()),
-                    start: None,
-                }],
-                db_index: 0,
-            }));
+            let dummy_type1_type = NormalFormId::unchecked_new(ExpressionId::Name(
+                add_name_expression_and_overwrite_component_ids(
+                    registry,
+                    vec![Identifier {
+                        id: dummy_id(),
+                        name: IdentifierName::Standard("Type2".to_owned()),
+                        start: None,
+                    }],
+                    0,
+                ),
+            ));
+            let type0_type = NormalFormId::unchecked_new(ExpressionId::Name(
+                add_name_expression_and_overwrite_component_ids(
+                    registry,
+                    vec![Identifier {
+                        id: dummy_id(),
+                        name: IdentifierName::Standard("Type1".to_owned()),
+                        start: None,
+                    }],
+                    0,
+                ),
+            ));
             Self {
                 local_type_stack: vec![dummy_type1_type, type0_type],
             }
@@ -504,7 +512,7 @@ mod misc {
     }
 
     pub fn type0_expression(context: &Context, registry: &mut NodeRegistry) -> NormalFormId {
-        let name_id = get_name_expression(
+        let name_id = add_name_expression_and_overwrite_component_ids(
             registry,
             vec![Identifier {
                 id: dummy_id(),
@@ -516,7 +524,7 @@ mod misc {
         NormalFormId::unchecked_new(ExpressionId::Name(name_id))
     }
 
-    fn get_name_expression(
+    pub fn add_name_expression_and_overwrite_component_ids(
         registry: &mut NodeRegistry,
         components: Vec<Identifier>,
         db_index: usize,
