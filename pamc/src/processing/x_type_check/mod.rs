@@ -449,7 +449,7 @@ mod context {
         Alias {
             value_id: NormalFormId,
         },
-        /// Algebraic data type declaration
+        /// Algebraic data type
         Adt {
             variant_name_list_id: ListId<NodeId<Identifier>>,
         },
