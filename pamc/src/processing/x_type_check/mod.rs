@@ -655,7 +655,7 @@ use shift::*;
 mod shift {
     use super::*;
 
-    pub trait Shift {
+    pub trait ShiftDbIndices {
         type Output;
 
         fn upshift_with_cutoff(
@@ -673,7 +673,7 @@ mod shift {
         }
     }
 
-    impl Shift for NormalFormId {
+    impl ShiftDbIndices for NormalFormId {
         type Output = Self;
 
         fn upshift_with_cutoff(
@@ -686,7 +686,7 @@ mod shift {
         }
     }
 
-    impl Shift for ExpressionId {
+    impl ShiftDbIndices for ExpressionId {
         type Output = Self;
 
         fn upshift_with_cutoff(
@@ -715,7 +715,7 @@ mod shift {
         }
     }
 
-    impl Shift for NodeId<NameExpression> {
+    impl ShiftDbIndices for NodeId<NameExpression> {
         type Output = Self;
 
         fn upshift_with_cutoff(
@@ -728,7 +728,7 @@ mod shift {
         }
     }
 
-    impl Shift for NodeId<Call> {
+    impl ShiftDbIndices for NodeId<Call> {
         type Output = Self;
 
         fn upshift_with_cutoff(
@@ -741,7 +741,7 @@ mod shift {
         }
     }
 
-    impl Shift for NodeId<Fun> {
+    impl ShiftDbIndices for NodeId<Fun> {
         type Output = Self;
 
         fn upshift_with_cutoff(
@@ -754,7 +754,7 @@ mod shift {
         }
     }
 
-    impl Shift for NodeId<Match> {
+    impl ShiftDbIndices for NodeId<Match> {
         type Output = Self;
 
         fn upshift_with_cutoff(
@@ -767,7 +767,7 @@ mod shift {
         }
     }
 
-    impl Shift for NodeId<Forall> {
+    impl ShiftDbIndices for NodeId<Forall> {
         type Output = Self;
 
         fn upshift_with_cutoff(
