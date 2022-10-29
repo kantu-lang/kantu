@@ -5,10 +5,7 @@ use crate::data::{
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
-    IllegalTypeExpression {
-        original: ExpressionId,
-        normalized: NormalFormId,
-    },
+    IllegalTypeExpression(ExpressionId),
     BadCallee(ExpressionId),
     WrongNumberOfArguments {
         call_id: NodeId<Call>,
@@ -142,14 +139,12 @@ fn type_check_param(
     param_id: NodeId<Param>,
 ) -> Result<(), TypeCheckError> {
     let param = registry.param(param_id);
-    type_check_expression(context, registry, param.type_id)?;
-    let normalized_type_id = evaluate_well_typed_expression(context, registry, param.type_id);
-    if !is_term_a_member_of_type0_or_type1(context, registry, normalized_type_id) {
-        return Err(TypeCheckError::IllegalTypeExpression {
-            original: param.type_id,
-            normalized: normalized_type_id,
-        });
+    let param_type_type_id = get_type_of_expression(context, registry, param.type_id)?;
+    if !is_term_equal_to_type0_or_type1(context, registry, param_type_type_id) {
+        return Err(TypeCheckError::IllegalTypeExpression(param.type_id));
     }
+
+    let normalized_type_id = evaluate_well_typed_expression(context, registry, param.type_id);
     context.push(normalized_type_id);
     Ok(())
 }
@@ -290,37 +285,41 @@ fn get_type_of_fun(
     fun_id: NodeId<Fun>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let fun = registry.fun(fun_id);
-    let params =
+    let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(context, registry, fun.param_list_id)?;
     {
-        let return_type_type = get_type_of_expression(context, registry, fun.return_type_id)?;
-        if !is_term_a_member_of_type0_or_type1(context, registry, return_type_type) {
+        let return_type_type_id = get_type_of_expression(context, registry, fun.return_type_id)?;
+        if !is_term_equal_to_type0_or_type1(context, registry, return_type_type_id) {
             return Err(TypeCheckError::IllegalTypeExpression(fun.return_type_id));
         }
     }
-    let return_type = evaluate_well_typed_expression(context, &fun.return_type);
+    let normalized_return_type_id =
+        evaluate_well_typed_expression(context, registry, fun.return_type_id);
 
-    let fun_type = NormalFormId::unchecked_new(Expression::Forall(Box::new(Forall {
-        params,
-        output: return_type.clone().into(),
-    })));
+    let fun_type = NormalFormId::unchecked_new(ExpressionId::Forall(
+        registry.add_forall_and_overwrite_its_id(Forall {
+            id: dummy_id(),
+            param_list_id: normalized_param_list_id,
+            output_id: normalized_return_type_id.raw(),
+        }),
+    ));
 
     context.push(fun_type.clone());
 
-    let body_type = get_type_of_expression(context, &fun.body)?;
+    let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
     if !is_left_type_assignable_to_right_type(
         context,
-        body_type.as_nf_ref(),
-        return_type.as_nf_ref(),
+        normalized_body_type_id,
+        normalized_return_type_id,
     ) {
         return Err(TypeCheckError::TypeMismatch {
-            expression: fun.body.clone(),
-            expected_type: return_type,
-            actual_type: body_type,
+            expression_id: fun.body_id,
+            expected_type_id: normalized_return_type_id,
+            actual_type_id: normalized_body_type_id,
         });
     }
 
-    context.pop_n(fun.params.len() + 1);
+    context.pop_n(fun.param_list_id.len + 1);
     Ok(fun_type)
 }
 
@@ -549,7 +548,7 @@ mod misc {
         }
     }
 
-    pub fn is_term_a_member_of_type0_or_type1(
+    pub fn is_term_equal_to_type0_or_type1(
         context: &Context,
         registry: &NodeRegistry,
         term: NormalFormId,
