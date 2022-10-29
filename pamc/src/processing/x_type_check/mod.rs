@@ -103,7 +103,7 @@ fn type_check_type_constructor(
     };
     context.push(ContextEntry {
         type_id: type_constructor_type_id,
-        metadata: ContextEntryMetadata::Adt {
+        definition: ContextEntryDefinition::Adt {
             variant_name_list_id,
         },
     });
@@ -162,7 +162,7 @@ fn type_check_param(
     let normalized_type_id = evaluate_well_typed_expression(context, registry, param.type_id);
     context.push(ContextEntry {
         type_id: normalized_type_id,
-        metadata: ContextEntryMetadata::Uninterpreted,
+        definition: ContextEntryDefinition::Uninterpreted,
     });
     Ok(())
 }
@@ -189,7 +189,7 @@ fn type_check_type_variant(
     context.pop_n(arity);
     context.push(ContextEntry {
         type_id,
-        metadata: ContextEntryMetadata::Uninterpreted,
+        definition: ContextEntryDefinition::Uninterpreted,
     });
     Ok(())
 }
@@ -205,7 +205,7 @@ fn type_check_let_statement(
         evaluate_well_typed_expression(context, registry, let_statement.value_id);
     context.push(ContextEntry {
         type_id,
-        metadata: ContextEntryMetadata::Alias {
+        definition: ContextEntryDefinition::Alias {
             value_id: normalized_value_id,
         },
     });
@@ -336,7 +336,7 @@ fn get_type_of_fun(
     context.push(ContextEntry {
         type_id: fun_type_id,
         // TODO: Shift up
-        metadata: ContextEntryMetadata::Fun(fun_id),
+        definition: ContextEntryDefinition::Fun(fun_id),
     });
 
     let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
@@ -438,11 +438,11 @@ mod context {
     #[derive(Clone, Debug)]
     pub struct ContextEntry {
         pub type_id: NormalFormId,
-        pub metadata: ContextEntryMetadata,
+        pub definition: ContextEntryDefinition,
     }
 
     #[derive(Clone, Debug)]
-    pub enum ContextEntryMetadata {
+    pub enum ContextEntryDefinition {
         Alias {
             value_id: NormalFormId,
         },
@@ -476,7 +476,7 @@ mod context {
                 ));
                 ContextEntry {
                     type_id: dummy_type1_type_id,
-                    metadata: ContextEntryMetadata::Uninterpreted,
+                    definition: ContextEntryDefinition::Uninterpreted,
                 }
             };
             let type0_entry = {
@@ -493,7 +493,7 @@ mod context {
                 ));
                 ContextEntry {
                     type_id: type0_type_id,
-                    metadata: ContextEntryMetadata::Uninterpreted,
+                    definition: ContextEntryDefinition::Uninterpreted,
                 }
             };
             Self {
