@@ -189,7 +189,9 @@ fn type_check_type_variant(
     context.pop_n(arity);
     context.push(ContextEntry {
         type_id,
-        definition: ContextEntryDefinition::Uninterpreted,
+        definition: ContextEntryDefinition::Variant {
+            name_id: variant.name_id,
+        },
     });
     Ok(())
 }
@@ -457,7 +459,7 @@ mod context {
             variant_name_list_id: ListId<NodeId<Identifier>>,
         },
         Variant {
-            name: NodeId<Identifier>,
+            name_id: NodeId<Identifier>,
         },
         Uninterpreted,
     }
