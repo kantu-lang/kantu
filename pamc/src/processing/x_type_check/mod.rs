@@ -391,12 +391,67 @@ fn get_type_of_forall(
     Ok(type0_expression(context, registry))
 }
 
-fn evaluate_well_typed_expression(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
-    _id: ExpressionId,
-) -> NormalFormId {
-    unimplemented!()
+use eval::*;
+mod eval {
+    use super::*;
+
+    pub fn evaluate_well_typed_expression(
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        id: ExpressionId,
+    ) -> NormalFormId {
+        match id {
+            ExpressionId::Name(name_id) => {
+                evaluate_well_typed_name_expression(context, registry, name_id)
+            }
+            ExpressionId::Call(call_id) => evaluate_well_typed_call(context, registry, call_id),
+            ExpressionId::Fun(fun_id) => evaluate_well_typed_fun(context, registry, fun_id),
+            ExpressionId::Match(match_id) => evaluate_well_typed_match(context, registry, match_id),
+            ExpressionId::Forall(forall_id) => {
+                evaluate_well_typed_forall(context, registry, forall_id)
+            }
+        }
+    }
+
+    fn evaluate_well_typed_name_expression(
+        _context: &mut Context,
+        _registry: &mut NodeRegistry,
+        _name_id: NodeId<NameExpression>,
+    ) -> NormalFormId {
+        unimplemented!()
+    }
+
+    fn evaluate_well_typed_call(
+        _context: &mut Context,
+        _registry: &mut NodeRegistry,
+        _call_id: NodeId<Call>,
+    ) -> NormalFormId {
+        unimplemented!()
+    }
+
+    fn evaluate_well_typed_fun(
+        _context: &mut Context,
+        _registry: &mut NodeRegistry,
+        _fun_id: NodeId<Fun>,
+    ) -> NormalFormId {
+        unimplemented!()
+    }
+
+    fn evaluate_well_typed_match(
+        _context: &mut Context,
+        _registry: &mut NodeRegistry,
+        _match_id: NodeId<Match>,
+    ) -> NormalFormId {
+        unimplemented!()
+    }
+
+    fn evaluate_well_typed_forall(
+        _context: &mut Context,
+        _registry: &mut NodeRegistry,
+        _forall_id: NodeId<Forall>,
+    ) -> NormalFormId {
+        unimplemented!()
+    }
 }
 
 use context::*;
