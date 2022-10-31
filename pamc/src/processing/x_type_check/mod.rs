@@ -442,11 +442,27 @@ mod eval {
     }
 
     fn evaluate_well_typed_fun(
-        _context: &mut Context,
-        _registry: &mut NodeRegistry,
-        _fun_id: NodeId<Fun>,
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        fun_id: NodeId<Fun>,
     ) -> NormalFormId {
-        unimplemented!()
+        let fun = registry.fun(fun_id).clone();
+        let normalized_param_list_id =
+            normalize_params_and_leave_params_in_context(context, registry, fun.param_list_id)
+                .expect("A well-typed Fun should have well-typed params.");
+        let normalized_return_type_id =
+            evaluate_well_typed_expression(context, registry, fun.return_type_id);
+        context.pop_n(fun.param_list_id.len);
+
+        NormalFormId::unchecked_new(ExpressionId::Fun(registry.add_fun_and_overwrite_its_id(
+            Fun {
+                id: dummy_id(),
+                name_id: fun.name_id,
+                param_list_id: normalized_param_list_id,
+                return_type_id: normalized_return_type_id.raw(),
+                body_id: fun.body_id,
+            },
+        )))
     }
 
     fn evaluate_well_typed_match(
