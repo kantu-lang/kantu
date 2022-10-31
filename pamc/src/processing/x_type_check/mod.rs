@@ -335,11 +335,14 @@ fn get_type_of_fun(
         }),
     ));
 
+    let shifted_fun_id = fun_id.upshift(context.len() - original_context_len, registry);
+    let normalized_fun_id =
+        evaluate_well_typed_expression(context, registry, ExpressionId::Fun(shifted_fun_id));
     context.push(ContextEntry {
         type_id: fun_type_id,
-        definition: ContextEntryDefinition::Fun(
-            fun_id.upshift(context.len() - original_context_len, registry),
-        ),
+        definition: ContextEntryDefinition::Alias {
+            value_id: normalized_fun_id,
+        },
     });
 
     let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
@@ -453,7 +456,9 @@ mod context {
         Adt {
             variant_name_list_id: ListId<NodeId<Identifier>>,
         },
-        Fun(NodeId<Fun>),
+        Variant {
+            name: NodeId<Identifier>,
+        },
         Uninterpreted,
     }
 
