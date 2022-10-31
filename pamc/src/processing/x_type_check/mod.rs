@@ -414,11 +414,23 @@ mod eval {
     }
 
     fn evaluate_well_typed_name_expression(
-        _context: &mut Context,
-        _registry: &mut NodeRegistry,
-        _name_id: NodeId<NameExpression>,
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        name_id: NodeId<NameExpression>,
     ) -> NormalFormId {
-        unimplemented!()
+        let name = registry.name_expression(name_id);
+        let definition = context.get_definition(name.db_index, registry);
+        match definition {
+            ContextEntryDefinition::Alias { value_id } => value_id,
+
+            ContextEntryDefinition::Adt {
+                variant_name_list_id: _,
+            }
+            | ContextEntryDefinition::Variant { name_id: _ }
+            | ContextEntryDefinition::Uninterpreted => {
+                NormalFormId::unchecked_new(ExpressionId::Name(name_id))
+            }
+        }
     }
 
     fn evaluate_well_typed_call(
@@ -504,7 +516,7 @@ mod context {
         pub definition: ContextEntryDefinition,
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub enum ContextEntryDefinition {
         Alias {
             value_id: NormalFormId,
@@ -619,7 +631,20 @@ mod context {
             }
             self.local_type_stack[level.0]
                 .type_id
-                .clone()
+                .upshift(index.0 + 1, registry)
+        }
+
+        pub fn get_definition(
+            &self,
+            index: DbIndex,
+            registry: &mut NodeRegistry,
+        ) -> ContextEntryDefinition {
+            let level = self.index_to_level(index);
+            if level == TYPE1_LEVEL {
+                panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
+            }
+            self.local_type_stack[level.0]
+                .definition
                 .upshift(index.0 + 1, registry)
         }
     }
@@ -732,6 +757,29 @@ mod shift {
             Self: Sized,
         {
             self.upshift_with_cutoff(amount, 0, registry)
+        }
+    }
+
+    impl ShiftDbIndices for ContextEntryDefinition {
+        type Output = Self;
+
+        fn upshift_with_cutoff(
+            self,
+            amount: usize,
+            cutoff: usize,
+            registry: &mut NodeRegistry,
+        ) -> Self {
+            match self {
+                ContextEntryDefinition::Alias { value_id } => ContextEntryDefinition::Alias {
+                    value_id: value_id.upshift_with_cutoff(amount, cutoff, registry),
+                },
+
+                ContextEntryDefinition::Adt {
+                    variant_name_list_id: _,
+                }
+                | ContextEntryDefinition::Variant { name_id: _ }
+                | ContextEntryDefinition::Uninterpreted => self,
+            }
         }
     }
 
