@@ -474,11 +474,25 @@ mod eval {
     }
 
     fn evaluate_well_typed_forall(
-        _context: &mut Context,
-        _registry: &mut NodeRegistry,
-        _forall_id: NodeId<Forall>,
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        forall_id: NodeId<Forall>,
     ) -> NormalFormId {
-        unimplemented!()
+        let forall = registry.forall(forall_id).clone();
+        let normalized_param_list_id =
+            normalize_params_and_leave_params_in_context(context, registry, forall.param_list_id)
+                .expect("A well-typed Fun should have well-typed params.");
+        let normalized_output_id =
+            evaluate_well_typed_expression(context, registry, forall.output_id);
+        context.pop_n(forall.param_list_id.len);
+
+        NormalFormId::unchecked_new(ExpressionId::Forall(
+            registry.add_forall_and_overwrite_its_id(Forall {
+                id: dummy_id(),
+                param_list_id: normalized_param_list_id,
+                output_id: normalized_output_id.raw(),
+            }),
+        ))
     }
 }
 
