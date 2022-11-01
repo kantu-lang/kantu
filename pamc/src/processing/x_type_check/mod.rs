@@ -17,6 +17,10 @@ pub enum TypeCheckError {
         expected_type_id: NormalFormId,
         actual_type_id: NormalFormId,
     },
+    NonAdtMatchee {
+        matchee_id: ExpressionId,
+        type_id: NormalFormId,
+    },
 }
 
 pub fn type_check_files(
@@ -366,9 +370,75 @@ fn get_type_of_fun(
 }
 
 fn get_type_of_match(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    match_id: NodeId<Match>,
+) -> Result<NormalFormId, TypeCheckError> {
+    let match_ = registry.match_(match_id).clone();
+    let matchee_type_id = get_type_of_expression(context, registry, match_.matchee_id)?;
+    let matchee_type = if let Some(t) = try_as_adt_expression(context, registry, matchee_type_id) {
+        t
+    } else {
+        return Err(TypeCheckError::NonAdtMatchee {
+            matchee_id: match_.matchee_id,
+            type_id: matchee_type_id,
+        });
+    };
+
+    verify_variant_to_case_bijection(
+        context,
+        registry,
+        matchee_type.variant_name_list_id,
+        match_.case_list_id,
+    )?;
+
+    let case_ids = registry.match_case_list(match_.case_list_id).to_vec();
+    let mut first_case_type_id = None;
+    for case_id in case_ids {
+        let case_type_id = get_type_of_match_case(context, registry, case_id, matchee_type_id)?;
+        if let Some(first_case_type_id) = first_case_type_id {
+            if !is_left_type_assignable_to_right_type(
+                context,
+                registry,
+                case_type_id,
+                first_case_type_id,
+            ) {
+                let case = registry.match_case(case_id);
+                return Err(TypeCheckError::TypeMismatch {
+                    expression_id: case.output_id,
+                    expected_type_id: first_case_type_id,
+                    actual_type_id: case_type_id,
+                });
+            }
+        } else {
+            first_case_type_id = Some(case_type_id);
+        }
+    }
+
+    if let Some(first_case_type_id) = first_case_type_id {
+        Ok(first_case_type_id)
+    } else {
+        // If `first_case_type_id` is `None`, then `case_ids` is empty, which
+        // means the matchee has any empty type.
+        // Thus, the match should have an empty type.
+        Ok(matchee_type_id)
+    }
+}
+
+fn verify_variant_to_case_bijection(
     _context: &mut Context,
     _registry: &mut NodeRegistry,
-    _match_id: NodeId<Match>,
+    _variant_name_list_id: ListId<NodeId<Identifier>>,
+    _case_list_id: ListId<NodeId<MatchCase>>,
+) -> Result<(), TypeCheckError> {
+    unimplemented!()
+}
+
+fn get_type_of_match_case(
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _case_id: NodeId<MatchCase>,
+    _matchee_type_id: NormalFormId,
 ) -> Result<NormalFormId, TypeCheckError> {
     unimplemented!()
 }
@@ -716,12 +786,6 @@ mod eval {
             }
             _ => None,
         }
-    }
-
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    enum PossibleArgListId {
-        Nullary,
-        Some(ListId<ExpressionId>),
     }
 
     fn evaluate_well_typed_forall(
@@ -1210,6 +1274,67 @@ mod shift {
             _registry: &mut NodeRegistry,
         ) -> Self {
             unimplemented!()
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum PossibleArgListId {
+        Nullary,
+        Some(ListId<ExpressionId>),
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct AdtExpression {
+        pub type_name_id: NodeId<NameExpression>,
+        pub variant_name_list_id: ListId<NodeId<Identifier>>,
+        pub arg_list_id: PossibleArgListId,
+    }
+
+    /// If the provided expression is has a variant at
+    /// the top level,this returns IDs for the variant name
+    /// and the variant's argument list.
+    /// Otherwise, returns `None`.
+    pub fn try_as_adt_expression(
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        expression_id: NormalFormId,
+    ) -> Option<AdtExpression> {
+        match expression_id.raw() {
+            ExpressionId::Name(name_id) => {
+                let db_index = registry.name_expression(name_id).db_index;
+                let definition = context.get_definition(db_index, registry);
+                match definition {
+                    ContextEntryDefinition::Adt {
+                        variant_name_list_id,
+                    } => Some(AdtExpression {
+                        type_name_id: name_id,
+                        variant_name_list_id,
+                        arg_list_id: PossibleArgListId::Nullary,
+                    }),
+                    _ => None,
+                }
+            }
+            ExpressionId::Call(call_id) => {
+                let call = registry.call(call_id).clone();
+                match call.callee_id {
+                    ExpressionId::Name(name_id) => {
+                        let db_index = registry.name_expression(name_id).db_index;
+                        let definition = context.get_definition(db_index, registry);
+                        match definition {
+                            ContextEntryDefinition::Adt {
+                                variant_name_list_id,
+                            } => Some(AdtExpression {
+                                type_name_id: name_id,
+                                variant_name_list_id: variant_name_list_id,
+                                arg_list_id: PossibleArgListId::Some(call.arg_list_id),
+                            }),
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
         }
     }
 }
