@@ -452,6 +452,8 @@ mod eval {
         };
 
         match normalized_callee_id.raw() {
+            // TODO: Only unwrap if decreasing argument has a variant at the top,
+            // or if there is no decreasing argument (i.e., the function is non-recursive).
             ExpressionId::Fun(fun_id) => {
                 let fun = registry.fun(fun_id).clone();
                 let param_ids = registry.param_list(fun.param_list_id).to_vec();
@@ -542,11 +544,95 @@ mod eval {
     }
 
     fn evaluate_well_typed_match(
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        match_id: NodeId<Match>,
+    ) -> NormalFormId {
+        let match_ = registry.match_(match_id).clone();
+        let normalized_matchee_id =
+            evaluate_well_typed_expression(context, registry, match_.matchee_id);
+
+        let (normalized_matchee_variant_name_id, normalized_matchee_arg_list_id) =
+            if let Some((variant_name_id, arg_list_id)) =
+                try_as_variant(context, registry, normalized_matchee_id)
+            {
+                (variant_name_id, arg_list_id)
+            } else {
+                return NormalFormId::unchecked_new(ExpressionId::Match(
+                    registry.add_match_and_overwrite_its_id(Match {
+                        id: dummy_id(),
+                        matchee_id: normalized_matchee_id.raw(),
+                        case_list_id: match_.case_list_id,
+                    }),
+                ));
+            };
+
+        let case_id = *registry
+            .match_case_list(match_.case_list_id)
+            .iter()
+            .find(|case_id| {
+                let case = registry.match_case(**case_id);
+                case.variant_name_id == normalized_matchee_variant_name_id
+            })
+             .expect("A well-typed Match expression should have a case for every variant of its matchee's type.");
+
+        let case = registry.match_case(case_id).clone();
+
+        match normalized_matchee_arg_list_id {
+            PossibleArgListId::Nullary => {
+                evaluate_well_typed_expression(context, registry, case.output_id)
+            }
+            PossibleArgListId::Some(normalized_matchee_arg_list_id) => {
+                let case_param_ids = registry.identifier_list(case.param_list_id).to_vec();
+                let case_arity = case_param_ids.len();
+                let matchee_arg_ids = registry
+                    .expression_list(normalized_matchee_arg_list_id)
+                    .to_vec();
+                let substitutions: Vec<Substitution> = case_param_ids
+                    .iter()
+                    .copied()
+                    .zip(matchee_arg_ids.iter().copied())
+                    .enumerate()
+                    .map(|(param_index, (param_id, arg_id))| {
+                        let db_index = DbIndex(case_arity - param_index - 1);
+                        // We can safely call `unchecked_new` here because we know that each
+                        // arg to a normal form Call is also a normal form.
+                        let shifted_arg_id =
+                            NormalFormId::unchecked_new(arg_id).upshift(case_arity, registry);
+                        Substitution::Single {
+                            from: NormalFormId::unchecked_new(ExpressionId::Name(
+                                add_name_expression(registry, vec![param_id], db_index),
+                            )),
+                            to: shifted_arg_id,
+                        }
+                    })
+                    .collect();
+
+                let substituted_body = case
+                    .output_id
+                    .subst_all(&substitutions, registry)
+                    .downshift(case_arity, registry);
+                evaluate_well_typed_expression(context, registry, substituted_body)
+            }
+        }
+    }
+
+    /// If the provided expression is has a variant at
+    /// the top level,this returns IDs for the variant name
+    /// and the variant's argument list.
+    /// Otherwise, returns `None`.
+    fn try_as_variant(
         _context: &mut Context,
         _registry: &mut NodeRegistry,
-        _match_id: NodeId<Match>,
-    ) -> NormalFormId {
+        _expression_id: NormalFormId,
+    ) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
         unimplemented!()
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    enum PossibleArgListId {
+        Nullary,
+        Some(ListId<ExpressionId>),
     }
 
     fn evaluate_well_typed_forall(
