@@ -434,11 +434,93 @@ mod eval {
     }
 
     fn evaluate_well_typed_call(
-        _context: &mut Context,
-        _registry: &mut NodeRegistry,
-        _call_id: NodeId<Call>,
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        call_id: NodeId<Call>,
     ) -> NormalFormId {
-        unimplemented!()
+        let call = registry.call(call_id).clone();
+
+        let normalized_callee_id =
+            evaluate_well_typed_expression(context, registry, call.callee_id);
+
+        let normalized_arg_ids: Vec<NormalFormId> = {
+            let arg_ids = registry.expression_list(call.arg_list_id).to_vec();
+            arg_ids
+                .into_iter()
+                .map(|arg_id| evaluate_well_typed_expression(context, registry, arg_id))
+                .collect()
+        };
+
+        match normalized_callee_id.raw() {
+            ExpressionId::Fun(fun_id) => {
+                let fun = registry.fun(fun_id).clone();
+                let param_ids = registry.param_list(fun.param_list_id).to_vec();
+                let arity = param_ids.len();
+                let shifted_normalized_arg_ids = normalized_arg_ids
+                    .into_iter()
+                    .map(|arg_id| arg_id.upshift(arity + 1, registry))
+                    .collect::<Vec<_>>();
+                let substitutions =
+                    {
+                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
+                            fun_id.upshift(arity + 1, registry),
+                        ));
+                        const FUN_DB_INDEX: DbIndex = DbIndex(0);
+                        vec![Substitution::Single {
+                            from: NormalFormId::unchecked_new(ExpressionId::Name(
+                                add_name_expression(registry, vec![fun.name_id], FUN_DB_INDEX),
+                            )),
+                            to: shifted_fun_id,
+                        }]
+                    }
+                    .into_iter()
+                    .chain(
+                        param_ids
+                            .iter()
+                            .copied()
+                            .zip(shifted_normalized_arg_ids.iter().copied())
+                            .enumerate()
+                            .map(|(arg_index, (param_id, arg_id))| {
+                                let param_name_id = registry.param(param_id).name_id;
+                                let db_index = DbIndex(arity - arg_index);
+                                let name = NormalFormId::unchecked_new(ExpressionId::Name(
+                                    add_name_expression(registry, vec![param_name_id], db_index),
+                                ));
+                                Substitution::Single {
+                                    from: name,
+                                    to: arg_id,
+                                }
+                            }),
+                    )
+                    .collect::<Vec<_>>();
+
+                let body_id = fun.body_id.subst_all(&substitutions, registry);
+                let shifted_body_id = body_id.downshift(arity + 1, registry);
+                // TODO: Add this to Shift trait.
+                impl ExpressionId {
+                    fn downshift(self, _n: usize, _registry: &mut NodeRegistry) -> Self {
+                        unimplemented!()
+                    }
+                }
+                evaluate_well_typed_expression(context, registry, shifted_body_id)
+            }
+            ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
+                let normalized_arg_ids = normalized_arg_ids
+                    .into_iter()
+                    .map(NormalFormId::raw)
+                    .collect();
+                let normalized_arg_list_id = registry.add_expression_list(normalized_arg_ids);
+                let normalized_call_id = registry.add_call_and_overwrite_its_id(Call {
+                    id: dummy_id(),
+                    callee_id: normalized_callee_id.raw(),
+                    arg_list_id: normalized_arg_list_id,
+                });
+                NormalFormId::unchecked_new(ExpressionId::Call(normalized_call_id))
+            }
+            ExpressionId::Forall(_) => {
+                panic!("A well-typed Call expression cannot have a Forall as its callee.")
+            }
+        }
     }
 
     fn evaluate_well_typed_fun(
@@ -729,6 +811,19 @@ mod misc {
         })
     }
 
+    pub fn add_name_expression(
+        registry: &mut NodeRegistry,
+        component_ids: Vec<NodeId<Identifier>>,
+        db_index: DbIndex,
+    ) -> NodeId<NameExpression> {
+        let component_list_id = registry.add_identifier_list(component_ids);
+        registry.add_name_expression_and_overwrite_its_id(NameExpression {
+            id: dummy_id(),
+            component_list_id,
+            db_index,
+        })
+    }
+
     pub fn dummy_id<T>() -> NodeId<T> {
         NodeId::new(0)
     }
@@ -916,6 +1011,104 @@ mod shift {
             _cutoff: usize,
             _registry: &mut NodeRegistry,
         ) -> Self {
+            unimplemented!()
+        }
+    }
+}
+
+use substitute::*;
+mod substitute {
+    use super::*;
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum Substitution {
+        Single {
+            from: NormalFormId,
+            to: NormalFormId,
+        },
+    }
+
+    pub trait Substitute {
+        type Output;
+
+        fn subst(self, substitution: Substitution, registry: &mut NodeRegistry) -> Self::Output;
+
+        fn subst_all(
+            self,
+            substitutions: &[Substitution],
+            registry: &mut NodeRegistry,
+        ) -> Self::Output
+        where
+            Self: Sized + Substitute<Output = Self>,
+        {
+            let mut result = self;
+            for &subst in substitutions {
+                result = result.subst(subst, registry);
+            }
+            result
+        }
+    }
+
+    impl Substitute for ExpressionId {
+        type Output = Self;
+
+        fn subst(self, substitution: Substitution, registry: &mut NodeRegistry) -> Self {
+            match self {
+                ExpressionId::Name(name_id) => {
+                    ExpressionId::Name(name_id.subst(substitution, registry))
+                }
+                ExpressionId::Call(call_id) => {
+                    ExpressionId::Call(call_id.subst(substitution, registry))
+                }
+                ExpressionId::Fun(fun_id) => {
+                    ExpressionId::Fun(fun_id.subst(substitution, registry))
+                }
+                ExpressionId::Match(match_id) => {
+                    ExpressionId::Match(match_id.subst(substitution, registry))
+                }
+                ExpressionId::Forall(forall_id) => {
+                    ExpressionId::Forall(forall_id.subst(substitution, registry))
+                }
+            }
+        }
+    }
+
+    impl Substitute for NodeId<NameExpression> {
+        type Output = Self;
+
+        fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Substitute for NodeId<Call> {
+        type Output = Self;
+
+        fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Substitute for NodeId<Fun> {
+        type Output = Self;
+
+        fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Substitute for NodeId<Match> {
+        type Output = Self;
+
+        fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl Substitute for NodeId<Forall> {
+        type Output = Self;
+
+        fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
             unimplemented!()
         }
     }
