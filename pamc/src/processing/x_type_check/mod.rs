@@ -541,12 +541,43 @@ mod eval {
     }
 
     fn can_fun_be_applied(
-        _context: &Context,
-        _registry: &NodeRegistry,
-        _fun_id: NodeId<Fun>,
-        _normalized_arg_ids: &[NormalFormId],
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        fun_id: NodeId<Fun>,
+        normalized_arg_ids: &[NormalFormId],
     ) -> bool {
-        unimplemented!()
+        let param_list_id = registry.fun(fun_id).param_list_id;
+        let decreasing_param_index =
+            registry
+                .param_list(param_list_id)
+                .iter()
+                .copied()
+                .position(|param_id| {
+                    let param = registry.param(param_id);
+                    param.is_dashed
+                });
+        let decreasing_param_index = if let Some(i) = decreasing_param_index {
+            i
+        } else {
+            // If there is no decreasing parameter, the function is non-recursive,
+            // so it can be safely applied without causing infinite expansion.
+            return true;
+        };
+
+        let decreasing_arg_id = normalized_arg_ids[decreasing_param_index];
+        is_variant_expression(context, registry, decreasing_arg_id)
+    }
+
+    /// If the provided expression is has a variant at
+    /// the top level,this returns IDs for the variant name
+    /// and the variant's argument list.
+    /// Otherwise, returns `None`.
+    fn is_variant_expression(
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        expression_id: NormalFormId,
+    ) -> bool {
+        try_as_variant_expression(context, registry, expression_id).is_some()
     }
 
     fn evaluate_well_typed_fun(
@@ -584,7 +615,7 @@ mod eval {
 
         let (normalized_matchee_variant_name_id, normalized_matchee_arg_list_id) =
             if let Some((variant_name_id, arg_list_id)) =
-                try_as_variant(context, registry, normalized_matchee_id)
+                try_as_variant_expression(context, registry, normalized_matchee_id)
             {
                 (variant_name_id, arg_list_id)
             } else {
@@ -651,7 +682,7 @@ mod eval {
     /// the top level,this returns IDs for the variant name
     /// and the variant's argument list.
     /// Otherwise, returns `None`.
-    fn try_as_variant(
+    fn try_as_variant_expression(
         context: &mut Context,
         registry: &mut NodeRegistry,
         expression_id: NormalFormId,
