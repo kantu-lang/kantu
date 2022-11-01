@@ -496,12 +496,6 @@ mod eval {
 
                 let body_id = fun.body_id.subst_all(&substitutions, registry);
                 let shifted_body_id = body_id.downshift(arity + 1, registry);
-                // TODO: Add this to Shift trait.
-                impl ExpressionId {
-                    fn downshift(self, _n: usize, _registry: &mut NodeRegistry) -> Self {
-                        unimplemented!()
-                    }
-                }
                 evaluate_well_typed_expression(context, registry, shifted_body_id)
             }
             ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
@@ -870,9 +864,9 @@ mod shift {
     pub trait ShiftDbIndices {
         type Output;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            amount: usize,
+            amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
         ) -> Self::Output;
@@ -881,22 +875,51 @@ mod shift {
         where
             Self: Sized,
         {
-            self.upshift_with_cutoff(amount, 0, registry)
+            self.shift_with_cutoff(Upshift(amount), 0, registry)
+        }
+
+        fn downshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
+        where
+            Self: Sized,
+        {
+            self.shift_with_cutoff(Downshift(amount), 0, registry)
+        }
+    }
+
+    pub trait ShiftAmount {
+        fn apply(&self, i: DbIndex) -> DbIndex;
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct Upshift(usize);
+
+    impl ShiftAmount for Upshift {
+        fn apply(&self, i: DbIndex) -> DbIndex {
+            DbIndex(i.0 + self.0)
+        }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct Downshift(usize);
+
+    impl ShiftAmount for Downshift {
+        fn apply(&self, i: DbIndex) -> DbIndex {
+            DbIndex(i.0 - self.0)
         }
     }
 
     impl ShiftDbIndices for ContextEntryDefinition {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            amount: usize,
+            amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
         ) -> Self {
             match self {
                 ContextEntryDefinition::Alias { value_id } => ContextEntryDefinition::Alias {
-                    value_id: value_id.upshift_with_cutoff(amount, cutoff, registry),
+                    value_id: value_id.shift_with_cutoff(amount, cutoff, registry),
                 },
 
                 ContextEntryDefinition::Adt {
@@ -911,40 +934,40 @@ mod shift {
     impl ShiftDbIndices for NormalFormId {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            amount: usize,
+            amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
         ) -> Self {
-            Self::unchecked_new(self.raw().upshift_with_cutoff(amount, cutoff, registry))
+            Self::unchecked_new(self.raw().shift_with_cutoff(amount, cutoff, registry))
         }
     }
 
     impl ShiftDbIndices for ExpressionId {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            amount: usize,
+            amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
         ) -> Self {
             match self {
                 ExpressionId::Name(name_id) => {
-                    ExpressionId::Name(name_id.upshift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Name(name_id.shift_with_cutoff(amount, cutoff, registry))
                 }
                 ExpressionId::Call(call_id) => {
-                    ExpressionId::Call(call_id.upshift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Call(call_id.shift_with_cutoff(amount, cutoff, registry))
                 }
                 ExpressionId::Fun(fun_id) => {
-                    ExpressionId::Fun(fun_id.upshift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Fun(fun_id.shift_with_cutoff(amount, cutoff, registry))
                 }
                 ExpressionId::Match(match_id) => {
-                    ExpressionId::Match(match_id.upshift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Match(match_id.shift_with_cutoff(amount, cutoff, registry))
                 }
                 ExpressionId::Forall(forall_id) => {
-                    ExpressionId::Forall(forall_id.upshift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Forall(forall_id.shift_with_cutoff(amount, cutoff, registry))
                 }
             }
         }
@@ -953,9 +976,9 @@ mod shift {
     impl ShiftDbIndices for NodeId<NameExpression> {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            _amount: usize,
+            _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
         ) -> Self {
@@ -966,9 +989,9 @@ mod shift {
     impl ShiftDbIndices for NodeId<Call> {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            _amount: usize,
+            _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
         ) -> Self {
@@ -979,9 +1002,9 @@ mod shift {
     impl ShiftDbIndices for NodeId<Fun> {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            _amount: usize,
+            _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
         ) -> Self {
@@ -992,9 +1015,9 @@ mod shift {
     impl ShiftDbIndices for NodeId<Match> {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            _amount: usize,
+            _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
         ) -> Self {
@@ -1005,9 +1028,9 @@ mod shift {
     impl ShiftDbIndices for NodeId<Forall> {
         type Output = Self;
 
-        fn upshift_with_cutoff(
+        fn shift_with_cutoff<A: ShiftAmount>(
             self,
-            _amount: usize,
+            _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
         ) -> Self {
