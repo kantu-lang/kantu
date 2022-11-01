@@ -622,11 +622,39 @@ mod eval {
     /// and the variant's argument list.
     /// Otherwise, returns `None`.
     fn try_as_variant(
-        _context: &mut Context,
-        _registry: &mut NodeRegistry,
-        _expression_id: NormalFormId,
+        context: &mut Context,
+        registry: &mut NodeRegistry,
+        expression_id: NormalFormId,
     ) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
-        unimplemented!()
+        match expression_id.raw() {
+            ExpressionId::Name(name_id) => {
+                let db_index = registry.name_expression(name_id).db_index;
+                let definition = context.get_definition(db_index, registry);
+                match definition {
+                    ContextEntryDefinition::Variant { name_id } => {
+                        Some((name_id, PossibleArgListId::Nullary))
+                    }
+                    _ => None,
+                }
+            }
+            ExpressionId::Call(call_id) => {
+                let call = registry.call(call_id).clone();
+                match call.callee_id {
+                    ExpressionId::Name(name_id) => {
+                        let db_index = registry.name_expression(name_id).db_index;
+                        let definition = context.get_definition(db_index, registry);
+                        match definition {
+                            ContextEntryDefinition::Variant { name_id } => {
+                                Some((name_id, PossibleArgListId::Some(call.arg_list_id)))
+                            }
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
     }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
