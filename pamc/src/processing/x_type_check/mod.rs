@@ -438,6 +438,25 @@ mod eval {
         registry: &mut NodeRegistry,
         call_id: NodeId<Call>,
     ) -> NormalFormId {
+        fn register_normalized_nonsubstituted_fun(
+            registry: &mut NodeRegistry,
+            normalized_callee_id: NormalFormId,
+            normalized_arg_ids: &[NormalFormId],
+        ) -> NormalFormId {
+            let normalized_arg_ids = normalized_arg_ids
+                .iter()
+                .copied()
+                .map(NormalFormId::raw)
+                .collect();
+            let normalized_arg_list_id = registry.add_expression_list(normalized_arg_ids);
+            let normalized_call_id = registry.add_call_and_overwrite_its_id(Call {
+                id: dummy_id(),
+                callee_id: normalized_callee_id.raw(),
+                arg_list_id: normalized_arg_list_id,
+            });
+            NormalFormId::unchecked_new(ExpressionId::Call(normalized_call_id))
+        }
+
         let call = registry.call(call_id).clone();
 
         let normalized_callee_id =
@@ -455,6 +474,14 @@ mod eval {
             // TODO: Only unwrap if decreasing argument has a variant at the top,
             // or if there is no decreasing argument (i.e., the function is non-recursive).
             ExpressionId::Fun(fun_id) => {
+                if !can_fun_be_applied(context, registry, fun_id, &normalized_arg_ids) {
+                    return register_normalized_nonsubstituted_fun(
+                        registry,
+                        normalized_callee_id,
+                        &normalized_arg_ids,
+                    );
+                }
+
                 let fun = registry.fun(fun_id).clone();
                 let param_ids = registry.param_list(fun.param_list_id).to_vec();
                 let arity = param_ids.len();
@@ -501,22 +528,25 @@ mod eval {
                 evaluate_well_typed_expression(context, registry, shifted_body_id)
             }
             ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
-                let normalized_arg_ids = normalized_arg_ids
-                    .into_iter()
-                    .map(NormalFormId::raw)
-                    .collect();
-                let normalized_arg_list_id = registry.add_expression_list(normalized_arg_ids);
-                let normalized_call_id = registry.add_call_and_overwrite_its_id(Call {
-                    id: dummy_id(),
-                    callee_id: normalized_callee_id.raw(),
-                    arg_list_id: normalized_arg_list_id,
-                });
-                NormalFormId::unchecked_new(ExpressionId::Call(normalized_call_id))
+                register_normalized_nonsubstituted_fun(
+                    registry,
+                    normalized_callee_id,
+                    &normalized_arg_ids,
+                )
             }
             ExpressionId::Forall(_) => {
                 panic!("A well-typed Call expression cannot have a Forall as its callee.")
             }
         }
+    }
+
+    fn can_fun_be_applied(
+        _context: &Context,
+        _registry: &NodeRegistry,
+        _fun_id: NodeId<Fun>,
+        _normalized_arg_ids: &[NormalFormId],
+    ) -> bool {
+        unimplemented!()
     }
 
     fn evaluate_well_typed_fun(
