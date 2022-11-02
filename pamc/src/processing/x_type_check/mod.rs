@@ -252,27 +252,19 @@ fn get_type_of_expression(
     id: ExpressionId,
 ) -> Result<NormalFormId, TypeCheckError> {
     match id {
-        ExpressionId::Name(name) => Ok(get_type_of_name(
-            context,
-            registry,
-            coercion_target_id,
-            name,
-        )),
-        ExpressionId::Call(call) => get_type_of_call(context, registry, coercion_target_id, call),
-        ExpressionId::Fun(fun) => get_type_of_fun(context, registry, coercion_target_id, fun),
+        ExpressionId::Name(name) => Ok(get_type_of_name(context, registry, name)),
+        ExpressionId::Call(call) => get_type_of_call(context, registry, call),
+        ExpressionId::Fun(fun) => get_type_of_fun(context, registry, fun),
         ExpressionId::Match(match_) => {
             get_type_of_match(context, registry, coercion_target_id, match_)
         }
-        ExpressionId::Forall(forall) => {
-            get_type_of_forall(context, registry, coercion_target_id, forall)
-        }
+        ExpressionId::Forall(forall) => get_type_of_forall(context, registry, forall),
     }
 }
 
 fn get_type_of_name(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    coercion_target_id: Option<NormalFormId>,
     name_id: NodeId<NameExpression>,
 ) -> NormalFormId {
     let name = registry.name_expression(name_id);
@@ -282,7 +274,6 @@ fn get_type_of_name(
 fn get_type_of_call(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    coercion_target_id: Option<NormalFormId>,
     call_id: NodeId<Call>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let call = registry.call(call_id).clone();
@@ -347,7 +338,6 @@ fn get_type_of_call(
 fn get_type_of_fun(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    coercion_target_id: Option<NormalFormId>,
     fun_id: NodeId<Fun>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let original_context_len = context.len();
@@ -681,7 +671,6 @@ fn fuse_left_to_right(
 fn get_type_of_forall(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    coercion_target_id: Option<NormalFormId>,
     forall_id: NodeId<Forall>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let forall = registry.forall(forall_id).clone();
