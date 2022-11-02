@@ -757,8 +757,6 @@ mod eval {
         };
 
         match normalized_callee_id.raw() {
-            // TODO: Only unwrap if decreasing argument has a variant at the top,
-            // or if there is no decreasing argument (i.e., the function is non-recursive).
             ExpressionId::Fun(fun_id) => {
                 if !can_fun_be_applied(context, registry, fun_id, &normalized_arg_ids) {
                     return register_normalized_nonsubstituted_fun(
