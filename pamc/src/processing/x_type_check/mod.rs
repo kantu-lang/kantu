@@ -619,9 +619,38 @@ fn add_case_params_to_context_and_get_constructed_type(
     matchee_type: AdtExpression,
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = registry.match_case(case_id).clone();
-    let _variant_dbi =
+    let variant_dbi =
         get_db_index_for_adt_variant_of_name(context, registry, matchee_type, case.variant_name_id);
-    unimplemented!()
+    let variant_type_id = context.get_type(variant_dbi, registry);
+    match variant_type_id.raw() {
+        ExpressionId::Forall(forall_id) => {
+            let forall = registry.forall(forall_id);
+            let param_ids = registry.param_list(forall.param_list_id).to_vec();
+            for &param_id in &param_ids {
+                let param = registry.param(param_id);
+                // We can safely call `unchecked_new` on the param type id
+                // because the Forall which the param came from was a normal form.
+                // We know this because we obtained the Forall from matching against
+                // `variant_type_id.raw()`.
+                let param_type_id = NormalFormId::unchecked_new(param.type_id);
+                context.push(ContextEntry {
+                    type_id: param_type_id,
+                    definition: ContextEntryDefinition::Uninterpreted,
+                });
+            }
+
+            // We can safely call `unchecked_new` on the output id
+                // because the Forall which the param came from was a normal form.
+                // We know this because we obtained the Forall from matching against
+                // `variant_type_id.raw()`.
+            Ok(NormalFormId::unchecked_new(forall.output_id))
+        }
+        ExpressionId::Call(_) => {
+            // In this case, the variant is nullary.
+            Ok(variant_type_id)
+        }
+        other => panic!("A variant's type should always either be a Forall or a Call, but it was actually a {:?}", other),
+    }
 }
 
 fn get_db_index_for_adt_variant_of_name(
