@@ -31,6 +31,9 @@ pub enum TypeCheckError {
     ExtraneousMatchCase {
         case_id: NodeId<MatchCase>,
     },
+    AmbiguousOutputType {
+        case_id: NodeId<MatchCase>,
+    },
 }
 
 pub fn type_check_files(
@@ -168,7 +171,7 @@ fn type_check_param(
     param_id: NodeId<Param>,
 ) -> Result<(), TypeCheckError> {
     let param = registry.param(param_id).clone();
-    let param_type_type_id = get_type_of_expression(context, registry, param.type_id)?;
+    let param_type_type_id = get_type_of_expression(context, registry, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(context, registry, param_type_type_id) {
         return Err(TypeCheckError::IllegalTypeExpression(param.type_id));
     }
@@ -190,7 +193,7 @@ fn type_check_type_variant(
     let arity = variant.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(context, registry, variant.param_list_id)?;
-    type_check_expression(context, registry, variant.return_type_id)?;
+    type_check_expression(context, registry, None, variant.return_type_id)?;
     let return_type_id = evaluate_well_typed_expression(context, registry, variant.return_type_id);
     let type_id = NormalFormId::unchecked_new(
         Forall {
@@ -216,7 +219,7 @@ fn type_check_let_statement(
     let_statement_id: NodeId<LetStatement>,
 ) -> Result<(), TypeCheckError> {
     let let_statement = registry.let_statement(let_statement_id).clone();
-    let type_id = get_type_of_expression(context, registry, let_statement.value_id)?;
+    let type_id = get_type_of_expression(context, registry, None, let_statement.value_id)?;
     let normalized_value_id =
         evaluate_well_typed_expression(context, registry, let_statement.value_id);
     context.push(ContextEntry {
@@ -231,6 +234,7 @@ fn type_check_let_statement(
 fn type_check_expression(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     expression: ExpressionId,
 ) -> Result<(), TypeCheckError> {
     // In the future, we could implement a version of this that skips the
@@ -238,26 +242,37 @@ fn type_check_expression(
     // actually use the returned type.
     // But for now, we'll just reuse the existing code, for the sake of
     // simplicity.
-    get_type_of_expression(context, registry, expression).map(std::mem::drop)
+    get_type_of_expression(context, registry, coercion_target_id, expression).map(std::mem::drop)
 }
 
 fn get_type_of_expression(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     id: ExpressionId,
 ) -> Result<NormalFormId, TypeCheckError> {
     match id {
-        ExpressionId::Name(name) => Ok(get_type_of_name(context, registry, name)),
-        ExpressionId::Call(call) => get_type_of_call(context, registry, call),
-        ExpressionId::Fun(fun) => get_type_of_fun(context, registry, fun),
-        ExpressionId::Match(match_) => get_type_of_match(context, registry, match_),
-        ExpressionId::Forall(forall) => get_type_of_forall(context, registry, forall),
+        ExpressionId::Name(name) => Ok(get_type_of_name(
+            context,
+            registry,
+            coercion_target_id,
+            name,
+        )),
+        ExpressionId::Call(call) => get_type_of_call(context, registry, coercion_target_id, call),
+        ExpressionId::Fun(fun) => get_type_of_fun(context, registry, coercion_target_id, fun),
+        ExpressionId::Match(match_) => {
+            get_type_of_match(context, registry, coercion_target_id, match_)
+        }
+        ExpressionId::Forall(forall) => {
+            get_type_of_forall(context, registry, coercion_target_id, forall)
+        }
     }
 }
 
 fn get_type_of_name(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     name_id: NodeId<NameExpression>,
 ) -> NormalFormId {
     let name = registry.name_expression(name_id);
@@ -267,10 +282,11 @@ fn get_type_of_name(
 fn get_type_of_call(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     call_id: NodeId<Call>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let call = registry.call(call_id).clone();
-    let callee_type_id = get_type_of_expression(context, registry, call.callee_id)?;
+    let callee_type_id = get_type_of_expression(context, registry, None, call.callee_id)?;
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
     } else {
@@ -280,7 +296,11 @@ fn get_type_of_call(
     let arg_type_ids = arg_ids
         .iter()
         .copied()
-        .map(|arg_id| get_type_of_expression(context, registry, arg_id))
+        .map(|arg_id| {
+            get_type_of_expression(
+                context, registry, /* TODO: Infer from call param types. */ None, arg_id,
+            )
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let callee_type = registry.forall(callee_type_id);
     // We use the params of the callee _type_ rather than the params of the
@@ -327,6 +347,7 @@ fn get_type_of_call(
 fn get_type_of_fun(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     fun_id: NodeId<Fun>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let original_context_len = context.len();
@@ -335,7 +356,8 @@ fn get_type_of_fun(
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(context, registry, fun.param_list_id)?;
     {
-        let return_type_type_id = get_type_of_expression(context, registry, fun.return_type_id)?;
+        let return_type_type_id =
+            get_type_of_expression(context, registry, None, fun.return_type_id)?;
         if !is_term_equal_to_type0_or_type1(context, registry, return_type_type_id) {
             return Err(TypeCheckError::IllegalTypeExpression(fun.return_type_id));
         }
@@ -361,7 +383,12 @@ fn get_type_of_fun(
         },
     });
 
-    let normalized_body_type_id = get_type_of_expression(context, registry, fun.body_id)?;
+    let normalized_body_type_id = get_type_of_expression(
+        context,
+        registry,
+        Some(normalized_return_type_id),
+        fun.body_id,
+    )?;
     if !is_left_type_assignable_to_right_type(
         context,
         registry,
@@ -382,10 +409,11 @@ fn get_type_of_fun(
 fn get_type_of_match(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     match_id: NodeId<Match>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let match_ = registry.match_(match_id).clone();
-    let matchee_type_id = get_type_of_expression(context, registry, match_.matchee_id)?;
+    let matchee_type_id = get_type_of_expression(context, registry, None, match_.matchee_id)?;
     let matchee_type = if let Some(t) = try_as_adt_expression(context, registry, matchee_type_id) {
         t
     } else {
@@ -404,8 +432,14 @@ fn get_type_of_match(
     let case_ids = registry.match_case_list(match_.case_list_id).to_vec();
     let mut first_case_type_id = None;
     for case_id in case_ids {
-        let case_type_id =
-            get_type_of_match_case(context, registry, case_id, matchee_type_id, matchee_type)?;
+        let case_type_id = get_type_of_match_case(
+            context,
+            registry,
+            coercion_target_id,
+            case_id,
+            matchee_type_id,
+            matchee_type,
+        )?;
         if let Some(first_case_type_id) = first_case_type_id {
             if !is_left_type_assignable_to_right_type(
                 context,
@@ -525,11 +559,13 @@ fn verify_that_every_case_has_a_variant(
 fn get_type_of_match_case(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     case_id: NodeId<MatchCase>,
     matchee_type_id: NormalFormId,
     matchee_type: AdtExpression,
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = registry.match_case(case_id).clone();
+    let case_arity = case.param_list_id.len;
     let parameterized_type_id = add_case_params_to_context_and_get_constructed_type(
         context,
         registry,
@@ -537,16 +573,60 @@ fn get_type_of_match_case(
         matchee_type,
     )?;
 
+    let original_coercion_target_id = coercion_target_id;
+    let shifted_coercion_target_id = coercion_target_id
+        .map(|coercion_target_id| coercion_target_id.upshift(case_arity, registry));
+
     let substitutions =
         fuse_left_to_right(context, registry, matchee_type_id, parameterized_type_id);
 
     let mut substituted_context = context.clone().subst_all(&substitutions, registry);
-    let output_type_id =
-        get_type_of_expression(&mut substituted_context, registry, case.output_id)?;
+    let substituted_coercion_target_id = shifted_coercion_target_id
+        .map(|coercion_target_id| coercion_target_id.raw().subst_all(&substitutions, registry));
+    let normalized_substituted_coercion_target_id =
+        substituted_coercion_target_id.map(|coercion_target_id| {
+            evaluate_well_typed_expression(context, registry, coercion_target_id)
+        });
+    let output_type_id = get_type_of_expression(
+        &mut substituted_context,
+        registry,
+        normalized_substituted_coercion_target_id,
+        case.output_id,
+    )?;
 
-    context.pop_n(case.param_list_id.len);
+    context.pop_n(case_arity);
 
-    Ok(output_type_id)
+    match normalized_substituted_coercion_target_id {
+        Some(normalized_substituted_coercion_target_id)
+            if is_left_type_assignable_to_right_type(
+                &mut substituted_context,
+                registry,
+                output_type_id,
+                normalized_substituted_coercion_target_id,
+            ) =>
+        {
+            Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is some"))
+        }
+        _ => {
+            // TODO: Implement this in the `Shift` trait
+            #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+            struct DbIndexToSmallError {
+                downshift_amount: usize,
+                index: DbIndex
+            }
+            impl NormalFormId {
+                fn try_downshift(self, _amount: usize, _registry: &mut NodeRegistry) -> Result<Self, DbIndexToSmallError> {
+                    unimplemented!()
+                }
+            }
+            match output_type_id.try_downshift(case_arity, registry) {
+                Ok(shifted_output_type_id) => Ok(shifted_output_type_id),
+                Err(_) => Err(TypeCheckError::AmbiguousOutputType {
+                    case_id,
+                }),
+            }
+        },
+    }
 }
 
 fn add_case_params_to_context_and_get_constructed_type(
@@ -601,12 +681,13 @@ fn fuse_left_to_right(
 fn get_type_of_forall(
     context: &mut Context,
     registry: &mut NodeRegistry,
+    coercion_target_id: Option<NormalFormId>,
     forall_id: NodeId<Forall>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let forall = registry.forall(forall_id).clone();
     normalize_params_and_leave_params_in_context(context, registry, forall.param_list_id)?;
 
-    let output_type_id = get_type_of_expression(context, registry, forall.output_id)?;
+    let output_type_id = get_type_of_expression(context, registry, None, forall.output_id)?;
     if !is_term_equal_to_type0_or_type1(context, registry, output_type_id) {
         return Err(TypeCheckError::IllegalTypeExpression(forall.output_id));
     }
