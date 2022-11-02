@@ -17,7 +17,7 @@ pub mod x_stripped_ast;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FileId(pub usize);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TextPosition {
     pub file_id: FileId,
     pub index: usize,

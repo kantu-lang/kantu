@@ -2,10 +2,12 @@ use crate::data::x_light_ast::*;
 
 pub use crate::data::node_registry::ListId;
 pub use crate::data::node_registry::NodeId;
-pub use crate::data::x_stripped_ast::Strip;
 
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
+
+use remove_id::RemoveId;
+mod remove_id;
 
 // TODO: We need to seriously redesign this because
 // stripping is going to make debug messages inaccurate.
@@ -46,10 +48,10 @@ pub enum ExpressionRef<'a> {
     Forall(&'a Forall),
 }
 
-/// For any type `T`, if `T` implements `Strip`, then the
+/// For any type `T`, if `T` implements `RemoveId`, then the
 /// registry guarantees that for any two `T`s `x` and `y`
 /// with respective `NodeId<T>`s `x_id` and `y_id`,
-/// `x.strip() == y.strip()` implies `x_id == y_id`.
+/// `x.remove_id() == y.remove_id()` implies `x_id == y_id`.
 #[derive(Clone, Debug)]
 pub struct NodeRegistry {
     files: Subregistry<File>,
@@ -64,6 +66,7 @@ pub struct NodeRegistry {
     match_cases: Subregistry<MatchCase>,
     foralls: Subregistry<Forall>,
 
+    // TODO: Make this a Subregistry.
     identifiers: Vec<Identifier>,
 
     file_item_lists: ListSubregistry<FileItemNodeId>,
@@ -324,7 +327,7 @@ mod subregistry {
     #[derive(Clone, Debug)]
     pub struct Subregistry<T>
     where
-        T: Strip,
+        T: RemoveId,
         T::Output: Clone + Debug,
     {
         items: Vec<T>,
@@ -333,7 +336,7 @@ mod subregistry {
 
     impl<T> Subregistry<T>
     where
-        T: Strip,
+        T: RemoveId,
         T::Output: Clone + Debug,
     {
         pub fn new() -> Self {
@@ -346,7 +349,7 @@ mod subregistry {
 
     impl<T> Subregistry<T>
     where
-        T: Strip,
+        T: RemoveId,
         T::Output: Clone + Debug,
     {
         pub fn get(&self, id: NodeId<T>) -> &T {
@@ -356,16 +359,16 @@ mod subregistry {
 
     impl<T> Subregistry<T>
     where
-        T: Strip + SetId,
+        T: RemoveId + SetId,
         T::Output: Clone + Debug,
     {
         pub fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
-            if let Some(existing_id) = self.ids.get(&item.strip()) {
+            if let Some(existing_id) = self.ids.get(&item.remove_id()) {
                 *existing_id
             } else {
                 let new_id = NodeId::<T>::new(self.items.len());
                 item.set_id(new_id);
-                self.ids.insert(item.strip(), new_id);
+                self.ids.insert(item.remove_id(), new_id);
                 self.items.push(item);
                 new_id
             }
