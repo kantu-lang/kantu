@@ -12,7 +12,6 @@ pub mod variant_return_type;
 
 pub mod x_light_ast;
 pub mod x_node_registry;
-pub mod x_stripped_ast;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FileId(pub usize);
