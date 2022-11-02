@@ -3,6 +3,8 @@ use crate::data::{
     x_node_registry::{ListId, NodeId, NodeRegistry},
 };
 
+use std::convert::Infallible;
+
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
     IllegalTypeExpression(ExpressionId),
@@ -598,17 +600,6 @@ fn get_type_of_match_case(
             Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is some"))
         }
         _ => {
-            // TODO: Implement this in the `Shift` trait
-            #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-            struct DbIndexToSmallError {
-                downshift_amount: usize,
-                index: DbIndex
-            }
-            impl NormalFormId {
-                fn try_downshift(self, _amount: usize, _registry: &mut NodeRegistry) -> Result<Self, DbIndexToSmallError> {
-                    unimplemented!()
-                }
-            }
             match output_type_id.try_downshift(case_arity, registry) {
                 Ok(shifted_output_type_id) => Ok(shifted_output_type_id),
                 Err(_) => Err(TypeCheckError::AmbiguousOutputType {
@@ -1328,6 +1319,20 @@ mod misc {
     ) -> bool {
         unimplemented!()
     }
+
+    pub trait SafeUnwrap<T> {
+        /// This is guaranteed to never panic.
+        fn safe_unwrap(self) -> T;
+    }
+
+    impl<T> SafeUnwrap<T> for Result<T, Infallible> {
+        fn safe_unwrap(self) -> T {
+            match self {
+                Ok(x) => x,
+                Err(impossible) => match impossible {},
+            }
+        }
+    }
 }
 
 use shift::*;
@@ -1337,38 +1342,64 @@ mod shift {
     pub trait ShiftDbIndices {
         type Output;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
-        ) -> Self::Output;
+        ) -> Result<Self::Output, A::ShiftError>;
 
         fn upshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
         where
             Self: Sized,
         {
-            self.shift_with_cutoff(Upshift(amount), 0, registry)
+            self.try_shift_with_cutoff(Upshift(amount), 0, registry)
+                .safe_unwrap()
+        }
+
+        fn try_upshift(
+            self,
+            amount: usize,
+            registry: &mut NodeRegistry,
+        ) -> Result<Self::Output, Infallible>
+        where
+            Self: Sized,
+        {
+            self.try_shift_with_cutoff(Upshift(amount), 0, registry)
         }
 
         fn downshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
         where
             Self: Sized,
         {
-            self.shift_with_cutoff(Downshift(amount), 0, registry)
+            self.try_shift_with_cutoff(Downshift(amount), 0, registry)
+                .unwrap_or_else(|err| panic!("Downshift failed: {:?}", err))
+        }
+
+        fn try_downshift(
+            self,
+            amount: usize,
+            registry: &mut NodeRegistry,
+        ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
+        where
+            Self: Sized,
+        {
+            self.try_shift_with_cutoff(Downshift(amount), 0, registry)
         }
     }
 
     pub trait ShiftAmount {
-        fn apply(&self, i: DbIndex) -> DbIndex;
+        type ShiftError;
+        fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Self::ShiftError>;
     }
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     struct Upshift(usize);
 
     impl ShiftAmount for Upshift {
-        fn apply(&self, i: DbIndex) -> DbIndex {
-            DbIndex(i.0 + self.0)
+        type ShiftError = Infallible;
+        fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Infallible> {
+            Ok(DbIndex(i.0 + self.0))
         }
     }
 
@@ -1376,23 +1407,37 @@ mod shift {
     struct Downshift(usize);
 
     impl ShiftAmount for Downshift {
-        fn apply(&self, i: DbIndex) -> DbIndex {
-            DbIndex(i.0 - self.0)
+        type ShiftError = DbIndexTooSmallForDownshiftError;
+        fn try_apply(&self, i: DbIndex) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+            if i.0 < self.0 {
+                Err(DbIndexTooSmallForDownshiftError {
+                    db_index: i,
+                    downshift_amount: self.0,
+                })
+            } else {
+                Ok(DbIndex(i.0 - self.0))
+            }
         }
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct DbIndexTooSmallForDownshiftError {
+        db_index: DbIndex,
+        downshift_amount: usize,
     }
 
     impl ShiftDbIndices for ContextEntryDefinition {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
-        ) -> Self {
-            match self {
+        ) -> Result<Self, A::ShiftError> {
+            Ok(match self {
                 ContextEntryDefinition::Alias { value_id } => ContextEntryDefinition::Alias {
-                    value_id: value_id.shift_with_cutoff(amount, cutoff, registry),
+                    value_id: value_id.try_shift_with_cutoff(amount, cutoff, registry)?,
                 },
 
                 ContextEntryDefinition::Adt {
@@ -1400,61 +1445,63 @@ mod shift {
                 }
                 | ContextEntryDefinition::Variant { name_id: _ }
                 | ContextEntryDefinition::Uninterpreted => self,
-            }
+            })
         }
     }
 
     impl ShiftDbIndices for NormalFormId {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
-        ) -> Self {
-            Self::unchecked_new(self.raw().shift_with_cutoff(amount, cutoff, registry))
+        ) -> Result<Self, A::ShiftError> {
+            Ok(Self::unchecked_new(
+                self.raw().try_shift_with_cutoff(amount, cutoff, registry)?,
+            ))
         }
     }
 
     impl ShiftDbIndices for ExpressionId {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             amount: A,
             cutoff: usize,
             registry: &mut NodeRegistry,
-        ) -> Self {
-            match self {
+        ) -> Result<Self, A::ShiftError> {
+            Ok(match self {
                 ExpressionId::Name(name_id) => {
-                    ExpressionId::Name(name_id.shift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Name(name_id.try_shift_with_cutoff(amount, cutoff, registry)?)
                 }
                 ExpressionId::Call(call_id) => {
-                    ExpressionId::Call(call_id.shift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Call(call_id.try_shift_with_cutoff(amount, cutoff, registry)?)
                 }
                 ExpressionId::Fun(fun_id) => {
-                    ExpressionId::Fun(fun_id.shift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Fun(fun_id.try_shift_with_cutoff(amount, cutoff, registry)?)
                 }
                 ExpressionId::Match(match_id) => {
-                    ExpressionId::Match(match_id.shift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Match(match_id.try_shift_with_cutoff(amount, cutoff, registry)?)
                 }
                 ExpressionId::Forall(forall_id) => {
-                    ExpressionId::Forall(forall_id.shift_with_cutoff(amount, cutoff, registry))
+                    ExpressionId::Forall(forall_id.try_shift_with_cutoff(amount, cutoff, registry)?)
                 }
-            }
+            })
         }
     }
 
     impl ShiftDbIndices for NodeId<NameExpression> {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
-        ) -> Self {
+        ) -> Result<Self, A::ShiftError> {
             unimplemented!()
         }
     }
@@ -1462,12 +1509,12 @@ mod shift {
     impl ShiftDbIndices for NodeId<Call> {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
-        ) -> Self {
+        ) -> Result<Self, A::ShiftError> {
             unimplemented!()
         }
     }
@@ -1475,12 +1522,12 @@ mod shift {
     impl ShiftDbIndices for NodeId<Fun> {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
-        ) -> Self {
+        ) -> Result<Self, A::ShiftError> {
             unimplemented!()
         }
     }
@@ -1488,12 +1535,12 @@ mod shift {
     impl ShiftDbIndices for NodeId<Match> {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
-        ) -> Self {
+        ) -> Result<Self, A::ShiftError> {
             unimplemented!()
         }
     }
@@ -1501,12 +1548,12 @@ mod shift {
     impl ShiftDbIndices for NodeId<Forall> {
         type Output = Self;
 
-        fn shift_with_cutoff<A: ShiftAmount>(
+        fn try_shift_with_cutoff<A: ShiftAmount>(
             self,
             _amount: A,
             _cutoff: usize,
             _registry: &mut NodeRegistry,
-        ) -> Self {
+        ) -> Result<Self, A::ShiftError> {
             unimplemented!()
         }
     }
