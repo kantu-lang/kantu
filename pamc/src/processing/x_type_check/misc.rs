@@ -149,3 +149,127 @@ pub fn normalize_params_and_leave_params_in_context(
         .collect::<Result<Vec<_>, _>>()?;
     Ok(registry.add_param_list(normalized_ids))
 }
+
+pub fn verify_variant_to_case_bijection(
+    registry: &NodeRegistry,
+    variant_name_list_id: ListId<NodeId<Identifier>>,
+    case_list_id: ListId<NodeId<MatchCase>>,
+) -> Result<(), TypeCheckError> {
+    verify_there_are_no_duplicate_cases(registry, case_list_id)?;
+    verify_that_every_variant_has_a_case(registry, variant_name_list_id, case_list_id)?;
+    verify_that_every_case_has_a_variant(registry, variant_name_list_id, case_list_id)?;
+    Ok(())
+}
+
+fn verify_there_are_no_duplicate_cases(
+    registry: &NodeRegistry,
+    case_list_id: ListId<NodeId<MatchCase>>,
+) -> Result<(), TypeCheckError> {
+    let mut visited_cases: Vec<NodeId<MatchCase>> = Vec::with_capacity(case_list_id.len);
+
+    let case_ids = registry.match_case_list(case_list_id);
+
+    for &case_id in case_ids {
+        let case = registry.match_case(case_id);
+        let case_variant_name = &registry.identifier(case.variant_name_id).name;
+
+        if let Some(existing_case_id) = visited_cases
+            .iter()
+            .find(|&&existing_case_id| {
+                let existing_case = registry.match_case(existing_case_id);
+                let existing_case_variant_name =
+                    &registry.identifier(existing_case.variant_name_id).name;
+                existing_case_variant_name == case_variant_name
+            })
+            .copied()
+        {
+            return Err(TypeCheckError::DuplicateMatchCase {
+                existing_match_case_id: existing_case_id,
+                new_match_case_id: case_id,
+            });
+        }
+
+        visited_cases.push(case_id);
+    }
+
+    Ok(())
+}
+
+fn verify_that_every_variant_has_a_case(
+    registry: &NodeRegistry,
+    variant_name_list_id: ListId<NodeId<Identifier>>,
+    case_list_id: ListId<NodeId<MatchCase>>,
+) -> Result<(), TypeCheckError> {
+    let variant_name_ids = registry.identifier_list(variant_name_list_id);
+    let case_ids = registry.match_case_list(case_list_id);
+
+    for &variant_name_id in variant_name_ids {
+        let variant_name = &registry.identifier(variant_name_id).name;
+        if !case_ids.iter().any(|&case_id| {
+            let case = registry.match_case(case_id);
+            let case_variant_name = &registry.identifier(case.variant_name_id).name;
+            case_variant_name == variant_name
+        }) {
+            return Err(TypeCheckError::MissingMatchCase { variant_name_id });
+        }
+    }
+    Ok(())
+}
+
+fn verify_that_every_case_has_a_variant(
+    registry: &NodeRegistry,
+    variant_name_list_id: ListId<NodeId<Identifier>>,
+    case_list_id: ListId<NodeId<MatchCase>>,
+) -> Result<(), TypeCheckError> {
+    let variant_name_ids = registry.identifier_list(variant_name_list_id);
+    let case_ids = registry.match_case_list(case_list_id);
+
+    for &case_id in case_ids {
+        let case = registry.match_case(case_id);
+        let case_variant_name = &registry.identifier(case.variant_name_id).name;
+        if !variant_name_ids.iter().any(|&variant_name_id| {
+            let variant_name = &registry.identifier(variant_name_id).name;
+            case_variant_name == variant_name
+        }) {
+            return Err(TypeCheckError::ExtraneousMatchCase { case_id });
+        }
+    }
+    Ok(())
+}
+
+pub fn get_db_index_for_adt_variant_of_name(
+    context: &Context,
+    registry: &mut NodeRegistry,
+    adt_expression: AdtExpression,
+    target_variant_name_id: NodeId<Identifier>,
+) -> DbIndex {
+    let type_dbi = registry
+        .name_expression(adt_expression.type_name_id)
+        .db_index;
+    let variant_name_list_id = match context.get_definition(type_dbi, registry) {
+        ContextEntryDefinition::Adt {
+            variant_name_list_id,
+        } => variant_name_list_id,
+        _ => panic!("An ADT's NameExpression should always point to an ADT definition"),
+    };
+
+    let target_variant_name = &registry.identifier(target_variant_name_id).name;
+    let variant_index = registry
+        .identifier_list(variant_name_list_id)
+        .iter()
+        .position(|&variant_name_id| {
+            let variant_name = &registry.identifier(variant_name_id).name;
+            variant_name == target_variant_name
+        })
+        .expect("The target variant name should always be found in the ADT's variant name list");
+    DbIndex(type_dbi.0 + 1 + variant_index)
+}
+
+pub fn fuse_left_to_right(
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _left: NormalFormId,
+    _right: NormalFormId,
+) -> Vec<Substitution> {
+    unimplemented!()
+}
