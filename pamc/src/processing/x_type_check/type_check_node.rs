@@ -460,27 +460,21 @@ fn add_case_params_to_context_and_get_constructed_type(
         get_db_index_for_adt_variant_of_name(context, registry, matchee_type, case.variant_name_id);
     let variant_type_id = context.get_type(variant_dbi, registry);
     match variant_type_id.raw() {
-        ExpressionId::Forall(forall_id) => {
-            let forall = registry.forall(forall_id);
-            let param_ids = registry.param_list(forall.param_list_id).to_vec();
-            for &param_id in &param_ids {
-                let param = registry.param(param_id);
-                // We can safely call `unchecked_new` on the param type id
-                // because the Forall which the param came from was a normal form.
-                // We know this because we obtained the Forall from matching against
-                // `variant_type_id.raw()`.
-                let param_type_id = NormalFormId::unchecked_new(param.type_id);
+        ExpressionId::Forall(normalized_forall_id) => {
+            let normalized_forall = registry.forall(normalized_forall_id);
+            let normalized_param_ids = registry
+                .param_list(normalized_forall.param_list_id)
+                .to_vec();
+            for &normalized_param_id in &normalized_param_ids {
+                let normalized_param = registry.param(normalized_param_id);
+                let param_type_id = NormalFormId::unchecked_new(normalized_param.type_id);
                 context.push(ContextEntry {
                     type_id: param_type_id,
                     definition: ContextEntryDefinition::Uninterpreted,
                 });
             }
 
-            // We can safely call `unchecked_new` on the output id
-               // because the Forall which the param came from was a normal form.
-                // We know this because we obtained the Forall from matching against
-                // `variant_type_id.raw()`.
-            Ok( NormalFormId::unchecked_new(forall.output_id))
+            Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
         }
         ExpressionId::Call(_) => {
             // In this case, the variant is nullary.
