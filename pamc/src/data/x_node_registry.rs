@@ -7,6 +7,21 @@ pub use crate::data::x_stripped_ast::Strip;
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 
+// TODO: We need to seriously redesign this because
+// stripping is going to make debug messages inaccurate.
+
+// For example, if the first NameExpression with a
+// `db_index` of 0 will be the _only_ name expression to
+// be registered.
+// Consequently, all subsequent NameExpressions with a
+// `db_index` of 0 will be assigned the same id as the first
+// NameExpression, which will give them incorrect `name` and
+// `start` values.
+// For type checking, we don't care about `name` and `start`,
+// which is the whole reason we're stripping in the first place.
+// However, a developer obviously wants to know the name and location
+// of the identifiers in their erroneous code.
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FileItemNodeId {
     Type(NodeId<TypeStatement>),
