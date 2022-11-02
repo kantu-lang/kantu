@@ -404,7 +404,8 @@ fn get_type_of_match(
     let case_ids = registry.match_case_list(match_.case_list_id).to_vec();
     let mut first_case_type_id = None;
     for case_id in case_ids {
-        let case_type_id = get_type_of_match_case(context, registry, case_id, matchee_type_id)?;
+        let case_type_id =
+            get_type_of_match_case(context, registry, case_id, matchee_type_id, matchee_type)?;
         if let Some(first_case_type_id) = first_case_type_id {
             if !is_left_type_assignable_to_right_type(
                 context,
@@ -522,11 +523,78 @@ fn verify_that_every_case_has_a_variant(
 }
 
 fn get_type_of_match_case(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    case_id: NodeId<MatchCase>,
+    matchee_type_id: NormalFormId,
+    matchee_type: AdtExpression,
+) -> Result<NormalFormId, TypeCheckError> {
+    let case = registry.match_case(case_id).clone();
+    let parameterized_type_id = add_case_params_to_context_and_get_constructed_type(
+        context,
+        registry,
+        case_id,
+        matchee_type,
+    )?;
+
+    let substitutions =
+        fuse_left_to_right(context, registry, matchee_type_id, parameterized_type_id);
+
+    let mut substituted_context = context.clone().subst_all(&substitutions, registry);
+    let output_type_id =
+        get_type_of_expression(&mut substituted_context, registry, case.output_id)?;
+
+    context.pop_n(case.param_list_id.len);
+
+    Ok(output_type_id)
+}
+
+fn add_case_params_to_context_and_get_constructed_type(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    case_id: NodeId<MatchCase>,
+    matchee_type: AdtExpression,
+) -> Result<NormalFormId, TypeCheckError> {
+    let case = registry.match_case(case_id).clone();
+    let _variant_dbi =
+        get_db_index_for_adt_variant_of_name(context, registry, matchee_type, case.variant_name_id);
+    unimplemented!()
+}
+
+fn get_db_index_for_adt_variant_of_name(
+    context: &Context,
+    registry: &mut NodeRegistry,
+    adt_expression: AdtExpression,
+    target_variant_name_id: NodeId<Identifier>,
+) -> DbIndex {
+    let type_dbi = registry
+        .name_expression(adt_expression.type_name_id)
+        .db_index;
+    let variant_name_list_id = match context.get_definition(type_dbi, registry) {
+        ContextEntryDefinition::Adt {
+            variant_name_list_id,
+        } => variant_name_list_id,
+        _ => panic!("An ADT's NameExpression should always point to an ADT definition"),
+    };
+
+    let target_variant_name = &registry.identifier(target_variant_name_id).name;
+    let variant_index = registry
+        .identifier_list(variant_name_list_id)
+        .iter()
+        .position(|&variant_name_id| {
+            let variant_name = &registry.identifier(variant_name_id).name;
+            variant_name == target_variant_name
+        })
+        .expect("The target variant name should always be found in the ADT's variant name list");
+    DbIndex(type_dbi.0 + 1 + variant_index)
+}
+
+fn fuse_left_to_right(
     _context: &mut Context,
     _registry: &mut NodeRegistry,
-    _case_id: NodeId<MatchCase>,
-    _matchee_type_id: NormalFormId,
-) -> Result<NormalFormId, TypeCheckError> {
+    _left: NormalFormId,
+    _right: NormalFormId,
+) -> Vec<Substitution> {
     unimplemented!()
 }
 
@@ -902,6 +970,7 @@ use context::*;
 mod context {
     use super::*;
 
+    #[derive(Debug, Clone)]
     pub struct Context {
         /// Each type in the stack is expressed "locally" (i.e., relative
         /// to its position within the stack).
@@ -1078,6 +1147,14 @@ mod context {
             self.local_type_stack[level.0]
                 .definition
                 .upshift(index.0 + 1, registry)
+        }
+    }
+
+    impl Substitute for Context {
+        type Output = Self;
+
+        fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
+            unimplemented!();
         }
     }
 }
