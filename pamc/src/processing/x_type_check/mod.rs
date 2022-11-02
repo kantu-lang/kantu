@@ -317,6 +317,7 @@ fn get_type_of_call(
         .zip(arg_type_ids.iter().copied())
         .enumerate()
     {
+        // TODO: Substitute the arg values into the param type, one-by-one.
         let callee_type_param = registry.param(callee_type_param_id);
         if !is_left_type_assignable_to_right_type(
             context,
@@ -334,6 +335,7 @@ fn get_type_of_call(
             });
         }
     }
+    // TODO: Substitute arg values into output type
     Ok(NormalFormId::unchecked_new(callee_type.output_id))
 }
 
