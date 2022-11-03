@@ -1,6 +1,6 @@
 use crate::data::{
     x_light_ast::*,
-    x_node_registry::{NodeId, NodeRegistry},
+    x_node_registry::{ListId, NodeId, NodeRegistry},
 };
 
 use std::hash::Hash;
@@ -16,12 +16,15 @@ mod stripped_ast;
 #[derive(Clone, Debug)]
 pub struct NodeStructuralIdentityRegistry {
     name_expressions: Subregistry<NodeId<NameExpression>>,
+
+    expression_lists: Subregistry<ListId<ExpressionId>>,
 }
 
 impl NodeStructuralIdentityRegistry {
     pub fn empty() -> Self {
         Self {
             name_expressions: Subregistry::new(),
+            expression_lists: Subregistry::new(),
         }
     }
 }
@@ -43,6 +46,37 @@ pub trait ComputeStructuralIdentity: Sized {
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> Self::Output;
+}
+
+impl ComputeStructuralIdentity for ListId<ExpressionId> {
+    type Output = StructuralId<Vec<ExpressionStructuralId>>;
+
+    fn get_structural_id(
+        self,
+        nreg: &NodeRegistry,
+        sreg: &mut NodeStructuralIdentityRegistry,
+    ) -> Self::Output {
+        StructuralId::new(Subregistry::<ListId<ExpressionId>>::get_structural_id(
+            self, nreg, sreg,
+        ))
+    }
+}
+
+impl ComputeStructuralIdentity for ExpressionId {
+    type Output = ExpressionStructuralId;
+
+    fn get_structural_id(
+        self,
+        nreg: &NodeRegistry,
+        sreg: &mut NodeStructuralIdentityRegistry,
+    ) -> Self::Output {
+        match self {
+            ExpressionId::Name(id) => ExpressionStructuralId::Name(StructuralId::new(
+                Subregistry::<NodeId<NameExpression>>::get_structural_id(id, nreg, sreg),
+            )),
+            _ => unimplemented!(),
+        }
+    }
 }
 
 impl ComputeStructuralIdentity for NodeId<NameExpression> {
@@ -122,6 +156,12 @@ mod subregistry {
         Self::Output: Clone + Debug,
     {
         fn get_subreg_mut(sreg: &mut NodeStructuralIdentityRegistry) -> &mut Subregistry<Self>;
+    }
+
+    impl GetSubregistryMut for ListId<ExpressionId> {
+        fn get_subreg_mut(sreg: &mut NodeStructuralIdentityRegistry) -> &mut Subregistry<Self> {
+            &mut sreg.expression_lists
+        }
     }
 
     impl GetSubregistryMut for NodeId<NameExpression> {

@@ -36,9 +36,9 @@ impl<T> std::hash::Hash for StructuralId<T> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ExpressionStructuralId {
-    Name(NodeId<NameExpression>),
-    Call(NodeId<Call>),
-    Fun(NodeId<Fun>),
-    Match(NodeId<Match>),
-    Forall(NodeId<Forall>),
+    Name(StructuralId<NameExpression>),
+    Call(StructuralId<Call>),
+    Fun(StructuralId<Fun>),
+    Match(StructuralId<Match>),
+    Forall(StructuralId<Forall>),
 }

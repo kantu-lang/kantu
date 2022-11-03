@@ -1,7 +1,9 @@
 use crate::data::{
-    node_structural_identity_registry::{stripped_ast::*, NodeStructuralIdentityRegistry},
+    node_structural_identity_registry::{
+        stripped_ast::*, ExpressionStructuralId, NodeStructuralIdentityRegistry,
+    },
     x_light_ast as nonstripped,
-    x_node_registry::{NodeId, NodeRegistry},
+    x_node_registry::{ExpressionId, ListId, NodeId, NodeRegistry},
 };
 
 pub trait Strip {
@@ -9,6 +11,28 @@ pub trait Strip {
 
     fn strip(&self, nreg: &NodeRegistry, sreg: &mut NodeStructuralIdentityRegistry)
         -> Self::Output;
+}
+
+impl Strip for ListId<ExpressionId> {
+    type Output = Vec<ExpressionStructuralId>;
+
+    fn strip(
+        &self,
+        nreg: &NodeRegistry,
+        sreg: &mut NodeStructuralIdentityRegistry,
+    ) -> Self::Output {
+        nreg.expression_list(*self)
+            .iter()
+            .map(|id| -> ExpressionStructuralId {
+                match *id {
+                    ExpressionId::Name(id) => {
+                        ExpressionStructuralId::Name(sreg.get_structural_id(id, nreg))
+                    }
+                    _ => unimplemented!(),
+                }
+            })
+            .collect()
+    }
 }
 
 impl Strip for NodeId<nonstripped::NameExpression> {
@@ -35,10 +59,9 @@ impl Strip for NodeId<nonstripped::Call> {
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> Self::Output {
         let call = nreg.call(*self);
-        // Call {
-        //     callee_id: sreg.get_structural_id(call.callee_id, nreg),
-        //     arg_list_id: sreg.get_structural_id(call.arg_list_id, nreg),
-        // }
-        unimplemented!()
+        Call {
+            callee_id: sreg.get_structural_id(call.callee_id, nreg),
+            arg_list_id: sreg.get_structural_id(call.arg_list_id, nreg),
+        }
     }
 }

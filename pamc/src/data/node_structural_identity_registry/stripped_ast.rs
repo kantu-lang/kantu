@@ -9,7 +9,7 @@ pub use crate::data::bound_ast::{DbIndex, DbLevel};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
-    pub callee_id: StructuralId<Call>,
+    pub callee_id: ExpressionStructuralId,
     pub arg_list_id: StructuralId<Vec<ExpressionStructuralId>>,
 }
 
