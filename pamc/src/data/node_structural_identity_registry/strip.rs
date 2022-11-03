@@ -16,11 +16,26 @@ impl Strip for nonstripped::NameExpression {
 
     fn strip(
         &self,
-        nreg: &NodeRegistry,
-        sreg: &mut NodeStructuralIdentityRegistry,
+        _nreg: &NodeRegistry,
+        _sreg: &mut NodeStructuralIdentityRegistry,
     ) -> Self::Output {
         NameExpression {
             db_index: self.db_index,
+        }
+    }
+}
+
+impl Strip for nonstripped::Call {
+    type Output = Call;
+
+    fn strip(
+        &self,
+        nreg: &NodeRegistry,
+        sreg: &mut NodeStructuralIdentityRegistry,
+    ) -> Self::Output {
+        Call {
+            callee_id: nreg.get_structural_id(self.callee_id, sreg),
+            arg_list_id: nreg.get_structural_id(self.arg_list_id, sreg),
         }
     }
 }

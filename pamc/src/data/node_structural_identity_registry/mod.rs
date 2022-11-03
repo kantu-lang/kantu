@@ -25,7 +25,7 @@ impl NodeStructuralIdentityRegistry {
 }
 
 impl NodeStructuralIdentityRegistry {
-    pub fn get_structural_id<T: ComputeStructuralIdentity>(
+    pub fn get_structural_id<T: ComputeStructuralIdentity<Output = StructuralId<T>>>(
         &mut self,
         id: NodeId<T>,
         registry: &NodeRegistry,
@@ -35,21 +35,41 @@ impl NodeStructuralIdentityRegistry {
 }
 
 pub trait ComputeStructuralIdentity: Sized {
+    type Output;
+
     fn get_structural_id(
         id: NodeId<Self>,
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
-    ) -> StructuralId<Self>;
+    ) -> Self::Output;
+}
+
+impl ComputeStructuralIdentity for ExpressionId {
+    type Output = ExpressionStructuralId;
+
+    fn get_structural_id(
+        id: NodeId<Self>,
+        nreg: &NodeRegistry,
+        sreg: &mut NodeStructuralIdentityRegistry,
+    ) -> ExpressionStructuralId {
+        Subregistry::<ExpressionStructuralId>::get_structural_id(
+            id,
+            nreg.name_expression(id),
+            nreg,
+            sreg,
+        )
+    }
 }
 
 impl ComputeStructuralIdentity for NameExpression {
+    type Output = StructuralId<Self>;
+
     fn get_structural_id(
         id: NodeId<Self>,
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> StructuralId<Self> {
-        sreg.name_expressions
-            .get_structural_id(id, nreg.name_expression(id), nreg, sreg)
+        Subregistry::<NameExpression>::get_structural_id(id, nreg.name_expression(id), nreg, sreg)
     }
 }
 
@@ -86,31 +106,44 @@ mod subregistry {
 
     impl<T> Subregistry<T>
     where
-        T: Strip,
+        T: Strip + GetSubregistryMut,
         T::Output: Clone + Debug,
         NodeId<T>: Eq,
     {
         pub fn get_structural_id(
-            &mut self,
             id: NodeId<T>,
             node: &T,
             nreg: &NodeRegistry,
             sreg: &mut NodeStructuralIdentityRegistry,
         ) -> StructuralId<T> {
-            if let Some(sid) = self.raw.get(&id) {
+            if let Some(sid) = T::get_subreg_mut(sreg).raw.get(&id) {
                 return *sid;
             }
 
             let stripped = node.strip(nreg, sreg);
 
-            if let Some(sid) = self.injective.get(&stripped) {
+            if let Some(sid) = T::get_subreg_mut(sreg).injective.get(&stripped) {
                 return *sid;
             }
 
-            let sid = StructuralId::<T>::new(self.injective.len());
-            self.injective.insert(stripped, sid);
+            let sid = StructuralId::<T>::new(T::get_subreg_mut(sreg).injective.len());
+            T::get_subreg_mut(sreg).injective.insert(stripped, sid);
 
             sid
+        }
+    }
+
+    pub trait GetSubregistryMut
+    where
+        Self: Sized + Strip,
+        Self::Output: Clone + Debug,
+    {
+        fn get_subreg_mut(sreg: &mut NodeStructuralIdentityRegistry) -> &mut Subregistry<Self>;
+    }
+
+    impl GetSubregistryMut for NameExpression {
+        fn get_subreg_mut(sreg: &mut NodeStructuralIdentityRegistry) -> &mut Subregistry<Self> {
+            &mut sreg.name_expressions
         }
     }
 }
