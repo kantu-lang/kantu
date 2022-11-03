@@ -9,9 +9,6 @@ use std::fmt::Debug;
 use remove_id::RemoveId;
 mod remove_id;
 
-// TODO: We need to seriously redesign this because
-// stripping is going to make debug messages inaccurate.
-
 // For example, if the first NameExpression with a
 // `db_index` of 0 will be the _only_ name expression to
 // be registered.
