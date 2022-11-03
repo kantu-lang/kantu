@@ -3,6 +3,8 @@ use crate::data::{
     x_node_registry::{NodeId, NodeRegistry},
 };
 
+use std::hash::Hash;
+
 mod id;
 pub use id::*;
 
@@ -13,7 +15,7 @@ mod stripped_ast;
 
 #[derive(Clone, Debug)]
 pub struct NodeStructuralIdentityRegistry {
-    name_expressions: Subregistry<NodeId<NameExpression>, StructuralId<NameExpression>>,
+    name_expressions: Subregistry<NodeId<NameExpression>>,
 }
 
 impl NodeStructuralIdentityRegistry {
@@ -25,12 +27,11 @@ impl NodeStructuralIdentityRegistry {
 }
 
 impl NodeStructuralIdentityRegistry {
-    pub fn get_structural_id<T: ComputeStructuralIdentity<Output = StructuralId<T>>>(
-        &mut self,
-        id: NodeId<T>,
-        registry: &NodeRegistry,
-    ) -> StructuralId<T> {
-        T::get_structural_id(id, registry, self)
+    pub fn get_structural_id<T>(&mut self, input: T, registry: &NodeRegistry) -> T::Output
+    where
+        T: ComputeStructuralIdentity,
+    {
+        T::get_structural_id(input, registry, self)
     }
 }
 
@@ -38,38 +39,22 @@ pub trait ComputeStructuralIdentity: Sized {
     type Output;
 
     fn get_structural_id(
-        id: NodeId<Self>,
+        self,
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> Self::Output;
 }
 
-impl ComputeStructuralIdentity for ExpressionId {
-    type Output = ExpressionStructuralId;
+impl ComputeStructuralIdentity for NodeId<NameExpression> {
+    type Output = StructuralId<NameExpression>;
 
     fn get_structural_id(
-        id: NodeId<Self>,
+        self,
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
-    ) -> ExpressionStructuralId {
-        Subregistry::<ExpressionId, ExpressionStructuralId>::get_structural_id(
-            id,
-            nreg.name_expression(id),
-            nreg,
-            sreg,
-        )
-    }
-}
-
-impl ComputeStructuralIdentity for NameExpression {
-    type Output = StructuralId<Self>;
-
-    fn get_structural_id(
-        id: NodeId<Self>,
-        nreg: &NodeRegistry,
-        sreg: &mut NodeStructuralIdentityRegistry,
-    ) -> StructuralId<Self> {
-        Subregistry::<NameExpression>::get_structural_id(id, nreg.name_expression(id), nreg, sreg)
+    ) -> Self::Output {
+        let raw = Subregistry::<NodeId<NameExpression>>::get_structural_id(self, nreg, sreg);
+        StructuralId::new(raw)
     }
 }
 
@@ -82,16 +67,16 @@ mod subregistry {
     use rustc_hash::FxHashMap;
 
     #[derive(Clone, Debug)]
-    pub struct Subregistry<Input, Output>
+    pub struct Subregistry<Input>
     where
         Input: Strip,
         Input::Output: Clone + Debug,
     {
-        injective: FxHashMap<Input::Output, Output>,
-        raw: FxHashMap<Input, Output>,
+        injective: FxHashMap<Input::Output, usize>,
+        raw: FxHashMap<Input, usize>,
     }
 
-    impl<Input, Output> Subregistry<Input, Output>
+    impl<Input> Subregistry<Input>
     where
         Input: Strip,
         Input::Output: Clone + Debug,
@@ -106,7 +91,7 @@ mod subregistry {
 
     impl<Input> Subregistry<Input>
     where
-        Input: Strip + GetSubregistryMut,
+        Input: Strip + GetSubregistryMut + Eq + Hash,
         Input::Output: Clone + Debug,
     {
         pub fn get_structural_id(
@@ -139,7 +124,7 @@ mod subregistry {
         fn get_subreg_mut(sreg: &mut NodeStructuralIdentityRegistry) -> &mut Subregistry<Self>;
     }
 
-    impl GetSubregistryMut for NameExpression {
+    impl GetSubregistryMut for NodeId<NameExpression> {
         fn get_subreg_mut(sreg: &mut NodeStructuralIdentityRegistry) -> &mut Subregistry<Self> {
             &mut sreg.name_expressions
         }

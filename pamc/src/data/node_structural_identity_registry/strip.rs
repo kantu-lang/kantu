@@ -35,9 +35,10 @@ impl Strip for NodeId<nonstripped::Call> {
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> Self::Output {
         let call = nreg.call(*self);
-        Call {
-            callee_id: sreg.get_structural_id(call.callee_id, nreg),
-            arg_list_id: sreg.get_structural_id(call.arg_list_id, nreg),
-        }
+        // Call {
+        //     callee_id: sreg.get_structural_id(call.callee_id, nreg),
+        //     arg_list_id: sreg.get_structural_id(call.arg_list_id, nreg),
+        // }
+        unimplemented!()
     }
 }
