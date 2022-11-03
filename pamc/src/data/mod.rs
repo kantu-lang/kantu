@@ -3,6 +3,7 @@ pub mod light_ast;
 pub mod node_free_variable_cache;
 pub mod node_hash_cache;
 pub mod node_registry;
+pub mod node_structural_identity_registry;
 pub mod simplified_ast;
 pub mod symbol_database;
 pub mod token;
