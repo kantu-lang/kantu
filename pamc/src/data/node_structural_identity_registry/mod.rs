@@ -13,7 +13,7 @@ mod stripped_ast;
 
 #[derive(Clone, Debug)]
 pub struct NodeStructuralIdentityRegistry {
-    name_expressions: Subregistry<NameExpression>,
+    name_expressions: Subregistry<NodeId<NameExpression>, StructuralId<NameExpression>>,
 }
 
 impl NodeStructuralIdentityRegistry {
@@ -52,7 +52,7 @@ impl ComputeStructuralIdentity for ExpressionId {
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> ExpressionStructuralId {
-        Subregistry::<ExpressionStructuralId>::get_structural_id(
+        Subregistry::<ExpressionId, ExpressionStructuralId>::get_structural_id(
             id,
             nreg.name_expression(id),
             nreg,
@@ -82,19 +82,19 @@ mod subregistry {
     use rustc_hash::FxHashMap;
 
     #[derive(Clone, Debug)]
-    pub struct Subregistry<T>
+    pub struct Subregistry<Input, Output>
     where
-        T: Strip,
-        T::Output: Clone + Debug,
+        Input: Strip,
+        Input::Output: Clone + Debug,
     {
-        injective: FxHashMap<T::Output, StructuralId<T>>,
-        raw: FxHashMap<NodeId<T>, StructuralId<T>>,
+        injective: FxHashMap<Input::Output, Output>,
+        raw: FxHashMap<Input, Output>,
     }
 
-    impl<T> Subregistry<T>
+    impl<Input, Output> Subregistry<Input, Output>
     where
-        T: Strip,
-        T::Output: Clone + Debug,
+        Input: Strip,
+        Input::Output: Clone + Debug,
     {
         pub fn new() -> Self {
             Self {
@@ -104,30 +104,28 @@ mod subregistry {
         }
     }
 
-    impl<T> Subregistry<T>
+    impl<Input> Subregistry<Input>
     where
-        T: Strip + GetSubregistryMut,
-        T::Output: Clone + Debug,
-        NodeId<T>: Eq,
+        Input: Strip + GetSubregistryMut,
+        Input::Output: Clone + Debug,
     {
         pub fn get_structural_id(
-            id: NodeId<T>,
-            node: &T,
+            input: Input,
             nreg: &NodeRegistry,
             sreg: &mut NodeStructuralIdentityRegistry,
-        ) -> StructuralId<T> {
-            if let Some(sid) = T::get_subreg_mut(sreg).raw.get(&id) {
+        ) -> usize {
+            if let Some(sid) = Input::get_subreg_mut(sreg).raw.get(&input) {
                 return *sid;
             }
 
-            let stripped = node.strip(nreg, sreg);
+            let stripped = input.strip(nreg, sreg);
 
-            if let Some(sid) = T::get_subreg_mut(sreg).injective.get(&stripped) {
+            if let Some(sid) = Input::get_subreg_mut(sreg).injective.get(&stripped) {
                 return *sid;
             }
 
-            let sid = StructuralId::<T>::new(T::get_subreg_mut(sreg).injective.len());
-            T::get_subreg_mut(sreg).injective.insert(stripped, sid);
+            let sid = Input::get_subreg_mut(sreg).injective.len();
+            Input::get_subreg_mut(sreg).injective.insert(stripped, sid);
 
             sid
         }
