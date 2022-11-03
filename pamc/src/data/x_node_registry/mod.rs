@@ -65,17 +65,14 @@ pub struct NodeRegistry {
     matches: Subregistry<Match>,
     match_cases: Subregistry<MatchCase>,
     foralls: Subregistry<Forall>,
-
-    // TODO: Make this a Subregistry.
-    identifiers: Vec<Identifier>,
+    identifiers: Subregistry<Identifier>,
 
     file_item_lists: ListSubregistry<FileItemNodeId>,
     param_lists: ListSubregistry<NodeId<Param>>,
     variant_lists: ListSubregistry<NodeId<Variant>>,
     match_case_lists: ListSubregistry<NodeId<MatchCase>>,
     expression_lists: ListSubregistry<ExpressionId>,
-
-    identifier_lists: Vec<NodeId<Identifier>>,
+    identifier_lists: ListSubregistry<NodeId<Identifier>>,
 }
 
 impl NodeRegistry {
@@ -92,16 +89,14 @@ impl NodeRegistry {
             matches: Subregistry::new(),
             match_cases: Subregistry::new(),
             foralls: Subregistry::new(),
-
-            identifiers: Vec::new(),
+            identifiers: Subregistry::new(),
 
             file_item_lists: ListSubregistry::new(),
             param_lists: ListSubregistry::new(),
             variant_lists: ListSubregistry::new(),
             match_case_lists: ListSubregistry::new(),
             expression_lists: ListSubregistry::new(),
-
-            identifier_lists: Vec::new(),
+            identifier_lists: ListSubregistry::new(),
         }
     }
 }
@@ -167,6 +162,13 @@ impl NodeRegistry {
     pub fn add_forall_and_overwrite_its_id(&mut self, forall: Forall) -> NodeId<Forall> {
         self.foralls.add_and_overwrite_id(forall)
     }
+
+    pub fn add_identifier_and_overwrite_its_id(
+        &mut self,
+        identifier: Identifier,
+    ) -> NodeId<Identifier> {
+        self.identifiers.add_and_overwrite_id(identifier)
+    }
 }
 
 impl NodeRegistry {
@@ -213,21 +215,9 @@ impl NodeRegistry {
     pub fn forall(&self, id: NodeId<Forall>) -> &Forall {
         self.foralls.get(id)
     }
-}
 
-impl NodeRegistry {
-    pub fn add_identifier_and_overwrite_its_id(
-        &mut self,
-        identifier: Identifier,
-    ) -> NodeId<Identifier> {
-        self.identifiers.push(identifier.clone());
-        NodeId::new(self.identifiers.len() - 1)
-    }
-}
-
-impl NodeRegistry {
     pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
-        &self.identifiers[id.raw]
+        &self.identifiers.get(id)
     }
 }
 
@@ -254,6 +244,13 @@ impl NodeRegistry {
     pub fn add_expression_list(&mut self, list: Vec<ExpressionId>) -> ListId<ExpressionId> {
         self.expression_lists.add(list)
     }
+
+    pub fn add_identifier_list(
+        &mut self,
+        list: Vec<NodeId<Identifier>>,
+    ) -> ListId<NodeId<Identifier>> {
+        self.identifier_lists.add(list)
+    }
 }
 
 impl NodeRegistry {
@@ -276,23 +273,9 @@ impl NodeRegistry {
     pub fn expression_list(&self, id: ListId<ExpressionId>) -> &[ExpressionId] {
         self.expression_lists.get(id)
     }
-}
 
-impl NodeRegistry {
-    pub fn add_identifier_list(
-        &mut self,
-        mut list: Vec<NodeId<Identifier>>,
-    ) -> ListId<NodeId<Identifier>> {
-        let id = ListId::<NodeId<Identifier>>::new(self.identifier_lists.len(), list.len());
-        self.identifier_lists.append(&mut list);
-        id
-    }
-}
-
-impl NodeRegistry {
     pub fn identifier_list(&self, id: ListId<NodeId<Identifier>>) -> &[NodeId<Identifier>] {
-        let end = id.start + id.len;
-        &self.identifier_lists[id.start..end]
+        self.identifier_lists.get(id)
     }
 }
 
