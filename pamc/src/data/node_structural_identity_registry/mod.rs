@@ -3,51 +3,24 @@ use crate::data::{
     x_node_registry::{NodeId, NodeRegistry},
 };
 
+mod id;
+pub use id::*;
+
+mod strip;
+use strip::Strip;
+
 mod stripped_ast;
-use stripped_ast::Strip;
-
-// TODO: Implement Debug, PartialEq, Eq for StructuralId<T>,
-// since #[derive] only works if T implements the respective traits.
-#[derive(Debug, PartialEq, Eq)]
-pub struct StructuralId<T> {
-    pub raw: usize,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-impl<T> StructuralId<T> {
-    pub fn new(raw: usize) -> Self {
-        Self {
-            raw,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T> Clone for StructuralId<T> {
-    fn clone(&self) -> StructuralId<T> {
-        StructuralId {
-            raw: self.raw,
-            _phantom: self._phantom,
-        }
-    }
-}
-
-impl<T> Copy for StructuralId<T> {}
-
-impl<T> std::hash::Hash for StructuralId<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.raw.hash(state);
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct NodeStructuralIdentityRegistry {
-    files: Subregistry<File>,
+    name_expressions: Subregistry<NameExpression>,
 }
 
 impl NodeStructuralIdentityRegistry {
     pub fn empty() -> Self {
-        Self {}
+        Self {
+            name_expressions: Subregistry::new(),
+        }
     }
 }
 
@@ -69,13 +42,14 @@ pub trait ComputeStructuralIdentity: Sized {
     ) -> StructuralId<Self>;
 }
 
-impl ComputeStructuralIdentity for File {
+impl ComputeStructuralIdentity for NameExpression {
     fn get_structural_id(
         id: NodeId<Self>,
         nreg: &NodeRegistry,
         sreg: &mut NodeStructuralIdentityRegistry,
     ) -> StructuralId<Self> {
-        sreg.files.get_structural_id(id, nreg, sreg)
+        sreg.name_expressions
+            .get_structural_id(id, nreg.name_expression(id), nreg, sreg)
     }
 }
 
@@ -94,6 +68,7 @@ mod subregistry {
         T::Output: Clone + Debug,
     {
         injective: FxHashMap<T::Output, StructuralId<T>>,
+        raw: FxHashMap<NodeId<T>, StructuralId<T>>,
     }
 
     impl<T> Subregistry<T>
@@ -117,11 +92,16 @@ mod subregistry {
     {
         pub fn get_structural_id(
             &mut self,
+            id: NodeId<T>,
             node: &T,
             nreg: &NodeRegistry,
             sreg: &mut NodeStructuralIdentityRegistry,
         ) -> StructuralId<T> {
-            let stripped = node.strip();
+            if let Some(sid) = self.raw.get(&id) {
+                return *sid;
+            }
+
+            let stripped = node.strip(nreg, sreg);
 
             if let Some(sid) = self.injective.get(&stripped) {
                 return *sid;
