@@ -219,7 +219,7 @@ fn get_type_of_call(
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let callee_type = registry.forall(callee_type_id);
+    let callee_type = registry.forall(callee_type_id).clone();
     // We use the params of the callee _type_ rather than the params of the
     // callee itself, since the callee type is a normal form, which guarantees
     // that its params are normal forms.
@@ -241,20 +241,43 @@ fn get_type_of_call(
         .zip(arg_type_ids.iter().copied())
         .enumerate()
     {
-        // TODO: Substitute the arg values into the param type, one-by-one.
-        let callee_type_param = registry.param(callee_type_param_id);
+        let substituted_param_type_id = {
+            let callee_type_param = registry.param(callee_type_param_id);
+            // This is safe because the param is the param of a normal
+            // form Forall node, which guarantees that its type is a
+            // normal form.
+            let unsubstituted = NormalFormId::unchecked_new(callee_type_param.type_id);
+            let substitutions: Vec<Substitution> =
+                arg_type_ids[..i]
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .map(|(j, arg_type_id)| {
+                        let db_index = DbIndex(i - j - 1);
+                        let param_name_id = registry.param(callee_type_param_ids[j]).name_id;
+                        Substitution::Single {
+                            from: NormalFormId::unchecked_new(ExpressionId::Name(
+                                add_name_expression(registry, vec![param_name_id], db_index),
+                            )),
+                            to: arg_type_id.upshift(i, registry),
+                        }
+                    })
+                    .collect();
+            let substituted = unsubstituted
+                .raw()
+                .subst_all(&substitutions, registry)
+                .downshift(i, registry);
+            evaluate_well_typed_expression(context, registry, substituted)
+        };
         if !is_left_type_assignable_to_right_type(
             context,
             registry,
             arg_type_id,
-            // This is safe because the param is the param of a normal
-            // form Forall node, which guarantees that its type is a
-            // normal form.
-            NormalFormId::unchecked_new(callee_type_param.type_id),
+            substituted_param_type_id,
         ) {
             return Err(TypeCheckError::TypeMismatch {
                 expression_id: arg_ids[i],
-                expected_type_id: NormalFormId::unchecked_new(callee_type_param.type_id),
+                expected_type_id: substituted_param_type_id,
                 actual_type_id: arg_type_id,
             });
         }
