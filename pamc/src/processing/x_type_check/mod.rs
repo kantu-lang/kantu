@@ -1,4 +1,5 @@
 use crate::data::{
+    node_equality_checker::NodeEqualityChecker,
     x_light_ast::*,
     x_node_registry::{ListId, NodeId, NodeRegistry},
 };
@@ -53,4 +54,11 @@ pub enum TypeCheckError {
     AmbiguousOutputType {
         case_id: NodeId<MatchCase>,
     },
+}
+
+#[derive(Debug)]
+struct State<'a> {
+    context: &'a mut Context,
+    registry: &'a mut NodeRegistry,
+    equality_checker: &'a mut NodeEqualityChecker,
 }

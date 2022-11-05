@@ -15,15 +15,15 @@ impl NormalFormId {
     }
 }
 
-pub fn type0_expression(context: &Context, registry: &mut NodeRegistry) -> NormalFormId {
+pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
     let name_id = add_name_expression_and_overwrite_component_ids(
-        registry,
+        state.registry,
         vec![Identifier {
             id: dummy_id(),
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
             start: None,
         }],
-        context.type0_dbi(),
+        state.context.type0_dbi(),
     );
     NormalFormId::unchecked_new(ExpressionId::Name(name_id))
 }
@@ -73,23 +73,18 @@ impl Forall {
     }
 }
 
-pub fn is_term_equal_to_type0_or_type1(
-    context: &Context,
-    registry: &NodeRegistry,
-    term: NormalFormId,
-) -> bool {
+pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId) -> bool {
     if let ExpressionId::Name(name_id) = term.raw() {
-        let name = registry.name_expression(name_id);
+        let name = state.registry.name_expression(name_id);
         let i = name.db_index;
-        i == context.type0_dbi() || i == context.type1_dbi()
+        i == state.context.type0_dbi() || i == state.context.type1_dbi()
     } else {
         false
     }
 }
 
-pub fn is_left_type_assignable_to_right_type(
-    _context: &Context,
-    _registry: &NodeRegistry,
+pub(super) fn is_left_type_assignable_to_right_type(
+    _state: &mut State,
     _left: NormalFormId,
     _right: NormalFormId,
 ) -> bool {
@@ -112,42 +107,40 @@ impl<T> SafeUnwrap<T> for Result<T, Infallible> {
     }
 }
 
-pub fn normalize_params(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
+pub(super) fn normalize_params(
+    state: &mut State,
     param_list_id: ListId<NodeId<Param>>,
 ) -> Result<ListId<NodeId<Param>>, TypeCheckError> {
-    let normalized_list_id =
-        normalize_params_and_leave_params_in_context(context, registry, param_list_id)?;
-    context.pop_n(param_list_id.len);
+    let normalized_list_id = normalize_params_and_leave_params_in_context(state, param_list_id)?;
+    state.context.pop_n(param_list_id.len);
     Ok(normalized_list_id)
 }
 
-pub fn normalize_params_and_leave_params_in_context(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
+pub(super) fn normalize_params_and_leave_params_in_context(
+    state: &mut State,
     param_list_id: ListId<NodeId<Param>>,
 ) -> Result<ListId<NodeId<Param>>, TypeCheckError> {
-    let param_ids = registry.param_list(param_list_id).to_vec();
+    let param_ids = state.registry.param_list(param_list_id).to_vec();
     let normalized_ids = param_ids
         .iter()
         .copied()
         .map(|param_id| {
-            type_check_param(context, registry, param_id)?;
-            let type_id: ExpressionId = context.get_type(DbIndex(0), registry).raw();
-            let old_param = registry.param(param_id);
+            type_check_param(state, param_id)?;
+            let type_id: ExpressionId = state.context.get_type(DbIndex(0), state.registry).raw();
+            let old_param = state.registry.param(param_id);
             let normalized_param_with_dummy_id = Param {
                 id: dummy_id(),
                 is_dashed: old_param.is_dashed,
                 name_id: old_param.name_id,
                 type_id,
             };
-            let normalized_id =
-                registry.add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
+            let normalized_id = state
+                .registry
+                .add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
             Ok(normalized_id)
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(registry.add_param_list(normalized_ids))
+    Ok(state.registry.add_param_list(normalized_ids))
 }
 
 pub fn verify_variant_to_case_bijection(
@@ -237,39 +230,99 @@ fn verify_that_every_case_has_a_variant(
     Ok(())
 }
 
-pub fn get_db_index_for_adt_variant_of_name(
-    context: &Context,
-    registry: &mut NodeRegistry,
+pub(super) fn get_db_index_for_adt_variant_of_name(
+    state: &mut State,
     adt_expression: AdtExpression,
     target_variant_name_id: NodeId<Identifier>,
 ) -> DbIndex {
-    let type_dbi = registry
+    let type_dbi = state
+        .registry
         .name_expression(adt_expression.type_name_id)
         .db_index;
-    let variant_name_list_id = match context.get_definition(type_dbi, registry) {
+    let variant_name_list_id = match state.context.get_definition(type_dbi, state.registry) {
         ContextEntryDefinition::Adt {
             variant_name_list_id,
         } => variant_name_list_id,
         _ => panic!("An ADT's NameExpression should always point to an ADT definition"),
     };
 
-    let target_variant_name = &registry.identifier(target_variant_name_id).name;
-    let variant_index = registry
+    let target_variant_name = &state.registry.identifier(target_variant_name_id).name;
+    let variant_index = state
+        .registry
         .identifier_list(variant_name_list_id)
         .iter()
         .position(|&variant_name_id| {
-            let variant_name = &registry.identifier(variant_name_id).name;
+            let variant_name = &state.registry.identifier(variant_name_id).name;
             variant_name == target_variant_name
         })
         .expect("The target variant name should always be found in the ADT's variant name list");
     DbIndex(type_dbi.0 + 1 + variant_index)
 }
 
-pub fn fuse_left_to_right(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
+pub(super) fn fuse_left_to_right(
+    _state: &mut State,
     _left: NormalFormId,
     _right: NormalFormId,
 ) -> Vec<Substitution> {
     unimplemented!()
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PossibleArgListId {
+    Nullary,
+    Some(ListId<ExpressionId>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdtExpression {
+    pub type_name_id: NodeId<NameExpression>,
+    pub variant_name_list_id: ListId<NodeId<Identifier>>,
+    pub arg_list_id: PossibleArgListId,
+}
+
+/// If the provided expression is has a variant at
+/// the top level,this returns IDs for the variant name
+/// and the variant's argument list.
+/// Otherwise, returns `None`.
+pub(super) fn try_as_adt_expression(
+    state: &mut State,
+    expression_id: NormalFormId,
+) -> Option<AdtExpression> {
+    match expression_id.raw() {
+        ExpressionId::Name(name_id) => {
+            let db_index = state.registry.name_expression(name_id).db_index;
+            let definition = state.context.get_definition(db_index, state.registry);
+            match definition {
+                ContextEntryDefinition::Adt {
+                    variant_name_list_id,
+                } => Some(AdtExpression {
+                    type_name_id: name_id,
+                    variant_name_list_id,
+                    arg_list_id: PossibleArgListId::Nullary,
+                }),
+                _ => None,
+            }
+        }
+        ExpressionId::Call(call_id) => {
+            let call = state.registry.call(call_id).clone();
+            match call.callee_id {
+                ExpressionId::Name(name_id) => {
+                    let db_index = state.registry.name_expression(name_id).db_index;
+                    let definition = state.context.get_definition(db_index, state.registry);
+                    match definition {
+                        ContextEntryDefinition::Adt {
+                            variant_name_list_id,
+                        } => Some(AdtExpression {
+                            type_name_id: name_id,
+                            variant_name_list_id: variant_name_list_id,
+                            arg_list_id: PossibleArgListId::Some(call.arg_list_id),
+                        }),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
 }

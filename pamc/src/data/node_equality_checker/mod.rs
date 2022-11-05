@@ -19,7 +19,7 @@ use stripped_ast as stripped;
 pub struct NodeEqualityChecker(StrippedRegistry);
 
 impl NodeEqualityChecker {
-    pub fn empty() -> Self {
+    pub fn new() -> Self {
         Self(StrippedRegistry::empty())
     }
 }
