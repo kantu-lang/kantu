@@ -429,13 +429,13 @@ fn get_type_of_match_case(
     };
     let state = &mut state;
 
-    let substituted_coercion_target_id = shifted_coercion_target_id.map(|coercion_target_id| {
-        coercion_target_id
-            .raw()
-            .subst_all(&substitutions, state.registry)
-    });
-    let normalized_substituted_coercion_target_id = substituted_coercion_target_id
-        .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
+    let normalized_substituted_coercion_target_id =
+        shifted_coercion_target_id.map(|coercion_target_id| {
+            let shifted = coercion_target_id
+                .raw()
+                .subst_all(&substitutions, state.registry);
+            evaluate_well_typed_expression(state, shifted)
+        });
     let output_type_id = get_type_of_expression(
         state,
         normalized_substituted_coercion_target_id,
@@ -455,7 +455,7 @@ fn get_type_of_match_case(
     original_context.pop_n(case_arity);
 
     if can_be_coerced {
-        Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is some"))
+        Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
     } else {
         match output_type_id.try_downshift(case_arity, state.registry) {
             Ok(shifted_output_type_id) => Ok(shifted_output_type_id),
