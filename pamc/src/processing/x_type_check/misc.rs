@@ -288,6 +288,9 @@ pub(super) fn fuse_left_to_right(
     left: NormalFormId,
     right: NormalFormId,
 ) -> Fusion {
+    // TODO: Make sure we're not putting any
+    // non-uninterpreted types on a substitution LHS.
+
     if state
         .equality_checker
         .eq(left.raw(), right.raw(), state.registry)
