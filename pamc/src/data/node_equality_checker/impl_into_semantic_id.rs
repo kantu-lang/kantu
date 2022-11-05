@@ -2,8 +2,7 @@ use super::*;
 
 use std::iter::FromIterator;
 
-impl IntoSemanticId for ListId<ExpressionId> {
-    type Output = SemanticId<Vec<ExpressionSemanticId>>;
+impl GetIndexInSubregistry for ListId<ExpressionId> {
     type Stripped = Vec<ExpressionSemanticId>;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -15,9 +14,12 @@ impl IntoSemanticId for ListId<ExpressionId> {
             .expression_list(self)
             .iter()
             .copied()
-            .map(|id| expression_id_to_expression_semantic_id(id, registry, sreg))
+            .map(|id| id.into_semantic_id(registry, sreg))
             .collect()
     }
+}
+impl IntoSemanticId for ListId<ExpressionId> {
+    type Output = SemanticId<Vec<ExpressionSemanticId>>;
 
     fn into_semantic_id(
         self,
@@ -29,18 +31,28 @@ impl IntoSemanticId for ListId<ExpressionId> {
     }
 }
 
-fn expression_id_to_expression_semantic_id(
-    id: ExpressionId,
-    registry: &NodeRegistry,
-    sreg: &mut StrippedRegistry,
-) -> ExpressionSemanticId {
-    match id {
-        ExpressionId::Name(id) => ExpressionSemanticId::Name(id.into_semantic_id(registry, sreg)),
-        ExpressionId::Call(id) => ExpressionSemanticId::Call(id.into_semantic_id(registry, sreg)),
-        ExpressionId::Fun(id) => ExpressionSemanticId::Fun(id.into_semantic_id(registry, sreg)),
-        ExpressionId::Match(id) => ExpressionSemanticId::Match(id.into_semantic_id(registry, sreg)),
-        ExpressionId::Forall(id) => {
-            ExpressionSemanticId::Forall(id.into_semantic_id(registry, sreg))
+impl IntoSemanticId for ExpressionId {
+    type Output = ExpressionSemanticId;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        match self {
+            ExpressionId::Name(id) => {
+                ExpressionSemanticId::Name(id.into_semantic_id(registry, sreg))
+            }
+            ExpressionId::Call(id) => {
+                ExpressionSemanticId::Call(id.into_semantic_id(registry, sreg))
+            }
+            ExpressionId::Fun(id) => ExpressionSemanticId::Fun(id.into_semantic_id(registry, sreg)),
+            ExpressionId::Match(id) => {
+                ExpressionSemanticId::Match(id.into_semantic_id(registry, sreg))
+            }
+            ExpressionId::Forall(id) => {
+                ExpressionSemanticId::Forall(id.into_semantic_id(registry, sreg))
+            }
         }
     }
 }
@@ -54,7 +66,7 @@ fn expression_ids_to_expression_vec_semantic_id(
     let stripped = ids
         .iter()
         .copied()
-        .map(|id| expression_id_to_expression_semantic_id(id, registry, sreg))
+        .map(|id| id.into_semantic_id(registry, sreg))
         .collect();
     get_semantic_id_of_expression_vec(stripped, sreg)
 }
@@ -72,8 +84,7 @@ fn get_semantic_id_of_expression_vec(
     SemanticId::new(new_raw)
 }
 
-impl IntoSemanticId for NodeId<NameExpression> {
-    type Output = SemanticId<stripped::NameExpression>;
+impl GetIndexInSubregistry for NodeId<NameExpression> {
     type Stripped = stripped::NameExpression;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -86,6 +97,9 @@ impl IntoSemanticId for NodeId<NameExpression> {
             db_index: name.db_index,
         }
     }
+}
+impl IntoSemanticId for NodeId<NameExpression> {
+    type Output = SemanticId<stripped::NameExpression>;
 
     fn into_semantic_id(
         self,
@@ -97,8 +111,7 @@ impl IntoSemanticId for NodeId<NameExpression> {
     }
 }
 
-impl IntoSemanticId for NodeId<Call> {
-    type Output = SemanticId<stripped::Call>;
+impl GetIndexInSubregistry for NodeId<Call> {
     type Stripped = stripped::Call;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -108,10 +121,13 @@ impl IntoSemanticId for NodeId<Call> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let call = registry.call(self);
         stripped::Call {
-            callee_id: expression_id_to_expression_semantic_id(call.callee_id, registry, sreg),
+            callee_id: call.callee_id.into_semantic_id(registry, sreg),
             arg_list_id: call.arg_list_id.into_semantic_id(registry, sreg),
         }
     }
+}
+impl IntoSemanticId for NodeId<Call> {
+    type Output = SemanticId<stripped::Call>;
 
     fn into_semantic_id(
         self,
@@ -123,8 +139,7 @@ impl IntoSemanticId for NodeId<Call> {
     }
 }
 
-impl IntoSemanticId for NodeId<Fun> {
-    type Output = SemanticId<stripped::Fun>;
+impl GetIndexInSubregistry for NodeId<Fun> {
     type Stripped = stripped::Fun;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -152,14 +167,13 @@ impl IntoSemanticId for NodeId<Fun> {
                     let param = registry.param(*param_id);
                     param.is_dashed
                 }),
-            return_type_id: expression_id_to_expression_semantic_id(
-                fun.return_type_id,
-                registry,
-                sreg,
-            ),
-            body_id: expression_id_to_expression_semantic_id(fun.body_id, registry, sreg),
+            return_type_id: fun.return_type_id.into_semantic_id(registry, sreg),
+            body_id: fun.body_id.into_semantic_id(registry, sreg),
         }
     }
+}
+impl IntoSemanticId for NodeId<Fun> {
+    type Output = SemanticId<stripped::Fun>;
 
     fn into_semantic_id(
         self,
@@ -171,8 +185,7 @@ impl IntoSemanticId for NodeId<Fun> {
     }
 }
 
-impl IntoSemanticId for NodeId<Match> {
-    type Output = SemanticId<stripped::Match>;
+impl GetIndexInSubregistry for NodeId<Match> {
     type Stripped = stripped::Match;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -182,10 +195,13 @@ impl IntoSemanticId for NodeId<Match> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let match_ = registry.match_(self);
         stripped::Match {
-            matchee_id: expression_id_to_expression_semantic_id(match_.matchee_id, registry, sreg),
+            matchee_id: match_.matchee_id.into_semantic_id(registry, sreg),
             case_list_id: match_.case_list_id.into_semantic_id(registry, sreg),
         }
     }
+}
+impl IntoSemanticId for NodeId<Match> {
+    type Output = SemanticId<stripped::Match>;
 
     fn into_semantic_id(
         self,
@@ -197,8 +213,7 @@ impl IntoSemanticId for NodeId<Match> {
     }
 }
 
-impl IntoSemanticId for ListId<NodeId<MatchCase>> {
-    type Output = SemanticId<stripped::Set<SemanticId<stripped::MatchCase>>>;
+impl GetIndexInSubregistry for ListId<NodeId<MatchCase>> {
     type Stripped = MatchCaseSemanticIdSet;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -212,6 +227,9 @@ impl IntoSemanticId for ListId<NodeId<MatchCase>> {
             .map(|case_id| case_id.into_semantic_id(registry, sreg))
             .collect()
     }
+}
+impl IntoSemanticId for ListId<NodeId<MatchCase>> {
+    type Output = SemanticId<stripped::Set<SemanticId<stripped::MatchCase>>>;
 
     fn into_semantic_id(
         self,
@@ -239,8 +257,7 @@ impl FromIterator<SemanticId<stripped::MatchCase>> for MatchCaseSemanticIdSet {
     }
 }
 
-impl IntoSemanticId for NodeId<MatchCase> {
-    type Output = SemanticId<stripped::MatchCase>;
+impl GetIndexInSubregistry for NodeId<MatchCase> {
     type Stripped = stripped::MatchCase;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -251,9 +268,12 @@ impl IntoSemanticId for NodeId<MatchCase> {
         let case = registry.match_case(self);
         stripped::MatchCase {
             variant_name_id: case.variant_name_id.into_semantic_id(registry, sreg),
-            output_id: expression_id_to_expression_semantic_id(case.output_id, registry, sreg),
+            output_id: case.output_id.into_semantic_id(registry, sreg),
         }
     }
+}
+impl IntoSemanticId for NodeId<MatchCase> {
+    type Output = SemanticId<stripped::MatchCase>;
 
     fn into_semantic_id(
         self,
@@ -265,8 +285,7 @@ impl IntoSemanticId for NodeId<MatchCase> {
     }
 }
 
-impl IntoSemanticId for NodeId<Identifier> {
-    type Output = SemanticId<stripped::IdentifierName>;
+impl GetIndexInSubregistry for NodeId<Identifier> {
     type Stripped = stripped::IdentifierName;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -276,6 +295,9 @@ impl IntoSemanticId for NodeId<Identifier> {
     fn strip(self, registry: &NodeRegistry, _sreg: &mut StrippedRegistry) -> Self::Stripped {
         registry.identifier(self).name.clone()
     }
+}
+impl IntoSemanticId for NodeId<Identifier> {
+    type Output = SemanticId<stripped::IdentifierName>;
 
     fn into_semantic_id(
         self,
@@ -287,8 +309,7 @@ impl IntoSemanticId for NodeId<Identifier> {
     }
 }
 
-impl IntoSemanticId for NodeId<Forall> {
-    type Output = SemanticId<stripped::Forall>;
+impl GetIndexInSubregistry for NodeId<Forall> {
     type Stripped = stripped::Forall;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -309,9 +330,12 @@ impl IntoSemanticId for NodeId<Forall> {
                 registry,
                 sreg,
             ),
-            output_id: expression_id_to_expression_semantic_id(forall.output_id, registry, sreg),
+            output_id: forall.output_id.into_semantic_id(registry, sreg),
         }
     }
+}
+impl IntoSemanticId for NodeId<Forall> {
+    type Output = SemanticId<stripped::Forall>;
 
     fn into_semantic_id(
         self,

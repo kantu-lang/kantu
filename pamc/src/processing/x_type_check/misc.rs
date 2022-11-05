@@ -84,11 +84,22 @@ pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId)
 }
 
 pub(super) fn is_left_type_assignable_to_right_type(
-    _state: &mut State,
-    _left: NormalFormId,
-    _right: NormalFormId,
+    state: &mut State,
+    left: NormalFormId,
+    right: NormalFormId,
 ) -> bool {
-    unimplemented!()
+    is_term_equal_to_an_empty_type(state, left)
+        || state
+            .equality_checker
+            .eq(left.raw(), right.raw(), state.registry)
+}
+
+fn is_term_equal_to_an_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
+    if let Some(adt) = try_as_adt_expression(state, term_id) {
+        adt.variant_name_list_id.len == 0
+    } else {
+        false
+    }
 }
 
 pub use std::convert::Infallible;
@@ -280,9 +291,8 @@ pub struct AdtExpression {
     pub arg_list_id: PossibleArgListId,
 }
 
-/// If the provided expression is has a variant at
-/// the top level,this returns IDs for the variant name
-/// and the variant's argument list.
+/// If the provided expression is has an ADT constructor at
+/// the top level, this returns the appropriate `AdtExpression`.
 /// Otherwise, returns `None`.
 pub(super) fn try_as_adt_expression(
     state: &mut State,

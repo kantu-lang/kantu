@@ -35,14 +35,17 @@ impl NodeEqualityChecker {
 
 pub trait IntoSemanticId: Copy + Eq + Hash {
     type Output: Eq + Hash;
+
+    fn into_semantic_id(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry)
+        -> Self::Output;
+}
+
+pub trait GetIndexInSubregistry: Copy + Eq + Hash {
     type Stripped: Eq + Hash;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self>;
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped;
-
-    fn into_semantic_id(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry)
-        -> Self::Output;
 
     fn get_index_in_subregistry(
         self,
@@ -104,17 +107,17 @@ impl StrippedRegistry {
 }
 
 #[derive(Clone, Debug)]
-pub struct Subregistry<Input>
+pub struct Subregistry<I>
 where
-    Input: IntoSemanticId,
+    I: GetIndexInSubregistry,
 {
-    injective: FxHashMap<Input::Stripped, usize>,
-    raw: FxHashMap<Input, usize>,
+    injective: FxHashMap<I::Stripped, usize>,
+    raw: FxHashMap<I, usize>,
 }
 
-impl<Input> Subregistry<Input>
+impl<I> Subregistry<I>
 where
-    Input: IntoSemanticId,
+    I: GetIndexInSubregistry,
 {
     fn empty() -> Self {
         Self {
