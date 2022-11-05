@@ -270,12 +270,201 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
     DbIndex(type_dbi.0 + 1 + variant_index)
 }
 
+#[derive(Clone, Debug)]
+pub struct Fusion {
+    pub has_exploded: bool,
+    pub substitutions: Vec<Substitution>,
+}
+
+impl std::ops::AddAssign<Fusion> for Fusion {
+    fn add_assign(&mut self, rhs: Fusion) {
+        self.has_exploded |= rhs.has_exploded;
+        self.substitutions.extend(rhs.substitutions);
+    }
+}
+
 pub(super) fn fuse_left_to_right(
-    _state: &mut State,
-    _left: NormalFormId,
-    _right: NormalFormId,
-) -> Vec<Substitution> {
-    unimplemented!()
+    state: &mut State,
+    left: NormalFormId,
+    right: NormalFormId,
+) -> Fusion {
+    if state
+        .equality_checker
+        .eq(left.raw(), right.raw(), state.registry)
+    {
+        return Fusion {
+            has_exploded: false,
+            substitutions: vec![],
+        };
+    }
+
+    if is_left_inclusive_subterm_of_right(state, left.raw(), right.raw()) {
+        return Fusion {
+            has_exploded: false,
+            substitutions: vec![Substitution::Repeated {
+                from: right,
+                to: left,
+            }],
+        };
+    }
+
+    if is_left_inclusive_subterm_of_right(state, right.raw(), left.raw()) {
+        return Fusion {
+            has_exploded: false,
+            substitutions: vec![Substitution::Repeated {
+                from: left,
+                to: right,
+            }],
+        };
+    }
+
+    if let (Some(left_ve), Some(right_ve)) = (
+        try_as_variant_expression(state, left),
+        try_as_variant_expression(state, right),
+    ) {
+        let left_name: &IdentifierName = &state.registry.identifier(left_ve.0).name;
+        let right_name: &IdentifierName = &state.registry.identifier(right_ve.0).name;
+        if left_name == right_name {
+            match (left_ve.1, right_ve.1) {
+                (
+                    PossibleArgListId::Some(left_arg_list_id),
+                    PossibleArgListId::Some(right_arg_list_id),
+                ) => {
+                    let mut out = Fusion {
+                        has_exploded: false,
+                        substitutions: vec![Substitution::Single {
+                            from: left,
+                            to: right,
+                        }],
+                    };
+                    let left_arg_ids = state.registry.expression_list(left_arg_list_id).to_vec();
+                    let right_arg_ids = state.registry.expression_list(right_arg_list_id).to_vec();
+
+                    for (left_arg_id, right_arg_id) in left_arg_ids
+                        .iter()
+                        .copied()
+                        .zip(right_arg_ids.iter().copied())
+                    {
+                        out += fuse_left_to_right(
+                            state,
+                            // This is safe because an arg to a normal
+                            // form Call node is always a normal form itself.
+                            NormalFormId::unchecked_new(left_arg_id),
+                            NormalFormId::unchecked_new(right_arg_id),
+                        );
+                    }
+                    out
+                }
+                (PossibleArgListId::Nullary, PossibleArgListId::Nullary) => Fusion {
+                    has_exploded: false,
+                    substitutions: vec![],
+                },
+                other => panic!("Invalid fusion: {:?}", other),
+            }
+        } else {
+            Fusion {
+                has_exploded: true,
+                substitutions: vec![],
+            }
+        }
+    } else {
+        Fusion {
+            has_exploded: false,
+            substitutions: vec![Substitution::Single {
+                from: left,
+                to: right,
+            }],
+        }
+    }
+}
+
+fn is_left_inclusive_subterm_of_right(
+    state: &mut State,
+    left: ExpressionId,
+    right: ExpressionId,
+) -> bool {
+    if state.equality_checker.eq(left, right, state.registry) {
+        return true;
+    }
+
+    match right {
+        ExpressionId::Name(_) => {
+            // This must be false because we already checked for equality.
+            false
+        }
+        ExpressionId::Call(right_id) => {
+            let right = state.registry.call(right_id).clone();
+
+            if is_left_inclusive_subterm_of_right(state, left, right.callee_id) {
+                return true;
+            }
+
+            let right_arg_ids = state.registry.expression_list(right.arg_list_id).to_vec();
+            if right_arg_ids
+                .iter()
+                .any(|&right_arg_id| is_left_inclusive_subterm_of_right(state, left, right_arg_id))
+            {
+                return true;
+            }
+
+            false
+        }
+        ExpressionId::Fun(right_id) => {
+            let right = state.registry.fun(right_id).clone();
+
+            let right_param_ids = state.registry.param_list(right.param_list_id).to_vec();
+            if right_param_ids.iter().any(|&right_param_id| {
+                let right_param_type_id = state.registry.param(right_param_id).type_id;
+                is_left_inclusive_subterm_of_right(state, left, right_param_type_id)
+            }) {
+                return true;
+            }
+
+            if is_left_inclusive_subterm_of_right(state, left, right.return_type_id) {
+                return true;
+            }
+
+            if is_left_inclusive_subterm_of_right(state, left, right.body_id) {
+                return true;
+            }
+
+            false
+        }
+        ExpressionId::Match(right_id) => {
+            let right = state.registry.match_(right_id).clone();
+
+            if is_left_inclusive_subterm_of_right(state, left, right.matchee_id) {
+                return true;
+            }
+
+            let right_case_ids = state.registry.match_case_list(right.case_list_id).to_vec();
+            if right_case_ids.iter().any(|&right_case_id| {
+                let right_case_output_id = state.registry.match_case(right_case_id).output_id;
+                is_left_inclusive_subterm_of_right(state, left, right_case_output_id)
+            }) {
+                return true;
+            }
+
+            false
+        }
+        ExpressionId::Forall(right_id) => {
+            let right = state.registry.forall(right_id).clone();
+
+            let right_param_ids = state.registry.param_list(right.param_list_id).to_vec();
+            if right_param_ids.iter().any(|&right_param_id| {
+                let right_param_type_id = state.registry.param(right_param_id).type_id;
+                is_left_inclusive_subterm_of_right(state, left, right_param_type_id)
+            }) {
+                return true;
+            }
+
+            if is_left_inclusive_subterm_of_right(state, left, right.output_id) {
+                return true;
+            }
+
+            false
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -327,6 +516,45 @@ pub(super) fn try_as_adt_expression(
                             variant_name_list_id: variant_name_list_id,
                             arg_list_id: PossibleArgListId::Some(call.arg_list_id),
                         }),
+                        _ => None,
+                    }
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    }
+}
+
+/// If the provided expression is has a variant at
+/// the top level,this returns IDs for the variant name
+/// and the variant's argument list.
+/// Otherwise, returns `None`.
+pub(super) fn try_as_variant_expression(
+    state: &mut State,
+    expression_id: NormalFormId,
+) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
+    match expression_id.raw() {
+        ExpressionId::Name(name_id) => {
+            let db_index = state.registry.name_expression(name_id).db_index;
+            let definition = state.context.get_definition(db_index, state.registry);
+            match definition {
+                ContextEntryDefinition::Variant { name_id } => {
+                    Some((name_id, PossibleArgListId::Nullary))
+                }
+                _ => None,
+            }
+        }
+        ExpressionId::Call(call_id) => {
+            let call = state.registry.call(call_id).clone();
+            match call.callee_id {
+                ExpressionId::Name(name_id) => {
+                    let db_index = state.registry.name_expression(name_id).db_index;
+                    let definition = state.context.get_definition(db_index, state.registry);
+                    match definition {
+                        ContextEntryDefinition::Variant { name_id } => {
+                            Some((name_id, PossibleArgListId::Some(call.arg_list_id)))
+                        }
                         _ => None,
                     }
                 }

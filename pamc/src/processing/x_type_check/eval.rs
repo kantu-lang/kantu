@@ -253,45 +253,6 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
     }
 }
 
-/// If the provided expression is has a variant at
-/// the top level,this returns IDs for the variant name
-/// and the variant's argument list.
-/// Otherwise, returns `None`.
-fn try_as_variant_expression(
-    state: &mut State,
-    expression_id: NormalFormId,
-) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
-    match expression_id.raw() {
-        ExpressionId::Name(name_id) => {
-            let db_index = state.registry.name_expression(name_id).db_index;
-            let definition = state.context.get_definition(db_index, state.registry);
-            match definition {
-                ContextEntryDefinition::Variant { name_id } => {
-                    Some((name_id, PossibleArgListId::Nullary))
-                }
-                _ => None,
-            }
-        }
-        ExpressionId::Call(call_id) => {
-            let call = state.registry.call(call_id).clone();
-            match call.callee_id {
-                ExpressionId::Name(name_id) => {
-                    let db_index = state.registry.name_expression(name_id).db_index;
-                    let definition = state.context.get_definition(db_index, state.registry);
-                    match definition {
-                        ContextEntryDefinition::Variant { name_id } => {
-                            Some((name_id, PossibleArgListId::Some(call.arg_list_id)))
-                        }
-                        _ => None,
-                    }
-                }
-                _ => None,
-            }
-        }
-        _ => None,
-    }
-}
-
 fn evaluate_well_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> NormalFormId {
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id =

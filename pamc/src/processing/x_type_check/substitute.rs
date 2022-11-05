@@ -6,6 +6,10 @@ pub enum Substitution {
         from: NormalFormId,
         to: NormalFormId,
     },
+    Repeated {
+        from: NormalFormId,
+        to: NormalFormId,
+    },
 }
 
 pub trait Substitute {
