@@ -282,8 +282,34 @@ fn get_type_of_call(
             });
         }
     }
-    // TODO: Substitute arg values into output type
-    Ok(NormalFormId::unchecked_new(callee_type.output_id))
+
+    let substituted_output_id = {
+        let unsubstituted = NormalFormId::unchecked_new(callee_type.output_id);
+        let arity = callee_type_param_ids.len();
+        let substitutions: Vec<Substitution> = arg_type_ids
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(j, arg_type_id)| {
+                let db_index = DbIndex(arity - j - 1);
+                let param_name_id = registry.param(callee_type_param_ids[j]).name_id;
+                Substitution::Single {
+                    from: NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                        registry,
+                        vec![param_name_id],
+                        db_index,
+                    ))),
+                    to: arg_type_id.upshift(arity, registry),
+                }
+            })
+            .collect();
+        let substituted = unsubstituted
+            .raw()
+            .subst_all(&substitutions, registry)
+            .downshift(arity, registry);
+        evaluate_well_typed_expression(context, registry, substituted)
+    };
+    Ok(substituted_output_id)
 }
 
 fn get_type_of_fun(
