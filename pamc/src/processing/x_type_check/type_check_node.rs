@@ -237,7 +237,7 @@ fn get_type_of_call(
                     .map(|(j, arg_type_id)| {
                         let db_index = DbIndex(i - j - 1);
                         let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
-                        Substitution::Single {
+                        Substitution {
                             from: NormalFormId::unchecked_new(ExpressionId::Name(
                                 add_name_expression(state.registry, vec![param_name_id], db_index),
                             )),
@@ -270,7 +270,7 @@ fn get_type_of_call(
             .map(|(j, arg_type_id)| {
                 let db_index = DbIndex(arity - j - 1);
                 let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
-                Substitution::Single {
+                Substitution {
                     from: NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
                         state.registry,
                         vec![param_name_id],
@@ -419,12 +419,13 @@ fn get_type_of_match_case(
         }
     }
 
-    let substitutions = fusion.substitutions;
+    let (mut substituted_context, substituted_coercion_target_id) =
+        apply_dynamic_substitutions_with_compounding(
+            state,
+            fusion.substitutions,
+            shifted_coercion_target_id.map(NormalFormId::raw),
+        );
 
-    let mut substituted_context = state
-        .context
-        .clone()
-        .subst_all(&substitutions, state.registry);
     let State {
         context: original_context,
         registry,
@@ -437,13 +438,8 @@ fn get_type_of_match_case(
     };
     let state = &mut state;
 
-    let normalized_substituted_coercion_target_id =
-        shifted_coercion_target_id.map(|coercion_target_id| {
-            let shifted = coercion_target_id
-                .raw()
-                .subst_all(&substitutions, state.registry);
-            evaluate_well_typed_expression(state, shifted)
-        });
+    let normalized_substituted_coercion_target_id = substituted_coercion_target_id
+        .map(|target_id| evaluate_well_typed_expression(state, target_id));
     let output_type_id = get_type_of_expression(
         state,
         normalized_substituted_coercion_target_id,

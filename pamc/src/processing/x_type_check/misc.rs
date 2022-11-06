@@ -273,8 +273,11 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
 #[derive(Clone, Debug)]
 pub struct Fusion {
     pub has_exploded: bool,
-    pub substitutions: Vec<Substitution>,
+    pub substitutions: Vec<DynamicSubstitution>,
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct DynamicSubstitution(pub ExpressionId, pub ExpressionId);
 
 impl std::ops::AddAssign<Fusion> for Fusion {
     fn add_assign(&mut self, rhs: Fusion) {
@@ -288,39 +291,6 @@ pub(super) fn fuse_left_to_right(
     left: NormalFormId,
     right: NormalFormId,
 ) -> Fusion {
-    // TODO: Make sure we're not putting any
-    // non-uninterpreted types on a substitution LHS.
-
-    if state
-        .equality_checker
-        .eq(left.raw(), right.raw(), state.registry)
-    {
-        return Fusion {
-            has_exploded: false,
-            substitutions: vec![],
-        };
-    }
-
-    if is_left_inclusive_subterm_of_right(state, left.raw(), right.raw()) {
-        return Fusion {
-            has_exploded: false,
-            substitutions: vec![Substitution::Repeated {
-                from: right,
-                to: left,
-            }],
-        };
-    }
-
-    if is_left_inclusive_subterm_of_right(state, right.raw(), left.raw()) {
-        return Fusion {
-            has_exploded: false,
-            substitutions: vec![Substitution::Repeated {
-                from: left,
-                to: right,
-            }],
-        };
-    }
-
     if let (Some(left_ve), Some(right_ve)) = (
         try_as_variant_expression(state, left),
         try_as_variant_expression(state, right),
@@ -335,10 +305,7 @@ pub(super) fn fuse_left_to_right(
                 ) => {
                     let mut out = Fusion {
                         has_exploded: false,
-                        substitutions: vec![Substitution::Single {
-                            from: left,
-                            to: right,
-                        }],
+                        substitutions: vec![],
                     };
                     let left_arg_ids = state.registry.expression_list(left_arg_list_id).to_vec();
                     let right_arg_ids = state.registry.expression_list(right_arg_list_id).to_vec();
@@ -373,10 +340,7 @@ pub(super) fn fuse_left_to_right(
     } else {
         Fusion {
             has_exploded: false,
-            substitutions: vec![Substitution::Single {
-                from: left,
-                to: right,
-            }],
+            substitutions: vec![DynamicSubstitution(left.raw(), right.raw())],
         }
     }
 }
@@ -566,4 +530,31 @@ pub(super) fn try_as_variant_expression(
         }
         _ => None,
     }
+}
+
+pub(super) fn apply_dynamic_substitutions_with_compounding(
+    state: &mut State,
+    substitutions: Vec<DynamicSubstitution>,
+    shifted_coercion_target_id: Option<ExpressionId>,
+) -> (Context, Option<ExpressionId>) {
+    let original_state = state;
+    let n = substitutions.len();
+
+    let mut substitutions = substitutions;
+    let mut context = original_state.context.clone();
+
+    for i in 0..n {
+        let mut state = State {
+            context: &mut context,
+            registry: original_state.registry,
+            equality_checker: original_state.equality_checker,
+        };
+        let substitution = get_concrete_substitution(&mut state, substitutions[i]);
+        let remaining_substitutions = &mut substitutions[i + 1..];
+    }
+    unimplemented!();
+}
+
+fn get_concrete_substitution(_state: &mut State, _dynamic: DynamicSubstitution) -> Substitution {
+    unimplemented!()
 }

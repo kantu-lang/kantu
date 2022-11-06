@@ -83,7 +83,7 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                     fun_id.upshift(arity + 1, state.registry),
                 ));
                 const FUN_DB_INDEX: DbIndex = DbIndex(0);
-                vec![Substitution::Single {
+                vec![Substitution {
                     from: NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
                         state.registry,
                         vec![fun.name_id],
@@ -105,7 +105,7 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                         let name = NormalFormId::unchecked_new(ExpressionId::Name(
                             add_name_expression(state.registry, vec![param_name_id], db_index),
                         ));
-                        Substitution::Single {
+                        Substitution {
                             from: name,
                             to: arg_id,
                         }
@@ -235,7 +235,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                         // arg to a normal form Call is also a normal form.
                         let shifted_arg_id =
                             NormalFormId::unchecked_new(arg_id).upshift(case_arity, state.registry);
-                        Substitution::Single {
+                        Substitution {
                             from: NormalFormId::unchecked_new(ExpressionId::Name(
                                 add_name_expression(state.registry, vec![param_id], db_index),
                             )),

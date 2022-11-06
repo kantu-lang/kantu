@@ -1,15 +1,9 @@
 use super::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Substitution {
-    Single {
-        from: NormalFormId,
-        to: NormalFormId,
-    },
-    Repeated {
-        from: NormalFormId,
-        to: NormalFormId,
-    },
+pub struct Substitution {
+    pub from: NormalFormId,
+    pub to: NormalFormId,
 }
 
 pub trait Substitute {
