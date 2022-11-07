@@ -477,7 +477,7 @@ fn get_type_of_match_case(
     let shifted_coercion_target_id = coercion_target_id
         .map(|coercion_target_id| coercion_target_id.upshift(case_arity, state.registry));
 
-    let fusion = fuse_left_to_right(state, matchee_type_id, parameterized_type_id);
+    let fusion = fuse(state, matchee_type_id, parameterized_type_id);
     if fusion.has_exploded {
         if let Some(coercion_target_id) = coercion_target_id {
             state.context.pop_n(case_arity);

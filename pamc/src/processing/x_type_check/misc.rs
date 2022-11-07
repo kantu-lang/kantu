@@ -281,11 +281,7 @@ impl std::ops::AddAssign<Fusion> for Fusion {
     }
 }
 
-pub(super) fn fuse_left_to_right(
-    state: &mut State,
-    left: NormalFormId,
-    right: NormalFormId,
-) -> Fusion {
+pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -> Fusion {
     if let (Some(left_ve), Some(right_ve)) = (
         try_as_variant_expression(state, left),
         try_as_variant_expression(state, right),
@@ -310,7 +306,7 @@ pub(super) fn fuse_left_to_right(
                         .copied()
                         .zip(right_arg_ids.iter().copied())
                     {
-                        out += fuse_left_to_right(
+                        out += fuse(
                             state,
                             // This is safe because an arg to a normal
                             // form Call node is always a normal form itself.
