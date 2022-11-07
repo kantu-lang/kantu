@@ -57,7 +57,9 @@ fn type_check_type_constructor(
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeCheckError> {
     let type_statement = state.registry.type_statement(type_statement_id).clone();
-    let normalized_param_list_id = normalize_params(state, type_statement.param_list_id)?;
+    let arity = type_statement.param_list_id.len;
+    let normalized_param_list_id =
+        normalize_params_and_leave_params_in_context(state, type_statement.param_list_id)?;
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
@@ -66,6 +68,8 @@ fn type_check_type_constructor(
         }
         .collapse_if_nullary(state.registry),
     );
+    state.context.pop_n(arity);
+
     let variant_name_list_id = {
         let variant_ids = state.registry.variant_list(type_statement.variant_list_id);
         let variant_name_ids = variant_ids

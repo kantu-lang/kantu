@@ -118,15 +118,6 @@ impl<T> SafeUnwrap<T> for Result<T, Infallible> {
     }
 }
 
-pub(super) fn normalize_params(
-    state: &mut State,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Result<ListId<NodeId<Param>>, TypeCheckError> {
-    let normalized_list_id = normalize_params_and_leave_params_in_context(state, param_list_id)?;
-    state.context.pop_n(param_list_id.len);
-    Ok(normalized_list_id)
-}
-
 pub(super) fn normalize_params_and_leave_params_in_context(
     state: &mut State,
     param_list_id: ListId<NodeId<Param>>,
