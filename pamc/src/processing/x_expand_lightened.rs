@@ -100,7 +100,7 @@ fn expand_let_statement(registry: &NodeRegistry, id: NodeId<light::LetStatement>
     LetStatement { name, value }
 }
 
-fn expand_expression(registry: &NodeRegistry, id: light::ExpressionId) -> Expression {
+pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionId) -> Expression {
     match id {
         light::ExpressionId::Name(id) => Expression::Name(expand_name_expression(registry, id)),
         light::ExpressionId::Call(id) => Expression::Call(Box::new(expand_call(registry, id))),

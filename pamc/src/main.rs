@@ -59,9 +59,8 @@ fn main() {
                                     println!("Lightened file!");
                                     print_separator();
 
-                                    use pamc::{
-                                        data::{x_light_ast::*, x_node_registry::ExpressionRef},
-                                        processing::x_type_check::*,
+                                    use pamc::processing::{
+                                        x_expand_lightened::expand_expression, x_type_check::*,
                                     };
 
                                     let type_check_result =
@@ -76,17 +75,10 @@ fn main() {
                                                 expression_id,
                                             ) = err
                                             {
-                                                let expr = registry.expression_ref(expression_id);
-                                                println!("Illegal type expression: {:#?}", expr);
-
-                                                if let ExpressionRef::Name(name) = expr {
-                                                    let components: Vec<&Identifier> = registry
-                                                        .identifier_list(name.component_list_id)
-                                                        .iter()
-                                                        .map(|&id| registry.identifier(id))
-                                                        .collect();
-                                                    println!("Components: {:?}", components);
-                                                }
+                                                println!(
+                                                    "Illegal type expression: {:#?}",
+                                                    expand_expression(&registry, expression_id,)
+                                                );
                                             }
                                         }
                                     }
