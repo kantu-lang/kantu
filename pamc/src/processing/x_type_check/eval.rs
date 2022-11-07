@@ -1,13 +1,21 @@
 use super::*;
 
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
-    match id {
+    println!(
+        "evaluate_well_typed_expression in progress (context_len={}, type0_dbi={:?}): {:#?} (((",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(state.registry, id)
+    );
+    let out = match id {
         ExpressionId::Name(name_id) => evaluate_well_typed_name_expression(state, name_id),
         ExpressionId::Call(call_id) => evaluate_well_typed_call(state, call_id),
         ExpressionId::Fun(fun_id) => evaluate_well_typed_fun(state, fun_id),
         ExpressionId::Match(match_id) => evaluate_well_typed_match(state, match_id),
         ExpressionId::Forall(forall_id) => evaluate_well_typed_forall(state, forall_id),
-    }
+    };
+    println!(")))");
+    out
 }
 
 fn evaluate_well_typed_name_expression(
