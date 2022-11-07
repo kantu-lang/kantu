@@ -183,7 +183,7 @@ impl Context {
 impl Substitute for Context {
     type Output = Self;
 
-    fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> Self {
+    fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> (Self, WasNoOp) {
         unimplemented!();
     }
 }
