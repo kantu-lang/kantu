@@ -52,20 +52,6 @@ pub(super) trait Substitute {
     }
 }
 
-trait Map0<T, U> {
-    type Output;
-
-    fn map0(self, f: impl FnOnce(T) -> U) -> Self::Output;
-}
-
-impl<T1, U1, T2> Map0<T1, U1> for (T1, T2) {
-    type Output = (U1, T2);
-
-    fn map0(self, f: impl FnOnce(T1) -> U1) -> Self::Output {
-        (f(self.0), self.1)
-    }
-}
-
 impl Substitute for ExpressionId {
     type Output = Self;
 

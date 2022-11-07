@@ -658,3 +658,17 @@ impl DynamicSubstitution {
         (DynamicSubstitution(t1, t2), was_no_op_1 & was_no_op_2)
     }
 }
+
+pub trait Map0<T, U> {
+    type Output;
+
+    fn map0(self, f: impl FnOnce(T) -> U) -> Self::Output;
+}
+
+impl<T1, U1, T2> Map0<T1, U1> for (T1, T2) {
+    type Output = (U1, T2);
+
+    fn map0(self, f: impl FnOnce(T1) -> U1) -> Self::Output {
+        (f(self.0), self.1)
+    }
+}
