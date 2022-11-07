@@ -277,7 +277,7 @@ pub struct Fusion {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct DynamicSubstitution(pub ExpressionId, pub ExpressionId);
+pub struct DynamicSubstitution(pub NormalFormId, pub NormalFormId);
 
 impl std::ops::AddAssign<Fusion> for Fusion {
     fn add_assign(&mut self, rhs: Fusion) {
@@ -340,7 +340,7 @@ pub(super) fn fuse_left_to_right(
     } else {
         Fusion {
             has_exploded: false,
-            substitutions: vec![DynamicSubstitution(left.raw(), right.raw())],
+            substitutions: vec![DynamicSubstitution(left, right)],
         }
     }
 }
@@ -550,7 +550,12 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
     let mut shifted_coercion_target_id = shifted_coercion_target_id;
 
     for i in 0..n {
-        let substitution = get_concrete_substitution(&mut state, substitutions[i]);
+        let substitution =
+            if let Some(substitution) = get_concrete_substitution(&mut state, substitutions[i]) {
+                substitution
+            } else {
+                continue;
+            };
         let remaining_substitutions = &mut substitutions[i + 1..];
         loop {
             let mut was_no_op = WasNoOp(true);
@@ -559,13 +564,13 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
                 was_no_op &= id.subst_in_place(substitution, &mut state.registry);
             }
 
-            for remaining in remaining_substitutions.iter_mut() {
-                was_no_op &= remaining.subst_in_place(substitution, &mut state.registry);
-            }
-
             was_no_op &= state
                 .context
                 .subst_in_place(substitution, &mut state.registry);
+
+            for remaining in remaining_substitutions.iter_mut() {
+                was_no_op &= remaining.subst_in_place(substitution, &mut state);
+            }
 
             if was_no_op.0 {
                 break;
@@ -576,7 +581,29 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
     (context, shifted_coercion_target_id)
 }
 
-fn get_concrete_substitution(_state: &mut State, _dynamic: DynamicSubstitution) -> Substitution {
+fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Option<Substitution> {
+    if state
+        .equality_checker
+        .eq(d.0.raw(), d.1.raw(), state.registry)
+    {
+        return None;
+    }
+    if is_left_inclusive_subterm_of_right(state, d.0.raw(), d.1.raw()) {
+        return Some(Substitution { from: d.1, to: d.0 });
+    }
+    if is_left_inclusive_subterm_of_right(state, d.1.raw(), d.0.raw()) {
+        return Some(Substitution { from: d.0, to: d.1 });
+    }
+
+    if min_db_index(state.registry, d.0.raw()).0 < min_db_index(state.registry, d.1.raw()).0 {
+        Some(Substitution { from: d.0, to: d.1 })
+    } else {
+        Some(Substitution { from: d.1, to: d.0 })
+    }
+}
+
+// TODO: Maybe cache this.
+fn min_db_index(_registry: &NodeRegistry, _id: ExpressionId) -> DbIndex {
     unimplemented!()
 }
 
@@ -600,5 +627,21 @@ where
         let (substituted, was_no_op) = self.clone().subst(substitution, registry);
         *self = substituted;
         was_no_op
+    }
+}
+
+impl DynamicSubstitution {
+    fn subst_in_place(&mut self, substitution: Substitution, state: &mut State) -> WasNoOp {
+        let (substituted, was_no_op) = self.subst(substitution, state);
+        *self = substituted;
+        was_no_op
+    }
+
+    fn subst(self, substitution: Substitution, state: &mut State) -> (Self, WasNoOp) {
+        let (t1, was_no_op_1) = self.0.raw().subst(substitution, state.registry);
+        let (t2, was_no_op_2) = self.1.raw().subst(substitution, state.registry);
+        let t1 = evaluate_well_typed_expression(state, t1);
+        let t2 = evaluate_well_typed_expression(state, t2);
+        (DynamicSubstitution(t1, t2), was_no_op_1 & was_no_op_2)
     }
 }

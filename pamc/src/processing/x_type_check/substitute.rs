@@ -15,6 +15,15 @@ impl std::ops::BitAndAssign for WasNoOp {
     }
 }
 
+impl std::ops::BitAnd for WasNoOp {
+    type Output = Self;
+
+    fn bitand(mut self, rhs: Self) -> Self {
+        self &= rhs;
+        self
+    }
+}
+
 pub trait Substitute {
     type Output;
 
@@ -114,14 +123,6 @@ impl Substitute for NodeId<Match> {
 }
 
 impl Substitute for NodeId<Forall> {
-    type Output = Self;
-
-    fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> (Self, WasNoOp) {
-        unimplemented!()
-    }
-}
-
-impl Substitute for DynamicSubstitution {
     type Output = Self;
 
     fn subst(self, _substitution: Substitution, _registry: &mut NodeRegistry) -> (Self, WasNoOp) {
