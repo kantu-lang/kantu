@@ -160,27 +160,9 @@ impl Context {
         if level == TYPE1_LEVEL {
             panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
         }
-        println!(
-            "GET_TYPE({:?}).before_shift(context_len={}, type0_dbi={:?}): {:#?}",
-            index,
-            self.len(),
-            self.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_expression(
-                registry,
-                self.local_type_stack[level.0].type_id.raw()
-            )
-        );
-        let out = self.local_type_stack[level.0]
+        self.local_type_stack[level.0]
             .type_id
-            .upshift(index.0 + 1, registry);
-        println!(
-            "GET_TYPE({:?}).after_shift(context_len={}, type0_dbi={:?}): {:#?}",
-            index,
-            self.len(),
-            self.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_expression(registry, out.raw())
-        );
-        out
+            .upshift(index.0 + 1, registry)
     }
 
     pub fn get_definition(
