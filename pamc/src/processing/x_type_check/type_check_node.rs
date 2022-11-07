@@ -387,16 +387,30 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
         },
     });
 
-    let normalized_body_type_id =
-        get_type_of_expression(state, Some(normalized_return_type_id), fun.body_id)?;
+    // We need to upshift the return type by one level before comparing it
+    // to the body type, to account for the fact that the function has been
+    // added to the context.
+    let normalized_return_type_id_relative_to_body = {
+        let shifted_return_type_id = fun.return_type_id.upshift(1, state.registry);
+        evaluate_well_typed_expression(state, shifted_return_type_id)
+    };
+    // Shadow the old variable to prevent it from being accidentally used.
+    #[allow(unused_variables)]
+    let normalized_return_type_id = ();
+
+    let normalized_body_type_id = get_type_of_expression(
+        state,
+        Some(normalized_return_type_id_relative_to_body),
+        fun.body_id,
+    )?;
     if !is_left_type_assignable_to_right_type(
         state,
         normalized_body_type_id,
-        normalized_return_type_id,
+        normalized_return_type_id_relative_to_body,
     ) {
         return Err(TypeCheckError::TypeMismatch {
             expression_id: fun.body_id,
-            expected_type_id: normalized_return_type_id,
+            expected_type_id: normalized_return_type_id_relative_to_body,
             actual_type_id: normalized_body_type_id,
         });
     }
@@ -486,16 +500,16 @@ fn get_type_of_match_case(
             )
         );
     }
-    let shifted_coercion_target_id = coercion_target_id
-        .map(|coercion_target_id| coercion_target_id.upshift(case_arity, state.registry));
+    let shifted_coercion_target_id =
+        coercion_target_id.map(|target_id| target_id.upshift(case_arity, state.registry));
 
     let shifted_matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
     let fusion = fuse(state, shifted_matchee_type_id, parameterized_type_id);
     if fusion.has_exploded {
-        if let Some(coercion_target_id) = coercion_target_id {
+        if let Some(target_id) = original_coercion_target_id {
             state.context.pop_n(case_arity);
-            return Ok(coercion_target_id);
+            return Ok(target_id);
         }
     }
 
