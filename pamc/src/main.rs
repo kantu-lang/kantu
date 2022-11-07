@@ -59,17 +59,35 @@ fn main() {
                                     println!("Lightened file!");
                                     print_separator();
 
+                                    use pamc::{
+                                        data::{x_light_ast::*, x_node_registry::ExpressionRef},
+                                        processing::x_type_check::*,
+                                    };
+
                                     let type_check_result =
-                                        pamc::processing::x_type_check::type_check_files(
-                                            &mut registry,
-                                            &[lightened_file],
-                                        );
+                                        type_check_files(&mut registry, &[lightened_file]);
                                     match type_check_result {
                                         Ok(_) => {
                                             println!("Type check success!");
                                         }
                                         Err(err) => {
                                             println!("Type check error: {:?}", err);
+                                            if let TypeCheckError::IllegalTypeExpression(
+                                                expression_id,
+                                            ) = err
+                                            {
+                                                let expr = registry.expression_ref(expression_id);
+                                                println!("Illegal type expression: {:#?}", expr);
+
+                                                if let ExpressionRef::Name(name) = expr {
+                                                    let components: Vec<&Identifier> = registry
+                                                        .identifier_list(name.component_list_id)
+                                                        .iter()
+                                                        .map(|&id| registry.identifier(id))
+                                                        .collect();
+                                                    println!("Components: {:?}", components);
+                                                }
+                                            }
                                         }
                                     }
                                 }
