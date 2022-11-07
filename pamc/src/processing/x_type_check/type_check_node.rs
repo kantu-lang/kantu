@@ -560,11 +560,11 @@ fn add_case_params_to_context_and_get_constructed_type(
 
             Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
         }
-        ExpressionId::Call(_) => {
-            // In this case, the variant is nullary.
+        ExpressionId::Name(_) => {
+            // In this case, the variant type is nullary.
             Ok(variant_type_id)
         }
-        other => panic!("A variant's type should always either be a Forall or a Call, but it was actually a {:?}", other),
+        other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
     }
 }
 
