@@ -542,7 +542,22 @@ fn add_case_params_to_context_and_get_constructed_type(
     let case = state.registry.match_case(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
+    println!(
+        "ADD_CASE_PARAMS(variant_name={:?}, variant_dbi={:?}).context: {:#?}",
+        &state.registry.identifier(case.variant_name_id).name,
+        variant_dbi,
+        state.context
+    );
     let variant_type_id = state.context.get_type(variant_dbi, state.registry);
+    println!(
+        "ADD_CASE_PARAMS.variant_type_id (context_len={}, type0_dbi={:?}): {:#?}",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(
+            state.registry,
+            variant_type_id.raw()
+        )
+    );
     match variant_type_id.raw() {
         ExpressionId::Forall(normalized_forall_id) => {
             let normalized_forall = state.registry.forall(normalized_forall_id);

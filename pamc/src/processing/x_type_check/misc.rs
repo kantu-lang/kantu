@@ -262,7 +262,7 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
             variant_name == target_variant_name
         })
         .expect("The target variant name should always be found in the ADT's variant name list");
-    DbIndex(type_dbi.0 + 1 + variant_index)
+    DbIndex(type_dbi.0 - 1 - variant_index)
 }
 
 #[derive(Clone, Debug)]
@@ -282,6 +282,18 @@ impl std::ops::AddAssign<Fusion> for Fusion {
 }
 
 pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -> Fusion {
+    println!(
+        "FUSE.LEFT (context_len={}, type0_dbi={:?}): {:#?}",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(state.registry, left.raw())
+    );
+    println!(
+        "FUSE.RIGHT (context_len={}, type0_dbi={:?}): {:#?}",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(state.registry, right.raw())
+    );
     if let (Some(left_ve), Some(right_ve)) = (
         try_as_variant_expression(state, left),
         try_as_variant_expression(state, right),
