@@ -62,3 +62,18 @@ struct State<'a> {
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
 }
+
+impl<'a> State<'_> {
+    fn without_context(&'a mut self) -> ContextlessState<'a> {
+        ContextlessState {
+            registry: self.registry,
+            equality_checker: self.equality_checker,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ContextlessState<'a> {
+    registry: &'a mut NodeRegistry,
+    equality_checker: &'a mut NodeEqualityChecker,
+}

@@ -561,12 +561,16 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
             let mut was_no_op = WasNoOp(true);
 
             if let Some(id) = shifted_coercion_target_id.as_mut() {
-                was_no_op &= id.subst_in_place(substitution, &mut state.registry);
+                was_no_op &= id.subst_in_place(substitution, &mut state.without_context());
             }
 
-            was_no_op &= state
-                .context
-                .subst_in_place(substitution, &mut state.registry);
+            was_no_op &= state.context.subst_in_place(
+                substitution,
+                &mut ContextlessState {
+                    registry: state.registry,
+                    equality_checker: state.equality_checker,
+                },
+            );
 
             for remaining in remaining_substitutions.iter_mut() {
                 was_no_op &= remaining.subst_in_place(substitution, &mut state);
@@ -611,7 +615,7 @@ trait SubstituteInPlace {
     fn subst_in_place(
         &mut self,
         substitution: Substitution,
-        registry: &mut NodeRegistry,
+        state: &mut ContextlessState,
     ) -> WasNoOp;
 }
 
@@ -622,9 +626,9 @@ where
     fn subst_in_place(
         &mut self,
         substitution: Substitution,
-        registry: &mut NodeRegistry,
+        state: &mut ContextlessState,
     ) -> WasNoOp {
-        let (substituted, was_no_op) = self.clone().subst(substitution, registry);
+        let (substituted, was_no_op) = self.clone().subst(substitution, state);
         *self = substituted;
         was_no_op
     }
@@ -641,8 +645,14 @@ impl DynamicSubstitution {
     }
 
     fn subst(self, substitution: Substitution, state: &mut State) -> (Self, WasNoOp) {
-        let (t1, was_no_op_1) = self.0.raw().subst(substitution, state.registry);
-        let (t2, was_no_op_2) = self.1.raw().subst(substitution, state.registry);
+        let (t1, was_no_op_1) = self
+            .0
+            .raw()
+            .subst(substitution, &mut state.without_context());
+        let (t2, was_no_op_2) = self
+            .1
+            .raw()
+            .subst(substitution, &mut state.without_context());
         let t1 = evaluate_well_typed_expression(state, t1);
         let t2 = evaluate_well_typed_expression(state, t2);
         (DynamicSubstitution(t1, t2), was_no_op_1 & was_no_op_2)

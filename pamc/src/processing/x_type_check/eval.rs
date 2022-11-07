@@ -113,7 +113,10 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
             )
             .collect::<Vec<_>>();
 
-            let body_id = fun.body_id.subst_all(&substitutions, state.registry).0;
+            let body_id = fun
+                .body_id
+                .subst_all(&substitutions, &mut state.without_context())
+                .0;
             let shifted_body_id = body_id.downshift(arity + 1, state.registry);
             evaluate_well_typed_expression(state, shifted_body_id)
         }
@@ -246,7 +249,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
 
             let substituted_body = case
                 .output_id
-                .subst_all(&substitutions, state.registry)
+                .subst_all(&substitutions, &mut state.without_context())
                 .0
                 .downshift(case_arity, state.registry);
             evaluate_well_typed_expression(state, substituted_body)
