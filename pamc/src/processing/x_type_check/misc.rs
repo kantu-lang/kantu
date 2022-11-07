@@ -128,7 +128,11 @@ pub(super) fn normalize_params_and_leave_params_in_context(
         .copied()
         .map(|param_id| {
             type_check_param(state, param_id)?;
-            let type_id: ExpressionId = state.context.get_type(DbIndex(0), state.registry).raw();
+            let type_id: ExpressionId = state
+                .context
+                .get_type(DbIndex(0), state.registry)
+                .downshift(1, state.registry)
+                .raw();
             let old_param = state.registry.param(param_id);
             let normalized_param_with_dummy_id = Param {
                 id: dummy_id(),

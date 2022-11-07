@@ -13,7 +13,7 @@ pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
     }
 }
 
-fn expand_file_item_list(registry: &NodeRegistry, id: ListId<FileItemNodeId>) -> Vec<FileItem> {
+pub fn expand_file_item_list(registry: &NodeRegistry, id: ListId<FileItemNodeId>) -> Vec<FileItem> {
     registry
         .file_item_list(id)
         .iter()
@@ -21,14 +21,14 @@ fn expand_file_item_list(registry: &NodeRegistry, id: ListId<FileItemNodeId>) ->
         .collect()
 }
 
-fn expand_file_item(registry: &NodeRegistry, id: FileItemNodeId) -> FileItem {
+pub fn expand_file_item(registry: &NodeRegistry, id: FileItemNodeId) -> FileItem {
     match id {
         light::FileItemNodeId::Type(id) => FileItem::Type(expand_type_statement(registry, id)),
         light::FileItemNodeId::Let(id) => FileItem::Let(expand_let_statement(registry, id)),
     }
 }
 
-fn expand_type_statement(
+pub fn expand_type_statement(
     registry: &NodeRegistry,
     id: NodeId<light::TypeStatement>,
 ) -> TypeStatement {
@@ -43,7 +43,7 @@ fn expand_type_statement(
     }
 }
 
-fn expand_identifier(registry: &NodeRegistry, id: NodeId<light::Identifier>) -> Identifier {
+pub fn expand_identifier(registry: &NodeRegistry, id: NodeId<light::Identifier>) -> Identifier {
     let light = registry.identifier(id);
     Identifier {
         name: light.name.clone(),
@@ -51,7 +51,7 @@ fn expand_identifier(registry: &NodeRegistry, id: NodeId<light::Identifier>) -> 
     }
 }
 
-fn expand_param_list(registry: &NodeRegistry, id: ListId<NodeId<light::Param>>) -> Vec<Param> {
+pub fn expand_param_list(registry: &NodeRegistry, id: ListId<NodeId<light::Param>>) -> Vec<Param> {
     registry
         .param_list(id)
         .iter()
@@ -59,7 +59,7 @@ fn expand_param_list(registry: &NodeRegistry, id: ListId<NodeId<light::Param>>) 
         .collect()
 }
 
-fn expand_param(registry: &NodeRegistry, id: NodeId<light::Param>) -> Param {
+pub fn expand_param(registry: &NodeRegistry, id: NodeId<light::Param>) -> Param {
     let light = registry.param(id);
     let name = expand_identifier(registry, light.name_id);
     let type_ = expand_expression(registry, light.type_id);
@@ -70,7 +70,7 @@ fn expand_param(registry: &NodeRegistry, id: NodeId<light::Param>) -> Param {
     }
 }
 
-fn expand_variant_list(
+pub fn expand_variant_list(
     registry: &NodeRegistry,
     id: ListId<NodeId<light::Variant>>,
 ) -> Vec<Variant> {
@@ -81,7 +81,7 @@ fn expand_variant_list(
         .collect()
 }
 
-fn expand_variant(registry: &NodeRegistry, id: NodeId<light::Variant>) -> Variant {
+pub fn expand_variant(registry: &NodeRegistry, id: NodeId<light::Variant>) -> Variant {
     let light = registry.variant(id);
     let name = expand_identifier(registry, light.name_id);
     let params = expand_param_list(registry, light.param_list_id);
@@ -93,7 +93,10 @@ fn expand_variant(registry: &NodeRegistry, id: NodeId<light::Variant>) -> Varian
     }
 }
 
-fn expand_let_statement(registry: &NodeRegistry, id: NodeId<light::LetStatement>) -> LetStatement {
+pub fn expand_let_statement(
+    registry: &NodeRegistry,
+    id: NodeId<light::LetStatement>,
+) -> LetStatement {
     let light = registry.let_statement(id);
     let name = expand_identifier(registry, light.name_id);
     let value = expand_expression(registry, light.value_id);
@@ -112,7 +115,7 @@ pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionId) -> Ex
     }
 }
 
-fn expand_name_expression(
+pub fn expand_name_expression(
     registry: &NodeRegistry,
     id: NodeId<light::NameExpression>,
 ) -> NameExpression {
@@ -124,7 +127,7 @@ fn expand_name_expression(
     }
 }
 
-fn expand_identifier_list(
+pub fn expand_identifier_list(
     registry: &NodeRegistry,
     id: ListId<NodeId<light::Identifier>>,
 ) -> Vec<Identifier> {
@@ -135,14 +138,14 @@ fn expand_identifier_list(
         .collect()
 }
 
-fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
+pub fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
     let light = registry.call(id);
     let callee = expand_expression(registry, light.callee_id);
     let args = expand_expression_list(registry, light.arg_list_id);
     Call { callee, args }
 }
 
-fn expand_expression_list(
+pub fn expand_expression_list(
     registry: &NodeRegistry,
     id: ListId<light::ExpressionId>,
 ) -> Vec<Expression> {
@@ -153,7 +156,7 @@ fn expand_expression_list(
         .collect()
 }
 
-fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
+pub fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
     let light = registry.fun(id);
     let name = expand_identifier(registry, light.name_id);
     let params = expand_param_list(registry, light.param_list_id);
@@ -167,14 +170,14 @@ fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
     }
 }
 
-fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match {
+pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match {
     let light = registry.match_(id);
     let matchee = expand_expression(registry, light.matchee_id);
     let cases = expand_match_case_list(registry, light.case_list_id);
     Match { matchee, cases }
 }
 
-fn expand_match_case_list(
+pub fn expand_match_case_list(
     registry: &NodeRegistry,
     id: ListId<NodeId<light::MatchCase>>,
 ) -> Vec<MatchCase> {
@@ -185,7 +188,7 @@ fn expand_match_case_list(
         .collect()
 }
 
-fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> MatchCase {
+pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> MatchCase {
     let light = registry.match_case(id);
     let variant_name = expand_identifier(registry, light.variant_name_id);
     let params = expand_identifier_list(registry, light.param_list_id);
@@ -197,7 +200,7 @@ fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> M
     }
 }
 
-fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Forall {
+pub fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Forall {
     let light = registry.forall(id);
     let params = expand_param_list(registry, light.param_list_id);
     let output = expand_expression(registry, light.output_id);

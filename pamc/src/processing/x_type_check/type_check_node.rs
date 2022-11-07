@@ -60,6 +60,22 @@ fn type_check_type_constructor(
     let arity = type_statement.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(state, type_statement.param_list_id)?;
+    println!(
+        "type_check_type_constructor.forall_params(context_len={}, type0_dbi={:?}): {:#?}",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_param_list(
+            state.registry,
+            normalized_param_list_id
+        )
+    );
+    let debug_temp = type0_expression(state).raw();
+    println!(
+        "type_check_type_constructor.output(context_len={}, type0_dbi={:?}): {:#?}",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(state.registry, debug_temp)
+    );
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
