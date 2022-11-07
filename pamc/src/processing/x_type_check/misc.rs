@@ -630,6 +630,9 @@ where
     }
 }
 
+// We can't `impl SubstituteInPlace` here, because applying a substitution to
+// a `DynamicSubstitution` requires evaluation, which requires a `State` (which
+// is too strong of a requirement to satisfy the `SubstituteInPlace` trait).
 impl DynamicSubstitution {
     fn subst_in_place(&mut self, substitution: Substitution, state: &mut State) -> WasNoOp {
         let (substituted, was_no_op) = self.subst(substitution, state);
