@@ -73,11 +73,36 @@ fn main() {
                                             println!("Type check error: {:?}", err);
                                             if let TypeCheckError::IllegalTypeExpression(
                                                 expression_id,
-                                            ) = err
+                                            ) = &err
                                             {
                                                 println!(
                                                     "Illegal type expression: {:#?}",
-                                                    expand_expression(&registry, expression_id,)
+                                                    expand_expression(&registry, *expression_id,)
+                                                );
+                                            }
+                                            if let TypeCheckError::TypeMismatch {
+                                                expression_id,
+                                                expected_type_id,
+                                                actual_type_id,
+                                            } = &err
+                                            {
+                                                println!(
+                                                    "TYPE_MISMATCH.expression: {:#?}",
+                                                    expand_expression(&registry, *expression_id)
+                                                );
+                                                println!(
+                                                    "TYPE_MISMATCH.expected_type: {:#?}",
+                                                    expand_expression(
+                                                        &registry,
+                                                        expected_type_id.raw()
+                                                    )
+                                                );
+                                                println!(
+                                                    "TYPE_MISMATCH.actual_type: {:#?}",
+                                                    expand_expression(
+                                                        &registry,
+                                                        actual_type_id.raw()
+                                                    )
                                                 );
                                             }
                                         }

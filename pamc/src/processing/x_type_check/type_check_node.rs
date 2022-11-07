@@ -474,6 +474,18 @@ fn get_type_of_match_case(
         add_case_params_to_context_and_get_constructed_type(state, case_id, matchee_type)?;
 
     let original_coercion_target_id = coercion_target_id;
+    if let Some(original_coercion_target_id) = original_coercion_target_id {
+        println!(
+            "COERCION_TARGET.original(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}): {:#?}",
+            case_arity,
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                original_coercion_target_id.raw()
+            )
+        );
+    }
     let shifted_coercion_target_id = coercion_target_id
         .map(|coercion_target_id| coercion_target_id.upshift(case_arity, state.registry));
 
@@ -525,6 +537,12 @@ fn get_type_of_match_case(
     );
 
     original_context.pop_n(case_arity);
+
+    println!(
+        "COERCION STATUS: has_coercion={:?}; can_be_coerced={:?}",
+        normalized_substituted_coercion_target_id.is_some(),
+        can_be_coerced
+    );
 
     if can_be_coerced {
         Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
