@@ -8,9 +8,9 @@ type List(T: Type) {
     .Cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
-let foo = fun foo(-a: Nat, b: Nat): Nat {
+let plus = fun plus(-a: Nat, b: Nat): Nat {
     match a {
         .O => b,
-        .S(a_pred) => b,
+        .S(a_pred) => Nat.S(plus(a_pred, b)),
     }
 };
