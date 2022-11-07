@@ -542,19 +542,63 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
 
     let mut substitutions = substitutions;
     let mut context = original_state.context.clone();
+    let mut state = State {
+        context: &mut context,
+        registry: original_state.registry,
+        equality_checker: original_state.equality_checker,
+    };
+    let mut shifted_coercion_target_id = shifted_coercion_target_id;
 
     for i in 0..n {
-        let mut state = State {
-            context: &mut context,
-            registry: original_state.registry,
-            equality_checker: original_state.equality_checker,
-        };
         let substitution = get_concrete_substitution(&mut state, substitutions[i]);
         let remaining_substitutions = &mut substitutions[i + 1..];
+        loop {
+            let mut was_no_op = WasNoOp(true);
+
+            if let Some(id) = shifted_coercion_target_id.as_mut() {
+                was_no_op &= id.subst_in_place(substitution, &mut state.registry);
+            }
+
+            for remaining in remaining_substitutions.iter_mut() {
+                was_no_op &= remaining.subst_in_place(substitution, &mut state.registry);
+            }
+
+            was_no_op &= state
+                .context
+                .subst_in_place(substitution, &mut state.registry);
+
+            if was_no_op.0 {
+                break;
+            }
+        }
     }
-    unimplemented!();
+
+    (context, shifted_coercion_target_id)
 }
 
 fn get_concrete_substitution(_state: &mut State, _dynamic: DynamicSubstitution) -> Substitution {
     unimplemented!()
+}
+
+trait SubstituteInPlace {
+    fn subst_in_place(
+        &mut self,
+        substitution: Substitution,
+        registry: &mut NodeRegistry,
+    ) -> WasNoOp;
+}
+
+impl<T> SubstituteInPlace for T
+where
+    T: Clone + Substitute<Output = T>,
+{
+    fn subst_in_place(
+        &mut self,
+        substitution: Substitution,
+        registry: &mut NodeRegistry,
+    ) -> WasNoOp {
+        let (substituted, was_no_op) = self.clone().subst(substitution, registry);
+        *self = substituted;
+        was_no_op
+    }
 }

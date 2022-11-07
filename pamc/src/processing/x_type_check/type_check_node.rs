@@ -248,6 +248,7 @@ fn get_type_of_call(
             let substituted = unsubstituted
                 .raw()
                 .subst_all(&substitutions, state.registry)
+                .0
                 .downshift(i, state.registry);
             evaluate_well_typed_expression(state, substituted)
         };
@@ -283,6 +284,7 @@ fn get_type_of_call(
         let substituted = unsubstituted
             .raw()
             .subst_all(&substitutions, state.registry)
+            .0
             .downshift(arity, state.registry);
         evaluate_well_typed_expression(state, substituted)
     };
