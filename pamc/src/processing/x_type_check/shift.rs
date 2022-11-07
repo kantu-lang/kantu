@@ -49,7 +49,7 @@ pub trait ShiftDbIndices {
     }
 }
 
-pub trait ShiftAmount: Copy + std::fmt::Debug {
+pub trait ShiftAmount: Copy {
     type ShiftError;
     fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Self::ShiftError>;
 }
@@ -172,16 +172,7 @@ impl ShiftDbIndices for NodeId<NameExpression> {
                 db_index: shifted_index,
                 ..*name
             };
-            println!("{:?} + {:?} = {:?}", name.db_index, amount, shifted_index);
-            let output = registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id);
-            println!(
-                "inside upshift: {:#?}",
-                crate::processing::x_expand_lightened::expand_expression(
-                    registry,
-                    ExpressionId::Name(output)
-                )
-            );
-            Ok(output)
+            Ok(registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id))
         }
     }
 }

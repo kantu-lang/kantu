@@ -90,10 +90,6 @@ pub(super) fn type_check_param(
     let param = state.registry.param(param_id).clone();
     let param_type_type_id = get_type_of_expression(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
-        println!(
-            "Illegal type expr: {:#?}",
-            crate::processing::x_expand_lightened::expand_expression(state.registry, param.type_id)
-        );
         return Err(TypeCheckError::IllegalTypeExpression(param.type_id));
     }
 
