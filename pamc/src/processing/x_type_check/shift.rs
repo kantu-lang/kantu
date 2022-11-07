@@ -49,7 +49,7 @@ pub trait ShiftDbIndices {
     }
 }
 
-pub trait ShiftAmount {
+pub trait ShiftAmount: Copy {
     type ShiftError;
     fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Self::ShiftError>;
 }
@@ -159,11 +159,21 @@ impl ShiftDbIndices for NodeId<NameExpression> {
 
     fn try_shift_with_cutoff<A: ShiftAmount>(
         self,
-        _amount: A,
-        _cutoff: usize,
-        _registry: &mut NodeRegistry,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
-        unimplemented!()
+        let name = registry.name_expression(self);
+        if name.db_index.0 < cutoff {
+            Ok(self)
+        } else {
+            let shifted_index = amount.try_apply(name.db_index)?;
+            let shifted_with_dummy_id = NameExpression {
+                db_index: shifted_index,
+                ..*name
+            };
+            Ok(registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id))
+        }
     }
 }
 
@@ -172,11 +182,41 @@ impl ShiftDbIndices for NodeId<Call> {
 
     fn try_shift_with_cutoff<A: ShiftAmount>(
         self,
-        _amount: A,
-        _cutoff: usize,
-        _registry: &mut NodeRegistry,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
-        unimplemented!()
+        let call = registry.call(self).clone();
+        let shifted_callee_id = call
+            .callee_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        let shifted_argument_id = call
+            .arg_list_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        Ok(registry.add_call_and_overwrite_its_id(Call {
+            id: dummy_id(),
+            callee_id: shifted_callee_id,
+            arg_list_id: shifted_argument_id,
+        }))
+    }
+}
+
+impl ShiftDbIndices for ListId<ExpressionId> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let list: Vec<ExpressionId> = registry
+            .expression_list(self)
+            .to_vec()
+            .into_iter()
+            .map(|id| id.try_shift_with_cutoff(amount, cutoff, registry))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(registry.add_expression_list(list))
     }
 }
 
@@ -185,11 +225,70 @@ impl ShiftDbIndices for NodeId<Fun> {
 
     fn try_shift_with_cutoff<A: ShiftAmount>(
         self,
-        _amount: A,
-        _cutoff: usize,
-        _registry: &mut NodeRegistry,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
-        unimplemented!()
+        let fun = registry.fun(self).clone();
+        let param_arity = fun.param_list_id.len;
+        let shifted_param_list_id = fun
+            .param_list_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        let shifted_return_type_id =
+            fun.return_type_id
+                .try_shift_with_cutoff(amount, cutoff + param_arity, registry)?;
+        let shifted_body_id =
+            fun.body_id
+                .try_shift_with_cutoff(amount, cutoff + param_arity + 1, registry)?;
+        Ok(registry.add_fun_and_overwrite_its_id(Fun {
+            id: dummy_id(),
+            name_id: fun.name_id,
+            param_list_id: shifted_param_list_id,
+            return_type_id: shifted_return_type_id,
+            body_id: shifted_body_id,
+        }))
+    }
+}
+
+impl ShiftDbIndices for ListId<NodeId<Param>> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let list: Vec<NodeId<Param>> = registry
+            .param_list(self)
+            .to_vec()
+            .into_iter()
+            .enumerate()
+            .map(|(index, id)| id.try_shift_with_cutoff(amount, cutoff + index, registry))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(registry.add_param_list(list))
+    }
+}
+
+impl ShiftDbIndices for NodeId<Param> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let param = registry.param(self).clone();
+        let shifted_type_id = param
+            .type_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        Ok(registry.add_param_and_overwrite_its_id(Param {
+            id: dummy_id(),
+            is_dashed: param.is_dashed,
+            name_id: param.name_id,
+            type_id: shifted_type_id,
+        }))
     }
 }
 
@@ -198,11 +297,64 @@ impl ShiftDbIndices for NodeId<Match> {
 
     fn try_shift_with_cutoff<A: ShiftAmount>(
         self,
-        _amount: A,
-        _cutoff: usize,
-        _registry: &mut NodeRegistry,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
-        unimplemented!()
+        let match_ = registry.match_(self).clone();
+        let shifted_matchee_id = match_
+            .matchee_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        let shifted_case_list_id = match_
+            .case_list_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        Ok(registry.add_match_and_overwrite_its_id(Match {
+            id: dummy_id(),
+            matchee_id: shifted_matchee_id,
+            case_list_id: shifted_case_list_id,
+        }))
+    }
+}
+
+impl ShiftDbIndices for ListId<NodeId<MatchCase>> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let list: Vec<NodeId<MatchCase>> = registry
+            .match_case_list(self)
+            .to_vec()
+            .into_iter()
+            .map(|id| id.try_shift_with_cutoff(amount, cutoff, registry))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(registry.add_match_case_list(list))
+    }
+}
+
+impl ShiftDbIndices for NodeId<MatchCase> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let case = registry.match_case(self).clone();
+        let arity = case.param_list_id.len;
+        let shifted_output_id =
+            case.output_id
+                .try_shift_with_cutoff(amount, cutoff + arity, registry)?;
+        Ok(registry.add_match_case_and_overwrite_its_id(MatchCase {
+            id: dummy_id(),
+            variant_name_id: case.variant_name_id,
+            param_list_id: case.param_list_id,
+            output_id: shifted_output_id,
+        }))
     }
 }
 
@@ -211,10 +363,23 @@ impl ShiftDbIndices for NodeId<Forall> {
 
     fn try_shift_with_cutoff<A: ShiftAmount>(
         self,
-        _amount: A,
-        _cutoff: usize,
-        _registry: &mut NodeRegistry,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
-        unimplemented!()
+        let forall = registry.forall(self).clone();
+        let arity = forall.param_list_id.len;
+        let shifted_param_list_id = forall
+            .param_list_id
+            .try_shift_with_cutoff(amount, cutoff, registry)?;
+        let shifted_output_id =
+            forall
+                .output_id
+                .try_shift_with_cutoff(amount, cutoff + arity, registry)?;
+        Ok(registry.add_forall_and_overwrite_its_id(Forall {
+            id: dummy_id(),
+            param_list_id: shifted_param_list_id,
+            output_id: shifted_output_id,
+        }))
     }
 }
