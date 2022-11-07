@@ -180,21 +180,21 @@ impl Context {
     }
 }
 
-impl Substitute for Context {
+impl SubstituteAndGetNoOpStatus for Context {
     type Output = Self;
 
-    fn subst(
+    fn subst_and_get_status(
         mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> (Self, WasNoOp) {
-        let was_no_op = self.subst_in_place(substitution, state);
+        let was_no_op = self.subst_in_place_and_get_status(substitution, state);
         (self, was_no_op)
     }
 }
 
-impl Context {
-    fn subst_in_place(
+impl SubstituteInPlaceAndGetNoOpStatus for Context {
+    fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
@@ -206,7 +206,9 @@ impl Context {
         }
         was_no_op
     }
+}
 
+impl Context {
     fn subst_entry_in_place(
         &mut self,
         level: DbLevel,
@@ -229,7 +231,7 @@ impl Context {
             .type_id
             .raw()
             .upshift(shift_amount, state.registry)
-            .subst(substitution, state)
+            .subst_and_get_status(substitution, state)
             .map0(|id| id.downshift(shift_amount, state.registry));
         self.local_type_stack[level.0].type_id = evaluate_well_typed_expression(
             &mut State {
@@ -257,7 +259,7 @@ impl Context {
                 let (substituted, was_no_op) = value_id
                     .raw()
                     .upshift(shift_amount, state.registry)
-                    .subst(substitution, state)
+                    .subst_and_get_status(substitution, state)
                     .map0(|id| id.downshift(shift_amount, state.registry));
                 let new_definition = ContextEntryDefinition::Alias {
                     value_id: evaluate_well_typed_expression(

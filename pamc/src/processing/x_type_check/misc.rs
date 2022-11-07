@@ -561,10 +561,11 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
             let mut was_no_op = WasNoOp(true);
 
             if let Some(id) = shifted_coercion_target_id.as_mut() {
-                was_no_op &= id.subst_in_place(substitution, &mut state.without_context());
+                was_no_op &=
+                    id.subst_in_place_and_get_status(substitution, &mut state.without_context());
             }
 
-            was_no_op &= state.context.subst_in_place(
+            was_no_op &= state.context.subst_in_place_and_get_status(
                 substitution,
                 &mut ContextlessState {
                     registry: state.registry,
@@ -573,7 +574,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
             );
 
             for remaining in remaining_substitutions.iter_mut() {
-                was_no_op &= remaining.subst_in_place(substitution, &mut state);
+                was_no_op &= remaining.subst_in_place_and_get_status(substitution, &mut state);
             }
 
             if was_no_op.0 {
@@ -684,26 +685,72 @@ fn min_or_first<T: Ord>(first: T, second: Option<T>) -> T {
     }
 }
 
-trait SubstituteInPlace {
-    fn subst_in_place(
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct WasNoOp(pub bool);
+
+impl std::ops::BitAndAssign for WasNoOp {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl std::ops::BitAnd for WasNoOp {
+    type Output = Self;
+
+    fn bitand(mut self, rhs: Self) -> Self {
+        self &= rhs;
+        self
+    }
+}
+
+pub(super) trait SubstituteInPlaceAndGetNoOpStatus {
+    fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> WasNoOp;
 }
 
-impl<T> SubstituteInPlace for T
+impl<T> SubstituteInPlaceAndGetNoOpStatus for T
 where
-    T: Clone + Substitute<Output = T>,
+    T: Copy + SubstituteAndGetNoOpStatus<Output = T>,
 {
-    fn subst_in_place(
+    fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> WasNoOp {
-        let (substituted, was_no_op) = self.clone().subst(substitution, state);
+        let (substituted, was_no_op) = self.subst_and_get_status(substitution, state);
         *self = substituted;
         was_no_op
+    }
+}
+
+pub(super) trait SubstituteAndGetNoOpStatus {
+    type Output;
+
+    fn subst_and_get_status(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> (Self::Output, WasNoOp);
+}
+
+impl<T> SubstituteAndGetNoOpStatus for T
+where
+    T: Substitute<Output = T>,
+    T: crate::data::node_equality_checker::IntoSemanticId,
+{
+    type Output = T;
+
+    fn subst_and_get_status(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> (Self::Output, WasNoOp) {
+        let substituted = self.subst(substitution, state);
+        let was_no_op = WasNoOp(state.equality_checker.eq(self, substituted, state.registry));
+        (substituted, was_no_op)
     }
 }
 
@@ -711,24 +758,42 @@ where
 // a `DynamicSubstitution` requires evaluation, which requires a `State` (which
 // is too strong of a requirement to satisfy the `SubstituteInPlace` trait).
 impl DynamicSubstitution {
-    fn subst_in_place(&mut self, substitution: Substitution, state: &mut State) -> WasNoOp {
-        let (substituted, was_no_op) = self.subst(substitution, state);
+    fn subst_in_place_and_get_status(
+        &mut self,
+        substitution: Substitution,
+        state: &mut State,
+    ) -> WasNoOp {
+        let (substituted, was_no_op) = self.subst_and_get_status(substitution, state);
         *self = substituted;
         was_no_op
     }
 
-    fn subst(self, substitution: Substitution, state: &mut State) -> (Self, WasNoOp) {
-        let (t1, was_no_op_1) = self
+    fn subst_and_get_status(
+        self,
+        substitution: Substitution,
+        state: &mut State,
+    ) -> (Self, WasNoOp) {
+        let original_t1 = self.0;
+        let original_t2 = self.1;
+        let t1 = self
             .0
             .raw()
             .subst(substitution, &mut state.without_context());
-        let (t2, was_no_op_2) = self
+        let t2 = self
             .1
             .raw()
             .subst(substitution, &mut state.without_context());
         let t1 = evaluate_well_typed_expression(state, t1);
         let t2 = evaluate_well_typed_expression(state, t2);
-        (DynamicSubstitution(t1, t2), was_no_op_1 & was_no_op_2)
+        let was_no_op = WasNoOp(
+            state
+                .equality_checker
+                .eq(original_t1.raw(), t1.raw(), state.registry)
+                && state
+                    .equality_checker
+                    .eq(original_t2.raw(), t2.raw(), state.registry),
+        );
+        (DynamicSubstitution(t1, t2), was_no_op)
     }
 }
 
