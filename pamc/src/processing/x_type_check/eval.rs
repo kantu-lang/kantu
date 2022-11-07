@@ -177,9 +177,24 @@ fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool
 
 fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalFormId {
     let fun = state.registry.fun(fun_id).clone();
-    let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, fun.param_list_id)
-            .expect("A well-typed Fun should have well-typed params.");
+    let normalized_param_list_id = normalize_params_and_leave_params_in_context(
+        state,
+        fun.param_list_id,
+    )
+    .unwrap_or_else(|err| {
+        if let TypeCheckError::IllegalTypeExpression(expr_id) = &err {
+            println!(
+                "ILLEGAL_TYPE_EXPR: {:#?}",
+                crate::processing::x_expand_lightened::expand_expression(state.registry, *expr_id)
+            );
+        } else {
+            println!("DIFFERENT ERROR");
+        }
+        panic!(
+            "A well-typed Fun should have well-typed params. But got error {:#?}",
+            err
+        );
+    });
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
     state.context.pop_n(fun.param_list_id.len);
 
@@ -265,9 +280,26 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
 
 fn evaluate_well_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> NormalFormId {
     let forall = state.registry.forall(forall_id).clone();
-    let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, forall.param_list_id)
-            .expect("A well-typed Fun should have well-typed params.");
+    let normalized_param_list_id = normalize_params_and_leave_params_in_context(
+        state,
+        forall.param_list_id,
+    )
+    .unwrap_or_else(|err| {
+        if let TypeCheckError::IllegalTypeExpression(expr_id) = &err {
+            println!("ILLEGAL_TYPE_EXPR.context: {:#?}", state.context,);
+            println!(
+                "ILLEGAL_TYPE_EXPR(context_len={}): {:#?}",
+                state.context.len(),
+                crate::processing::x_expand_lightened::expand_expression(state.registry, *expr_id)
+            );
+        } else {
+            println!("DIFFERENT ERROR");
+        }
+        panic!(
+            "A well-typed Forall should have well-typed params. But got error {:#?}",
+            err
+        );
+    });
     let normalized_output_id = evaluate_well_typed_expression(state, forall.output_id);
     state.context.pop_n(forall.param_list_id.len);
 

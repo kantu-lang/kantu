@@ -217,6 +217,19 @@ impl SubstituteInPlaceAndGetNoOpStatus for Context {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> WasNoOp {
+        println!(
+            "CONTEXT::subst_in_place_and_get_status.substitution: {:#?}",
+            (
+                crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    substitution.from.raw()
+                ),
+                crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    substitution.to.raw()
+                )
+            )
+        );
         let mut was_no_op = WasNoOp(true);
         for i in 0..self.len() {
             let level = DbLevel(i);
