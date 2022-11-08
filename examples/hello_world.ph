@@ -21,3 +21,12 @@ let mult = fun mult(-a: Nat, b: Nat): Nat {
         .S(a_pred) => plus(b, mult(a_pred, b)),
     }
 };
+
+let square = fun square(a: Nat): Nat { mult(a, a) };
+
+let map = fun map(T: Type, U: Type, -l: List(T), f: forall(v: T) { U }): List(U) {
+    match l {
+        .Nil(_T) => List.Nil(U),
+        .Cons(_T, car, cdr) => List.Cons(U, f(car), map(T, U, cdr, f)),
+    }
+};
