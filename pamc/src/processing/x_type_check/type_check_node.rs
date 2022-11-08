@@ -389,14 +389,14 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
             param_list_id: normalized_param_list_id,
             output_id: normalized_return_type_id.raw(),
         }),
-    ))
-    .upshift(param_arity, state.registry);
+    ));
 
+    let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
     let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
     let normalized_fun_id =
         evaluate_well_typed_expression(state, ExpressionId::Fun(shifted_fun_id));
     state.context.push(ContextEntry {
-        type_id: fun_type_id,
+        type_id: shifted_fun_type_id,
         definition: ContextEntryDefinition::Alias {
             value_id: normalized_fun_id,
         },
