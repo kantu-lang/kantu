@@ -14,3 +14,10 @@ let plus = fun plus(-a: Nat, b: Nat): Nat {
         .S(a_pred) => Nat.S(plus(a_pred, b)),
     }
 };
+
+let mult = fun mult(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => Nat.O,
+        .S(a_pred) => plus(b, mult(a_pred, b)),
+    }
+};
