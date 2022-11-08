@@ -365,9 +365,14 @@ fn get_type_of_call(
 }
 
 fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, TypeCheckError> {
-    let original_context_len = state.context.len();
-
     let fun = state.registry.fun(fun_id).clone();
+    // We call this "param arity" instead of simply "arity"
+    // to convey the fact that it does **not** include the recursive
+    // function.
+    // For example, `fun f(a: A, b: B) -> C { ... }` has param arity 2,
+    // even though `f` is also added to the context as a third entry
+    // (to enable recursion).
+    let param_arity = fun.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(state, fun.param_list_id)?;
     {
@@ -385,9 +390,9 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
             output_id: normalized_return_type_id.raw(),
         }),
     ))
-    .upshift(fun.param_list_id.len, state.registry);
+    .upshift(param_arity, state.registry);
 
-    let shifted_fun_id = fun_id.upshift(state.context.len() - original_context_len, state.registry);
+    let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
     let normalized_fun_id =
         evaluate_well_typed_expression(state, ExpressionId::Fun(shifted_fun_id));
     state.context.push(ContextEntry {
@@ -425,7 +430,7 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
         });
     }
 
-    state.context.pop_n(fun.param_list_id.len + 1);
+    state.context.pop_n(param_arity + 1);
     Ok(fun_type_id)
 }
 
