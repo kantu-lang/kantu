@@ -268,6 +268,15 @@ fn get_type_of_call(
             });
         }
     }
+    println!(
+        "GET_TYPE_OF_CALL (context_len={}, type0_dbi={:?}): callee_type = {:#?} (((",
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(
+            state.registry,
+            ExpressionId::Forall(callee_type_id)
+        )
+    );
     for (i, (callee_type_param_id, arg_type_id)) in callee_type_param_ids
         .iter()
         .copied()
@@ -301,14 +310,14 @@ fn get_type_of_call(
                 .subst_all(&substitutions, &mut state.without_context())
                 .downshift(i, state.registry);
             println!(
-                "ABOUT to evaluate in get_type_of_call (context_len={}, type0_dbi={:?}, shift={}): {:#?} (((",
+                "ABOUT to evaluate in get_type_of_call (context_len={}, type0_dbi={:?}, shift={}): param_type.substituted = {:#?} (((",
                 state.context.len(),
                 state.context.type0_dbi(),
                 i,
                 crate::processing::x_expand_lightened::expand_expression(state.registry, substituted)
             );
             println!(
-                "^ABOUT.unsubstituted {:#?}",
+                "^ABOUT.param_type.unsubstituted {:#?}",
                 crate::processing::x_expand_lightened::expand_expression(
                     state.registry,
                     unsubstituted.raw()
@@ -375,7 +384,8 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
             param_list_id: normalized_param_list_id,
             output_id: normalized_return_type_id.raw(),
         }),
-    ));
+    ))
+    .upshift(fun.param_list_id.len, state.registry);
 
     let shifted_fun_id = fun_id.upshift(state.context.len() - original_context_len, state.registry);
     let normalized_fun_id =
