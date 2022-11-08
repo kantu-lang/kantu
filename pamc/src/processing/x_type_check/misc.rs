@@ -590,6 +590,9 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
 }
 
 fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Option<Substitution> {
+    // TODO: Consider comparing `d.0` and `d.1` for equality directly,
+    // since we may want to treat NameExpressions with same `db_index`s
+    // but different names as distinct, for the sake of sane error messages.
     if state
         .equality_checker
         .eq(d.0.raw(), d.1.raw(), state.registry)
