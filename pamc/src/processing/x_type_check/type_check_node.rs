@@ -240,6 +240,11 @@ fn get_type_of_call(
         return Err(TypeCheckError::BadCallee(call.callee_id));
     };
     let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
+    let normalized_arg_ids: Vec<NormalFormId> = arg_ids
+        .iter()
+        .copied()
+        .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
+        .collect();
     let arg_type_ids = arg_ids
         .iter()
         .copied()
@@ -290,18 +295,18 @@ fn get_type_of_call(
             // normal form.
             let unsubstituted = NormalFormId::unchecked_new(callee_type_param.type_id);
             let substitutions: Vec<Substitution> =
-                arg_type_ids[..i]
+                normalized_arg_ids[..i]
                     .iter()
                     .copied()
                     .enumerate()
-                    .map(|(j, arg_type_id)| {
+                    .map(|(j, normalized_arg_id)| {
                         let db_index = DbIndex(i - j - 1);
                         let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
                         Substitution {
                             from: NormalFormId::unchecked_new(ExpressionId::Name(
                                 add_name_expression(state.registry, vec![param_name_id], db_index),
                             )),
-                            to: arg_type_id.upshift(i, state.registry),
+                            to: normalized_arg_id.upshift(i, state.registry),
                         }
                     })
                     .collect();
@@ -338,11 +343,11 @@ fn get_type_of_call(
     let substituted_output_id = {
         let unsubstituted = NormalFormId::unchecked_new(callee_type.output_id);
         let arity = callee_type_param_ids.len();
-        let substitutions: Vec<Substitution> = arg_type_ids
+        let substitutions: Vec<Substitution> = normalized_arg_ids
             .iter()
             .copied()
             .enumerate()
-            .map(|(j, arg_type_id)| {
+            .map(|(j, normalized_arg_id)| {
                 let db_index = DbIndex(arity - j - 1);
                 let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
                 Substitution {
@@ -351,7 +356,7 @@ fn get_type_of_call(
                         vec![param_name_id],
                         db_index,
                     ))),
-                    to: arg_type_id.upshift(arity, state.registry),
+                    to: normalized_arg_id.upshift(arity, state.registry),
                 }
             })
             .collect();
