@@ -6,6 +6,21 @@ pub struct Substitution {
     pub to: NormalFormId,
 }
 
+impl ShiftDbIndices for Substitution {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let from = self.from.try_shift_with_cutoff(amount, cutoff, registry)?;
+        let to = self.to.try_shift_with_cutoff(amount, cutoff, registry)?;
+        Ok(Substitution { from, to })
+    }
+}
+
 pub(super) trait Substitute {
     type Output;
 
@@ -112,8 +127,14 @@ impl Substitute for NodeId<Fun> {
 
         let fun = state.registry.fun(self).clone();
         let substituted_param_list_id = fun.param_list_id.subst(substitution, state);
-        let substituted_return_type_id = fun.return_type_id.subst(substitution, state);
-        let substituted_body_id = fun.body_id.subst(substitution, state);
+        let substituted_return_type_id = fun.return_type_id.subst(
+            substitution.upshift(fun.param_list_id.len, state.registry),
+            state,
+        );
+        let substituted_body_id = fun.body_id.subst(
+            substitution.upshift(fun.param_list_id.len + 1, state.registry),
+            state,
+        );
         ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
             id: dummy_id(),
             name_id: fun.name_id,
@@ -133,7 +154,8 @@ impl Substitute for ListId<NodeId<Param>> {
             .param_list(self)
             .to_vec()
             .into_iter()
-            .map(|id| id.subst(substitution, state))
+            .enumerate()
+            .map(|(index, id)| id.subst(substitution.upshift(index, state.registry), state))
             .collect();
         state.registry.add_param_list(new_ids)
     }
@@ -196,7 +218,10 @@ impl Substitute for NodeId<MatchCase> {
 
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let case = state.registry.match_case(self).clone();
-        let substituted_output_id = case.output_id.subst(substitution, state);
+        let substituted_output_id = case.output_id.subst(
+            substitution.upshift(case.param_list_id.len, state.registry),
+            state,
+        );
         state
             .registry
             .add_match_case_and_overwrite_its_id(MatchCase {
@@ -220,7 +245,10 @@ impl Substitute for NodeId<Forall> {
 
         let forall = state.registry.forall(self).clone();
         let substituted_param_list_id = forall.param_list_id.subst(substitution, state);
-        let substituted_output_id = forall.output_id.subst(substitution, state);
+        let substituted_output_id = forall.output_id.subst(
+            substitution.upshift(forall.param_list_id.len, state.registry),
+            state,
+        );
 
         ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
