@@ -640,6 +640,7 @@ fn add_case_params_to_context_and_get_constructed_type(
                 });
             }
 
+            // TODO: Replace forall param names with case param names 
             Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
         }
         ExpressionId::Name(_) => {
