@@ -51,18 +51,17 @@ fn subst_if_equal_and_get_status(
     original: ExpressionId,
     substitution: Substitution,
     state: &mut ContextlessState,
-) -> (ExpressionId, WasNoOp) {
+) -> (ExpressionId, WasSyntacticNoOp) {
     let Substitution { from, to } = substitution;
     let is_equal = state
         .equality_checker
         .eq(original, from.raw(), state.registry);
     if is_equal {
         let to = to.raw();
-        let is_still_equal = state.equality_checker.eq(original, to, state.registry);
-        let was_no_op = WasNoOp(is_still_equal);
+        let was_no_op = WasSyntacticNoOp(original == to);
         (to, was_no_op)
     } else {
-        (original, WasNoOp(true))
+        (original, WasSyntacticNoOp(true))
     }
 }
 
@@ -72,7 +71,7 @@ impl Substitute for NodeId<Call> {
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level =
             subst_if_equal_and_get_status(ExpressionId::Call(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
@@ -107,7 +106,7 @@ impl Substitute for NodeId<Fun> {
 
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level = subst_if_equal_and_get_status(ExpressionId::Fun(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
@@ -161,7 +160,7 @@ impl Substitute for NodeId<Match> {
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level =
             subst_if_equal_and_get_status(ExpressionId::Match(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
@@ -215,7 +214,7 @@ impl Substitute for NodeId<Forall> {
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level =
             subst_if_equal_and_get_status(ExpressionId::Forall(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 

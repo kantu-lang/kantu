@@ -198,25 +198,12 @@ impl Context {
     }
 }
 
-impl SubstituteAndGetNoOpStatus for Context {
-    type Output = Self;
-
-    fn subst_and_get_status(
-        mut self,
-        substitution: Substitution,
-        state: &mut ContextlessState,
-    ) -> (Self, WasNoOp) {
-        let was_no_op = self.subst_in_place_and_get_status(substitution, state);
-        (self, was_no_op)
-    }
-}
-
 impl SubstituteInPlaceAndGetNoOpStatus for Context {
     fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         println!(
             "CONTEXT::subst_in_place_and_get_status.substitution: {:#?}",
             (
@@ -230,7 +217,7 @@ impl SubstituteInPlaceAndGetNoOpStatus for Context {
                 )
             )
         );
-        let mut was_no_op = WasNoOp(true);
+        let mut was_no_op = WasSyntacticNoOp(true);
         for i in 0..self.len() {
             let level = DbLevel(i);
             was_no_op &= self.subst_entry_in_place(level, substitution, state);
@@ -245,7 +232,7 @@ impl Context {
         level: DbLevel,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         self.subst_entry_type_id_in_place(level, substitution, state)
             & self.subst_entry_definition_in_place(level, substitution, state)
     }
@@ -255,15 +242,18 @@ impl Context {
         level: DbLevel,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         let shift_amount = self.level_to_index(level).0 + 1;
 
-        let (substituted_type_id, was_no_op) = self.local_type_stack[level.0]
-            .type_id
-            .raw()
-            .upshift(shift_amount, state.registry)
-            .subst_and_get_status(substitution, state)
-            .map0(|id| id.downshift(shift_amount, state.registry));
+        let (substituted_type_id, was_no_op) = {
+            let original_type_id = self.local_type_stack[level.0].type_id.raw();
+            let substituted_type_id = original_type_id
+                .upshift(shift_amount, state.registry)
+                .subst(substitution, state)
+                .downshift(shift_amount, state.registry);
+            let was_no_op = WasSyntacticNoOp(substituted_type_id == original_type_id);
+            (substituted_type_id, was_no_op)
+        };
         self.local_type_stack[level.0].type_id = evaluate_well_typed_expression(
             &mut State {
                 context: self,
@@ -281,17 +271,18 @@ impl Context {
         level: DbLevel,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         let shift_amount = self.level_to_index(level).0 + 1;
 
         let original_definition = self.local_type_stack[level.0].definition;
         let (new_definition, was_no_op) = match original_definition {
             ContextEntryDefinition::Alias { value_id } => {
-                let (substituted, was_no_op) = value_id
+                let substituted = value_id
                     .raw()
                     .upshift(shift_amount, state.registry)
-                    .subst_and_get_status(substitution, state)
-                    .map0(|id| id.downshift(shift_amount, state.registry));
+                    .subst(substitution, state)
+                    .downshift(shift_amount, state.registry);
+                let was_no_op = WasSyntacticNoOp(substituted == value_id.raw());
                 let new_definition = ContextEntryDefinition::Alias {
                     value_id: evaluate_well_typed_expression(
                         &mut State {
@@ -306,7 +297,9 @@ impl Context {
             }
             ContextEntryDefinition::Adt { .. }
             | ContextEntryDefinition::Variant { .. }
-            | ContextEntryDefinition::Uninterpreted => (original_definition, WasNoOp(true)),
+            | ContextEntryDefinition::Uninterpreted => {
+                (original_definition, WasSyntacticNoOp(true))
+            }
         };
         self.local_type_stack[level.0].definition = new_definition;
 

@@ -561,7 +561,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
             };
         let remaining_substitutions = &mut substitutions[i + 1..];
         loop {
-            let mut was_no_op = WasNoOp(true);
+            let mut was_no_op = WasSyntacticNoOp(true);
 
             if let Some(id) = shifted_coercion_target_id.as_mut() {
                 was_no_op &=
@@ -692,15 +692,15 @@ fn min_or_first<T: Ord>(first: T, second: Option<T>) -> T {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct WasNoOp(pub bool);
+pub struct WasSyntacticNoOp(pub bool);
 
-impl std::ops::BitAndAssign for WasNoOp {
+impl std::ops::BitAndAssign for WasSyntacticNoOp {
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0;
     }
 }
 
-impl std::ops::BitAnd for WasNoOp {
+impl std::ops::BitAnd for WasSyntacticNoOp {
     type Output = Self;
 
     fn bitand(mut self, rhs: Self) -> Self {
@@ -714,49 +714,21 @@ pub(super) trait SubstituteInPlaceAndGetNoOpStatus {
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp;
+    ) -> WasSyntacticNoOp;
 }
 
-impl<T> SubstituteInPlaceAndGetNoOpStatus for T
-where
-    T: Copy + SubstituteAndGetNoOpStatus<Output = T>,
-{
+impl SubstituteInPlaceAndGetNoOpStatus for ExpressionId {
     fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
-        let (substituted, was_no_op) = self.subst_and_get_status(substitution, state);
-        *self = substituted;
+    ) -> WasSyntacticNoOp {
+        let original = *self;
+        let new = original.subst(substitution, state);
+        let was_no_op = WasSyntacticNoOp(original == new);
+
+        *self = new;
         was_no_op
-    }
-}
-
-pub(super) trait SubstituteAndGetNoOpStatus {
-    type Output;
-
-    fn subst_and_get_status(
-        self,
-        substitution: Substitution,
-        state: &mut ContextlessState,
-    ) -> (Self::Output, WasNoOp);
-}
-
-impl<T> SubstituteAndGetNoOpStatus for T
-where
-    T: Substitute<Output = T>,
-    T: crate::data::node_equality_checker::IntoSemanticId,
-{
-    type Output = T;
-
-    fn subst_and_get_status(
-        self,
-        substitution: Substitution,
-        state: &mut ContextlessState,
-    ) -> (Self::Output, WasNoOp) {
-        let substituted = self.subst(substitution, state);
-        let was_no_op = WasNoOp(state.equality_checker.eq(self, substituted, state.registry));
-        (substituted, was_no_op)
     }
 }
 
@@ -768,7 +740,7 @@ impl DynamicSubstitution {
         &mut self,
         substitution: Substitution,
         state: &mut State,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         let (substituted, was_no_op) = self.subst_and_get_status(substitution, state);
         *self = substituted;
         was_no_op
@@ -778,7 +750,7 @@ impl DynamicSubstitution {
         self,
         substitution: Substitution,
         state: &mut State,
-    ) -> (Self, WasNoOp) {
+    ) -> (Self, WasSyntacticNoOp) {
         let original_t1 = self.0;
         let original_t2 = self.1;
         let t1 = self
@@ -791,14 +763,8 @@ impl DynamicSubstitution {
             .subst(substitution, &mut state.without_context());
         let t1 = evaluate_well_typed_expression(state, t1);
         let t2 = evaluate_well_typed_expression(state, t2);
-        let was_no_op = WasNoOp(
-            state
-                .equality_checker
-                .eq(original_t1.raw(), t1.raw(), state.registry)
-                && state
-                    .equality_checker
-                    .eq(original_t2.raw(), t2.raw(), state.registry),
-        );
+        let was_no_op =
+            WasSyntacticNoOp(original_t1.raw() == t1.raw() && original_t2.raw() == t2.raw());
         (DynamicSubstitution(t1, t2), was_no_op)
     }
 }
