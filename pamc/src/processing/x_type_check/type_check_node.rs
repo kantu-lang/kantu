@@ -596,7 +596,30 @@ fn get_type_of_match_case(
     } else {
         match output_type_id.try_downshift(case_arity, state.registry) {
             Ok(shifted_output_type_id) => Ok(shifted_output_type_id),
-            Err(_) => Err(TypeCheckError::AmbiguousOutputType { case_id }),
+            Err(_) => {
+                println!(
+                    "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) nondownshifted_type = {:#?}",
+                    state.context.len(),
+                    state.context.type0_dbi(),
+                    crate::processing::x_expand_lightened::expand_expression(
+                        state.registry,
+                        output_type_id.raw()
+                    )
+                );
+                println!(
+                    "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) (upshifted_)coercion_target = {:#?}",
+                    state.context.len(),
+                    state.context.type0_dbi(),
+                    normalized_substituted_coercion_target_id.map(|target_id| {
+                        crate::processing::x_expand_lightened::expand_expression(
+                            state.registry,
+                            target_id.raw(),
+                        )
+                    })
+                );
+
+                Err(TypeCheckError::AmbiguousOutputType { case_id })
+            }
         }
     }
 }
