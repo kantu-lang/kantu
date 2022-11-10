@@ -516,6 +516,7 @@ fn get_type_of_match_case(
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
+    // TODO: Verify that `case_arity == case_variant_type_params.len`.
     let parameterized_type_id =
         add_case_params_to_context_and_get_constructed_type(state, case_id, matchee_type)?;
 
