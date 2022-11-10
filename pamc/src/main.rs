@@ -105,6 +105,27 @@ fn main() {
                                                     )
                                                 );
                                             }
+                                            if let TypeCheckError::WrongNumberOfArguments {
+                                                call_id,
+                                                expected,
+                                                actual,
+                                            } = &err
+                                            {
+                                                println!(
+                                                    "TYPE_MISMATCH.call: {:#?}",
+                                                    expand_expression(
+                                                        &registry,
+                                                        pamc::data::x_light_ast::ExpressionId::Call(
+                                                            *call_id
+                                                        )
+                                                    )
+                                                );
+                                                println!(
+                                                    "TYPE_MISMATCH.expected_arity: {}",
+                                                    expected
+                                                );
+                                                println!("TYPE_MISMATCH.actual_arity: {}", actual);
+                                            }
                                         }
                                     }
                                 }

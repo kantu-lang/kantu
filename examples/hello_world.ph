@@ -24,9 +24,30 @@ let mult = fun mult(-a: Nat, b: Nat): Nat {
 
 let square = fun square(a: Nat): Nat { mult(a, a) };
 
-let map = fun map(A: Type, B: Type, -l: List(A), f: forall(v: A) { B }): List(B) {
+let map = fun map(T: Type, U: Type, -l: List(T), f: forall(v: T) { U }): List(U) {
     match l {
-        .Nil(_A1) => List.Nil(B),
-        .Cons(_A2, car, cdr) => List.Cons(B, f(car), map(A, B, cdr, f)),
+        .Nil(_T) => List.Nil(U),
+        .Cons(_T, car, cdr) => List.Cons(U, f(car), map(T, U, cdr, f)),
     }
 };
+
+let square_all = fun square_all(l: List(Nat)): List(Nat) { map(Nat, Nat, l, square) };
+
+type Exists(T: Type, P: forall(v: T) { Type }) {
+    .witness(T: Type, P: forall(v: T) { Type }, v: T, H: P(v)): Exists(T, P),
+}
+
+type Eq(T: Type, x: T, y: T) {
+    .Refl(T: Type, z: T): Eq(T, z, z),
+}
+
+let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
+    match a {
+        .O => Eq.Refl(Nat, Nat.S(b)),
+        .S(a') =>
+            match plus_S_(a', b) {
+                .Refl(_c) => Eq.Refl(Nat, Nat.S(Nat.S(plus(a', b)))),
+            },
+    }
+};
+
