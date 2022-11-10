@@ -24,7 +24,7 @@ let mult = fun mult(-a: Nat, b: Nat): Nat {
 
 let square = fun square(a: Nat): Nat { mult(a, a) };
 
-let map = fun map(A: Type, B: Type, -l: List(A), f: forall(v: A) { B }): List(A) {
+let map = fun map(A: Type, B: Type, -l: List(A), f: forall(v: A) { B }): List(B) {
     match l {
         .Nil(_A1) => List.Nil(B),
         .Cons(_A2, car, cdr) => List.Cons(B, f(car), map(A, B, cdr, f)),
