@@ -41,13 +41,8 @@ type Eq(T: Type, x: T, y: T) {
     .Refl(T: Type, z: T): Eq(T, z, z),
 }
 
-let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
-    match a {
-        .O => Eq.Refl(Nat, Nat.S(b)),
-        .S(a') =>
-            match plus_S_(a', b) {
-                .Refl(_Nat, _c) => Eq.Refl(Nat, Nat.S(Nat.S(plus(a', b)))),
-            },
+let eq_comm = fun eq_comm_(a: Nat, b: Nat, H: Eq(Nat, a, b)): Eq(Nat, b, a) {
+    match H {
+        .Refl(_Nat, _c) => Eq.Refl(Nat, a),
     }
 };
-
