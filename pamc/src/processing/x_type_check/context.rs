@@ -1,5 +1,7 @@
 use super::*;
 
+const NUMBER_OF_BUILTIN_ENTRIES: usize = 2;
+
 #[derive(Debug, Clone)]
 pub struct Context {
     /// Each type in the stack is expressed "locally" (i.e., relative
@@ -104,8 +106,9 @@ impl Context {
                 definition: ContextEntryDefinition::Uninterpreted,
             }
         };
+        let builtins: [ContextEntry; NUMBER_OF_BUILTIN_ENTRIES] = [type1_entry, type0_entry];
         Self {
-            local_type_stack: vec![type1_entry, type0_entry],
+            local_type_stack: builtins.to_vec(),
         }
     }
 }
@@ -218,7 +221,7 @@ impl SubstituteInPlaceAndGetNoOpStatus for Context {
             )
         );
         let mut was_no_op = WasSyntacticNoOp(true);
-        for i in 0..self.len() {
+        for i in NUMBER_OF_BUILTIN_ENTRIES..self.len() {
             let level = DbLevel(i);
             was_no_op &= self.subst_entry_in_place(level, substitution, state);
         }
@@ -254,14 +257,17 @@ impl Context {
             let was_no_op = WasSyntacticNoOp(substituted_type_id == original_type_id);
             (substituted_type_id, was_no_op)
         };
-        self.local_type_stack[level.0].type_id = evaluate_well_typed_expression(
-            &mut State {
-                context: self,
-                registry: state.registry,
-                equality_checker: state.equality_checker,
-            },
-            substituted_type_id,
-        );
+        self.local_type_stack[level.0].type_id = {
+            let mut context = self.clone_slice(level);
+            evaluate_well_typed_expression(
+                &mut State {
+                    context: &mut context,
+                    registry: state.registry,
+                    equality_checker: state.equality_checker,
+                },
+                substituted_type_id,
+            )
+        };
 
         was_no_op
     }
@@ -283,15 +289,18 @@ impl Context {
                     .subst(substitution, state)
                     .downshift(shift_amount, state.registry);
                 let was_no_op = WasSyntacticNoOp(substituted == value_id.raw());
-                let new_definition = ContextEntryDefinition::Alias {
-                    value_id: evaluate_well_typed_expression(
-                        &mut State {
-                            context: self,
-                            registry: state.registry,
-                            equality_checker: state.equality_checker,
-                        },
-                        substituted,
-                    ),
+                let new_definition = {
+                    let mut context = self.clone_slice(level);
+                    ContextEntryDefinition::Alias {
+                        value_id: evaluate_well_typed_expression(
+                            &mut State {
+                                context: &mut context,
+                                registry: state.registry,
+                                equality_checker: state.equality_checker,
+                            },
+                            substituted,
+                        ),
+                    }
                 };
                 (new_definition, was_no_op)
             }
@@ -304,5 +313,13 @@ impl Context {
         self.local_type_stack[level.0].definition = new_definition;
 
         was_no_op
+    }
+}
+
+impl Context {
+    fn clone_slice(&self, excl_upper_bound: DbLevel) -> Context {
+        Context {
+            local_type_stack: self.local_type_stack[0..excl_upper_bound.0].to_vec(),
+        }
     }
 }
