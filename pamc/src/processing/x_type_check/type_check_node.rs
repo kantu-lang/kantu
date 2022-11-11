@@ -549,6 +549,7 @@ fn get_type_of_match_case(
         apply_dynamic_substitutions_with_compounding(
             state,
             fusion.substitutions,
+            // TODO: Substitute case output
             shifted_coercion_target_id.map(NormalFormId::raw),
         );
 
