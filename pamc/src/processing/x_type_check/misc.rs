@@ -562,8 +562,8 @@ pub(super) fn try_as_variant_expression(
 pub(super) fn apply_dynamic_substitutions_with_compounding(
     state: &mut State,
     substitutions: Vec<DynamicSubstitution>,
-    shifted_coercion_target_id: Option<ExpressionId>,
-) -> (Context, Option<ExpressionId>) {
+    expressions_to_substitute: Vec<ExpressionId>,
+) -> (Context, Vec<ExpressionId>) {
     let original_state = state;
     let n = substitutions.len();
 
@@ -574,7 +574,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
         registry: original_state.registry,
         equality_checker: original_state.equality_checker,
     };
-    let mut shifted_coercion_target_id = shifted_coercion_target_id;
+    let mut expressions_to_substitute = expressions_to_substitute;
 
     for i in 0..n {
         let substitution =
@@ -587,7 +587,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
         loop {
             let mut was_no_op = WasSyntacticNoOp(true);
 
-            if let Some(id) = shifted_coercion_target_id.as_mut() {
+            for id in expressions_to_substitute.iter_mut() {
                 was_no_op &=
                     id.subst_in_place_and_get_status(substitution, &mut state.without_context());
             }
@@ -610,7 +610,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
         }
     }
 
-    (context, shifted_coercion_target_id)
+    (context, expressions_to_substitute)
 }
 
 fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Option<Substitution> {
