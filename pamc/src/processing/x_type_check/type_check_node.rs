@@ -701,6 +701,17 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
         state.context
     );
     let variant_type_id = state.context.get_type(variant_dbi, state.registry);
+    let fully_qualified_variant_name_component_ids: Vec<NodeId<Identifier>> = {
+        let matchee_type_name = state.registry.name_expression(matchee_type.type_name_id);
+        let matchee_type_name_component_ids = state
+            .registry
+            .identifier_list(matchee_type_name.component_list_id)
+            .to_vec();
+        matchee_type_name_component_ids
+            .into_iter()
+            .chain(vec![case.variant_name_id])
+            .collect()
+    };
     println!(
         "ADD_CASE_PARAMS.variant_type (context_len={}, type0_dbi={:?}): variant_type = {:#?}",
         state.context.len(),
@@ -712,7 +723,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
     );
     match variant_type_id.raw() {
         ExpressionId::Forall(normalized_forall_id) => {
-            let normalized_forall = state.registry.forall(normalized_forall_id);
+            let normalized_forall = state.registry.forall(normalized_forall_id).clone();
             let expected_case_param_arity = normalized_forall.param_list_id.len;
             if case.param_list_id.len != expected_case_param_arity {
                 return Err(TypeCheckError::WrongNumberOfCaseParams {
@@ -735,9 +746,40 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                 });
             }
 
+            let parameterized_matchee_id = {
+                let callee_id = ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    fully_qualified_variant_name_component_ids,
+                    variant_dbi,
+                ));
+
+                let case_param_ids = state.registry.identifier_list(case.param_list_id).to_vec();
+                let arg_ids = case_param_ids
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .map(|(index, case_param_id)| {
+                        ExpressionId::Name(add_name_expression(
+                            state.registry,
+                            vec![case_param_id],
+                            DbIndex(case_param_ids.len() - index - 1),
+                        ))
+                    })
+                    .collect();
+                let arg_list_id = state.registry.add_expression_list(arg_ids);
+                
+                NormalFormId::unchecked_new(ExpressionId::Call(
+                    state.registry.add_call_and_overwrite_its_id(Call {
+                        id: dummy_id(),
+                        callee_id,
+                        arg_list_id,
+                    }),
+                ))
+            };
             // TODO: Replace forall param names with case param names
-            // Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
-            unimplemented!()
+            let parameterized_matchee_type_id =
+                NormalFormId::unchecked_new(normalized_forall.output_id);
+            Ok((parameterized_matchee_id, parameterized_matchee_type_id))
         }
         ExpressionId::Name(_) => {
             // In this case, the variant type is nullary.
@@ -750,21 +792,12 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     actual: case.param_list_id.len,
                 });
             }
-            
-            let variant_name_component_ids: Vec<NodeId<Identifier>> = {
-                let matchee_type_name = state.registry.name_expression(matchee_type.type_name_id);
-                let matchee_type_name_component_ids = state
-                    .registry
-                    .identifier_list(matchee_type_name.component_list_id)
-                    .to_vec();
-                matchee_type_name_component_ids
-                    .into_iter()
-                    .chain(vec![case.variant_name_id])
-                    .collect()
-            };
-            let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Name(
-                add_name_expression(state.registry, variant_name_component_ids, variant_dbi),
-            ));
+            let parameterized_matchee_id =
+                NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    fully_qualified_variant_name_component_ids,
+                    variant_dbi,
+                )));
             Ok((parameterized_matchee_id, variant_type_id))
         }
         other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
