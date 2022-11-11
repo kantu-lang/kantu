@@ -655,14 +655,13 @@ fn add_case_params_to_context_and_get_constructed_type(
             if case.param_list_id.len != expected_case_param_arity {
                 return Err(TypeCheckError::WrongNumberOfCaseParams {
                     case_id,
-                   expected: expected_case_param_arity,
-                 actual:   case.param_list_id.len ,
+                    expected: expected_case_param_arity,
+                    actual: case.param_list_id.len,
                 });
             }
 
-
-
-            let normalized_param_ids = state.registry
+            let normalized_param_ids = state
+                .registry
                 .param_list(normalized_forall.param_list_id)
                 .to_vec();
             for &normalized_param_id in &normalized_param_ids {
@@ -674,16 +673,16 @@ fn add_case_params_to_context_and_get_constructed_type(
                 });
             }
 
-            // TODO: Replace forall param names with case param names 
+            // TODO: Replace forall param names with case param names
             Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
         }
         ExpressionId::Name(_) => {
             let expected_case_param_arity = 0;
             if case.param_list_id.len != expected_case_param_arity {
                 return Err(TypeCheckError::WrongNumberOfCaseParams {
-                   case_id,
-                   expected: expected_case_param_arity,
-                     actual:   case.param_list_id.len ,
+                    case_id,
+                    expected: expected_case_param_arity,
+                    actual: case.param_list_id.len,
                 });
             }
             // In this case, the variant type is nullary.
