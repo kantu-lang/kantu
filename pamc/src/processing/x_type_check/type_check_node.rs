@@ -594,15 +594,15 @@ fn get_type_of_match_case(
     }
 
     let normalized_coercion_target_id =
-        evaluate_well_typed_expression(state, substituted_coercion_target_id)?;
+        substituted_coercion_target_id.map(|id| evaluate_well_typed_expression(state, id));
 
     let (mut substituted_context, substituted_coercion_target_id, substituted_output_id) =
-        if let Some(substituted_coercion_target_id) = substituted_coercion_target_id {
+        if let Some(normalized_coercion_target_id) = normalized_coercion_target_id {
             let (substituted_context, substituted_expressions) =
                 apply_dynamic_substitutions_with_compounding(
                     state,
                     type_fusion.substitutions,
-                    vec![substituted_coercion_target_id.raw(), substituted_output_id],
+                    vec![normalized_coercion_target_id.raw(), substituted_output_id],
                 );
             (
                 substituted_context,
@@ -736,9 +736,12 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
             }
 
             // TODO: Replace forall param names with case param names
-            Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
+            // Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
+            unimplemented!()
         }
         ExpressionId::Name(_) => {
+            // In this case, the variant type is nullary.
+
             let expected_case_param_arity = 0;
             if case.param_list_id.len != expected_case_param_arity {
                 return Err(TypeCheckError::WrongNumberOfCaseParams {
@@ -747,8 +750,22 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     actual: case.param_list_id.len,
                 });
             }
-            // In this case, the variant type is nullary.
-            Ok(variant_type_id)
+            
+            let variant_name_component_ids: Vec<NodeId<Identifier>> = {
+                let matchee_type_name = state.registry.name_expression(matchee_type.type_name_id);
+                let matchee_type_name_component_ids = state
+                    .registry
+                    .identifier_list(matchee_type_name.component_list_id)
+                    .to_vec();
+                matchee_type_name_component_ids
+                    .into_iter()
+                    .chain(vec![case.variant_name_id])
+                    .collect()
+            };
+            let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Name(
+                add_name_expression(state.registry, variant_name_component_ids, variant_dbi),
+            ));
+            Ok((parameterized_matchee_id, variant_type_id))
         }
         other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
     }
