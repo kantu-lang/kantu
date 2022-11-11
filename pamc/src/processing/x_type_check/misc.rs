@@ -614,13 +614,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
 }
 
 fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Option<Substitution> {
-    // TODO: Consider comparing `d.0` and `d.1` for equality directly,
-    // since we may want to treat NameExpressions with same `db_index`s
-    // but different names as distinct, for the sake of sane error messages.
-    if state
-        .equality_checker
-        .eq(d.0.raw(), d.1.raw(), state.registry)
-    {
+    if d.0.raw() == d.1.raw() {
         return None;
     }
     if is_left_inclusive_subterm_of_right(state, d.0.raw(), d.1.raw()) {
@@ -631,7 +625,7 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
     }
 
     if min_db_index_or_expression(state.registry, d.0.raw()).0
-        < min_db_index_or_expression(state.registry, d.1.raw()).0
+        <= min_db_index_or_expression(state.registry, d.1.raw()).0
     {
         Some(Substitution { from: d.0, to: d.1 })
     } else {
