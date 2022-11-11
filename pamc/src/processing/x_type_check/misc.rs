@@ -294,7 +294,6 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
         state.context.type0_dbi(),
         crate::processing::x_expand_lightened::expand_expression(state.registry, right.raw())
     );
-    // TODO: Also treat ADT expressions specially (not just variant expressions).
     if let (Some(left_ve), Some(right_ve)) = (
         try_as_variant_expression(state, left),
         try_as_variant_expression(state, right),
