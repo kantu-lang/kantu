@@ -301,39 +301,7 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
         let left_name: &IdentifierName = &state.registry.identifier(left_ve.0).name;
         let right_name: &IdentifierName = &state.registry.identifier(right_ve.0).name;
         if left_name == right_name {
-            match (left_ve.1, right_ve.1) {
-                (
-                    PossibleArgListId::Some(left_arg_list_id),
-                    PossibleArgListId::Some(right_arg_list_id),
-                ) => {
-                    let mut out = Fusion {
-                        has_exploded: false,
-                        substitutions: vec![],
-                    };
-                    let left_arg_ids = state.registry.expression_list(left_arg_list_id).to_vec();
-                    let right_arg_ids = state.registry.expression_list(right_arg_list_id).to_vec();
-
-                    for (left_arg_id, right_arg_id) in left_arg_ids
-                        .iter()
-                        .copied()
-                        .zip(right_arg_ids.iter().copied())
-                    {
-                        out += fuse(
-                            state,
-                            // This is safe because an arg to a normal
-                            // form Call node is always a normal form itself.
-                            NormalFormId::unchecked_new(left_arg_id),
-                            NormalFormId::unchecked_new(right_arg_id),
-                        );
-                    }
-                    out
-                }
-                (PossibleArgListId::Nullary, PossibleArgListId::Nullary) => Fusion {
-                    has_exploded: false,
-                    substitutions: vec![],
-                },
-                other => panic!("Invalid fusion: {:?}", other),
-            }
+            fuse_arg_list(state, left_ve.1, right_ve.1)
         } else {
             Fusion {
                 has_exploded: true,
@@ -344,7 +312,6 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
         try_as_adt_expression(state, left),
         try_as_adt_expression(state, right),
     ) {
-        // TODO: DRY
         let left_type_db_index = state
             .registry
             .name_expression(left_ae.type_name_id)
@@ -354,39 +321,7 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
             .name_expression(right_ae.type_name_id)
             .db_index;
         if left_type_db_index == right_type_db_index {
-            match (left_ae.arg_list_id, right_ae.arg_list_id) {
-                (
-                    PossibleArgListId::Some(left_arg_list_id),
-                    PossibleArgListId::Some(right_arg_list_id),
-                ) => {
-                    let mut out = Fusion {
-                        has_exploded: false,
-                        substitutions: vec![],
-                    };
-                    let left_arg_ids = state.registry.expression_list(left_arg_list_id).to_vec();
-                    let right_arg_ids = state.registry.expression_list(right_arg_list_id).to_vec();
-
-                    for (left_arg_id, right_arg_id) in left_arg_ids
-                        .iter()
-                        .copied()
-                        .zip(right_arg_ids.iter().copied())
-                    {
-                        out += fuse(
-                            state,
-                            // This is safe because an arg to a normal
-                            // form Call node is always a normal form itself.
-                            NormalFormId::unchecked_new(left_arg_id),
-                            NormalFormId::unchecked_new(right_arg_id),
-                        );
-                    }
-                    out
-                }
-                (PossibleArgListId::Nullary, PossibleArgListId::Nullary) => Fusion {
-                    has_exploded: false,
-                    substitutions: vec![],
-                },
-                other => panic!("Invalid fusion: {:?}", other),
-            }
+            fuse_arg_list(state, left_ae.arg_list_id, right_ae.arg_list_id)
         } else {
             Fusion {
                 has_exploded: true,
@@ -398,6 +333,42 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
             has_exploded: false,
             substitutions: vec![DynamicSubstitution(left, right)],
         }
+    }
+}
+
+fn fuse_arg_list(
+    state: &mut State,
+    left_arg_list_id: PossibleArgListId,
+    right_arg_list_id: PossibleArgListId,
+) -> Fusion {
+    match (left_arg_list_id, right_arg_list_id) {
+        (PossibleArgListId::Some(left_arg_list_id), PossibleArgListId::Some(right_arg_list_id)) => {
+            let mut out = Fusion {
+                has_exploded: false,
+                substitutions: vec![],
+            };
+            let left_arg_ids = state.registry.expression_list(left_arg_list_id).to_vec();
+            let right_arg_ids = state.registry.expression_list(right_arg_list_id).to_vec();
+            for (left_arg_id, right_arg_id) in left_arg_ids
+                .iter()
+                .copied()
+                .zip(right_arg_ids.iter().copied())
+            {
+                out += fuse(
+                    state,
+                    // This is safe because an arg to a normal
+                    // form Call node is always a normal form itself.
+                    NormalFormId::unchecked_new(left_arg_id),
+                    NormalFormId::unchecked_new(right_arg_id),
+                );
+            }
+            out
+        }
+        (PossibleArgListId::Nullary, PossibleArgListId::Nullary) => Fusion {
+            has_exploded: false,
+            substitutions: vec![],
+        },
+        other => panic!("Invalid fusion: {:?}", other),
     }
 }
 
