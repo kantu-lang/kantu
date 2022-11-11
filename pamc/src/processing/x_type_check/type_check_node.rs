@@ -516,7 +516,6 @@ fn get_type_of_match_case(
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
-    // TODO: Verify that `case_arity == case_variant_type_params.len`.
     let parameterized_type_id =
         add_case_params_to_context_and_get_constructed_type(state, case_id, matchee_type)?;
 
@@ -652,6 +651,17 @@ fn add_case_params_to_context_and_get_constructed_type(
     match variant_type_id.raw() {
         ExpressionId::Forall(normalized_forall_id) => {
             let normalized_forall = state.registry.forall(normalized_forall_id);
+            let expected_case_param_arity = normalized_forall.param_list_id.len;
+            if case.param_list_id.len != expected_case_param_arity {
+                return Err(TypeCheckError::WrongNumberOfCaseParams {
+                    case_id,
+                   expected: expected_case_param_arity,
+                 actual:   case.param_list_id.len ,
+                });
+            }
+
+
+
             let normalized_param_ids = state.registry
                 .param_list(normalized_forall.param_list_id)
                 .to_vec();
@@ -668,6 +678,14 @@ fn add_case_params_to_context_and_get_constructed_type(
             Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
         }
         ExpressionId::Name(_) => {
+            let expected_case_param_arity = 0;
+            if case.param_list_id.len != expected_case_param_arity {
+                return Err(TypeCheckError::WrongNumberOfCaseParams {
+                   case_id,
+                   expected: expected_case_param_arity,
+                     actual:   case.param_list_id.len ,
+                });
+            }
             // In this case, the variant type is nullary.
             Ok(variant_type_id)
         }

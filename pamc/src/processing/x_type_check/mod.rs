@@ -32,6 +32,11 @@ pub enum TypeCheckError {
         expected: usize,
         actual: usize,
     },
+    WrongNumberOfCaseParams {
+        case_id: NodeId<MatchCase>,
+        expected: usize,
+        actual: usize,
+    },
     TypeMismatch {
         expression_id: ExpressionId,
         expected_type_id: NormalFormId,
