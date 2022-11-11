@@ -628,8 +628,8 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
         return Some(Substitution { from: d.0, to: d.1 });
     }
 
-    if min_db_index_or_expression(state.registry, d.0.raw()).0
-        <= min_db_index_or_expression(state.registry, d.1.raw()).0
+    if min_db_index_of_expression(state.registry, d.0.raw()).0
+        <= min_db_index_of_expression(state.registry, d.1.raw()).0
     {
         Some(Substitution { from: d.0, to: d.1 })
     } else {
@@ -638,7 +638,7 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
 }
 
 // TODO: Maybe cache this.
-fn min_db_index_or_expression(registry: &NodeRegistry, id: ExpressionId) -> DbIndex {
+fn min_db_index_of_expression(registry: &NodeRegistry, id: ExpressionId) -> DbIndex {
     match id {
         ExpressionId::Name(id) => min_db_index_of_name(registry, id),
         ExpressionId::Call(id) => min_db_index_of_call(registry, id),
@@ -654,11 +654,11 @@ fn min_db_index_of_name(registry: &NodeRegistry, id: NodeId<NameExpression>) -> 
 
 fn min_db_index_of_call(registry: &NodeRegistry, id: NodeId<Call>) -> DbIndex {
     let call = registry.call(id);
-    let callee_min = min_db_index_or_expression(registry, call.callee_id);
+    let callee_min = min_db_index_of_expression(registry, call.callee_id);
     let arg_ids = registry.expression_list(call.arg_list_id);
     let args_min = arg_ids
         .iter()
-        .map(|&arg_id| min_db_index_or_expression(registry, arg_id))
+        .map(|&arg_id| min_db_index_of_expression(registry, arg_id))
         .min();
     min_or_first(callee_min, args_min)
 }
@@ -670,23 +670,23 @@ fn min_db_index_of_fun(registry: &NodeRegistry, id: NodeId<Fun>) -> DbIndex {
         .iter()
         .map(|&param_id| {
             let param = registry.param(param_id);
-            min_db_index_or_expression(registry, param.type_id)
+            min_db_index_of_expression(registry, param.type_id)
         })
         .min();
-    let return_type_min = min_db_index_or_expression(registry, fun.return_type_id);
-    let body_min = min_db_index_or_expression(registry, fun.body_id);
+    let return_type_min = min_db_index_of_expression(registry, fun.return_type_id);
+    let body_min = min_db_index_of_expression(registry, fun.body_id);
     min_or_first(return_type_min.min(body_min), param_types_min)
 }
 
 fn min_db_index_of_match(registry: &NodeRegistry, id: NodeId<Match>) -> DbIndex {
     let match_ = registry.match_(id);
-    let matchee_min = min_db_index_or_expression(registry, match_.matchee_id);
+    let matchee_min = min_db_index_of_expression(registry, match_.matchee_id);
     let case_ids = registry.match_case_list(match_.case_list_id);
     let case_outputs_min = case_ids
         .iter()
         .map(|case_id| {
             let case = registry.match_case(*case_id);
-            min_db_index_or_expression(registry, case.output_id)
+            min_db_index_of_expression(registry, case.output_id)
         })
         .min();
     min_or_first(matchee_min, case_outputs_min)
@@ -699,10 +699,10 @@ fn min_db_index_of_forall(registry: &NodeRegistry, id: NodeId<Forall>) -> DbInde
         .iter()
         .map(|&param_id| {
             let param = registry.param(param_id);
-            min_db_index_or_expression(registry, param.type_id)
+            min_db_index_of_expression(registry, param.type_id)
         })
         .min();
-    let output_min = min_db_index_or_expression(registry, forall.output_id);
+    let output_min = min_db_index_of_expression(registry, forall.output_id);
     min_or_first(output_min, param_types_min)
 }
 
@@ -810,8 +810,9 @@ pub struct ForwardReferencingSubstitution(pub Substitution);
 
 pub(super) fn apply_forward_referencing_substitution(
     state: &mut State,
-    substitutions: ForwardReferencingSubstitution,
+    substitution: ForwardReferencingSubstitution,
     expressions_to_substitute: Vec<ExpressionId>,
 ) -> (Context, Vec<ExpressionId>) {
+    let min_db = min_db_index_of_expression(state.registry, substitution.0.to.raw());
     unimplemented!()
 }
