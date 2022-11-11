@@ -3,20 +3,12 @@ type Nat {
     .S(n: Nat): Nat,
 }
 
-type Bar(m: Nat) {
-    .B(n: Nat): Bar(n),
+type Eq(left: Nat, right: Nat) {
+    .Refl(z: Nat): Eq(z, z),
 }
 
-let bar = fun bar_(a: Nat): Nat {
-    match a {
-        .O => Nat.O,
-        .S(a') => Nat.O,
-    }
-};
-
-let foo = fun foo_(a: Nat): Bar(a) {
-    match a {
-        .O => Bar.B(Nat.O),
-        .S(a') => Bar.B(a),
+let eq_comm = fun eq_comm_(a: Nat, b: Nat, H: Eq(a, b)): Eq(b, a) {
+    match H {
+        .Refl(_z) => Eq.Refl(a),
     }
 };
