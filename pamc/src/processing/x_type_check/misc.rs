@@ -266,7 +266,7 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
 }
 
 #[derive(Clone, Debug)]
-pub struct Fusion {
+pub struct BackwardFusion {
     pub has_exploded: bool,
     pub substitutions: Vec<DynamicSubstitution>,
 }
@@ -274,14 +274,18 @@ pub struct Fusion {
 #[derive(Clone, Copy, Debug)]
 pub struct DynamicSubstitution(pub NormalFormId, pub NormalFormId);
 
-impl std::ops::AddAssign<Fusion> for Fusion {
-    fn add_assign(&mut self, rhs: Fusion) {
+impl std::ops::AddAssign<BackwardFusion> for BackwardFusion {
+    fn add_assign(&mut self, rhs: BackwardFusion) {
         self.has_exploded |= rhs.has_exploded;
         self.substitutions.extend(rhs.substitutions);
     }
 }
 
-pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -> Fusion {
+pub(super) fn backfuse(
+    state: &mut State,
+    left: NormalFormId,
+    right: NormalFormId,
+) -> BackwardFusion {
     println!(
         "FUSE.LEFT (context_len={}, type0_dbi={:?}): {:#?}",
         state.context.len(),
@@ -301,9 +305,9 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
         let left_name: &IdentifierName = &state.registry.identifier(left_ve.0).name;
         let right_name: &IdentifierName = &state.registry.identifier(right_ve.0).name;
         if left_name == right_name {
-            fuse_arg_list(state, left_ve.1, right_ve.1)
+            backfuse_arg_list(state, left_ve.1, right_ve.1)
         } else {
-            Fusion {
+            BackwardFusion {
                 has_exploded: true,
                 substitutions: vec![],
             }
@@ -321,29 +325,29 @@ pub(super) fn fuse(state: &mut State, left: NormalFormId, right: NormalFormId) -
             .name_expression(right_ae.type_name_id)
             .db_index;
         if left_type_db_index == right_type_db_index {
-            fuse_arg_list(state, left_ae.arg_list_id, right_ae.arg_list_id)
+            backfuse_arg_list(state, left_ae.arg_list_id, right_ae.arg_list_id)
         } else {
-            Fusion {
+            BackwardFusion {
                 has_exploded: true,
                 substitutions: vec![],
             }
         }
     } else {
-        Fusion {
+        BackwardFusion {
             has_exploded: false,
             substitutions: vec![DynamicSubstitution(left, right)],
         }
     }
 }
 
-fn fuse_arg_list(
+fn backfuse_arg_list(
     state: &mut State,
     left_arg_list_id: PossibleArgListId,
     right_arg_list_id: PossibleArgListId,
-) -> Fusion {
+) -> BackwardFusion {
     match (left_arg_list_id, right_arg_list_id) {
         (PossibleArgListId::Some(left_arg_list_id), PossibleArgListId::Some(right_arg_list_id)) => {
-            let mut out = Fusion {
+            let mut out = BackwardFusion {
                 has_exploded: false,
                 substitutions: vec![],
             };
@@ -354,7 +358,7 @@ fn fuse_arg_list(
                 .copied()
                 .zip(right_arg_ids.iter().copied())
             {
-                out += fuse(
+                out += backfuse(
                     state,
                     // This is safe because an arg to a normal
                     // form Call node is always a normal form itself.
@@ -364,7 +368,7 @@ fn fuse_arg_list(
             }
             out
         }
-        (PossibleArgListId::Nullary, PossibleArgListId::Nullary) => Fusion {
+        (PossibleArgListId::Nullary, PossibleArgListId::Nullary) => BackwardFusion {
             has_exploded: false,
             substitutions: vec![],
         },
@@ -799,4 +803,15 @@ impl<T1, U1, T2> Map0<T1, U1> for (T1, T2) {
     fn map0(self, f: impl FnOnce(T1) -> U1) -> Self::Output {
         (f(self.0), self.1)
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ForwardReferencingSubstitution(pub Substitution);
+
+pub(super) fn apply_forward_referencing_substitution(
+    state: &mut State,
+    substitutions: ForwardReferencingSubstitution,
+    expressions_to_substitute: Vec<ExpressionId>,
+) -> (Context, Vec<ExpressionId>) {
+    unimplemented!()
 }

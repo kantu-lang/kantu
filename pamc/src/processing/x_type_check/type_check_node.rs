@@ -454,6 +454,7 @@ fn get_type_of_match(
             type_id: matchee_type_id,
         });
     };
+    let normalized_matchee_id = evaluate_well_typed_expression(state, match_.matchee_id);
 
     verify_variant_to_case_bijection(
         state.registry,
@@ -474,6 +475,7 @@ fn get_type_of_match(
             state,
             coercion_target_id,
             case_id,
+            normalized_matchee_id,
             matchee_type_id,
             matchee_type,
         )?;
@@ -511,13 +513,18 @@ fn get_type_of_match_case(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     case_id: NodeId<MatchCase>,
+    normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
     matchee_type: AdtExpression,
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
-    let parameterized_type_id =
-        add_case_params_to_context_and_get_constructed_type(state, case_id, matchee_type)?;
+    let (parameterized_matchee_id, parameterized_type_id) =
+        add_case_params_to_context_and_get_constructed_matchee_and_type(
+            state,
+            case_id,
+            matchee_type,
+        )?;
 
     let original_coercion_target_id = coercion_target_id;
     if let Some(original_coercion_target_id) = original_coercion_target_id {
@@ -535,22 +542,20 @@ fn get_type_of_match_case(
     let shifted_coercion_target_id =
         coercion_target_id.map(|target_id| target_id.upshift(case_arity, state.registry));
 
+    let shifted_matchee_id = normalized_matchee_id.upshift(case_arity, state.registry);
     let shifted_matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
-    let fusion = fuse(state, shifted_matchee_type_id, parameterized_type_id);
-    if fusion.has_exploded {
-        if let Some(target_id) = original_coercion_target_id {
-            state.context.pop_n(case_arity);
-            return Ok(target_id);
-        }
-    }
+    let matchee_substitution = ForwardReferencingSubstitution(Substitution {
+        from: shifted_matchee_id,
+        to: parameterized_matchee_id,
+    });
 
     let (mut substituted_context, substituted_coercion_target_id, substituted_output_id) =
         if let Some(shifted_coercion_target_id) = shifted_coercion_target_id {
             let (substituted_context, substituted_expressions) =
-                apply_dynamic_substitutions_with_compounding(
+                apply_forward_referencing_substitution(
                     state,
-                    fusion.substitutions,
+                    matchee_substitution,
                     vec![shifted_coercion_target_id.raw(), case.output_id],
                 );
             (
@@ -560,9 +565,9 @@ fn get_type_of_match_case(
             )
         } else {
             let (substituted_context, substituted_expressions) =
-                apply_dynamic_substitutions_with_compounding(
+                apply_forward_referencing_substitution(
                     state,
-                    fusion.substitutions,
+                    matchee_substitution,
                     vec![case.output_id],
                 );
             (substituted_context, None, substituted_expressions[0])
@@ -577,6 +582,47 @@ fn get_type_of_match_case(
         registry,
         context: &mut substituted_context,
         equality_checker,
+    };
+    let state = &mut state;
+
+    let type_fusion = backfuse(state, shifted_matchee_type_id, parameterized_type_id);
+    if type_fusion.has_exploded {
+        if let Some(target_id) = original_coercion_target_id {
+            original_context.pop_n(case_arity);
+            return Ok(target_id);
+        }
+    }
+
+    let normalized_coercion_target_id =
+        evaluate_well_typed_expression(state, substituted_coercion_target_id)?;
+
+    let (mut substituted_context, substituted_coercion_target_id, substituted_output_id) =
+        if let Some(substituted_coercion_target_id) = substituted_coercion_target_id {
+            let (substituted_context, substituted_expressions) =
+                apply_dynamic_substitutions_with_compounding(
+                    state,
+                    type_fusion.substitutions,
+                    vec![substituted_coercion_target_id.raw(), substituted_output_id],
+                );
+            (
+                substituted_context,
+                Some(substituted_expressions[0]),
+                substituted_expressions[1],
+            )
+        } else {
+            let (substituted_context, substituted_expressions) =
+                apply_dynamic_substitutions_with_compounding(
+                    state,
+                    type_fusion.substitutions,
+                    vec![substituted_output_id],
+                );
+            (substituted_context, None, substituted_expressions[0])
+        };
+
+    let mut state = State {
+        context: &mut substituted_context,
+        registry: state.registry,
+        equality_checker: state.equality_checker,
     };
     let state = &mut state;
 
@@ -639,11 +685,11 @@ fn get_type_of_match_case(
     }
 }
 
-fn add_case_params_to_context_and_get_constructed_type(
+fn add_case_params_to_context_and_get_constructed_matchee_and_type(
     state: &mut State,
     case_id: NodeId<MatchCase>,
     matchee_type: AdtExpression,
-) -> Result<NormalFormId, TypeCheckError> {
+) -> Result<(NormalFormId, NormalFormId), TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
