@@ -811,8 +811,21 @@ pub struct ForwardReferencingSubstitution(pub Substitution);
 pub(super) fn apply_forward_referencing_substitution(
     state: &mut State,
     substitution: ForwardReferencingSubstitution,
+    num_of_forward_references: usize,
     expressions_to_substitute: Vec<ExpressionId>,
 ) -> (Context, Vec<ExpressionId>) {
-    let min_db = min_db_index_of_expression(state.registry, substitution.0.to.raw());
+    let min_db_index = min_db_index_of_expression(state.registry, substitution.0.from.raw());
+    let max_db_level = state.context.index_to_level(min_db_index);
+
+    let context = {
+        let mut c = state.context.clone();
+        c.move_last_n_after_level_i(num_of_forward_references, max_db_level);
+        c
+    };
+    let expressions = expressions_to_substitute
+        .into_iter()
+        .map(|e| e.subst(substitution.0, state))
+        .collect();
+
     unimplemented!()
 }

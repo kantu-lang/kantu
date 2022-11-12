@@ -556,6 +556,7 @@ fn get_type_of_match_case(
                 apply_forward_referencing_substitution(
                     state,
                     matchee_substitution,
+                    case_arity,
                     vec![shifted_coercion_target_id.raw(), case.output_id],
                 );
             (
@@ -568,6 +569,7 @@ fn get_type_of_match_case(
                 apply_forward_referencing_substitution(
                     state,
                     matchee_substitution,
+                    case_arity,
                     vec![case.output_id],
                 );
             (substituted_context, None, substituted_expressions[0])
@@ -767,7 +769,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     })
                     .collect();
                 let arg_list_id = state.registry.add_expression_list(arg_ids);
-                
+
                 NormalFormId::unchecked_new(ExpressionId::Call(
                     state.registry.add_call_and_overwrite_its_id(Call {
                         id: dummy_id(),

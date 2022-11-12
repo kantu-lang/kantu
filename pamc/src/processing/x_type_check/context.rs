@@ -148,11 +148,11 @@ impl Context {
 }
 
 impl Context {
-    fn level_to_index(&self, level: DbLevel) -> DbIndex {
+    pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
         DbIndex(self.len() - level.0 - 1)
     }
 
-    fn index_to_level(&self, index: DbIndex) -> DbLevel {
+    pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
         DbLevel(self.len() - index.0 - 1)
     }
 }
@@ -317,7 +317,7 @@ impl Context {
 }
 
 impl Context {
-    fn clone_slice(&self, excl_upper_bound: DbLevel) -> Context {
+    pub(crate) fn clone_slice(&self, excl_upper_bound: DbLevel) -> Context {
         Context {
             local_type_stack: self.local_type_stack[0..excl_upper_bound.0].to_vec(),
         }
