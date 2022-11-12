@@ -78,8 +78,12 @@ struct Upshift(usize);
 
 impl ShiftAmount for Upshift {
     type ShiftError = Infallible;
-    fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Infallible> {
-        Ok(DbIndex(i.0 + self.0))
+    fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Infallible> {
+        if i.0 < cutoff {
+            Ok(i)
+        } else {
+            Ok(DbIndex(i.0 + self.0))
+        }
     }
 }
 
@@ -88,12 +92,18 @@ struct Downshift(usize);
 
 impl ShiftAmount for Downshift {
     type ShiftError = DbIndexTooSmallForDownshiftError;
-    fn try_apply(&self, i: DbIndex) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+    fn try_apply(
+        &self,
+        i: DbIndex,
+        cutoff: usize,
+    ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
         if i.0 < self.0 {
             Err(DbIndexTooSmallForDownshiftError {
                 db_index: i,
                 downshift_amount: self.0,
             })
+        } else if i.0 < cutoff {
+            Ok(i)
         } else {
             Ok(DbIndex(i.0 - self.0))
         }
@@ -106,6 +116,12 @@ struct Bishift {
     pivot: DbIndex,
 }
 
+impl Bishift {
+    fn distance(self) -> usize {
+        self.pivot.0 - self.len
+    }
+}
+
 impl ShiftAmount for Bishift {
     type ShiftError = DbIndexTooSmallForDownshiftError;
     fn try_apply(
@@ -113,13 +129,15 @@ impl ShiftAmount for Bishift {
         i: DbIndex,
         cutoff: usize,
     ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
-        if i.0 < self.0 {
-            Err(DbIndexTooSmallForDownshiftError {
-                db_index: i,
-                downshift_amount: self.0,
-            })
+        if (0..cutoff).contains(&i.0) {
+            Ok(i)
+        } else if (cutoff..cutoff + self.len).contains(&i.0) {
+            Ok(Upshift(self.distance()).try_apply(i, cutoff).safe_unwrap())
+        } else if (cutoff + self.len..self.pivot.0).contains(&i.0) {
+            Downshift(self.len).try_apply(i, cutoff)
         } else {
-            Ok(DbIndex(i.0 - self.0))
+            // Indices equal to or greater than the pivot are left as-is.
+            Ok(i)
         }
     }
 }
@@ -207,16 +225,12 @@ impl ShiftDbIndices for NodeId<NameExpression> {
         registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
         let name = registry.name_expression(self);
-        if name.db_index.0 < cutoff {
-            Ok(self)
-        } else {
-            let shifted_index = amount.try_apply(name.db_index)?;
-            let shifted_with_dummy_id = NameExpression {
-                db_index: shifted_index,
-                ..*name
-            };
-            Ok(registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id))
-        }
+        let shifted_index = amount.try_apply(name.db_index, cutoff)?;
+        let shifted_with_dummy_id = NameExpression {
+            db_index: shifted_index,
+            ..*name
+        };
+        Ok(registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id))
     }
 }
 

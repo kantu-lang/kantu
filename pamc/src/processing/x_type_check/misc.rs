@@ -821,10 +821,11 @@ pub(super) fn apply_forward_referencing_substitution(
         c.push_top_n_down(num_of_forward_references, min_db_index);
         c
     };
-    let substitution = substitution.bishift(num_of_forward_references, max_db_level);
-    let expressions_to_substitute = expressions_to_substitute
+    let substitution =
+        substitution.bishift(num_of_forward_references, min_db_index, state.registry);
+    let expressions_to_substitute: Vec<ExpressionId> = expressions_to_substitute
         .into_iter()
-        .map(|e| e.bishift(substitution.0, state))
+        .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry))
         .collect();
 
     let context = {
@@ -834,8 +835,23 @@ pub(super) fn apply_forward_referencing_substitution(
     };
     let expressions_to_substitute = expressions_to_substitute
         .into_iter()
-        .map(|e| e.subst(substitution.0, state))
+        .map(|e| e.subst(substitution.0, &mut state.without_context()))
         .collect();
 
     (context, expressions_to_substitute)
+}
+
+impl ShiftDbIndices for ForwardReferencingSubstitution {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self::Output, A::ShiftError> {
+        Ok(Self(
+            self.0.try_shift_with_cutoff(amount, cutoff, registry)?,
+        ))
+    }
 }
