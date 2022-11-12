@@ -14,8 +14,7 @@ pub trait ShiftDbIndices {
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Upshift(amount), 0, registry)
-            .safe_unwrap()
+        self.try_upshift(amount, registry).safe_unwrap()
     }
 
     fn try_upshift(
@@ -33,7 +32,7 @@ pub trait ShiftDbIndices {
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Downshift(amount), 0, registry)
+        self.try_downshift(amount, registry)
             .unwrap_or_else(|err| panic!("Downshift failed: {:?}", err))
     }
 
@@ -47,11 +46,31 @@ pub trait ShiftDbIndices {
     {
         self.try_shift_with_cutoff(Downshift(amount), 0, registry)
     }
+
+    fn bishift(self, len: usize, pivot: DbIndex, registry: &mut NodeRegistry) -> Self::Output
+    where
+        Self: Sized,
+    {
+        self.try_bishift(len, pivot, registry)
+            .unwrap_or_else(|err| panic!("Bishift failed: {:?}", err))
+    }
+
+    fn try_bishift(
+        self,
+        len: usize,
+        pivot: DbIndex,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
+    where
+        Self: Sized,
+    {
+        self.try_shift_with_cutoff(Bishift { len, pivot }, 0, registry)
+    }
 }
 
 pub trait ShiftAmount: Copy {
     type ShiftError;
-    fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Self::ShiftError>;
+    fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Self::ShiftError>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -70,6 +89,30 @@ struct Downshift(usize);
 impl ShiftAmount for Downshift {
     type ShiftError = DbIndexTooSmallForDownshiftError;
     fn try_apply(&self, i: DbIndex) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+        if i.0 < self.0 {
+            Err(DbIndexTooSmallForDownshiftError {
+                db_index: i,
+                downshift_amount: self.0,
+            })
+        } else {
+            Ok(DbIndex(i.0 - self.0))
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Bishift {
+    len: usize,
+    pivot: DbIndex,
+}
+
+impl ShiftAmount for Bishift {
+    type ShiftError = DbIndexTooSmallForDownshiftError;
+    fn try_apply(
+        &self,
+        i: DbIndex,
+        cutoff: usize,
+    ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
         if i.0 < self.0 {
             Err(DbIndexTooSmallForDownshiftError {
                 db_index: i,

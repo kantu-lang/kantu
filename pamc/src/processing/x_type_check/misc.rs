@@ -815,17 +815,27 @@ pub(super) fn apply_forward_referencing_substitution(
     expressions_to_substitute: Vec<ExpressionId>,
 ) -> (Context, Vec<ExpressionId>) {
     let min_db_index = min_db_index_of_expression(state.registry, substitution.0.from.raw());
-    let max_db_level = state.context.index_to_level(min_db_index);
 
     let context = {
         let mut c = state.context.clone();
-        c.move_last_n_after_level_i(num_of_forward_references, max_db_level);
+        c.push_top_n_down(num_of_forward_references, min_db_index);
         c
     };
-    let expressions = expressions_to_substitute
+    let substitution = substitution.bishift(num_of_forward_references, max_db_level);
+    let expressions_to_substitute = expressions_to_substitute
+        .into_iter()
+        .map(|e| e.bishift(substitution.0, state))
+        .collect();
+
+    let context = {
+        let mut c = context;
+        c.subst_in_place_and_get_status(substitution.0, &mut state.without_context());
+        c
+    };
+    let expressions_to_substitute = expressions_to_substitute
         .into_iter()
         .map(|e| e.subst(substitution.0, state))
         .collect();
 
-    unimplemented!()
+    (context, expressions_to_substitute)
 }

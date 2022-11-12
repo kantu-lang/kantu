@@ -323,3 +323,9 @@ impl Context {
         }
     }
 }
+
+impl Context {
+    pub fn push_top_n_down(&mut self, n: usize, pivot: DbIndex) {
+        unimplemented!();
+    }
+}
