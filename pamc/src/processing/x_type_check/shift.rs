@@ -69,7 +69,8 @@ pub trait ShiftDbIndices {
 }
 
 pub trait ShiftAmount: Copy {
-    type ShiftError;
+    // TODO: Remove trait bound after debug
+    type ShiftError: std::fmt::Debug;
     fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Self::ShiftError>;
 }
 
@@ -97,13 +98,13 @@ impl ShiftAmount for Downshift {
         i: DbIndex,
         cutoff: usize,
     ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
-        if i.0 < self.0 {
+        if i.0 < cutoff {
+            Ok(i)
+        } else if i.0 < self.0 {
             Err(DbIndexTooSmallForDownshiftError {
                 db_index: i,
                 downshift_amount: self.0,
             })
-        } else if i.0 < cutoff {
-            Ok(i)
         } else {
             Ok(DbIndex(i.0 - self.0))
         }
@@ -260,6 +261,16 @@ impl ShiftDbIndices for NodeId<NameExpression> {
         registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
         let name = registry.name_expression(self);
+        if let Err(err) = amount.try_apply(name.db_index, cutoff) {
+            println!("DB_SHIFT_ERROR.error: {:?}", err);
+            println!(
+                "DB_SHIFT_ERROR.name: {:?}",
+                crate::processing::x_expand_lightened::expand_expression(
+                    registry,
+                    ExpressionId::Name(self)
+                )
+            );
+        }
         let shifted_index = amount.try_apply(name.db_index, cutoff)?;
         let shifted_with_dummy_id = NameExpression {
             db_index: shifted_index,
