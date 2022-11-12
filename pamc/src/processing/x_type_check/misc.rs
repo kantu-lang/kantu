@@ -816,6 +816,27 @@ pub(super) fn apply_forward_referencing_substitution(
 ) -> (Context, Vec<ExpressionId>) {
     let min_db_index = min_db_index_of_expression(state.registry, substitution.0.from.raw());
 
+    println!(
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.from: {:#?}",
+        num_of_forward_references,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(
+            state.registry,
+            substitution.0.from.raw()
+        )
+    );
+    println!(
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.to: {:#?}",
+        num_of_forward_references,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(
+            state.registry,
+            substitution.0.to.raw()
+        )
+    );
+
     let context = {
         let mut c = state.context.clone();
         c.push_top_n_down(
@@ -831,6 +852,27 @@ pub(super) fn apply_forward_referencing_substitution(
         .into_iter()
         .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry))
         .collect();
+
+    println!(
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.from: {:#?}",
+        num_of_forward_references,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(
+            state.registry,
+            substitution.0.from.raw()
+        )
+    );
+    println!(
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.to: {:#?}",
+        num_of_forward_references,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_expand_lightened::expand_expression(
+            state.registry,
+            substitution.0.to.raw()
+        )
+    );
 
     let context = {
         let mut c = context;

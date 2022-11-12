@@ -278,11 +278,50 @@ impl Context {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> WasSyntacticNoOp {
+        println!(
+            "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) original_definition: {:#?}",
+            level,
+            self.level_to_index(level),
+            self.len(),
+            self.local_type_stack[level.0].definition
+        );
         let shift_amount = self.level_to_index(level).0 + 1;
 
         let original_definition = self.local_type_stack[level.0].definition;
         let (new_definition, was_no_op) = match original_definition {
             ContextEntryDefinition::Alias { value_id } => {
+                {
+                    let upshifted = value_id.raw().upshift(shift_amount, state.registry);
+                    println!(
+                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) upshifted_definition: {:#?}",
+                        level,
+                        self.level_to_index(level),
+                        self.len(),
+                        crate::processing::x_expand_lightened::expand_expression(state.registry, upshifted)
+                    );
+                    println!(
+                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) substitution.from: {:#?}",
+                        level,
+                        self.level_to_index(level),
+                        self.len(),
+                        crate::processing::x_expand_lightened::expand_expression(state.registry, substitution.from.raw())
+                    );
+                    println!(
+                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) substitution.to: {:#?}",
+                        level,
+                        self.level_to_index(level),
+                        self.len(),
+                        crate::processing::x_expand_lightened::expand_expression(state.registry, substitution.to.raw())
+                    );
+                    let upshifted_substituted = upshifted.subst(substitution, state);
+                    println!(
+                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) upshifted_substituted_definition: {:#?}",
+                        level,
+                        self.level_to_index(level),
+                        self.len(),
+                        crate::processing::x_expand_lightened::expand_expression(state.registry, upshifted_substituted)
+                    );
+                }
                 let substituted = value_id
                     .raw()
                     .upshift(shift_amount, state.registry)
