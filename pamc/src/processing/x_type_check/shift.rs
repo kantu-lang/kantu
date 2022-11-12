@@ -148,6 +148,26 @@ pub struct DbIndexTooSmallForDownshiftError {
     downshift_amount: usize,
 }
 
+impl ShiftDbIndices for ContextEntry {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self::Output, A::ShiftError> {
+        Ok(ContextEntry {
+            type_id: self
+                .type_id
+                .try_shift_with_cutoff(amount, cutoff, registry)?,
+            definition: self
+                .definition
+                .try_shift_with_cutoff(amount, cutoff, registry)?,
+        })
+    }
+}
+
 impl ShiftDbIndices for ContextEntryDefinition {
     type Output = Self;
 
@@ -168,6 +188,21 @@ impl ShiftDbIndices for ContextEntryDefinition {
             | ContextEntryDefinition::Variant { name_id: _ }
             | ContextEntryDefinition::Uninterpreted => self,
         })
+    }
+}
+
+impl ShiftDbIndices for Substitution {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let from = self.from.try_shift_with_cutoff(amount, cutoff, registry)?;
+        let to = self.to.try_shift_with_cutoff(amount, cutoff, registry)?;
+        Ok(Substitution { from, to })
     }
 }
 

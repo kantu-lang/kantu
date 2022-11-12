@@ -6,21 +6,6 @@ pub struct Substitution {
     pub to: NormalFormId,
 }
 
-impl ShiftDbIndices for Substitution {
-    type Output = Self;
-
-    fn try_shift_with_cutoff<A: ShiftAmount>(
-        self,
-        amount: A,
-        cutoff: usize,
-        registry: &mut NodeRegistry,
-    ) -> Result<Self, A::ShiftError> {
-        let from = self.from.try_shift_with_cutoff(amount, cutoff, registry)?;
-        let to = self.to.try_shift_with_cutoff(amount, cutoff, registry)?;
-        Ok(Substitution { from, to })
-    }
-}
-
 pub(super) trait Substitute {
     type Output;
 

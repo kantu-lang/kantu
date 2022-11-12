@@ -818,7 +818,11 @@ pub(super) fn apply_forward_referencing_substitution(
 
     let context = {
         let mut c = state.context.clone();
-        c.push_top_n_down(num_of_forward_references, min_db_index);
+        c.push_top_n_down(
+            num_of_forward_references,
+            min_db_index,
+            &mut state.without_context(),
+        );
         c
     };
     let substitution =

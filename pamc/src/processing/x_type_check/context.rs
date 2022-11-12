@@ -325,7 +325,26 @@ impl Context {
 }
 
 impl Context {
-    pub fn push_top_n_down(&mut self, n: usize, pivot: DbIndex) {
-        unimplemented!();
+    pub(super) fn push_top_n_down(
+        &mut self,
+        n: usize,
+        pivot: DbIndex,
+        state: &mut ContextlessState,
+    ) {
+        let distance = pivot.0 - n;
+        let pushees = self.local_type_stack.split_off(self.len() - n);
+        let liftees = self.local_type_stack.split_off(self.len() - distance);
+
+        let pushees = pushees
+            .into_iter()
+            .map(|pushee| pushee.downshift(distance, state.registry))
+            .collect::<Vec<_>>();
+        let liftees = liftees
+            .into_iter()
+            .map(|liftee| liftee.upshift(n, state.registry))
+            .collect::<Vec<_>>();
+
+        self.local_type_stack.extend(pushees);
+        self.local_type_stack.extend(liftees);
     }
 }
