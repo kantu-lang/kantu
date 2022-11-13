@@ -550,30 +550,16 @@ fn get_type_of_match_case(
         to: parameterized_matchee_id,
     });
 
-    let (mut substituted_context, substituted_coercion_target_id, substituted_output_id) =
-        if let Some(shifted_coercion_target_id) = shifted_coercion_target_id {
-            let (substituted_context, substituted_expressions) =
-                apply_forward_referencing_substitution(
-                    state,
-                    matchee_substitution,
-                    case_arity,
-                    vec![shifted_coercion_target_id.raw(), case.output_id],
-                );
+    let (mut substituted_context, (substituted_coercion_target_id, (substituted_output_id,))) =
+        apply_forward_referencing_substitution(
+            state,
+            matchee_substitution,
+            case_arity,
             (
-                substituted_context,
-                Some(substituted_expressions[0]),
-                substituted_expressions[1],
-            )
-        } else {
-            let (substituted_context, substituted_expressions) =
-                apply_forward_referencing_substitution(
-                    state,
-                    matchee_substitution,
-                    case_arity,
-                    vec![case.output_id],
-                );
-            (substituted_context, None, substituted_expressions[0])
-        };
+                shifted_coercion_target_id.map(NormalFormId::raw),
+                (case.output_id,),
+            ),
+        );
 
     let State {
         context: original_context,

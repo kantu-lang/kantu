@@ -791,29 +791,163 @@ impl DynamicSubstitution {
     }
 }
 
-pub trait Map0<T, U> {
-    type Output;
-
-    fn map0(self, f: impl FnOnce(T) -> U) -> Self::Output;
+pub trait Map<I, O = I> {
+    fn map(self, f: impl FnMut(I) -> O) -> Self;
 }
 
-impl<T1, U1, T2> Map0<T1, U1> for (T1, T2) {
-    type Output = (U1, T2);
+impl<T> Map<T> for Vec<T> {
+    fn map(self, f: impl FnMut(T) -> T) -> Self {
+        self.into_iter().map(f).collect()
+    }
+}
 
-    fn map0(self, f: impl FnOnce(T1) -> U1) -> Self::Output {
-        (f(self.0), self.1)
+impl<T> Map<T> for (T,) {
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (f(self.0),)
+    }
+}
+
+impl<T> Map<T> for Option<T> {
+    fn map(self, f: impl FnMut(T) -> T) -> Self {
+        self.map(f)
+    }
+}
+
+impl<T, U1, U2> Map<T> for (U1, U2)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (self.0.map(&mut f), self.1.map(&mut f))
+    }
+}
+
+impl<T, U1, U2, U3> Map<T> for (U1, U2, U3)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+    U3: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (self.0.map(&mut f), self.1.map(&mut f), self.2.map(&mut f))
+    }
+}
+
+impl<T, U1, U2, U3, U4> Map<T> for (U1, U2, U3, U4)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+    U3: Map<T>,
+    U4: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (
+            self.0.map(&mut f),
+            self.1.map(&mut f),
+            self.2.map(&mut f),
+            self.3.map(&mut f),
+        )
+    }
+}
+
+impl<T, U1, U2, U3, U4, U5> Map<T> for (U1, U2, U3, U4, U5)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+    U3: Map<T>,
+    U4: Map<T>,
+    U5: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (
+            self.0.map(&mut f),
+            self.1.map(&mut f),
+            self.2.map(&mut f),
+            self.3.map(&mut f),
+            self.4.map(&mut f),
+        )
+    }
+}
+
+impl<T, U1, U2, U3, U4, U5, U6> Map<T> for (U1, U2, U3, U4, U5, U6)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+    U3: Map<T>,
+    U4: Map<T>,
+    U5: Map<T>,
+    U6: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (
+            self.0.map(&mut f),
+            self.1.map(&mut f),
+            self.2.map(&mut f),
+            self.3.map(&mut f),
+            self.4.map(&mut f),
+            self.5.map(&mut f),
+        )
+    }
+}
+
+impl<T, U1, U2, U3, U4, U5, U6, U7> Map<T> for (U1, U2, U3, U4, U5, U6, U7)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+    U3: Map<T>,
+    U4: Map<T>,
+    U5: Map<T>,
+    U6: Map<T>,
+    U7: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (
+            self.0.map(&mut f),
+            self.1.map(&mut f),
+            self.2.map(&mut f),
+            self.3.map(&mut f),
+            self.4.map(&mut f),
+            self.5.map(&mut f),
+            self.6.map(&mut f),
+        )
+    }
+}
+
+impl<T, U1, U2, U3, U4, U5, U6, U7, U8> Map<T> for (U1, U2, U3, U4, U5, U6, U7, U8)
+where
+    U1: Map<T>,
+    U2: Map<T>,
+    U3: Map<T>,
+    U4: Map<T>,
+    U5: Map<T>,
+    U6: Map<T>,
+    U7: Map<T>,
+    U8: Map<T>,
+{
+    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+        (
+            self.0.map(&mut f),
+            self.1.map(&mut f),
+            self.2.map(&mut f),
+            self.3.map(&mut f),
+            self.4.map(&mut f),
+            self.5.map(&mut f),
+            self.6.map(&mut f),
+            self.7.map(&mut f),
+        )
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ForwardReferencingSubstitution(pub Substitution);
 
-pub(super) fn apply_forward_referencing_substitution(
+pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId>>(
     state: &mut State,
     substitution: ForwardReferencingSubstitution,
     num_of_forward_references: usize,
-    expressions_to_substitute: Vec<ExpressionId>,
-) -> (Context, Vec<ExpressionId>) {
+    expressions_to_substitute: E,
+) -> (Context, E) {
     let min_db_index = min_db_index_of_expression(state.registry, substitution.0.from.raw());
 
     println!(
@@ -848,10 +982,8 @@ pub(super) fn apply_forward_referencing_substitution(
     };
     let substitution =
         substitution.bishift(num_of_forward_references, min_db_index, state.registry);
-    let expressions_to_substitute: Vec<ExpressionId> = expressions_to_substitute
-        .into_iter()
-        .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry))
-        .collect();
+    let expressions_to_substitute = expressions_to_substitute
+        .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry));
 
     println!(
         "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.from: {:#?}",
@@ -879,10 +1011,8 @@ pub(super) fn apply_forward_referencing_substitution(
         c.subst_in_place_and_get_status(substitution.0, &mut state.without_context());
         c
     };
-    let expressions_to_substitute = expressions_to_substitute
-        .into_iter()
-        .map(|e| e.subst(substitution.0, &mut state.without_context()))
-        .collect();
+    let expressions_to_substitute =
+        expressions_to_substitute.map(|e| e.subst(substitution.0, &mut state.without_context()));
 
     (context, expressions_to_substitute)
 }
