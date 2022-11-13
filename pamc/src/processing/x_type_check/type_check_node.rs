@@ -529,8 +529,6 @@ fn get_type_of_match_case(
             case_id,
             matchee_type,
         )?;
-    #[allow(unused_variables)]
-    let matchee_type = ();
 
     let original_coercion_target_id = coercion_target_id;
     let coercion_target_id =
@@ -541,10 +539,10 @@ fn get_type_of_match_case(
     let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
     let (
-        mut substituted_context,
+        mut context,
         (
-            substituted_coercion_target_id,
-            (substituted_output_id,),
+            coercion_target_id,
+            (case_output_id,),
             (matchee_type_id,),
             (parameterized_matchee_type_id,),
         ),
@@ -573,66 +571,59 @@ fn get_type_of_match_case(
     } = state;
     let mut state = State {
         registry,
-        context: &mut substituted_context,
+        context: &mut context,
         equality_checker,
     };
     let state = &mut state;
 
-    let ((matchee_type_id,), (parameterized_matchee_type_id,)) = evaluate_well_typed_expressions(
-        state,
-        ((matchee_type_id,), (parameterized_matchee_type_id,)),
-    );
-
-    let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
-    if type_fusion.has_exploded {
-        if let Some(target_id) = original_coercion_target_id {
-            original_context.pop_n(case_arity);
-            return Ok(target_id);
-        }
-    }
-
-    let normalized_coercion_target_id =
-        substituted_coercion_target_id.map(|id| evaluate_well_typed_expression(state, id));
-
-    let (mut substituted_context, (substituted_coercion_target_id, (substituted_output_id,))) =
-        apply_dynamic_substitutions_with_compounding(
+    let (coercion_target_id, (matchee_type_id,), (parameterized_matchee_type_id,)) =
+        evaluate_well_typed_expressions(
             state,
-            type_fusion.substitutions,
             (
-                normalized_coercion_target_id.map(NormalFormId::raw),
-                (substituted_output_id,),
+                coercion_target_id,
+                (matchee_type_id,),
+                (parameterized_matchee_type_id,),
             ),
         );
 
+    let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
+    if type_fusion.has_exploded {
+        if let Some(original_coercion_target_id) = original_coercion_target_id {
+            original_context.pop_n(case_arity);
+            return Ok(original_coercion_target_id);
+        }
+    }
+
+    let (mut context, (coercion_target_id, (case_output_id,))) =
+        apply_dynamic_substitutions_with_compounding(
+            state,
+            type_fusion.substitutions,
+            (coercion_target_id.map(NormalFormId::raw), (case_output_id,)),
+        );
+
     let mut state = State {
-        context: &mut substituted_context,
+        context: &mut context,
         registry: state.registry,
         equality_checker: state.equality_checker,
     };
     let state = &mut state;
 
-    let normalized_substituted_coercion_target_id = substituted_coercion_target_id
-        .map(|target_id| evaluate_well_typed_expression(state, target_id));
-    let output_type_id = get_type_of_expression(
-        state,
-        normalized_substituted_coercion_target_id,
-        substituted_output_id,
-    )?;
+    let coercion_target_id = coercion_target_id
+        .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
+    let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id)?;
 
     let can_be_coerced = matches!(
-        normalized_substituted_coercion_target_id,
-        Some(normalized_substituted_coercion_target_id)
+        coercion_target_id,
+        Some(coercion_target_id)
             if is_left_type_assignable_to_right_type(
                 state,
                 output_type_id,
-                normalized_substituted_coercion_target_id,
+                coercion_target_id,
             )
     );
 
     if !can_be_coerced {
-        if let Some(normalized_substituted_coercion_target_id) =
-            normalized_substituted_coercion_target_id
-        {
+        if let Some(coercion_target_id) = coercion_target_id {
             println!(
                 "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target = {:#?}",
                 case_arity,
@@ -640,7 +631,7 @@ fn get_type_of_match_case(
                 state.context.type0_dbi(),
                 crate::processing::x_expand_lightened::expand_expression(
                     state.registry,
-                    normalized_substituted_coercion_target_id.raw()
+                    coercion_target_id.raw()
                 )
             );
             println!(
@@ -660,7 +651,7 @@ fn get_type_of_match_case(
 
     println!(
         "COERCION STATUS: has_coercion={:?}; can_be_coerced={:?}",
-        normalized_substituted_coercion_target_id.is_some(),
+        coercion_target_id.is_some(),
         can_be_coerced
     );
 
@@ -668,7 +659,7 @@ fn get_type_of_match_case(
         Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
     } else {
         match output_type_id.try_downshift(case_arity, state.registry) {
-            Ok(shifted_output_type_id) => Ok(shifted_output_type_id),
+            Ok(output_type_id) => Ok(output_type_id),
             Err(_) => {
                 println!(
                     "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) nondownshifted_type = {:#?}",
@@ -683,10 +674,10 @@ fn get_type_of_match_case(
                     "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) (upshifted_)coercion_target = {:#?}",
                     state.context.len(),
                     state.context.type0_dbi(),
-                    normalized_substituted_coercion_target_id.map(|target_id| {
+                    coercion_target_id.map(|coercion_target_id| {
                         crate::processing::x_expand_lightened::expand_expression(
                             state.registry,
-                            target_id.raw(),
+                            coercion_target_id.raw(),
                         )
                     })
                 );
