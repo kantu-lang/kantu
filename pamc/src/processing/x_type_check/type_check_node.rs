@@ -646,6 +646,33 @@ fn get_type_of_match_case(
             )
     );
 
+    if !can_be_coerced {
+        if let Some(normalized_substituted_coercion_target_id) =
+            normalized_substituted_coercion_target_id
+        {
+            println!(
+                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target = {:#?}",
+                case_arity,
+                state.context.len(),
+                state.context.type0_dbi(),
+                crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    normalized_substituted_coercion_target_id.raw()
+                )
+            );
+            println!(
+                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).output_type = {:#?}",
+                case_arity,
+                state.context.len(),
+                state.context.type0_dbi(),
+                crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    output_type_id.raw()
+                )
+            );
+        }
+    }
+
     original_context.pop_n(case_arity);
 
     println!(

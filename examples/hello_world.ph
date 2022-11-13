@@ -3,9 +3,12 @@ type Nat {
     .S(n: Nat): Nat,
 }
 
-let plus = fun plus(-a: Nat, b: Nat): Nat {
-    match a {
-        .O => b,
-        .S(a_pred) => Nat.S(plus(a_pred, b)),
+type Eq(left: Nat, right: Nat) {
+    .Refl(z: Nat): Eq(z, z),
+}
+
+let eq_comm = fun eq_comm_(a: Nat, b: Nat, H: Eq(a, b)): Eq(b, a) {
+    match H {
+        .Refl(_z) => Eq.Refl(_z),
     }
 };
