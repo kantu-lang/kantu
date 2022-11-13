@@ -792,56 +792,70 @@ impl DynamicSubstitution {
 }
 
 pub trait Map<I, O = I> {
-    fn map(self, f: impl FnMut(I) -> O) -> Self;
+    type Output;
+
+    fn map(self, f: impl FnMut(I) -> O) -> Self::Output;
 }
 
-impl<T> Map<T> for Vec<T> {
-    fn map(self, f: impl FnMut(T) -> T) -> Self {
+impl<I, O> Map<I, O> for Vec<I> {
+    type Output = Vec<O>;
+
+    fn map(self, f: impl FnMut(I) -> O) -> Self::Output {
         self.into_iter().map(f).collect()
     }
 }
 
-impl<T> Map<T> for (T,) {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+impl<I, O> Map<I, O> for (I,) {
+    type Output = (O,);
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (f(self.0),)
     }
 }
 
-impl<T> Map<T> for Option<T> {
-    fn map(self, f: impl FnMut(T) -> T) -> Self {
+impl<I, O> Map<I, O> for Option<I> {
+    type Output = Option<O>;
+
+    fn map(self, f: impl FnMut(I) -> O) -> Self::Output {
         self.map(f)
     }
 }
 
-impl<T, U1, U2> Map<T> for (U1, U2)
+impl<I, O, U1, U2> Map<I, O> for (U1, U2)
 where
-    U1: Map<T>,
-    U2: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (U1::Output, U2::Output);
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (self.0.map(&mut f), self.1.map(&mut f))
     }
 }
 
-impl<T, U1, U2, U3> Map<T> for (U1, U2, U3)
+impl<I, O, U1, U2, U3> Map<I, O> for (U1, U2, U3)
 where
-    U1: Map<T>,
-    U2: Map<T>,
-    U3: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
+    U3: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (U1::Output, U2::Output, U3::Output);
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (self.0.map(&mut f), self.1.map(&mut f), self.2.map(&mut f))
     }
 }
 
-impl<T, U1, U2, U3, U4> Map<T> for (U1, U2, U3, U4)
+impl<I, O, U1, U2, U3, U4> Map<I, O> for (U1, U2, U3, U4)
 where
-    U1: Map<T>,
-    U2: Map<T>,
-    U3: Map<T>,
-    U4: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
+    U3: Map<I, O>,
+    U4: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (U1::Output, U2::Output, U3::Output, U4::Output);
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (
             self.0.map(&mut f),
             self.1.map(&mut f),
@@ -851,15 +865,17 @@ where
     }
 }
 
-impl<T, U1, U2, U3, U4, U5> Map<T> for (U1, U2, U3, U4, U5)
+impl<I, O, U1, U2, U3, U4, U5> Map<I, O> for (U1, U2, U3, U4, U5)
 where
-    U1: Map<T>,
-    U2: Map<T>,
-    U3: Map<T>,
-    U4: Map<T>,
-    U5: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
+    U3: Map<I, O>,
+    U4: Map<I, O>,
+    U5: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (U1::Output, U2::Output, U3::Output, U4::Output, U5::Output);
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (
             self.0.map(&mut f),
             self.1.map(&mut f),
@@ -870,16 +886,25 @@ where
     }
 }
 
-impl<T, U1, U2, U3, U4, U5, U6> Map<T> for (U1, U2, U3, U4, U5, U6)
+impl<I, O, U1, U2, U3, U4, U5, U6> Map<I, O> for (U1, U2, U3, U4, U5, U6)
 where
-    U1: Map<T>,
-    U2: Map<T>,
-    U3: Map<T>,
-    U4: Map<T>,
-    U5: Map<T>,
-    U6: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
+    U3: Map<I, O>,
+    U4: Map<I, O>,
+    U5: Map<I, O>,
+    U6: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (
+        U1::Output,
+        U2::Output,
+        U3::Output,
+        U4::Output,
+        U5::Output,
+        U6::Output,
+    );
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (
             self.0.map(&mut f),
             self.1.map(&mut f),
@@ -891,17 +916,27 @@ where
     }
 }
 
-impl<T, U1, U2, U3, U4, U5, U6, U7> Map<T> for (U1, U2, U3, U4, U5, U6, U7)
+impl<I, O, U1, U2, U3, U4, U5, U6, U7> Map<I, O> for (U1, U2, U3, U4, U5, U6, U7)
 where
-    U1: Map<T>,
-    U2: Map<T>,
-    U3: Map<T>,
-    U4: Map<T>,
-    U5: Map<T>,
-    U6: Map<T>,
-    U7: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
+    U3: Map<I, O>,
+    U4: Map<I, O>,
+    U5: Map<I, O>,
+    U6: Map<I, O>,
+    U7: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (
+        U1::Output,
+        U2::Output,
+        U3::Output,
+        U4::Output,
+        U5::Output,
+        U6::Output,
+        U7::Output,
+    );
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (
             self.0.map(&mut f),
             self.1.map(&mut f),
@@ -914,18 +949,29 @@ where
     }
 }
 
-impl<T, U1, U2, U3, U4, U5, U6, U7, U8> Map<T> for (U1, U2, U3, U4, U5, U6, U7, U8)
+impl<I, O, U1, U2, U3, U4, U5, U6, U7, U8> Map<I, O> for (U1, U2, U3, U4, U5, U6, U7, U8)
 where
-    U1: Map<T>,
-    U2: Map<T>,
-    U3: Map<T>,
-    U4: Map<T>,
-    U5: Map<T>,
-    U6: Map<T>,
-    U7: Map<T>,
-    U8: Map<T>,
+    U1: Map<I, O>,
+    U2: Map<I, O>,
+    U3: Map<I, O>,
+    U4: Map<I, O>,
+    U5: Map<I, O>,
+    U6: Map<I, O>,
+    U7: Map<I, O>,
+    U8: Map<I, O>,
 {
-    fn map(self, mut f: impl FnMut(T) -> T) -> Self {
+    type Output = (
+        U1::Output,
+        U2::Output,
+        U3::Output,
+        U4::Output,
+        U5::Output,
+        U6::Output,
+        U7::Output,
+        U8::Output,
+    );
+
+    fn map(self, mut f: impl FnMut(I) -> O) -> Self::Output {
         (
             self.0.map(&mut f),
             self.1.map(&mut f),
@@ -942,7 +988,7 @@ where
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ForwardReferencingSubstitution(pub Substitution);
 
-pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId>>(
+pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output = E>>(
     state: &mut State,
     substitution: ForwardReferencingSubstitution,
     num_of_forward_references: usize,
@@ -1030,4 +1076,11 @@ impl ShiftDbIndices for ForwardReferencingSubstitution {
             self.0.try_shift_with_cutoff(amount, cutoff, registry)?,
         ))
     }
+}
+
+pub(super) fn evaluate_well_typed_expressions<E: Map<ExpressionId, NormalFormId>>(
+    state: &mut State,
+    expressions: E,
+) -> E::Output {
+    expressions.map(|e| evaluate_well_typed_expression(state, e))
 }

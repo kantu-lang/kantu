@@ -523,47 +523,48 @@ fn get_type_of_match_case(
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
-    let (parameterized_matchee_id, parameterized_type_id) =
+    let (original_parameterized_matchee_id, original_parameterized_matchee_type_id) =
         add_case_params_to_context_and_get_constructed_matchee_and_type(
             state,
             case_id,
             matchee_type,
         )?;
+    #[allow(unused_variables)]
+    let matchee_type = ();
 
     let original_coercion_target_id = coercion_target_id;
-    if let Some(original_coercion_target_id) = original_coercion_target_id {
-        println!(
-            "COERCION_TARGET.original(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}): {:#?}",
-            case_arity,
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                original_coercion_target_id.raw()
-            )
-        );
-    }
-    let shifted_coercion_target_id =
+    let coercion_target_id =
         coercion_target_id.map(|target_id| target_id.upshift(case_arity, state.registry));
 
-    let shifted_matchee_id = normalized_matchee_id.upshift(case_arity, state.registry);
-    let shifted_matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
+    let normalized_matchee_id = normalized_matchee_id.upshift(case_arity, state.registry);
 
-    let matchee_substitution = ForwardReferencingSubstitution(Substitution {
-        from: shifted_matchee_id,
-        to: parameterized_matchee_id,
-    });
+    let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
-    let (mut substituted_context, (substituted_coercion_target_id, (substituted_output_id,))) =
+    let (
+        mut substituted_context,
+        (
+            substituted_coercion_target_id,
+            (substituted_output_id,),
+            (matchee_type_id,),
+            (parameterized_matchee_type_id,),
+        ),
+    ) = {
+        let matchee_substitution = ForwardReferencingSubstitution(Substitution {
+            from: normalized_matchee_id,
+            to: original_parameterized_matchee_id,
+        });
         apply_forward_referencing_substitution(
             state,
             matchee_substitution,
             case_arity,
             (
-                shifted_coercion_target_id.map(NormalFormId::raw),
+                coercion_target_id.map(NormalFormId::raw),
                 (case.output_id,),
+                (matchee_type_id.raw(),),
+                (original_parameterized_matchee_type_id.raw(),),
             ),
-        );
+        )
+    };
 
     let State {
         context: original_context,
@@ -577,7 +578,12 @@ fn get_type_of_match_case(
     };
     let state = &mut state;
 
-    let type_fusion = backfuse(state, shifted_matchee_type_id, parameterized_type_id);
+    let ((matchee_type_id,), (parameterized_matchee_type_id,)) = evaluate_well_typed_expressions(
+        state,
+        ((matchee_type_id,), (parameterized_matchee_type_id,)),
+    );
+
+    let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
     if type_fusion.has_exploded {
         if let Some(target_id) = original_coercion_target_id {
             original_context.pop_n(case_arity);
