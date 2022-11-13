@@ -594,28 +594,15 @@ fn get_type_of_match_case(
     let normalized_coercion_target_id =
         substituted_coercion_target_id.map(|id| evaluate_well_typed_expression(state, id));
 
-    let (mut substituted_context, substituted_coercion_target_id, substituted_output_id) =
-        if let Some(normalized_coercion_target_id) = normalized_coercion_target_id {
-            let (substituted_context, substituted_expressions) =
-                apply_dynamic_substitutions_with_compounding(
-                    state,
-                    type_fusion.substitutions,
-                    vec![normalized_coercion_target_id.raw(), substituted_output_id],
-                );
+    let (mut substituted_context, (substituted_coercion_target_id, (substituted_output_id,))) =
+        apply_dynamic_substitutions_with_compounding(
+            state,
+            type_fusion.substitutions,
             (
-                substituted_context,
-                Some(substituted_expressions[0]),
-                substituted_expressions[1],
-            )
-        } else {
-            let (substituted_context, substituted_expressions) =
-                apply_dynamic_substitutions_with_compounding(
-                    state,
-                    type_fusion.substitutions,
-                    vec![substituted_output_id],
-                );
-            (substituted_context, None, substituted_expressions[0])
-        };
+                normalized_coercion_target_id.map(NormalFormId::raw),
+                (substituted_output_id,),
+            ),
+        );
 
     let mut state = State {
         context: &mut substituted_context,

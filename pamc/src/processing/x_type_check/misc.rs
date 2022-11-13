@@ -563,11 +563,11 @@ pub(super) fn try_as_variant_expression(
     }
 }
 
-pub(super) fn apply_dynamic_substitutions_with_compounding(
+pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, Output = E>>(
     state: &mut State,
     substitutions: Vec<DynamicSubstitution>,
-    expressions_to_substitute: Vec<ExpressionId>,
-) -> (Context, Vec<ExpressionId>) {
+    expressions_to_substitute: E,
+) -> (Context, E) {
     let original_state = state;
     let n = substitutions.len();
 
@@ -591,10 +591,11 @@ pub(super) fn apply_dynamic_substitutions_with_compounding(
         loop {
             let mut was_no_op = WasSyntacticNoOp(true);
 
-            for id in expressions_to_substitute.iter_mut() {
+            expressions_to_substitute = expressions_to_substitute.map(|mut id| {
                 was_no_op &=
                     id.subst_in_place_and_get_status(substitution, &mut state.without_context());
-            }
+                id
+            });
 
             was_no_op &= state.context.subst_in_place_and_get_status(
                 substitution,
