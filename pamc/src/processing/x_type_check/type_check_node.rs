@@ -538,6 +538,22 @@ fn get_type_of_match_case(
     };
     let state = &mut state;
 
+    if let Some(coercion_target_id) = coercion_target_id {
+        println!(
+            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB.BEFORE_NORMALIZATION =\n{}",
+            case_arity,
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    coercion_target_id,
+                ),
+                0,
+            ),
+        );
+    }
+
     let (coercion_target_id, (matchee_type_id,), (parameterized_matchee_type_id,)) =
         evaluate_well_typed_expressions(
             state,
@@ -550,7 +566,7 @@ fn get_type_of_match_case(
 
     if let Some(coercion_target_id) = coercion_target_id {
         println!(
-            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB =\n{}",
+            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB.NORMAL_FORM =\n{}",
             case_arity,
             state.context.len(),
             state.context.type0_dbi(),
