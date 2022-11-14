@@ -750,10 +750,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
             }
 
             let parameterized_matchee_id = {
+                let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len);
                 let callee_id = ExpressionId::Name(add_name_expression(
                     state.registry,
                     fully_qualified_variant_name_component_ids,
-                    variant_dbi,
+                    shifted_variant_dbi,
                 ));
 
                 let case_param_ids = state.registry.identifier_list(case.param_list_id).to_vec();
@@ -795,11 +796,13 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     actual: case.param_list_id.len,
                 });
             }
+            // Since the case is nullary, we shift by zero.
+            let shifted_variant_dbi = variant_dbi;
             let parameterized_matchee_id =
                 NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
                     state.registry,
                     fully_qualified_variant_name_component_ids,
-                    variant_dbi,
+                    shifted_variant_dbi,
                 )));
             Ok((parameterized_matchee_id, variant_type_id))
         }
