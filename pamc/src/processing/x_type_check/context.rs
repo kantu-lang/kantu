@@ -376,7 +376,20 @@ impl Context {
 
         let pushees = pushees
             .into_iter()
-            .map(|pushee| pushee.downshift(distance, state.registry))
+            .enumerate()
+            .map(|(index, pushee)| {
+                println!(
+                    "DOWNSHIFT_PUSHEE(i={}, context_len={}, type0_dbi={:?}).type = {:#?}",
+                    index,
+                    self.len(),
+                    self.type0_dbi(),
+                    crate::processing::x_expand_lightened::expand_expression(
+                        state.registry,
+                        pushee.type_id.raw()
+                    )
+                );
+                pushee.downshift(distance, state.registry)
+            })
             .collect::<Vec<_>>();
         let liftees = liftees
             .into_iter()
