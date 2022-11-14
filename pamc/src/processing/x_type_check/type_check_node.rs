@@ -538,6 +538,22 @@ fn get_type_of_match_case(
 
     let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
+    if let Some(coercion_target_id) = coercion_target_id {
+        println!(
+            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.BEFORE_FORWARD_SUB =\n{}",
+            case_arity,
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    coercion_target_id.raw(),
+                ),
+                0,
+            ),
+        );
+    }
+
     let (
         mut context,
         (
@@ -585,6 +601,22 @@ fn get_type_of_match_case(
                 (parameterized_matchee_type_id,),
             ),
         );
+
+    if let Some(coercion_target_id) = coercion_target_id {
+        println!(
+            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB =\n{}",
+            case_arity,
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    coercion_target_id.raw(),
+                ),
+                0,
+            ),
+        );
+    }
 
     let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
     if type_fusion.has_exploded {
