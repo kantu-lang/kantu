@@ -263,7 +263,12 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
         .iter()
         .find(|case_id| {
             let case = state.registry.match_case(**case_id);
-            case.variant_name_id == normalized_matchee_variant_name_id
+            let case_variant_name: &IdentifierName = &state
+                .registry
+                .identifier(case.variant_name_id)
+                .name;
+            let matchee_variant_name: &IdentifierName = &state.registry.identifier(normalized_matchee_variant_name_id).name;
+            case_variant_name == matchee_variant_name
         })
          .expect("A well-typed Match expression should have a case for every variant of its matchee's type.");
 

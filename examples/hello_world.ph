@@ -66,10 +66,10 @@ type Exists(T: Type, P: forall(v: T) { Type }) {
 
 let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
     match a {
-        .O => Eq.Refl(Nat.S(b)),
+        .O => Eq.Refl(Nat, Nat.S(b)),
         .S(a') =>
             match plus_S_(a', b) {
-                .Refl(_c) => Eq.Refl(Nat.S(Nat.S(plus(a', b)))),
+                .Refl(_Nat, _c) => Eq.Refl(Nat, Nat.S(Nat.S(plus(a', b)))),
             },
     }
 };
