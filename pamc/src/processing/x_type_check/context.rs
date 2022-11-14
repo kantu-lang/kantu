@@ -370,6 +370,7 @@ impl Context {
         pivot: DbIndex,
         state: &mut ContextlessState,
     ) {
+        println!("PUSH_TOP_N_DOWN.START(n={},pivot={:?})", n, pivot);
         let distance = pivot.0 - n;
         let pushees = self.local_type_stack.split_off(self.len() - n);
         let liftees = self.local_type_stack.split_off(self.len() - distance);
