@@ -125,15 +125,12 @@ fn main() {
                                             } = &err
                                             {
                                                 println!(
-                                                    "WRONG_NUM_OF_ARGS.call: \n{}",
-                                                    debug_expression(
-                                                        &expand_expression(
-                                                            &registry,
-                                                            pamc::data::x_light_ast::ExpressionId::Call(
-                                                                *call_id
-                                                            ),
+                                                    "WRONG_NUM_OF_ARGS.call: {:#?}",
+                                                    &expand_expression(
+                                                        &registry,
+                                                        pamc::data::x_light_ast::ExpressionId::Call(
+                                                            *call_id
                                                         ),
-                                                        0
                                                     ),
                                                 );
                                                 println!(
