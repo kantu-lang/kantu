@@ -183,12 +183,6 @@ fn get_type_of_expression(
     coercion_target_id: Option<NormalFormId>,
     id: ExpressionId,
 ) -> Result<NormalFormId, TypeCheckError> {
-    println!(
-        "get_type_of_expression in progress (context_len={}, type0_dbi={:?}): {:#?} <<<",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(state.registry, id)
-    );
     let out = match id {
         ExpressionId::Name(name) => Ok(get_type_of_name(state, name)),
         ExpressionId::Call(call) => get_type_of_call(state, call),
@@ -196,15 +190,6 @@ fn get_type_of_expression(
         ExpressionId::Match(match_) => get_type_of_match(state, coercion_target_id, match_),
         ExpressionId::Forall(forall) => get_type_of_forall(state, forall),
     };
-    println!(
-        "type_output(context_len={}, type0_dbi={:?}): {:#?} >>>",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            out.clone()?.raw()
-        )
-    );
     out
 }
 
@@ -218,22 +203,7 @@ fn get_type_of_call(
     call_id: NodeId<Call>,
 ) -> Result<NormalFormId, TypeCheckError> {
     let call = state.registry.call(call_id).clone();
-    println!(
-        "Callee (context_len={}, type0_dbi={:?}): {:#?} (((",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(state.registry, call.callee_id)
-    );
     let callee_type_id = get_type_of_expression(state, None, call.callee_id)?;
-    println!(
-        "Callee type (context_len={}, type0_dbi={:?}): {:#?} (((",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            callee_type_id.raw()
-        )
-    );
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
     } else {
@@ -273,15 +243,6 @@ fn get_type_of_call(
             });
         }
     }
-    println!(
-        "GET_TYPE_OF_CALL (context_len={}, type0_dbi={:?}): callee_type = {:#?} (((",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            ExpressionId::Forall(callee_type_id)
-        )
-    );
     for (i, (callee_type_param_id, arg_type_id)) in callee_type_param_ids
         .iter()
         .copied()
@@ -314,21 +275,6 @@ fn get_type_of_call(
                 .raw()
                 .subst_all(&substitutions, &mut state.without_context())
                 .downshift(i, state.registry);
-            println!(
-                "ABOUT to evaluate in get_type_of_call (context_len={}, type0_dbi={:?}, shift={}): param_type.substituted = {:#?} (((",
-                state.context.len(),
-                state.context.type0_dbi(),
-                i,
-                crate::processing::x_expand_lightened::expand_expression(state.registry, substituted)
-            );
-            println!(
-                "^ABOUT.param_type.unsubstituted {:#?}",
-                crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    unsubstituted.raw()
-                )
-            );
-            println!("^ABOUT.context {:#?}", state.context);
             evaluate_well_typed_expression(state, substituted)
         };
         if !is_left_type_assignable_to_right_type(state, arg_type_id, substituted_param_type_id) {

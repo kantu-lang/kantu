@@ -163,26 +163,9 @@ impl Context {
         if level == TYPE1_LEVEL {
             panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
         }
-        println!(
-            "GET_TYPE({:?}).before_shift(context_len={}, type0_dbi={:?}): {:#?}",
-            index,
-            self.len(),
-            self.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_expression(
-                registry,
-                self.local_type_stack[level.0].type_id.raw()
-            )
-        );
         let out = self.local_type_stack[level.0]
             .type_id
             .upshift(index.0 + 1, registry);
-        println!(
-            "GET_TYPE({:?}).after_shift(context_len={}, type0_dbi={:?}): {:#?}",
-            index,
-            self.len(),
-            self.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_expression(registry, out.raw())
-        );
         out
     }
 
@@ -207,19 +190,6 @@ impl SubstituteInPlaceAndGetNoOpStatus for Context {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> WasSyntacticNoOp {
-        println!(
-            "CONTEXT::subst_in_place_and_get_status.substitution: {:#?}",
-            (
-                crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    substitution.from.raw()
-                ),
-                crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    substitution.to.raw()
-                )
-            )
-        );
         let mut was_no_op = WasSyntacticNoOp(true);
         for i in NUMBER_OF_BUILTIN_ENTRIES..self.len() {
             let level = DbLevel(i);
@@ -278,50 +248,11 @@ impl Context {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> WasSyntacticNoOp {
-        println!(
-            "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) original_definition: {:#?}",
-            level,
-            self.level_to_index(level),
-            self.len(),
-            self.local_type_stack[level.0].definition
-        );
         let shift_amount = self.level_to_index(level).0 + 1;
 
         let original_definition = self.local_type_stack[level.0].definition;
         let (new_definition, was_no_op) = match original_definition {
             ContextEntryDefinition::Alias { value_id } => {
-                {
-                    let upshifted = value_id.raw().upshift(shift_amount, state.registry);
-                    println!(
-                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) upshifted_definition: {:#?}",
-                        level,
-                        self.level_to_index(level),
-                        self.len(),
-                        crate::processing::x_expand_lightened::expand_expression(state.registry, upshifted)
-                    );
-                    println!(
-                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) substitution.from: {:#?}",
-                        level,
-                        self.level_to_index(level),
-                        self.len(),
-                        crate::processing::x_expand_lightened::expand_expression(state.registry, substitution.from.raw())
-                    );
-                    println!(
-                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) substitution.to: {:#?}",
-                        level,
-                        self.level_to_index(level),
-                        self.len(),
-                        crate::processing::x_expand_lightened::expand_expression(state.registry, substitution.to.raw())
-                    );
-                    let upshifted_substituted = upshifted.subst(substitution, state);
-                    println!(
-                        "SUBST_ENTRY_DEFINITION_IN_PLACE.START({:?}=={:?},context_len={}) upshifted_substituted_definition: {:#?}",
-                        level,
-                        self.level_to_index(level),
-                        self.len(),
-                        crate::processing::x_expand_lightened::expand_expression(state.registry, upshifted_substituted)
-                    );
-                }
                 let substituted = value_id
                     .raw()
                     .upshift(shift_amount, state.registry)
@@ -370,7 +301,6 @@ impl Context {
         pivot: DbIndex,
         state: &mut ContextlessState,
     ) {
-        println!("PUSH_TOP_N_DOWN.START(n={},pivot={:?})", n, pivot);
         let distance = pivot.0 - n;
         let pushees = self.local_type_stack.split_off(self.len() - n);
         let liftees = self.local_type_stack.split_off(self.len() - distance);
@@ -379,16 +309,6 @@ impl Context {
             .into_iter()
             .enumerate()
             .map(|(entry_index, pushee)| {
-                println!(
-                    "DOWNSHIFT_PUSHEE(i={}, context_len={}, type0_dbi={:?}).type = {:#?}",
-                    entry_index,
-                    self.len(),
-                    self.type0_dbi(),
-                    crate::processing::x_expand_lightened::expand_expression(
-                        state.registry,
-                        pushee.type_id.raw()
-                    )
-                );
                 let entry_dbi = DbIndex(n - entry_index - 1);
                 let relative_len = n - entry_dbi.0 - 1;
                 pushee.downshift_with_cutoff(distance, relative_len, state.registry)
