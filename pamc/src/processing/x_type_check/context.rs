@@ -377,10 +377,10 @@ impl Context {
         let pushees = pushees
             .into_iter()
             .enumerate()
-            .map(|(index, pushee)| {
+            .map(|(entry_index, pushee)| {
                 println!(
                     "DOWNSHIFT_PUSHEE(i={}, context_len={}, type0_dbi={:?}).type = {:#?}",
-                    index,
+                    entry_index,
                     self.len(),
                     self.type0_dbi(),
                     crate::processing::x_expand_lightened::expand_expression(
@@ -388,12 +388,19 @@ impl Context {
                         pushee.type_id.raw()
                     )
                 );
-                pushee.downshift(distance, state.registry)
+                let entry_dbi = DbIndex(n - entry_index - 1);
+                let relative_len = n - entry_dbi.0 - 1;
+                pushee.downshift_with_cutoff(distance, relative_len, state.registry)
             })
             .collect::<Vec<_>>();
         let liftees = liftees
             .into_iter()
-            .map(|liftee| liftee.upshift(n, state.registry))
+            .enumerate()
+            .map(|(entry_index, liftee)| {
+                let entry_dbi = DbIndex(n + distance - entry_index - 1);
+                let relative_pivot = DbIndex(pivot.0 - entry_dbi.0 - 1);
+                liftee.upshift_with_cutoff(n, relative_pivot.0, state.registry)
+            })
             .collect::<Vec<_>>();
 
         self.local_type_stack.extend(pushees);
