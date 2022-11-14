@@ -125,7 +125,7 @@ fn main() {
                                             } = &err
                                             {
                                                 println!(
-                                                    "TYPE_MISMATCH.call: \n{}",
+                                                    "WRONG_NUM_OF_ARGS.call: \n{}",
                                                     debug_expression(
                                                         &expand_expression(
                                                             &registry,
@@ -137,10 +137,13 @@ fn main() {
                                                     ),
                                                 );
                                                 println!(
-                                                    "TYPE_MISMATCH.expected_arity: {}",
+                                                    "WRONG_NUM_OF_ARGS.expected_arity: {}",
                                                     expected
                                                 );
-                                                println!("TYPE_MISMATCH.actual_arity: {}", actual);
+                                                println!(
+                                                    "WRONG_NUM_OF_ARGS.actual_arity: {}",
+                                                    actual
+                                                );
                                             }
                                         }
                                     }
