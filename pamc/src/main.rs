@@ -60,6 +60,7 @@ fn main() {
                                     print_separator();
 
                                     use pamc::processing::{
+                                        x_debug::debug_expression,
                                         x_expand_lightened::expand_expression, x_type_check::*,
                                     };
 
@@ -87,21 +88,33 @@ fn main() {
                                             } = &err
                                             {
                                                 println!(
-                                                    "TYPE_MISMATCH.expression: {:#?}",
-                                                    expand_expression(&registry, *expression_id)
-                                                );
-                                                println!(
-                                                    "TYPE_MISMATCH.expected_type: {:#?}",
-                                                    expand_expression(
-                                                        &registry,
-                                                        expected_type_id.raw()
+                                                    "TYPE_MISMATCH.expression: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            *expression_id
+                                                        ),
+                                                        0
                                                     )
                                                 );
                                                 println!(
-                                                    "TYPE_MISMATCH.actual_type: {:#?}",
-                                                    expand_expression(
-                                                        &registry,
-                                                        actual_type_id.raw()
+                                                    "TYPE_MISMATCH.expected_type: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            expected_type_id.raw()
+                                                        ),
+                                                        0
+                                                    )
+                                                );
+                                                println!(
+                                                    "TYPE_MISMATCH.actual_type: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            actual_type_id.raw()
+                                                        ),
+                                                        0
                                                     )
                                                 );
                                             }
@@ -112,13 +125,16 @@ fn main() {
                                             } = &err
                                             {
                                                 println!(
-                                                    "TYPE_MISMATCH.call: {:#?}",
-                                                    expand_expression(
-                                                        &registry,
-                                                        pamc::data::x_light_ast::ExpressionId::Call(
-                                                            *call_id
-                                                        )
-                                                    )
+                                                    "TYPE_MISMATCH.call: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            pamc::data::x_light_ast::ExpressionId::Call(
+                                                                *call_id
+                                                            ),
+                                                        ),
+                                                        0
+                                                    ),
                                                 );
                                                 println!(
                                                     "TYPE_MISMATCH.expected_arity: {}",

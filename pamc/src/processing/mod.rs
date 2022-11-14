@@ -9,6 +9,7 @@ pub mod type_check;
 pub mod validate_fun_recursion;
 
 pub mod x_bind_type_independent;
+pub mod x_debug;
 pub mod x_expand_lightened;
 pub mod x_lighten;
 pub mod x_type_check;

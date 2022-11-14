@@ -625,24 +625,30 @@ fn get_type_of_match_case(
     if !can_be_coerced {
         if let Some(coercion_target_id) = coercion_target_id {
             println!(
-                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target = {:#?}",
+                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target =\n{}",
                 case_arity,
                 state.context.len(),
                 state.context.type0_dbi(),
-                crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    coercion_target_id.raw()
-                )
+                crate::processing::x_debug::debug_expression(
+                    &crate::processing::x_expand_lightened::expand_expression(
+                        state.registry,
+                        coercion_target_id.raw(),
+                    ),
+                    0,
+                ),
             );
             println!(
-                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).output_type = {:#?}",
+                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).output_type =\n{}",
                 case_arity,
                 state.context.len(),
                 state.context.type0_dbi(),
-                crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    output_type_id.raw()
-                )
+                crate::processing::x_debug::debug_expression(
+                    &crate::processing::x_expand_lightened::expand_expression(
+                        state.registry,
+                        output_type_id.raw(),
+                    ),
+                    0,
+                ),
             );
         }
     }
