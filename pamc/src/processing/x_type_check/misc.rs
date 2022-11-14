@@ -1,5 +1,7 @@
 use super::*;
 
+use std::cmp::Ordering;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NormalFormId(ExpressionId);
 
@@ -629,8 +631,8 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
         return Some(Substitution { from: d.0, to: d.1 });
     }
 
-    if min_db_index_of_expression(state.registry, d.0.raw()).0
-        <= min_db_index_of_expression(state.registry, d.1.raw()).0
+    if min_free_db_index_in_expression(state.registry, d.0.raw()).0
+        <= min_free_db_index_in_expression(state.registry, d.1.raw()).0
     {
         Some(Substitution { from: d.0, to: d.1 })
     } else {
@@ -638,72 +640,171 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
     }
 }
 
-// TODO: Maybe cache this.
-fn min_db_index_of_expression(registry: &NodeRegistry, id: ExpressionId) -> DbIndex {
-    match id {
-        ExpressionId::Name(id) => min_db_index_of_name(registry, id),
-        ExpressionId::Call(id) => min_db_index_of_call(registry, id),
-        ExpressionId::Fun(id) => min_db_index_of_fun(registry, id),
-        ExpressionId::Match(id) => min_db_index_of_match(registry, id),
-        ExpressionId::Forall(id) => min_db_index_of_forall(registry, id),
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MinDbIndex {
+    Infinity,
+    Some(DbIndex),
+}
+
+impl PartialOrd for MinDbIndex {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
-fn min_db_index_of_name(registry: &NodeRegistry, id: NodeId<NameExpression>) -> DbIndex {
-    registry.name_expression(id).db_index
+impl Ord for MinDbIndex {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (*self, *other) {
+            (MinDbIndex::Some(a), MinDbIndex::Some(b)) => a.cmp(&b),
+            (MinDbIndex::Some(_), MinDbIndex::Infinity) => Ordering::Less,
+            (MinDbIndex::Infinity, MinDbIndex::Some(_)) => Ordering::Greater,
+            (MinDbIndex::Infinity, MinDbIndex::Infinity) => Ordering::Equal,
+        }
+    }
 }
 
-fn min_db_index_of_call(registry: &NodeRegistry, id: NodeId<Call>) -> DbIndex {
+impl MinDbIndex {
+    fn expect(self, message: &str) -> DbIndex {
+        self.into_option().expect(message)
+    }
+
+    fn into_option(self) -> Option<DbIndex> {
+        match self {
+            MinDbIndex::Infinity => None,
+            MinDbIndex::Some(db_index) => Some(db_index),
+        }
+    }
+}
+
+// TODO: Maybe cache this.
+fn min_free_db_index_in_expression(registry: &NodeRegistry, id: ExpressionId) -> DbIndex {
+    min_db_index_in_expression_relative_to_cutoff(registry, id, 0)
+        .expect("Nothing is less than zero.")
+}
+
+fn min_db_index_in_expression_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: ExpressionId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match id {
+        ExpressionId::Name(id) => min_db_index_in_name_relative_to_cutoff(registry, id, cutoff),
+        ExpressionId::Call(id) => min_db_index_in_call_relative_to_cutoff(registry, id, cutoff),
+        ExpressionId::Fun(id) => min_db_index_in_fun_relative_to_cutoff(registry, id, cutoff),
+        ExpressionId::Match(id) => min_db_index_in_match_relative_to_cutoff(registry, id, cutoff),
+        ExpressionId::Forall(id) => min_db_index_in_forall_relative_to_cutoff(registry, id, cutoff),
+    }
+}
+
+fn min_db_index_in_name_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<NameExpression>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let original = registry.name_expression(id).db_index;
+    match original.0.checked_sub(cutoff) {
+        Some(relative) => MinDbIndex::Some(DbIndex(relative)),
+        None => MinDbIndex::Infinity,
+    }
+}
+
+fn min_db_index_in_call_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<Call>,
+    cutoff: usize,
+) -> MinDbIndex {
     let call = registry.call(id);
-    let callee_min = min_db_index_of_expression(registry, call.callee_id);
+    let callee_min =
+        min_db_index_in_expression_relative_to_cutoff(registry, call.callee_id, cutoff);
     let arg_ids = registry.expression_list(call.arg_list_id);
     let args_min = arg_ids
         .iter()
-        .map(|&arg_id| min_db_index_of_expression(registry, arg_id))
+        .map(|&arg_id| min_db_index_in_expression_relative_to_cutoff(registry, arg_id, cutoff))
         .min();
     min_or_first(callee_min, args_min)
 }
 
-fn min_db_index_of_fun(registry: &NodeRegistry, id: NodeId<Fun>) -> DbIndex {
+fn min_db_index_in_fun_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<Fun>,
+    cutoff: usize,
+) -> MinDbIndex {
     let fun = registry.fun(id);
     let param_ids = registry.param_list(fun.param_list_id);
     let param_types_min = param_ids
         .iter()
-        .map(|&param_id| {
+        .copied()
+        .enumerate()
+        .map(|(param_index, param_id)| {
             let param = registry.param(param_id);
-            min_db_index_of_expression(registry, param.type_id)
+            min_db_index_in_expression_relative_to_cutoff(
+                registry,
+                param.type_id,
+                cutoff + param_index,
+            )
         })
         .min();
-    let return_type_min = min_db_index_of_expression(registry, fun.return_type_id);
-    let body_min = min_db_index_of_expression(registry, fun.body_id);
+    let return_type_min = min_db_index_in_expression_relative_to_cutoff(
+        registry,
+        fun.return_type_id,
+        cutoff + param_ids.len(),
+    );
+    let body_min = min_db_index_in_expression_relative_to_cutoff(
+        registry,
+        fun.body_id,
+        cutoff + param_ids.len() + 1,
+    );
     min_or_first(return_type_min.min(body_min), param_types_min)
 }
 
-fn min_db_index_of_match(registry: &NodeRegistry, id: NodeId<Match>) -> DbIndex {
+fn min_db_index_in_match_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<Match>,
+    cutoff: usize,
+) -> MinDbIndex {
     let match_ = registry.match_(id);
-    let matchee_min = min_db_index_of_expression(registry, match_.matchee_id);
+    let matchee_min =
+        min_db_index_in_expression_relative_to_cutoff(registry, match_.matchee_id, cutoff);
     let case_ids = registry.match_case_list(match_.case_list_id);
     let case_outputs_min = case_ids
         .iter()
         .map(|case_id| {
             let case = registry.match_case(*case_id);
-            min_db_index_of_expression(registry, case.output_id)
+            min_db_index_in_expression_relative_to_cutoff(
+                registry,
+                case.output_id,
+                cutoff + case.param_list_id.len,
+            )
         })
         .min();
     min_or_first(matchee_min, case_outputs_min)
 }
 
-fn min_db_index_of_forall(registry: &NodeRegistry, id: NodeId<Forall>) -> DbIndex {
+fn min_db_index_in_forall_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<Forall>,
+    cutoff: usize,
+) -> MinDbIndex {
     let forall = registry.forall(id);
     let param_ids = registry.param_list(forall.param_list_id);
     let param_types_min = param_ids
         .iter()
-        .map(|&param_id| {
+        .copied()
+        .enumerate()
+        .map(|(param_index, param_id)| {
             let param = registry.param(param_id);
-            min_db_index_of_expression(registry, param.type_id)
+            min_db_index_in_expression_relative_to_cutoff(
+                registry,
+                param.type_id,
+                cutoff + param_index,
+            )
         })
         .min();
-    let output_min = min_db_index_of_expression(registry, forall.output_id);
+    let output_min = min_db_index_in_expression_relative_to_cutoff(
+        registry,
+        forall.output_id,
+        cutoff + param_ids.len(),
+    );
     min_or_first(output_min, param_types_min)
 }
 
@@ -995,7 +1096,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     num_of_forward_references: usize,
     expressions_to_substitute: E,
 ) -> (Context, E) {
-    let min_db_index = min_db_index_of_expression(state.registry, substitution.0.from.raw());
+    let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from.raw());
 
     println!(
         "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.from: {:#?}",
