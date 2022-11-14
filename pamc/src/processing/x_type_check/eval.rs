@@ -228,6 +228,36 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
             ));
         };
 
+    if state
+        .registry
+        .match_case_list(match_.case_list_id)
+        .iter()
+        .find(|case_id| {
+            let case = state.registry.match_case(**case_id);
+            case.variant_name_id == normalized_matchee_variant_name_id
+        })
+        .is_none()
+    {
+        println!(
+            "TRIED_TO_EVAL_ILL_TYPED_MATCH(context_len={}, type0_dbi={:?}).match = {:#?}",
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                ExpressionId::Match(match_.id)
+            )
+        );
+        println!(
+            "TRIED_TO_EVAL_ILL_TYPED_MATCH(context_len={}, type0_dbi={:?}).variant_name = {:#?}",
+            state.context.len(),
+            state.context.type0_dbi(),
+            &state
+                .registry
+                .identifier(normalized_matchee_variant_name_id)
+                .name
+        );
+    }
+
     let case_id = *state.registry
         .match_case_list(match_.case_list_id)
         .iter()
