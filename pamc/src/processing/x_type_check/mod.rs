@@ -4,8 +4,11 @@ use crate::data::{
     x_node_registry::{ListId, NodeId, NodeRegistry},
 };
 
-use eval::*;
-mod eval;
+use eval_possibly_ill_typed::*;
+mod eval_possibly_ill_typed;
+
+use eval_well_typed::*;
+mod eval_well_typed;
 
 use context::*;
 mod context;

@@ -307,8 +307,8 @@ pub(super) fn backfuse(
         )
     );
     if let (Some(left_ve), Some(right_ve)) = (
-        try_as_variant_expression(state, left),
-        try_as_variant_expression(state, right),
+        try_as_variant_expression(state, left.raw()),
+        try_as_variant_expression(state, right.raw()),
     ) {
         let left_name: &IdentifierName = &state.registry.identifier(left_ve.0).name;
         let right_name: &IdentifierName = &state.registry.identifier(right_ve.0).name;
@@ -538,9 +538,9 @@ pub(super) fn try_as_adt_expression(
 /// Otherwise, returns `None`.
 pub(super) fn try_as_variant_expression(
     state: &mut State,
-    expression_id: NormalFormId,
+    expression_id: ExpressionId,
 ) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
-    match expression_id.raw() {
+    match expression_id {
         ExpressionId::Name(name_id) => {
             let db_index = state.registry.name_expression(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
@@ -631,18 +631,30 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
         return None;
     }
     if is_left_inclusive_subterm_of_right(state, d.0.raw(), d.1.raw()) {
-        return Some(Substitution { from: d.1, to: d.0 });
+        return Some(Substitution {
+            from: d.1.raw(),
+            to: d.0.raw(),
+        });
     }
     if is_left_inclusive_subterm_of_right(state, d.1.raw(), d.0.raw()) {
-        return Some(Substitution { from: d.0, to: d.1 });
+        return Some(Substitution {
+            from: d.0.raw(),
+            to: d.1.raw(),
+        });
     }
 
     if min_free_db_index_in_expression(state.registry, d.0.raw()).0
         <= min_free_db_index_in_expression(state.registry, d.1.raw()).0
     {
-        Some(Substitution { from: d.0, to: d.1 })
+        Some(Substitution {
+            from: d.0.raw(),
+            to: d.1.raw(),
+        })
     } else {
-        Some(Substitution { from: d.1, to: d.0 })
+        Some(Substitution {
+            from: d.1.raw(),
+            to: d.0.raw(),
+        })
     }
 }
 
@@ -1102,7 +1114,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     num_of_forward_references: usize,
     expressions_to_substitute: E,
 ) -> (Context, E) {
-    let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from.raw());
+    let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from);
 
     println!(
         "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.from: \n{}",
@@ -1112,7 +1124,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                substitution.0.from.raw()
+                substitution.0.from
             ),
             0,
         )
@@ -1125,7 +1137,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                substitution.0.to.raw()
+                substitution.0.to
             ),
             0,
         )
@@ -1153,7 +1165,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                substitution.0.from.raw()
+                substitution.0.from
             ),
             0,
         )
@@ -1166,7 +1178,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                substitution.0.to.raw()
+                substitution.0.to
             ),
             0,
         )

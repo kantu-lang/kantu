@@ -255,22 +255,23 @@ fn get_type_of_call(
             // form Forall node, which guarantees that its type is a
             // normal form.
             let unsubstituted = NormalFormId::unchecked_new(callee_type_param.type_id);
-            let substitutions: Vec<Substitution> =
-                normalized_arg_ids[..i]
-                    .iter()
-                    .copied()
-                    .enumerate()
-                    .map(|(j, normalized_arg_id)| {
-                        let db_index = DbIndex(i - j - 1);
-                        let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
-                        Substitution {
-                            from: NormalFormId::unchecked_new(ExpressionId::Name(
-                                add_name_expression(state.registry, vec![param_name_id], db_index),
-                            )),
-                            to: normalized_arg_id.upshift(i, state.registry),
-                        }
-                    })
-                    .collect();
+            let substitutions: Vec<Substitution> = normalized_arg_ids[..i]
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(j, normalized_arg_id)| {
+                    let db_index = DbIndex(i - j - 1);
+                    let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
+                    Substitution {
+                        from: ExpressionId::Name(add_name_expression(
+                            state.registry,
+                            vec![param_name_id],
+                            db_index,
+                        )),
+                        to: normalized_arg_id.upshift(i, state.registry).raw(),
+                    }
+                })
+                .collect();
             let substituted = unsubstituted
                 .raw()
                 .subst_all(&substitutions, &mut state.without_context())
@@ -297,12 +298,12 @@ fn get_type_of_call(
                 let db_index = DbIndex(arity - j - 1);
                 let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
                 Substitution {
-                    from: NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                    from: ExpressionId::Name(add_name_expression(
                         state.registry,
                         vec![param_name_id],
                         db_index,
-                    ))),
-                    to: normalized_arg_id.upshift(arity, state.registry),
+                    )),
+                    to: normalized_arg_id.upshift(arity, state.registry).raw(),
                 }
             })
             .collect();
@@ -481,14 +482,7 @@ fn get_type_of_match_case(
 
     let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
-    match get_type_of_expression(state, None, case.output_id) {
-        Ok(_) | Err(TypeCheckError::AmbiguousOutputType { .. }) => (),
-        Err(e) => {
-            state.context.pop_n(case_arity);
-            return Err(e);
-        }
-    }
-    let case_output_id = evaluate_well_typed_expression(state, case.output_id);
+    let case_output_id = evaluate_possibly_ill_typed_expression(state, case.output_id);
 
     if let Some(coercion_target_id) = coercion_target_id {
         println!(
@@ -514,7 +508,7 @@ fn get_type_of_match_case(
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                case_output_id.raw(),
+                case_output_id,
             ),
             0,
         ),
@@ -530,8 +524,8 @@ fn get_type_of_match_case(
         ),
     ) = {
         let matchee_substitution = ForwardReferencingSubstitution(Substitution {
-            from: normalized_matchee_id,
-            to: original_parameterized_matchee_id,
+            from: normalized_matchee_id.raw(),
+            to: original_parameterized_matchee_id.raw(),
         });
         apply_forward_referencing_substitution(
             state,
@@ -539,7 +533,7 @@ fn get_type_of_match_case(
             case_arity,
             (
                 coercion_target_id.map(NormalFormId::raw),
-                (case_output_id.raw(),),
+                (case_output_id,),
                 (matchee_type_id.raw(),),
                 (original_parameterized_matchee_type_id.raw(),),
             ),

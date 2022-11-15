@@ -2,8 +2,8 @@ use super::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Substitution {
-    pub from: NormalFormId,
-    pub to: NormalFormId,
+    pub from: ExpressionId,
+    pub to: ExpressionId,
 }
 
 pub(super) trait Substitute {
@@ -53,11 +53,9 @@ fn subst_if_equal_and_get_status(
     state: &mut ContextlessState,
 ) -> (ExpressionId, WasSyntacticNoOp) {
     let Substitution { from, to } = substitution;
-    let is_equal = state
-        .equality_checker
-        .eq(original, from.raw(), state.registry);
+    let is_equal = state.equality_checker.eq(original, from, state.registry);
     if is_equal {
-        let to = to.raw();
+        let to = to;
         let was_no_op = WasSyntacticNoOp(original == to);
         (to, was_no_op)
     } else {
