@@ -472,6 +472,15 @@ fn get_type_of_match_case(
 
     let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
+    match get_type_of_expression(state, None, case.output_id) {
+        Ok(_) | Err(TypeCheckError::AmbiguousOutputType { .. }) => (),
+        Err(e) => {
+            state.context.pop_n(case_arity);
+            return Err(e);
+        }
+    }
+    let case_output_id = evaluate_well_typed_expression(state, case.output_id);
+
     if let Some(coercion_target_id) = coercion_target_id {
         println!(
             "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.BEFORE_FORWARD_SUB =\n{}",
@@ -489,14 +498,14 @@ fn get_type_of_match_case(
     }
 
     println!(
-        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).BEFORE_FORWARD_SUB =\n{}",
+        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).BEFORE_FORWARD_SUB.NORMALIZED =\n{}",
         case_arity,
         state.context.len(),
         state.context.type0_dbi(),
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                case.output_id,
+                case_output_id.raw(),
             ),
             0,
         ),
@@ -521,7 +530,7 @@ fn get_type_of_match_case(
             case_arity,
             (
                 coercion_target_id.map(NormalFormId::raw),
-                (case.output_id,),
+                (case_output_id.raw(),),
                 (matchee_type_id.raw(),),
                 (original_parameterized_matchee_type_id.raw(),),
             ),
@@ -540,6 +549,8 @@ fn get_type_of_match_case(
     };
     let state = &mut state;
 
+    original_context.pop_n(case_arity);
+
     if let Some(coercion_target_id) = coercion_target_id {
         println!(
             "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB.BEFORE_NORMALIZATION =\n{}",
@@ -556,15 +567,20 @@ fn get_type_of_match_case(
         );
     }
 
-    let (coercion_target_id, (matchee_type_id,), (parameterized_matchee_type_id,)) =
-        evaluate_well_typed_expressions(
-            state,
-            (
-                coercion_target_id,
-                (matchee_type_id,),
-                (parameterized_matchee_type_id,),
-            ),
-        );
+    let (
+        coercion_target_id,
+        (case_output_id,),
+        (matchee_type_id,),
+        (parameterized_matchee_type_id,),
+    ) = evaluate_well_typed_expressions(
+        state,
+        (
+            coercion_target_id,
+            (case_output_id,),
+            (matchee_type_id,),
+            (parameterized_matchee_type_id,),
+        ),
+    );
 
     if let Some(coercion_target_id) = coercion_target_id {
         println!(
@@ -583,14 +599,14 @@ fn get_type_of_match_case(
     }
 
     println!(
-        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).AFTER_FORWARD_SUB.NOT_NORMALIZED =\n{}",
+        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).AFTER_FORWARD_SUB.NORMALIZED =\n{}",
         case_arity,
         state.context.len(),
         state.context.type0_dbi(),
         crate::processing::x_debug::debug_expression(
             &crate::processing::x_expand_lightened::expand_expression(
                 state.registry,
-                case_output_id,
+                case_output_id.raw(),
             ),
             0,
         ),
@@ -608,7 +624,10 @@ fn get_type_of_match_case(
         apply_dynamic_substitutions_with_compounding(
             state,
             type_fusion.substitutions,
-            (coercion_target_id.map(NormalFormId::raw), (case_output_id,)),
+            (
+                coercion_target_id.map(NormalFormId::raw),
+                (case_output_id.raw(),),
+            ),
         );
 
     let mut state = State {
@@ -692,8 +711,6 @@ fn get_type_of_match_case(
             );
         }
     }
-
-    original_context.pop_n(case_arity);
 
     println!(
         "COERCION STATUS: has_coercion={:?}; can_be_coerced={:?}",
