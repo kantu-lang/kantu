@@ -342,16 +342,23 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
         }),
     ));
 
-    let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
-    let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
-    let normalized_fun_id =
-        evaluate_well_typed_expression(state, ExpressionId::Fun(shifted_fun_id));
-    state.context.push(ContextEntry {
-        type_id: shifted_fun_type_id,
-        definition: ContextEntryDefinition::Alias {
-            value_id: normalized_fun_id,
-        },
-    });
+    {
+        let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
+        let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
+        let shifted_fun = state.registry.fun(shifted_fun_id).clone();
+        let body_skipped_fun_id = state.registry.add_fun_and_overwrite_its_id(Fun {
+            skip_type_checking_body: true,
+            ..shifted_fun
+        });
+        let normalized_fun_id =
+            evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
+        state.context.push(ContextEntry {
+            type_id: shifted_fun_type_id,
+            definition: ContextEntryDefinition::Alias {
+                value_id: normalized_fun_id,
+            },
+        });
+    }
 
     // We need to upshift the return type by one level before comparing it
     // to the body type, to account for the fact that the function has been
@@ -364,21 +371,23 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
     #[allow(unused_variables)]
     let normalized_return_type_id = ();
 
-    let normalized_body_type_id = get_type_of_expression(
-        state,
-        Some(normalized_return_type_id_relative_to_body),
-        fun.body_id,
-    )?;
-    if !is_left_type_assignable_to_right_type(
-        state,
-        normalized_body_type_id,
-        normalized_return_type_id_relative_to_body,
-    ) {
-        return Err(TypeCheckError::TypeMismatch {
-            expression_id: fun.body_id,
-            expected_type_id: normalized_return_type_id_relative_to_body,
-            actual_type_id: normalized_body_type_id,
-        });
+    if !fun.skip_type_checking_body {
+        let normalized_body_type_id = get_type_of_expression(
+            state,
+            Some(normalized_return_type_id_relative_to_body),
+            fun.body_id,
+        )?;
+        if !is_left_type_assignable_to_right_type(
+            state,
+            normalized_body_type_id,
+            normalized_return_type_id_relative_to_body,
+        ) {
+            return Err(TypeCheckError::TypeMismatch {
+                expression_id: fun.body_id,
+                expected_type_id: normalized_return_type_id_relative_to_body,
+                actual_type_id: normalized_body_type_id,
+            });
+        }
     }
 
     state.context.pop_n(param_arity + 1);

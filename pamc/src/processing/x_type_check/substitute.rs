@@ -126,6 +126,7 @@ impl Substitute for NodeId<Fun> {
             param_list_id: substituted_param_list_id,
             return_type_id: substituted_return_type_id,
             body_id: substituted_body_id,
+            skip_type_checking_body: fun.skip_type_checking_body,
         }))
     }
 }

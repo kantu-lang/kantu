@@ -198,6 +198,7 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
             param_list_id: normalized_param_list_id,
             return_type_id: normalized_return_type_id.raw(),
             body_id: fun.body_id,
+            skip_type_checking_body: fun.skip_type_checking_body,
         }),
     ))
 }

@@ -192,6 +192,7 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> No
         param_list_id,
         return_type_id,
         body_id,
+        skip_type_checking_body: false,
     })
 }
 
