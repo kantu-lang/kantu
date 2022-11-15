@@ -289,16 +289,22 @@ pub(super) fn backfuse(
     right: NormalFormId,
 ) -> BackwardFusion {
     println!(
-        "FUSE.LEFT (context_len={}, type0_dbi={:?}): {:#?}",
+        "FUSE.LEFT (context_len={}, type0_dbi={:?}): \n{}",
         state.context.len(),
         state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(state.registry, left.raw())
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(state.registry, left.raw()),
+            0
+        )
     );
     println!(
-        "FUSE.RIGHT (context_len={}, type0_dbi={:?}): {:#?}",
+        "FUSE.RIGHT (context_len={}, type0_dbi={:?}): \n{}",
         state.context.len(),
         state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(state.registry, right.raw())
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(state.registry, right.raw()),
+            0
+        )
     );
     if let (Some(left_ve), Some(right_ve)) = (
         try_as_variant_expression(state, left),

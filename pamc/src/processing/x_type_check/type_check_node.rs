@@ -415,12 +415,6 @@ fn get_type_of_match(
     let case_ids = state.registry.match_case_list(match_.case_list_id).to_vec();
     let mut first_case_type_id = None;
     for case_id in case_ids {
-        println!(
-            "CASE_CHECK.start(context_len={}, type0_dbi={:?}): case = {:#?}",
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_match_case(state.registry, case_id)
-        );
         let case_type_id = get_type_of_match_case(
             state,
             coercion_target_id,
@@ -441,12 +435,6 @@ fn get_type_of_match(
         } else {
             first_case_type_id = Some(case_type_id);
         }
-        println!(
-            "CASE_CHECK.finish(context_len={}, type0_dbi={:?}): case = {:#?}",
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_expand_lightened::expand_match_case(state.registry, case_id)
-        );
     }
 
     if let Some(first_case_type_id) = first_case_type_id {
@@ -601,6 +589,22 @@ fn get_type_of_match_case(
         equality_checker: state.equality_checker,
     };
     let state = &mut state;
+
+    if let Some(coercion_target_id) = coercion_target_id {
+        println!(
+            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_BACK_SUB.BEFORE_NORMALIZATION =\n{}",
+            case_arity,
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    coercion_target_id,
+                ),
+                0,
+            ),
+        );
+    }
 
     let coercion_target_id = coercion_target_id
         .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
