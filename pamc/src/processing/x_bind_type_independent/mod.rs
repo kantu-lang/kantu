@@ -212,6 +212,7 @@ fn bind_fun(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError
         params,
         return_type,
         body,
+        skip_type_checking_body: false,
     }));
 
     context.pop_scope_or_panic();

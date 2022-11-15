@@ -80,8 +80,12 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                 .map(|arg_id| arg_id.upshift(arity + 1, state.registry))
                 .collect::<Vec<_>>();
             let substitutions = {
+                let skipped_fun_id = state.registry.add_fun_and_overwrite_its_id(Fun {
+                    skip_type_checking_body: true,
+                    ..fun.clone()
+                });
                 let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
-                    fun_id.upshift(arity + 1, state.registry),
+                    skipped_fun_id.upshift(arity + 1, state.registry),
                 ));
                 const FUN_DB_INDEX: DbIndex = DbIndex(0);
                 vec![Substitution {

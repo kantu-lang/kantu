@@ -36,7 +36,11 @@ pub fn debug_ident(ident: &Identifier) -> String {
 
 pub fn debug_call(call: &Call, indent_level: usize) -> String {
     let callee = match &call.callee {
-        Expression::Fun(fun) => debug_ident(&fun.name),
+        Expression::Fun(fun) => format!(
+            "{}<<{}>>",
+            debug_ident(&fun.name),
+            fun.skip_type_checking_body
+        ),
         _ => debug_expression(&call.callee, indent_level),
     };
     let i0 = indent(indent_level);
@@ -62,8 +66,9 @@ pub fn debug_fun(fun: &Fun, indent_level: usize) -> String {
     let return_type = debug_expression(&fun.return_type, indent_level + 1);
     let body = debug_expression(&fun.body, indent_level + 1);
     format!(
-        "fun {}(\n{}\n{}): {} {{\n{}{}\n{}}}",
+        "fun {}<<{}>>(\n{}\n{}): {} {{\n{}{}\n{}}}",
         debug_ident(&fun.name),
+        fun.skip_type_checking_body,
         params,
         &i0,
         return_type,
