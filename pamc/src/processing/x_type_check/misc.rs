@@ -298,7 +298,7 @@ pub(super) fn backfuse(
         )
     );
     println!(
-        "FUSE.RIGHT (context_len={}, type0_dbi={:?}): \n{}",
+        "FUSE.RIGHT (context_len={}, type0_dbi={:?}): \n{}\n",
         state.context.len(),
         state.context.type0_dbi(),
         crate::processing::x_debug::debug_expression(

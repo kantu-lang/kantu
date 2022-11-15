@@ -606,6 +606,20 @@ fn get_type_of_match_case(
         );
     }
 
+    println!(
+        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).AFTER_BACK_SUB.NOT_NORMALIZED =\n{}",
+        case_arity,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                case_output_id,
+            ),
+            0,
+        ),
+    );
+
     let coercion_target_id = coercion_target_id
         .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
     let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id)?;
