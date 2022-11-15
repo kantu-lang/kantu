@@ -162,7 +162,7 @@ impl ShiftAmount for Bishift {
             Ok(i)
         } else if (cutoff..cutoff + self.len).contains(&i.0) {
             Ok(Upshift(self.distance()).try_apply(i, cutoff).safe_unwrap())
-        } else if (cutoff + self.len..self.pivot.0).contains(&i.0) {
+        } else if (cutoff + self.len..cutoff + self.pivot.0).contains(&i.0) {
             Downshift(self.len).try_apply(i, cutoff)
         } else {
             // Indices equal to or greater than the pivot are left as-is.
