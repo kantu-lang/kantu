@@ -113,12 +113,3 @@ let plus_comm = fun plus_comm_(-a: Nat, b: Nat): Eq(Nat, plus(a, b), plus(b, a))
             },
     }
 };
-
-let _2 = Nat.S(Nat.S(Nat.O));
-let _3 = Nat.S(_2);
-
-let should_be_5 = plus(_2, _3);
-let should_be_9 = square(_3);
-let x = List.Cons(Nat, _2, List.Cons(Nat, should_be_5, List.Cons(Nat, should_be_9, List.Nil(Nat))));
-
-let main = square_all(x);
