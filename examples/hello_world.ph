@@ -73,3 +73,13 @@ let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Na
             },
     }
 };
+
+let plus_O = fun plus_O_(-n: Nat): Eq(Nat, plus(n, Nat.O), n) {
+    match n {
+        .O => Eq.Refl(Nat, Nat.O),
+        .S(n') =>
+            match plus_O_(n') {
+                .Refl(_Nat, _n) => Eq.Refl(Nat, Nat.S(plus(n', Nat.O))),
+            },
+    }
+};
