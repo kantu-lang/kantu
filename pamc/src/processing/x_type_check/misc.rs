@@ -1172,6 +1172,28 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         )
     );
 
+    let expressions_to_substitute = {
+        let mut i: usize = 0;
+        expressions_to_substitute.map(|e| {
+            println!(
+                "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_expressions[{}]: \n{}",
+                num_of_forward_references,
+                state.context.len(),
+                state.context.type0_dbi(),
+                i,
+                crate::processing::x_debug::debug_expression(
+                    &crate::processing::x_expand_lightened::expand_expression(
+                        state.registry,
+                        e
+                    ),
+                    0,
+                )
+            );
+            i += 1;
+            e
+        })
+    };
+
     let context = {
         let mut c = context;
         c.subst_in_place_and_get_status(substitution.0, &mut state.without_context());
