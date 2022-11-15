@@ -1105,23 +1105,29 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from.raw());
 
     println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.from: {:#?}",
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.from: \n{}",
         num_of_forward_references,
         state.context.len(),
         state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            substitution.0.from.raw()
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                substitution.0.from.raw()
+            ),
+            0,
         )
     );
     println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.to: {:#?}",
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.to: \n{}",
         num_of_forward_references,
         state.context.len(),
         state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            substitution.0.to.raw()
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                substitution.0.to.raw()
+            ),
+            0,
         )
     );
 
@@ -1140,23 +1146,29 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry));
 
     println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.from: {:#?}",
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.from: \n{}",
         num_of_forward_references,
         state.context.len(),
         state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            substitution.0.from.raw()
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                substitution.0.from.raw()
+            ),
+            0,
         )
     );
     println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.to: {:#?}",
+        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.to: \n{}",
         num_of_forward_references,
         state.context.len(),
         state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(
-            state.registry,
-            substitution.0.to.raw()
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                substitution.0.to.raw()
+            ),
+            0,
         )
     );
 

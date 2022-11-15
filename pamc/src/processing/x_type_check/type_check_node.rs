@@ -488,6 +488,20 @@ fn get_type_of_match_case(
         );
     }
 
+    println!(
+        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).BEFORE_FORWARD_SUB =\n{}",
+        case_arity,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                case.output_id,
+            ),
+            0,
+        ),
+    );
+
     let (
         mut context,
         (
@@ -567,6 +581,20 @@ fn get_type_of_match_case(
             ),
         );
     }
+
+    println!(
+        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).AFTER_FORWARD_SUB.NOT_NORMALIZED =\n{}",
+        case_arity,
+        state.context.len(),
+        state.context.type0_dbi(),
+        crate::processing::x_debug::debug_expression(
+            &crate::processing::x_expand_lightened::expand_expression(
+                state.registry,
+                case_output_id,
+            ),
+            0,
+        ),
+    );
 
     let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
     if type_fusion.has_exploded {
