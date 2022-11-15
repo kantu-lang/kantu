@@ -83,3 +83,42 @@ let plus_O = fun plus_O_(-n: Nat): Eq(Nat, plus(n, Nat.O), n) {
             },
     }
 };
+
+let plus_comm = fun plus_comm_(-a: Nat, b: Nat): Eq(Nat, plus(a, b), plus(b, a)) {
+    match a {
+        .O =>
+            match b {
+                .O => Eq.Refl(Nat, Nat.O),
+                .S(b') =>
+                    match plus_O(b') {
+                        .Refl(_Nat, _b) => Eq.Refl(Nat, plus(b', Nat.O)),
+                    },
+            },
+        .S(a') =>
+            match b {
+                .O =>
+                    match plus_O(a') {
+                        .Refl(_Nat, _a) => Eq.Refl(Nat, Nat.S(plus(a', Nat.O))),
+                    },
+                .S(b') =>
+                    match plus_S(a', b') {
+                        .Refl(_Nat, _c) =>
+                            match plus_S(b', a') {
+                                .Refl(_Nat1, _d) =>
+                                    match plus_comm_(a', b') {
+                                        .Refl(_e) => Eq.Refl(Nat, Nat.S(Nat.S(plus(a', b')))),
+                                    },
+                            },
+                    },
+            },
+    }
+};
+
+let _2 = Nat.S(Nat.S(Nat.O));
+let _3 = Nat.S(_2);
+
+let should_be_5 = plus(_2, _3);
+let should_be_9 = square(_3);
+let x = List.Cons(Nat, _2, List.Cons(Nat, should_be_5, List.Cons(Nat, should_be_9, List.Nil(Nat))));
+
+let main = square_all(x);
