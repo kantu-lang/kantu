@@ -1,5 +1,7 @@
 use super::*;
 
+// TODO: DRY with respect to eval_possibly_ill_typed.rs
+
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
     let out = match id {
         ExpressionId::Name(name_id) => evaluate_well_typed_name_expression(state, name_id),
