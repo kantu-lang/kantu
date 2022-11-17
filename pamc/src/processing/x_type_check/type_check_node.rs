@@ -674,18 +674,15 @@ fn get_type_of_match_case(
         .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
     let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id)?;
 
-    let can_be_coerced = matches!(
-        coercion_target_id,
-        Some(coercion_target_id)
-            if is_left_type_assignable_to_right_type(
-                state,
-                output_type_id,
-                coercion_target_id,
-            )
-    );
-
-    if !can_be_coerced {
-        if let Some(coercion_target_id) = coercion_target_id {
+    if let Some(coercion_target_id) = coercion_target_id {
+        let can_be_coerced = is_left_type_assignable_to_right_type(
+            state,
+            output_type_id,
+            coercion_target_id,
+        );
+        return if can_be_coerced {
+            Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
+        } else {
             println!(
                 "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target =\n{}",
                 case_arity,
@@ -712,44 +709,40 @@ fn get_type_of_match_case(
                     0,
                 ),
             );
+
+            Err(TypeCheckError::TypeMismatch {
+                expression_id: case.output_id,
+                actual_type_id: output_type_id,
+                expected_type_id: coercion_target_id,
+            })
         }
     }
 
-    println!(
-        "COERCION STATUS: has_coercion={:?}; can_be_coerced={:?}",
-        coercion_target_id.is_some(),
-        can_be_coerced
-    );
-
-    if can_be_coerced {
-        Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
-    } else {
-        match output_type_id.try_downshift(case_arity, state.registry) {
-            Ok(output_type_id) => Ok(output_type_id),
-            Err(_) => {
-                println!(
-                    "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) nondownshifted_type = {:#?}",
-                    state.context.len(),
-                    state.context.type0_dbi(),
+    match output_type_id.try_downshift(case_arity, state.registry) {
+        Ok(output_type_id) => Ok(output_type_id),
+        Err(_) => {
+            println!(
+                "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) nondownshifted_type = {:#?}",
+                state.context.len(),
+                state.context.type0_dbi(),
+                crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    output_type_id.raw()
+                )
+            );
+            println!(
+                "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) (upshifted_)coercion_target = {:#?}",
+                state.context.len(),
+                state.context.type0_dbi(),
+                coercion_target_id.map(|coercion_target_id| {
                     crate::processing::x_expand_lightened::expand_expression(
                         state.registry,
-                        output_type_id.raw()
+                        coercion_target_id.raw(),
                     )
-                );
-                println!(
-                    "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) (upshifted_)coercion_target = {:#?}",
-                    state.context.len(),
-                    state.context.type0_dbi(),
-                    coercion_target_id.map(|coercion_target_id| {
-                        crate::processing::x_expand_lightened::expand_expression(
-                            state.registry,
-                            coercion_target_id.raw(),
-                        )
-                    })
-                );
+                })
+            );
 
-                Err(TypeCheckError::AmbiguousOutputType { case_id })
-            }
+            Err(TypeCheckError::AmbiguousOutputType { case_id })
         }
     }
 }
