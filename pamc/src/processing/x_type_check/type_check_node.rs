@@ -815,14 +815,13 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                 });
             }
 
-            let parameterized_matchee_id = {
+            let (parameterized_matchee_id, parameterized_matchee_type_id) = {
                 let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len);
                 let callee_id = ExpressionId::Name(add_name_expression(
                     state.registry,
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 ));
-
                 let case_param_ids = state.registry.identifier_list(case.param_list_id).to_vec();
                 let arg_ids = case_param_ids
                     .iter()
@@ -837,18 +836,38 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     })
                     .collect();
                 let arg_list_id = state.registry.add_expression_list(arg_ids);
-
-                NormalFormId::unchecked_new(ExpressionId::Call(
+                let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
                     state.registry.add_call_and_overwrite_its_id(Call {
                         id: dummy_id(),
                         callee_id,
                         arg_list_id,
                     }),
-                ))
+                ));
+
+                let output_substitutions: Vec<Substitution> = case_param_ids
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .map(|(raw_index, case_param_id)| {
+                        let db_index = DbIndex(case_param_ids.len() - raw_index - 1);
+                        let param_name_expression_id = ExpressionId::Name(add_name_expression(state.registry, vec![case_param_id], db_index));
+                        Substitution {
+                            // We don't care about the name of the `from` `NameExpression`
+                            // because the comparison is only based on the `db_index`.
+                            from: param_name_expression_id,
+                            to: param_name_expression_id,
+                        }
+                    })
+                    .collect();
+                let substituted_output_id = normalized_forall.output_id.subst_all(
+                    &output_substitutions,
+                    &mut state.without_context(),
+                );
+                let parameterized_matchee_type_id = NormalFormId::unchecked_new(substituted_output_id);
+
+                (parameterized_matchee_id, parameterized_matchee_type_id)
             };
-            // TODO: Replace forall param names with case param names
-            let parameterized_matchee_type_id =
-                NormalFormId::unchecked_new(normalized_forall.output_id);
+            
             Ok((parameterized_matchee_id, parameterized_matchee_type_id))
         }
         ExpressionId::Name(_) => {
