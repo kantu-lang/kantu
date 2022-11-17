@@ -595,6 +595,32 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
             } else {
                 continue;
             };
+        println!("APPLY FUSION SUBSTITUTION (i={})", i);
+        println!(
+            "FUSE_SUB(context.len={}, context.dbi0={:?}).from:\n{}",
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    substitution.from
+                ),
+                0,
+            )
+        );
+        println!(
+            "FUSE_SUB(context.len={}, context.dbi0={:?}).to:\n{}",
+            state.context.len(),
+            state.context.type0_dbi(),
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    substitution.to
+                ),
+                0,
+            )
+        );
+
         let remaining_substitutions = &mut substitutions[i + 1..];
         loop {
             let mut was_no_op = WasSyntacticNoOp(true);
@@ -613,14 +639,50 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
                 },
             );
 
-            for remaining in remaining_substitutions.iter_mut() {
-                was_no_op &= remaining.subst_in_place_and_get_status(substitution, &mut state);
+            for (r_index, remaining) in remaining_substitutions.iter_mut().enumerate() {
+                let r_index = r_index + i + 1;
+                println!(
+                    "({})FUSE_SUB(context.len={}, context.dbi0={:?}).remaining_sub[{}].original.0:\n{}",
+                    r_index,
+                    state.context.len(),
+                    state.context.type0_dbi(),
+                    r_index,
+                    crate::processing::x_debug::debug_expression(
+                        &crate::processing::x_expand_lightened::expand_expression(
+                            state.registry,
+                            remaining.0.raw()
+                        ),
+                        0,
+                    )
+                );
+                println!(
+                    "({})FUSE_SUB(context.len={}, context.dbi0={:?}).remaining_sub[{}].original.1:\n{}",
+                    r_index,
+                    state.context.len(),
+                    state.context.type0_dbi(),
+                    r_index,
+                    crate::processing::x_debug::debug_expression(
+                        &crate::processing::x_expand_lightened::expand_expression(
+                            state.registry,
+                            remaining.1.raw()
+                        ),
+                        0,
+                    )
+                );
+                let debug_was_no_op =
+                    remaining.subst_in_place_and_get_status(substitution, &mut state);
+                was_no_op &= debug_was_no_op;
+                if !debug_was_no_op.0 {
+                    println!("({})FUSE_SUB: MUTATED REMAINING SUBSTITUTION", r_index);
+                }
             }
 
             if was_no_op.0 {
                 break;
             }
         }
+
+        println!();
     }
 
     (context, expressions_to_substitute)
@@ -631,16 +693,48 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
         return None;
     }
     if is_left_inclusive_subterm_of_right(state, d.0.raw(), d.1.raw()) {
+        println!("0 \\subset 1");
         return Some(Substitution {
             from: d.1.raw(),
             to: d.0.raw(),
         });
     }
     if is_left_inclusive_subterm_of_right(state, d.1.raw(), d.0.raw()) {
+        println!("1 \\subset 0");
         return Some(Substitution {
             from: d.0.raw(),
             to: d.1.raw(),
         });
+    }
+
+    {
+        let i0 = min_free_db_index_in_expression(state.registry, d.0.raw()).0;
+        let i1 = min_free_db_index_in_expression(state.registry, d.1.raw()).0;
+        println!("GETTING_CONC_SUB[min_dbi_of_0={}, min_dbi_of_1={}]", i0, i1);
+        println!(
+            "GETTING_CONC_SUB[min_dbi_of_0={}, min_dbi_of_1={}].0 =\n{}",
+            i0,
+            i1,
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    d.0.raw()
+                ),
+                0,
+            )
+        );
+        println!(
+            "GETTING_CONC_SUB[min_dbi_of_0={}, min_dbi_of_1={}].1 =\n{}",
+            i0,
+            i1,
+            crate::processing::x_debug::debug_expression(
+                &crate::processing::x_expand_lightened::expand_expression(
+                    state.registry,
+                    d.1.raw()
+                ),
+                0,
+            )
+        );
     }
 
     if min_free_db_index_in_expression(state.registry, d.0.raw()).0
