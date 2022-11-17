@@ -102,7 +102,7 @@ let plus_comm = fun plus_comm_(-a: Nat, b: Nat): Eq(Nat, plus(a, b), plus(b, a))
                     },
                 .S(b') =>
                     match plus_S(a', b') {
-                        .Refl(_Nat, _c) =>
+                        .Refl(_Nat, _q) =>
                             match plus_S(b', a') {
                                 .Refl(_Nat1, _d) =>
                                     match plus_comm_(a', b') {
