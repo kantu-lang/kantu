@@ -713,6 +713,10 @@ fn get_type_of_match_case(
             Err(TypeCheckError::TypeMismatch {
                 expression_id: case.output_id,
                 actual_type_id: output_type_id,
+                // TODO: This might be confusing to the user since it's
+                // undergone substitution.
+                // In the future, we'll include this in substitution
+                // tracking (if we implement it).
                 expected_type_id: coercion_target_id,
             })
         }
