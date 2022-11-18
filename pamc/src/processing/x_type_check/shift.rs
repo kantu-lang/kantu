@@ -289,16 +289,6 @@ impl ShiftDbIndices for NodeId<NameExpression> {
         registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
         let name = registry.name_expression(self);
-        if let Err(err) = amount.try_apply(name.db_index, cutoff) {
-            println!("DB_SHIFT_ERROR.error: {:?}", err);
-            println!(
-                "DB_SHIFT_ERROR.name: {:?}",
-                crate::processing::x_expand_lightened::expand_expression(
-                    registry,
-                    ExpressionId::Name(self)
-                )
-            );
-        }
         let shifted_index = amount.try_apply(name.db_index, cutoff)?;
         let shifted_with_dummy_id = NameExpression {
             db_index: shifted_index,

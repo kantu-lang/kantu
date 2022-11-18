@@ -288,24 +288,6 @@ pub(super) fn backfuse(
     left: NormalFormId,
     right: NormalFormId,
 ) -> BackwardFusion {
-    println!(
-        "FUSE.LEFT (context_len={}, type0_dbi={:?}): \n{}",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(state.registry, left.raw()),
-            0
-        )
-    );
-    println!(
-        "FUSE.RIGHT (context_len={}, type0_dbi={:?}): \n{}\n",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(state.registry, right.raw()),
-            0
-        )
-    );
     if let (Some(left_ve), Some(right_ve)) = (
         try_as_variant_expression(state, left.raw()),
         try_as_variant_expression(state, right.raw()),
@@ -612,31 +594,6 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
             } else {
                 continue;
             };
-        println!("APPLY FUSION SUBSTITUTION (i={})", i);
-        println!(
-            "FUSE_SUB(context.len={}, context.dbi0={:?}).from:\n{}",
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    substitution.from
-                ),
-                0,
-            )
-        );
-        println!(
-            "FUSE_SUB(context.len={}, context.dbi0={:?}).to:\n{}",
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    substitution.to
-                ),
-                0,
-            )
-        );
 
         let remaining_substitutions = &mut substitutions[i + 1..];
         loop {
@@ -656,50 +613,14 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
                 },
             );
 
-            for (r_index, remaining) in remaining_substitutions.iter_mut().enumerate() {
-                let r_index = r_index + i + 1;
-                println!(
-                    "({})FUSE_SUB(context.len={}, context.dbi0={:?}).remaining_sub[{}].original.0:\n{}",
-                    r_index,
-                    state.context.len(),
-                    state.context.type0_dbi(),
-                    r_index,
-                    crate::processing::x_debug::debug_expression(
-                        &crate::processing::x_expand_lightened::expand_expression(
-                            state.registry,
-                            remaining.0.raw()
-                        ),
-                        0,
-                    )
-                );
-                println!(
-                    "({})FUSE_SUB(context.len={}, context.dbi0={:?}).remaining_sub[{}].original.1:\n{}",
-                    r_index,
-                    state.context.len(),
-                    state.context.type0_dbi(),
-                    r_index,
-                    crate::processing::x_debug::debug_expression(
-                        &crate::processing::x_expand_lightened::expand_expression(
-                            state.registry,
-                            remaining.1.raw()
-                        ),
-                        0,
-                    )
-                );
-                let debug_was_no_op =
-                    remaining.subst_in_place_and_get_status(substitution, &mut state);
-                was_no_op &= debug_was_no_op;
-                if !debug_was_no_op.0 {
-                    println!("({})FUSE_SUB: MUTATED REMAINING SUBSTITUTION", r_index);
-                }
+            for remaining in remaining_substitutions.iter_mut() {
+                was_no_op &= remaining.subst_in_place_and_get_status(substitution, &mut state);
             }
 
             if was_no_op.0 {
                 break;
             }
         }
-
-        println!();
     }
 
     (context, expressions_to_substitute)
@@ -710,48 +631,16 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
         return None;
     }
     if is_left_inclusive_subterm_of_right(state, d.0.raw(), d.1.raw()) {
-        println!("0 \\subset 1");
         return Some(Substitution {
             from: d.1.raw(),
             to: d.0.raw(),
         });
     }
     if is_left_inclusive_subterm_of_right(state, d.1.raw(), d.0.raw()) {
-        println!("1 \\subset 0");
         return Some(Substitution {
             from: d.0.raw(),
             to: d.1.raw(),
         });
-    }
-
-    {
-        let i0 = min_free_db_index_in_expression(state.registry, d.0.raw()).0;
-        let i1 = min_free_db_index_in_expression(state.registry, d.1.raw()).0;
-        println!("GETTING_CONC_SUB[min_dbi_of_0={}, min_dbi_of_1={}]", i0, i1);
-        println!(
-            "GETTING_CONC_SUB[min_dbi_of_0={}, min_dbi_of_1={}].0 =\n{}",
-            i0,
-            i1,
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    d.0.raw()
-                ),
-                0,
-            )
-        );
-        println!(
-            "GETTING_CONC_SUB[min_dbi_of_0={}, min_dbi_of_1={}].1 =\n{}",
-            i0,
-            i1,
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    d.1.raw()
-                ),
-                0,
-            )
-        );
     }
 
     if min_free_db_index_in_expression(state.registry, d.0.raw()).0
@@ -1227,33 +1116,6 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
 ) -> (Context, E) {
     let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from);
 
-    println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.from: \n{}",
-        num_of_forward_references,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                substitution.0.from
-            ),
-            0,
-        )
-    );
-    println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).original_substitution.to: \n{}",
-        num_of_forward_references,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                substitution.0.to
-            ),
-            0,
-        )
-    );
-
     let context = {
         let mut c = state.context.clone();
         c.push_top_n_down(
@@ -1268,54 +1130,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     let expressions_to_substitute = expressions_to_substitute
         .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry));
 
-    println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.from: \n{}",
-        num_of_forward_references,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                substitution.0.from
-            ),
-            0,
-        )
-    );
-    println!(
-        "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_substitution.to: \n{}",
-        num_of_forward_references,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                substitution.0.to
-            ),
-            0,
-        )
-    );
-
-    let expressions_to_substitute = {
-        let mut i: usize = 0;
-        expressions_to_substitute.map(|e| {
-            println!(
-                "APPL_FORW_REF(len={}, context.len={}, context.dbi0={:?}).bishifted_expressions[{}]: \n{}",
-                num_of_forward_references,
-                state.context.len(),
-                state.context.type0_dbi(),
-                i,
-                crate::processing::x_debug::debug_expression(
-                    &crate::processing::x_expand_lightened::expand_expression(
-                        state.registry,
-                        e
-                    ),
-                    0,
-                )
-            );
-            i += 1;
-            e
-        })
-    };
+    let expressions_to_substitute = expressions_to_substitute.map(|e| e);
 
     let context = {
         let mut c = context;

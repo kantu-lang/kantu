@@ -60,22 +60,6 @@ fn type_check_type_constructor(
     let arity = type_statement.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(state, type_statement.param_list_id)?;
-    println!(
-        "type_check_type_constructor.forall_params(context_len={}, type0_dbi={:?}): {:#?}",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_param_list(
-            state.registry,
-            normalized_param_list_id
-        )
-    );
-    let debug_temp = type0_expression(state).raw();
-    println!(
-        "type_check_type_constructor.output(context_len={}, type0_dbi={:?}): {:#?}",
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_expand_lightened::expand_expression(state.registry, debug_temp)
-    );
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
@@ -484,36 +468,6 @@ fn get_type_of_match_case(
 
     let case_output_id = evaluate_possibly_ill_typed_expression(state, case.output_id);
 
-    if let Some(coercion_target_id) = coercion_target_id {
-        println!(
-            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.BEFORE_FORWARD_SUB =\n{}",
-            case_arity,
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    coercion_target_id.raw(),
-                ),
-                0,
-            ),
-        );
-    }
-
-    println!(
-        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).BEFORE_FORWARD_SUB.NORMALIZED =\n{}",
-        case_arity,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                case_output_id,
-            ),
-            0,
-        ),
-    );
-
     let (
         mut context,
         (
@@ -554,22 +508,6 @@ fn get_type_of_match_case(
 
     original_context.pop_n(case_arity);
 
-    if let Some(coercion_target_id) = coercion_target_id {
-        println!(
-            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB.BEFORE_NORMALIZATION =\n{}",
-            case_arity,
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    coercion_target_id,
-                ),
-                0,
-            ),
-        );
-    }
-
     let (
         coercion_target_id,
         (case_output_id,),
@@ -582,36 +520,6 @@ fn get_type_of_match_case(
             (case_output_id,),
             (matchee_type_id,),
             (parameterized_matchee_type_id,),
-        ),
-    );
-
-    if let Some(coercion_target_id) = coercion_target_id {
-        println!(
-            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_FORWARD_SUB.NORMAL_FORM =\n{}",
-            case_arity,
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    coercion_target_id.raw(),
-                ),
-                0,
-            ),
-        );
-    }
-
-    println!(
-        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).AFTER_FORWARD_SUB.NORMALIZED =\n{}",
-        case_arity,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                case_output_id.raw(),
-            ),
-            0,
         ),
     );
 
@@ -640,36 +548,6 @@ fn get_type_of_match_case(
     };
     let state = &mut state;
 
-    if let Some(coercion_target_id) = coercion_target_id {
-        println!(
-            "COERCION_TARGET(shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target.AFTER_BACK_SUB.BEFORE_NORMALIZATION =\n{}",
-            case_arity,
-            state.context.len(),
-            state.context.type0_dbi(),
-            crate::processing::x_debug::debug_expression(
-                &crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    coercion_target_id,
-                ),
-                0,
-            ),
-        );
-    }
-
-    println!(
-        "CASE_OUTPUT(shifted_by:{}, context_len={}, type0_dbi={:?}).AFTER_BACK_SUB.NOT_NORMALIZED =\n{}",
-        case_arity,
-        state.context.len(),
-        state.context.type0_dbi(),
-        crate::processing::x_debug::debug_expression(
-            &crate::processing::x_expand_lightened::expand_expression(
-                state.registry,
-                case_output_id,
-            ),
-            0,
-        ),
-    );
-
     let coercion_target_id = coercion_target_id
         .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
     let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id)?;
@@ -683,33 +561,6 @@ fn get_type_of_match_case(
         return if can_be_coerced {
             Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
         } else {
-            println!(
-                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).coercion_target =\n{}",
-                case_arity,
-                state.context.len(),
-                state.context.type0_dbi(),
-                crate::processing::x_debug::debug_expression(
-                    &crate::processing::x_expand_lightened::expand_expression(
-                        state.registry,
-                        coercion_target_id.raw(),
-                    ),
-                    0,
-                ),
-            );
-            println!(
-                "CANNOT_COERCE(will_be_shifted_by:{}, context_len={}, type0_dbi={:?}).output_type =\n{}",
-                case_arity,
-                state.context.len(),
-                state.context.type0_dbi(),
-                crate::processing::x_debug::debug_expression(
-                    &crate::processing::x_expand_lightened::expand_expression(
-                        state.registry,
-                        output_type_id.raw(),
-                    ),
-                    0,
-                ),
-            );
-
             Err(TypeCheckError::TypeMismatch {
                 expression_id: case.output_id,
                 actual_type_id: output_type_id,
@@ -725,27 +576,6 @@ fn get_type_of_match_case(
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
         Err(_) => {
-            println!(
-                "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) nondownshifted_type = {:#?}",
-                state.context.len(),
-                state.context.type0_dbi(),
-                crate::processing::x_expand_lightened::expand_expression(
-                    state.registry,
-                    output_type_id.raw()
-                )
-            );
-            println!(
-                "AMBIGUOUS_OUTPUT_TYPE(context_len={}, type0_dbi={:?}) (upshifted_)coercion_target = {:#?}",
-                state.context.len(),
-                state.context.type0_dbi(),
-                coercion_target_id.map(|coercion_target_id| {
-                    crate::processing::x_expand_lightened::expand_expression(
-                        state.registry,
-                        coercion_target_id.raw(),
-                    )
-                })
-            );
-
             Err(TypeCheckError::AmbiguousOutputType { case_id })
         }
     }
