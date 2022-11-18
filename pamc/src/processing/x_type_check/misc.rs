@@ -419,19 +419,28 @@ fn is_left_inclusive_subterm_of_right(
             let right = state.registry.fun(right_id).clone();
 
             let right_param_ids = state.registry.param_list(right.param_list_id).to_vec();
-            if right_param_ids.iter().any(|&right_param_id| {
-                let right_param_type_id = state.registry.param(right_param_id).type_id;
-                is_left_inclusive_subterm_of_right(state, left, right_param_type_id)
-            }) {
+            if right_param_ids.iter().copied().enumerate().any(
+                |(right_param_index, right_param_id)| {
+                    let shifted_left = left.upshift(right_param_index, state.registry);
+                    let right_param_type_id = state.registry.param(right_param_id).type_id;
+                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
+                },
+            ) {
                 return true;
             }
 
-            if is_left_inclusive_subterm_of_right(state, left, right.return_type_id) {
-                return true;
+            {
+                let shifted_left = left.upshift(right_param_ids.len(), state.registry);
+                if is_left_inclusive_subterm_of_right(state, shifted_left, right.return_type_id) {
+                    return true;
+                }
             }
 
-            if is_left_inclusive_subterm_of_right(state, left, right.body_id) {
-                return true;
+            {
+                let shifted_left = left.upshift(right_param_ids.len() + 1, state.registry);
+                if is_left_inclusive_subterm_of_right(state, shifted_left, right.body_id) {
+                    return true;
+                }
             }
 
             false
@@ -445,8 +454,10 @@ fn is_left_inclusive_subterm_of_right(
 
             let right_case_ids = state.registry.match_case_list(right.case_list_id).to_vec();
             if right_case_ids.iter().any(|&right_case_id| {
+                let case_arity = state.registry.match_case(right_case_id).param_list_id.len;
+                let shifted_left = left.upshift(case_arity, state.registry);
                 let right_case_output_id = state.registry.match_case(right_case_id).output_id;
-                is_left_inclusive_subterm_of_right(state, left, right_case_output_id)
+                is_left_inclusive_subterm_of_right(state, shifted_left, right_case_output_id)
             }) {
                 return true;
             }
@@ -457,15 +468,21 @@ fn is_left_inclusive_subterm_of_right(
             let right = state.registry.forall(right_id).clone();
 
             let right_param_ids = state.registry.param_list(right.param_list_id).to_vec();
-            if right_param_ids.iter().any(|&right_param_id| {
-                let right_param_type_id = state.registry.param(right_param_id).type_id;
-                is_left_inclusive_subterm_of_right(state, left, right_param_type_id)
-            }) {
+            if right_param_ids.iter().copied().enumerate().any(
+                |(right_param_index, right_param_id)| {
+                    let shifted_left = left.upshift(right_param_index, state.registry);
+                    let right_param_type_id = state.registry.param(right_param_id).type_id;
+                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
+                },
+            ) {
                 return true;
             }
 
-            if is_left_inclusive_subterm_of_right(state, left, right.output_id) {
-                return true;
+            {
+                let shifted_left = left.upshift(right.param_list_id.len, state.registry);
+                if is_left_inclusive_subterm_of_right(state, shifted_left, right.output_id) {
+                    return true;
+                }
             }
 
             false
