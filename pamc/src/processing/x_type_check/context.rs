@@ -1,5 +1,7 @@
 use super::*;
 
+const NUMBER_OF_BUILTIN_ENTRIES: usize = 2;
+
 #[derive(Debug, Clone)]
 pub struct Context {
     /// Each type in the stack is expressed "locally" (i.e., relative
@@ -104,8 +106,9 @@ impl Context {
                 definition: ContextEntryDefinition::Uninterpreted,
             }
         };
+        let builtins: [ContextEntry; NUMBER_OF_BUILTIN_ENTRIES] = [type1_entry, type0_entry];
         Self {
-            local_type_stack: vec![type1_entry, type0_entry],
+            local_type_stack: builtins.to_vec(),
         }
     }
 }
@@ -145,11 +148,11 @@ impl Context {
 }
 
 impl Context {
-    fn level_to_index(&self, level: DbLevel) -> DbIndex {
+    pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
         DbIndex(self.len() - level.0 - 1)
     }
 
-    fn index_to_level(&self, index: DbIndex) -> DbLevel {
+    pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
         DbLevel(self.len() - index.0 - 1)
     }
 }
@@ -160,9 +163,10 @@ impl Context {
         if level == TYPE1_LEVEL {
             panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
         }
-        self.local_type_stack[level.0]
+        let out = self.local_type_stack[level.0]
             .type_id
-            .upshift(index.0 + 1, registry)
+            .upshift(index.0 + 1, registry);
+        out
     }
 
     pub fn get_definition(
@@ -180,27 +184,14 @@ impl Context {
     }
 }
 
-impl SubstituteAndGetNoOpStatus for Context {
-    type Output = Self;
-
-    fn subst_and_get_status(
-        mut self,
-        substitution: Substitution,
-        state: &mut ContextlessState,
-    ) -> (Self, WasNoOp) {
-        let was_no_op = self.subst_in_place_and_get_status(substitution, state);
-        (self, was_no_op)
-    }
-}
-
 impl SubstituteInPlaceAndGetNoOpStatus for Context {
     fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
-        let mut was_no_op = WasNoOp(true);
-        for i in 0..self.len() {
+    ) -> WasSyntacticNoOp {
+        let mut was_no_op = WasSyntacticNoOp(true);
+        for i in NUMBER_OF_BUILTIN_ENTRIES..self.len() {
             let level = DbLevel(i);
             was_no_op &= self.subst_entry_in_place(level, substitution, state);
         }
@@ -214,7 +205,7 @@ impl Context {
         level: DbLevel,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         self.subst_entry_type_id_in_place(level, substitution, state)
             & self.subst_entry_definition_in_place(level, substitution, state)
     }
@@ -224,23 +215,29 @@ impl Context {
         level: DbLevel,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         let shift_amount = self.level_to_index(level).0 + 1;
 
-        let (substituted_type_id, was_no_op) = self.local_type_stack[level.0]
-            .type_id
-            .raw()
-            .upshift(shift_amount, state.registry)
-            .subst_and_get_status(substitution, state)
-            .map0(|id| id.downshift(shift_amount, state.registry));
-        self.local_type_stack[level.0].type_id = evaluate_well_typed_expression(
-            &mut State {
-                context: self,
-                registry: state.registry,
-                equality_checker: state.equality_checker,
-            },
-            substituted_type_id,
-        );
+        let (substituted_type_id, was_no_op) = {
+            let original_type_id = self.local_type_stack[level.0].type_id.raw();
+            let substituted_type_id = original_type_id
+                .upshift(shift_amount, state.registry)
+                .subst(substitution, state)
+                .downshift(shift_amount, state.registry);
+            let was_no_op = WasSyntacticNoOp(substituted_type_id == original_type_id);
+            (substituted_type_id, was_no_op)
+        };
+        self.local_type_stack[level.0].type_id = {
+            let mut context = self.clone_slice(level);
+            evaluate_well_typed_expression(
+                &mut State {
+                    context: &mut context,
+                    registry: state.registry,
+                    equality_checker: state.equality_checker,
+                },
+                substituted_type_id,
+            )
+        };
 
         was_no_op
     }
@@ -250,35 +247,84 @@ impl Context {
         level: DbLevel,
         substitution: Substitution,
         state: &mut ContextlessState,
-    ) -> WasNoOp {
+    ) -> WasSyntacticNoOp {
         let shift_amount = self.level_to_index(level).0 + 1;
 
         let original_definition = self.local_type_stack[level.0].definition;
         let (new_definition, was_no_op) = match original_definition {
             ContextEntryDefinition::Alias { value_id } => {
-                let (substituted, was_no_op) = value_id
+                let substituted = value_id
                     .raw()
                     .upshift(shift_amount, state.registry)
-                    .subst_and_get_status(substitution, state)
-                    .map0(|id| id.downshift(shift_amount, state.registry));
-                let new_definition = ContextEntryDefinition::Alias {
-                    value_id: evaluate_well_typed_expression(
-                        &mut State {
-                            context: self,
-                            registry: state.registry,
-                            equality_checker: state.equality_checker,
-                        },
-                        substituted,
-                    ),
+                    .subst(substitution, state)
+                    .downshift(shift_amount, state.registry);
+                let was_no_op = WasSyntacticNoOp(substituted == value_id.raw());
+                let new_definition = {
+                    let mut context = self.clone_slice(level);
+                    ContextEntryDefinition::Alias {
+                        value_id: evaluate_well_typed_expression(
+                            &mut State {
+                                context: &mut context,
+                                registry: state.registry,
+                                equality_checker: state.equality_checker,
+                            },
+                            substituted,
+                        ),
+                    }
                 };
                 (new_definition, was_no_op)
             }
             ContextEntryDefinition::Adt { .. }
             | ContextEntryDefinition::Variant { .. }
-            | ContextEntryDefinition::Uninterpreted => (original_definition, WasNoOp(true)),
+            | ContextEntryDefinition::Uninterpreted => {
+                (original_definition, WasSyntacticNoOp(true))
+            }
         };
         self.local_type_stack[level.0].definition = new_definition;
 
         was_no_op
+    }
+}
+
+impl Context {
+    pub(crate) fn clone_slice(&self, excl_upper_bound: DbLevel) -> Context {
+        Context {
+            local_type_stack: self.local_type_stack[0..excl_upper_bound.0].to_vec(),
+        }
+    }
+}
+
+impl Context {
+    pub(super) fn push_top_n_down(
+        &mut self,
+        n: usize,
+        pivot: DbIndex,
+        state: &mut ContextlessState,
+    ) {
+        let distance = pivot.0 - n;
+        let pushees = self.local_type_stack.split_off(self.len() - n);
+        let liftees = self.local_type_stack.split_off(self.len() - distance);
+
+        let pushees = pushees
+            .into_iter()
+            .enumerate()
+            .map(|(entry_index, pushee)| {
+                let entry_dbi = DbIndex(n - entry_index - 1);
+                let relative_len = n - entry_dbi.0 - 1;
+                pushee.downshift_with_cutoff(distance, relative_len, state.registry)
+            })
+            .collect::<Vec<_>>();
+        let liftees = liftees
+            .into_iter()
+            .enumerate()
+            .map(|(entry_index, liftee)| {
+                let entry_dbi = DbIndex(n + distance - entry_index - 1);
+                let relative_pivot = DbIndex(pivot.0 - entry_dbi.0 - 1);
+                liftee.upshift_with_cutoff(n, relative_pivot.0, state.registry)
+            })
+            .collect::<Vec<_>>();
+
+        self.local_type_stack.extend(pushees);
+        self.local_type_stack.extend(liftees);
     }
 }

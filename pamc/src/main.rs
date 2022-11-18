@@ -59,17 +59,89 @@ fn main() {
                                     println!("Lightened file!");
                                     print_separator();
 
+                                    use pamc::processing::{
+                                        x_debug::debug_expression,
+                                        x_expand_lightened::expand_expression, x_type_check::*,
+                                    };
+
                                     let type_check_result =
-                                        pamc::processing::x_type_check::type_check_files(
-                                            &mut registry,
-                                            &[lightened_file],
-                                        );
+                                        type_check_files(&mut registry, &[lightened_file]);
                                     match type_check_result {
                                         Ok(_) => {
                                             println!("Type check success!");
                                         }
                                         Err(err) => {
                                             println!("Type check error: {:?}", err);
+                                            if let TypeCheckError::IllegalTypeExpression(
+                                                expression_id,
+                                            ) = &err
+                                            {
+                                                println!(
+                                                    "Illegal type expression: {:#?}",
+                                                    expand_expression(&registry, *expression_id,)
+                                                );
+                                            }
+                                            if let TypeCheckError::TypeMismatch {
+                                                expression_id,
+                                                expected_type_id,
+                                                actual_type_id,
+                                            } = &err
+                                            {
+                                                println!(
+                                                    "TYPE_MISMATCH.expression: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            *expression_id
+                                                        ),
+                                                        0
+                                                    )
+                                                );
+                                                println!(
+                                                    "TYPE_MISMATCH.expected_type: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            expected_type_id.raw()
+                                                        ),
+                                                        0
+                                                    )
+                                                );
+                                                println!(
+                                                    "TYPE_MISMATCH.actual_type: \n{}",
+                                                    debug_expression(
+                                                        &expand_expression(
+                                                            &registry,
+                                                            actual_type_id.raw()
+                                                        ),
+                                                        0
+                                                    )
+                                                );
+                                            }
+                                            if let TypeCheckError::WrongNumberOfArguments {
+                                                call_id,
+                                                expected,
+                                                actual,
+                                            } = &err
+                                            {
+                                                println!(
+                                                    "WRONG_NUM_OF_ARGS.call: {:#?}",
+                                                    &expand_expression(
+                                                        &registry,
+                                                        pamc::data::x_light_ast::ExpressionId::Call(
+                                                            *call_id
+                                                        ),
+                                                    ),
+                                                );
+                                                println!(
+                                                    "WRONG_NUM_OF_ARGS.expected_arity: {}",
+                                                    expected
+                                                );
+                                                println!(
+                                                    "WRONG_NUM_OF_ARGS.actual_arity: {}",
+                                                    actual
+                                                );
+                                            }
                                         }
                                     }
                                 }

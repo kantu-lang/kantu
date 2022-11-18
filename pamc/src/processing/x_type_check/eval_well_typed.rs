@@ -1,13 +1,16 @@
 use super::*;
 
+// TODO: DRY with respect to eval_possibly_ill_typed.rs
+
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
-    match id {
+    let out = match id {
         ExpressionId::Name(name_id) => evaluate_well_typed_name_expression(state, name_id),
         ExpressionId::Call(call_id) => evaluate_well_typed_call(state, call_id),
         ExpressionId::Fun(fun_id) => evaluate_well_typed_fun(state, fun_id),
         ExpressionId::Match(match_id) => evaluate_well_typed_match(state, match_id),
         ExpressionId::Forall(forall_id) => evaluate_well_typed_forall(state, forall_id),
-    }
+    };
+    out
 }
 
 fn evaluate_well_typed_name_expression(
@@ -84,12 +87,12 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                 ));
                 const FUN_DB_INDEX: DbIndex = DbIndex(0);
                 vec![Substitution {
-                    from: NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                    from: ExpressionId::Name(add_name_expression(
                         state.registry,
                         vec![fun.name_id],
                         FUN_DB_INDEX,
-                    ))),
-                    to: shifted_fun_id,
+                    )),
+                    to: shifted_fun_id.raw(),
                 }]
             }
             .into_iter()
@@ -106,8 +109,8 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                             add_name_expression(state.registry, vec![param_name_id], db_index),
                         ));
                         Substitution {
-                            from: name,
-                            to: arg_id,
+                            from: name.raw(),
+                            to: arg_id.raw(),
                         }
                     }),
             )
@@ -164,7 +167,7 @@ fn can_fun_be_applied(
 /// and the variant's argument list.
 /// Otherwise, returns `None`.
 fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool {
-    try_as_variant_expression(state, expression_id).is_some()
+    try_as_variant_expression(state, expression_id.raw()).is_some()
 }
 
 fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalFormId {
@@ -182,6 +185,7 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
             param_list_id: normalized_param_list_id,
             return_type_id: normalized_return_type_id.raw(),
             body_id: fun.body_id,
+            skip_type_checking_body: fun.skip_type_checking_body,
         }),
     ))
 }
@@ -192,7 +196,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
 
     let (normalized_matchee_variant_name_id, normalized_matchee_arg_list_id) =
         if let Some((variant_name_id, arg_list_id)) =
-            try_as_variant_expression(state, normalized_matchee_id)
+            try_as_variant_expression(state, normalized_matchee_id.raw())
         {
             (variant_name_id, arg_list_id)
         } else {
@@ -210,7 +214,12 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
         .iter()
         .find(|case_id| {
             let case = state.registry.match_case(**case_id);
-            case.variant_name_id == normalized_matchee_variant_name_id
+            let case_variant_name: &IdentifierName = &state
+                .registry
+                .identifier(case.variant_name_id)
+                .name;
+            let matchee_variant_name: &IdentifierName = &state.registry.identifier(normalized_matchee_variant_name_id).name;
+            case_variant_name == matchee_variant_name
         })
          .expect("A well-typed Match expression should have a case for every variant of its matchee's type.");
 
@@ -225,26 +234,27 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .registry
                 .expression_list(normalized_matchee_arg_list_id)
                 .to_vec();
-            let substitutions: Vec<Substitution> =
-                case_param_ids
-                    .iter()
-                    .copied()
-                    .zip(matchee_arg_ids.iter().copied())
-                    .enumerate()
-                    .map(|(param_index, (param_id, arg_id))| {
-                        let db_index = DbIndex(case_arity - param_index - 1);
-                        // We can safely call `unchecked_new` here because we know that each
-                        // arg to a normal form Call is also a normal form.
-                        let shifted_arg_id =
-                            NormalFormId::unchecked_new(arg_id).upshift(case_arity, state.registry);
-                        Substitution {
-                            from: NormalFormId::unchecked_new(ExpressionId::Name(
-                                add_name_expression(state.registry, vec![param_id], db_index),
-                            )),
-                            to: shifted_arg_id,
-                        }
-                    })
-                    .collect();
+            let substitutions: Vec<Substitution> = case_param_ids
+                .iter()
+                .copied()
+                .zip(matchee_arg_ids.iter().copied())
+                .enumerate()
+                .map(|(param_index, (param_id, arg_id))| {
+                    let db_index = DbIndex(case_arity - param_index - 1);
+                    // We can safely call `unchecked_new` here because we know that each
+                    // arg to a normal form Call is also a normal form.
+                    let shifted_arg_id =
+                        NormalFormId::unchecked_new(arg_id).upshift(case_arity, state.registry);
+                    Substitution {
+                        from: ExpressionId::Name(add_name_expression(
+                            state.registry,
+                            vec![param_id],
+                            db_index,
+                        )),
+                        to: shifted_arg_id.raw(),
+                    }
+                })
+                .collect();
 
             let substituted_body = case
                 .output_id
@@ -259,7 +269,7 @@ fn evaluate_well_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> N
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(state, forall.param_list_id)
-            .expect("A well-typed Fun should have well-typed params.");
+            .expect("A well-typed Forall should have well-typed params.");
     let normalized_output_id = evaluate_well_typed_expression(state, forall.output_id);
     state.context.pop_n(forall.param_list_id.len);
 

@@ -2,8 +2,8 @@ use super::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Substitution {
-    pub from: NormalFormId,
-    pub to: NormalFormId,
+    pub from: ExpressionId,
+    pub to: ExpressionId,
 }
 
 pub(super) trait Substitute {
@@ -51,18 +51,15 @@ fn subst_if_equal_and_get_status(
     original: ExpressionId,
     substitution: Substitution,
     state: &mut ContextlessState,
-) -> (ExpressionId, WasNoOp) {
+) -> (ExpressionId, WasSyntacticNoOp) {
     let Substitution { from, to } = substitution;
-    let is_equal = state
-        .equality_checker
-        .eq(original, from.raw(), state.registry);
+    let is_equal = state.equality_checker.eq(original, from, state.registry);
     if is_equal {
-        let to = to.raw();
-        let is_still_equal = state.equality_checker.eq(original, to, state.registry);
-        let was_no_op = WasNoOp(is_still_equal);
+        let to = to;
+        let was_no_op = WasSyntacticNoOp(original == to);
         (to, was_no_op)
     } else {
-        (original, WasNoOp(true))
+        (original, WasSyntacticNoOp(true))
     }
 }
 
@@ -72,7 +69,7 @@ impl Substitute for NodeId<Call> {
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level =
             subst_if_equal_and_get_status(ExpressionId::Call(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
@@ -107,20 +104,27 @@ impl Substitute for NodeId<Fun> {
 
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level = subst_if_equal_and_get_status(ExpressionId::Fun(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
         let fun = state.registry.fun(self).clone();
         let substituted_param_list_id = fun.param_list_id.subst(substitution, state);
-        let substituted_return_type_id = fun.return_type_id.subst(substitution, state);
-        let substituted_body_id = fun.body_id.subst(substitution, state);
+        let substituted_return_type_id = fun.return_type_id.subst(
+            substitution.upshift(fun.param_list_id.len, state.registry),
+            state,
+        );
+        let substituted_body_id = fun.body_id.subst(
+            substitution.upshift(fun.param_list_id.len + 1, state.registry),
+            state,
+        );
         ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
             id: dummy_id(),
             name_id: fun.name_id,
             param_list_id: substituted_param_list_id,
             return_type_id: substituted_return_type_id,
             body_id: substituted_body_id,
+            skip_type_checking_body: fun.skip_type_checking_body,
         }))
     }
 }
@@ -134,7 +138,8 @@ impl Substitute for ListId<NodeId<Param>> {
             .param_list(self)
             .to_vec()
             .into_iter()
-            .map(|id| id.subst(substitution, state))
+            .enumerate()
+            .map(|(index, id)| id.subst(substitution.upshift(index, state.registry), state))
             .collect();
         state.registry.add_param_list(new_ids)
     }
@@ -161,7 +166,7 @@ impl Substitute for NodeId<Match> {
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level =
             subst_if_equal_and_get_status(ExpressionId::Match(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
@@ -197,7 +202,10 @@ impl Substitute for NodeId<MatchCase> {
 
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let case = state.registry.match_case(self).clone();
-        let substituted_output_id = case.output_id.subst(substitution, state);
+        let substituted_output_id = case.output_id.subst(
+            substitution.upshift(case.param_list_id.len, state.registry),
+            state,
+        );
         state
             .registry
             .add_match_case_and_overwrite_its_id(MatchCase {
@@ -215,13 +223,16 @@ impl Substitute for NodeId<Forall> {
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         let top_level =
             subst_if_equal_and_get_status(ExpressionId::Forall(self), substitution, state);
-        if let WasNoOp(false) = top_level.1 {
+        if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
 
         let forall = state.registry.forall(self).clone();
         let substituted_param_list_id = forall.param_list_id.subst(substitution, state);
-        let substituted_output_id = forall.output_id.subst(substitution, state);
+        let substituted_output_id = forall.output_id.subst(
+            substitution.upshift(forall.param_list_id.len, state.registry),
+            state,
+        );
 
         ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),

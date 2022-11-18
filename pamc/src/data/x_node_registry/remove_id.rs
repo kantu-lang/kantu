@@ -97,15 +97,20 @@ pub type ExpressionId = crate::data::x_node_registry::ExpressionId;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     pub component_list_id: ListId<NodeId<with_id::Identifier>>,
+    /// De Bruijn index (zero-based).
+    pub db_index: DbIndex,
 }
 impl RemoveId for with_id::NameExpression {
     type Output = NameExpression;
     fn remove_id(&self) -> Self::Output {
         NameExpression {
             component_list_id: self.component_list_id,
+            db_index: self.db_index,
         }
     }
 }
+
+pub use crate::data::bound_ast::{DbIndex, DbLevel};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Identifier {
@@ -150,6 +155,7 @@ pub struct Fun {
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub return_type_id: ExpressionId,
     pub body_id: ExpressionId,
+    pub skip_type_checking_body: bool,
 }
 impl RemoveId for with_id::Fun {
     type Output = Fun;
@@ -159,6 +165,7 @@ impl RemoveId for with_id::Fun {
             param_list_id: self.param_list_id,
             return_type_id: self.return_type_id,
             body_id: self.body_id,
+            skip_type_checking_body: self.skip_type_checking_body,
         }
     }
 }

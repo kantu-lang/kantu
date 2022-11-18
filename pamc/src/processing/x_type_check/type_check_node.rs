@@ -57,7 +57,9 @@ fn type_check_type_constructor(
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<(), TypeCheckError> {
     let type_statement = state.registry.type_statement(type_statement_id).clone();
-    let normalized_param_list_id = normalize_params(state, type_statement.param_list_id)?;
+    let arity = type_statement.param_list_id.len;
+    let normalized_param_list_id =
+        normalize_params_and_leave_params_in_context(state, type_statement.param_list_id)?;
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
@@ -66,6 +68,8 @@ fn type_check_type_constructor(
         }
         .collapse_if_nullary(state.registry),
     );
+    state.context.pop_n(arity);
+
     let variant_name_list_id = {
         let variant_ids = state.registry.variant_list(type_statement.variant_list_id);
         let variant_name_ids = variant_ids
@@ -163,13 +167,14 @@ fn get_type_of_expression(
     coercion_target_id: Option<NormalFormId>,
     id: ExpressionId,
 ) -> Result<NormalFormId, TypeCheckError> {
-    match id {
+    let out = match id {
         ExpressionId::Name(name) => Ok(get_type_of_name(state, name)),
         ExpressionId::Call(call) => get_type_of_call(state, call),
         ExpressionId::Fun(fun) => get_type_of_fun(state, fun),
         ExpressionId::Match(match_) => get_type_of_match(state, coercion_target_id, match_),
         ExpressionId::Forall(forall) => get_type_of_forall(state, forall),
-    }
+    };
+    out
 }
 
 fn get_type_of_name(state: &mut State, name_id: NodeId<NameExpression>) -> NormalFormId {
@@ -189,6 +194,11 @@ fn get_type_of_call(
         return Err(TypeCheckError::BadCallee(call.callee_id));
     };
     let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
+    let normalized_arg_ids: Vec<NormalFormId> = arg_ids
+        .iter()
+        .copied()
+        .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
+        .collect();
     let arg_type_ids = arg_ids
         .iter()
         .copied()
@@ -229,22 +239,23 @@ fn get_type_of_call(
             // form Forall node, which guarantees that its type is a
             // normal form.
             let unsubstituted = NormalFormId::unchecked_new(callee_type_param.type_id);
-            let substitutions: Vec<Substitution> =
-                arg_type_ids[..i]
-                    .iter()
-                    .copied()
-                    .enumerate()
-                    .map(|(j, arg_type_id)| {
-                        let db_index = DbIndex(i - j - 1);
-                        let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
-                        Substitution {
-                            from: NormalFormId::unchecked_new(ExpressionId::Name(
-                                add_name_expression(state.registry, vec![param_name_id], db_index),
-                            )),
-                            to: arg_type_id.upshift(i, state.registry),
-                        }
-                    })
-                    .collect();
+            let substitutions: Vec<Substitution> = normalized_arg_ids[..i]
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(j, normalized_arg_id)| {
+                    let db_index = DbIndex(i - j - 1);
+                    let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
+                    Substitution {
+                        from: ExpressionId::Name(add_name_expression(
+                            state.registry,
+                            vec![param_name_id],
+                            db_index,
+                        )),
+                        to: normalized_arg_id.upshift(i, state.registry).raw(),
+                    }
+                })
+                .collect();
             let substituted = unsubstituted
                 .raw()
                 .subst_all(&substitutions, &mut state.without_context())
@@ -263,20 +274,20 @@ fn get_type_of_call(
     let substituted_output_id = {
         let unsubstituted = NormalFormId::unchecked_new(callee_type.output_id);
         let arity = callee_type_param_ids.len();
-        let substitutions: Vec<Substitution> = arg_type_ids
+        let substitutions: Vec<Substitution> = normalized_arg_ids
             .iter()
             .copied()
             .enumerate()
-            .map(|(j, arg_type_id)| {
+            .map(|(j, normalized_arg_id)| {
                 let db_index = DbIndex(arity - j - 1);
                 let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
                 Substitution {
-                    from: NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                    from: ExpressionId::Name(add_name_expression(
                         state.registry,
                         vec![param_name_id],
                         db_index,
-                    ))),
-                    to: arg_type_id.upshift(arity, state.registry),
+                    )),
+                    to: normalized_arg_id.upshift(arity, state.registry).raw(),
                 }
             })
             .collect();
@@ -290,9 +301,14 @@ fn get_type_of_call(
 }
 
 fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, TypeCheckError> {
-    let original_context_len = state.context.len();
-
     let fun = state.registry.fun(fun_id).clone();
+    // We call this "param arity" instead of simply "arity"
+    // to convey the fact that it does **not** include the recursive
+    // function.
+    // For example, `fun f(a: A, b: B) -> C { ... }` has param arity 2,
+    // even though `f` is also added to the context as a third entry
+    // (to enable recursion).
+    let param_arity = fun.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context(state, fun.param_list_id)?;
     {
@@ -311,36 +327,64 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
         }),
     ));
 
-    let shifted_fun_id = fun_id.upshift(state.context.len() - original_context_len, state.registry);
-    let normalized_fun_id =
-        evaluate_well_typed_expression(state, ExpressionId::Fun(shifted_fun_id));
-    state.context.push(ContextEntry {
-        type_id: fun_type_id,
-        definition: ContextEntryDefinition::Alias {
-            value_id: normalized_fun_id,
-        },
-    });
-
-    let normalized_body_type_id =
-        get_type_of_expression(state, Some(normalized_return_type_id), fun.body_id)?;
-    if !is_left_type_assignable_to_right_type(
-        state,
-        normalized_body_type_id,
-        normalized_return_type_id,
-    ) {
-        return Err(TypeCheckError::TypeMismatch {
-            expression_id: fun.body_id,
-            expected_type_id: normalized_return_type_id,
-            actual_type_id: normalized_body_type_id,
+    {
+        let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
+        let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
+        let shifted_fun = state.registry.fun(shifted_fun_id).clone();
+        let body_skipped_fun_id = state.registry.add_fun_and_overwrite_its_id(Fun {
+            skip_type_checking_body: true,
+            ..shifted_fun
+        });
+        let normalized_fun_id =
+            evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
+        state.context.push(ContextEntry {
+            type_id: shifted_fun_type_id,
+            definition: ContextEntryDefinition::Alias {
+                value_id: normalized_fun_id,
+            },
         });
     }
 
-    state.context.pop_n(fun.param_list_id.len + 1);
+    // We need to upshift the return type by one level before comparing it
+    // to the body type, to account for the fact that the function has been
+    // added to the context.
+    let normalized_return_type_id_relative_to_body = {
+        let shifted_return_type_id = fun.return_type_id.upshift(1, state.registry);
+        evaluate_well_typed_expression(state, shifted_return_type_id)
+    };
+    // Shadow the old variable to prevent it from being accidentally used.
+    #[allow(unused_variables)]
+    let normalized_return_type_id = ();
+
+    if !fun.skip_type_checking_body {
+        let normalized_body_type_id = get_type_of_expression(
+            state,
+            Some(normalized_return_type_id_relative_to_body),
+            fun.body_id,
+        )?;
+        if !is_left_type_assignable_to_right_type(
+            state,
+            normalized_body_type_id,
+            normalized_return_type_id_relative_to_body,
+        ) {
+            return Err(TypeCheckError::TypeMismatch {
+                expression_id: fun.body_id,
+                expected_type_id: normalized_return_type_id_relative_to_body,
+                actual_type_id: normalized_body_type_id,
+            });
+        }
+    }
+
+    state.context.pop_n(param_arity + 1);
     Ok(fun_type_id)
 }
 
 fn get_type_of_match(
     state: &mut State,
+    // TODO: Instead of using coercion targets, we should
+    // use goals, where a goal is a non-optional coercion
+    // target (i.e., a type mismatch error will be returned)
+    // if the coercion is not possible.
     coercion_target_id: Option<NormalFormId>,
     match_id: NodeId<Match>,
 ) -> Result<NormalFormId, TypeCheckError> {
@@ -354,6 +398,7 @@ fn get_type_of_match(
             type_id: matchee_type_id,
         });
     };
+    let normalized_matchee_id = evaluate_well_typed_expression(state, match_.matchee_id);
 
     verify_variant_to_case_bijection(
         state.registry,
@@ -368,6 +413,7 @@ fn get_type_of_match(
             state,
             coercion_target_id,
             case_id,
+            normalized_matchee_id,
             matchee_type_id,
             matchee_type,
         )?;
@@ -399,32 +445,54 @@ fn get_type_of_match_case(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     case_id: NodeId<MatchCase>,
+    normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
     matchee_type: AdtExpression,
 ) -> Result<NormalFormId, TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
-    let parameterized_type_id =
-        add_case_params_to_context_and_get_constructed_type(state, case_id, matchee_type)?;
+    let (original_parameterized_matchee_id, original_parameterized_matchee_type_id) =
+        add_case_params_to_context_and_get_constructed_matchee_and_type(
+            state,
+            case_id,
+            matchee_type,
+        )?;
 
     let original_coercion_target_id = coercion_target_id;
-    let shifted_coercion_target_id = coercion_target_id
-        .map(|coercion_target_id| coercion_target_id.upshift(case_arity, state.registry));
+    let coercion_target_id =
+        coercion_target_id.map(|target_id| target_id.upshift(case_arity, state.registry));
 
-    let fusion = fuse_left_to_right(state, matchee_type_id, parameterized_type_id);
-    if fusion.has_exploded {
-        if let Some(coercion_target_id) = coercion_target_id {
-            state.context.pop_n(case_arity);
-            return Ok(coercion_target_id);
-        }
-    }
+    let normalized_matchee_id = normalized_matchee_id.upshift(case_arity, state.registry);
 
-    let (mut substituted_context, substituted_coercion_target_id) =
-        apply_dynamic_substitutions_with_compounding(
+    let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
+
+    let case_output_id = evaluate_possibly_ill_typed_expression(state, case.output_id);
+
+    let (
+        mut context,
+        (
+            coercion_target_id,
+            (case_output_id,),
+            (matchee_type_id,),
+            (parameterized_matchee_type_id,),
+        ),
+    ) = {
+        let matchee_substitution = ForwardReferencingSubstitution(Substitution {
+            from: normalized_matchee_id.raw(),
+            to: original_parameterized_matchee_id.raw(),
+        });
+        apply_forward_referencing_substitution(
             state,
-            fusion.substitutions,
-            shifted_coercion_target_id.map(NormalFormId::raw),
-        );
+            matchee_substitution,
+            case_arity,
+            (
+                coercion_target_id.map(NormalFormId::raw),
+                (case_output_id,),
+                (matchee_type_id.raw(),),
+                (original_parameterized_matchee_type_id.raw(),),
+            ),
+        )
+    };
 
     let State {
         context: original_context,
@@ -433,54 +501,120 @@ fn get_type_of_match_case(
     } = state;
     let mut state = State {
         registry,
-        context: &mut substituted_context,
+        context: &mut context,
         equality_checker,
     };
     let state = &mut state;
 
-    let normalized_substituted_coercion_target_id = substituted_coercion_target_id
-        .map(|target_id| evaluate_well_typed_expression(state, target_id));
-    let output_type_id = get_type_of_expression(
-        state,
-        normalized_substituted_coercion_target_id,
-        case.output_id,
-    )?;
-
-    let can_be_coerced = matches!(
-        normalized_substituted_coercion_target_id,
-        Some(normalized_substituted_coercion_target_id)
-            if is_left_type_assignable_to_right_type(
-                state,
-                output_type_id,
-                normalized_substituted_coercion_target_id,
-            )
-    );
-
     original_context.pop_n(case_arity);
 
-    if can_be_coerced {
-        Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
-    } else {
-        match output_type_id.try_downshift(case_arity, state.registry) {
-            Ok(shifted_output_type_id) => Ok(shifted_output_type_id),
-            Err(_) => Err(TypeCheckError::AmbiguousOutputType { case_id }),
+    let (
+        coercion_target_id,
+        (case_output_id,),
+        (matchee_type_id,),
+        (parameterized_matchee_type_id,),
+    ) = evaluate_well_typed_expressions(
+        state,
+        (
+            coercion_target_id,
+            (case_output_id,),
+            (matchee_type_id,),
+            (parameterized_matchee_type_id,),
+        ),
+    );
+
+    let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
+    if type_fusion.has_exploded {
+        if let Some(original_coercion_target_id) = original_coercion_target_id {
+            original_context.pop_n(case_arity);
+            return Ok(original_coercion_target_id);
+        }
+    }
+
+    let (mut context, (coercion_target_id, (case_output_id,))) =
+        apply_dynamic_substitutions_with_compounding(
+            state,
+            type_fusion.substitutions,
+            (
+                coercion_target_id.map(NormalFormId::raw),
+                (case_output_id.raw(),),
+            ),
+        );
+
+    let mut state = State {
+        context: &mut context,
+        registry: state.registry,
+        equality_checker: state.equality_checker,
+    };
+    let state = &mut state;
+
+    let coercion_target_id = coercion_target_id
+        .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
+    let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id)?;
+
+    if let Some(coercion_target_id) = coercion_target_id {
+        let can_be_coerced = is_left_type_assignable_to_right_type(
+            state,
+            output_type_id,
+            coercion_target_id,
+        );
+        return if can_be_coerced {
+            Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
+        } else {
+            Err(TypeCheckError::TypeMismatch {
+                expression_id: case.output_id,
+                actual_type_id: output_type_id,
+                // TODO: This might be confusing to the user since it's
+                // undergone substitution.
+                // In the future, we'll include this in substitution
+                // tracking (if we implement it).
+                expected_type_id: coercion_target_id,
+            })
+        }
+    }
+
+    match output_type_id.try_downshift(case_arity, state.registry) {
+        Ok(output_type_id) => Ok(output_type_id),
+        Err(_) => {
+            Err(TypeCheckError::AmbiguousOutputType { case_id })
         }
     }
 }
 
-fn add_case_params_to_context_and_get_constructed_type(
+fn add_case_params_to_context_and_get_constructed_matchee_and_type(
     state: &mut State,
     case_id: NodeId<MatchCase>,
     matchee_type: AdtExpression,
-) -> Result<NormalFormId, TypeCheckError> {
+) -> Result<(NormalFormId, NormalFormId), TypeCheckError> {
     let case = state.registry.match_case(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
     let variant_type_id = state.context.get_type(variant_dbi, state.registry);
+    let fully_qualified_variant_name_component_ids: Vec<NodeId<Identifier>> = {
+        let matchee_type_name = state.registry.name_expression(matchee_type.type_name_id);
+        let matchee_type_name_component_ids = state
+            .registry
+            .identifier_list(matchee_type_name.component_list_id)
+            .to_vec();
+        matchee_type_name_component_ids
+            .into_iter()
+            .chain(vec![case.variant_name_id])
+            .collect()
+    };
     match variant_type_id.raw() {
         ExpressionId::Forall(normalized_forall_id) => {
-            let normalized_forall = state.registry.forall(normalized_forall_id);
-            let normalized_param_ids = state.registry
+            let normalized_forall = state.registry.forall(normalized_forall_id).clone();
+            let expected_case_param_arity = normalized_forall.param_list_id.len;
+            if case.param_list_id.len != expected_case_param_arity {
+                return Err(TypeCheckError::WrongNumberOfCaseParams {
+                    case_id,
+                    expected: expected_case_param_arity,
+                    actual: case.param_list_id.len,
+                });
+            }
+
+            let normalized_param_ids = state
+                .registry
                 .param_list(normalized_forall.param_list_id)
                 .to_vec();
             for &normalized_param_id in &normalized_param_ids {
@@ -492,13 +626,83 @@ fn add_case_params_to_context_and_get_constructed_type(
                 });
             }
 
-            Ok(NormalFormId::unchecked_new(normalized_forall.output_id))
+            let (parameterized_matchee_id, parameterized_matchee_type_id) = {
+                let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len);
+                let callee_id = ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    fully_qualified_variant_name_component_ids,
+                    shifted_variant_dbi,
+                ));
+                let case_param_ids = state.registry.identifier_list(case.param_list_id).to_vec();
+                let arg_ids = case_param_ids
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .map(|(index, case_param_id)| {
+                        ExpressionId::Name(add_name_expression(
+                            state.registry,
+                            vec![case_param_id],
+                            DbIndex(case_param_ids.len() - index - 1),
+                        ))
+                    })
+                    .collect();
+                let arg_list_id = state.registry.add_expression_list(arg_ids);
+                let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
+                    state.registry.add_call_and_overwrite_its_id(Call {
+                        id: dummy_id(),
+                        callee_id,
+                        arg_list_id,
+                    }),
+                ));
+
+                let output_substitutions: Vec<Substitution> = case_param_ids
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .map(|(raw_index, case_param_id)| {
+                        let db_index = DbIndex(case_param_ids.len() - raw_index - 1);
+                        let param_name_expression_id = ExpressionId::Name(add_name_expression(state.registry, vec![case_param_id], db_index));
+                        Substitution {
+                            // We don't care about the name of the `from` `NameExpression`
+                            // because the comparison is only based on the `db_index`.
+                            from: param_name_expression_id,
+                            to: param_name_expression_id,
+                        }
+                    })
+                    .collect();
+                let substituted_output_id = normalized_forall.output_id.subst_all(
+                    &output_substitutions,
+                    &mut state.without_context(),
+                );
+                let parameterized_matchee_type_id = NormalFormId::unchecked_new(substituted_output_id);
+
+                (parameterized_matchee_id, parameterized_matchee_type_id)
+            };
+            
+            Ok((parameterized_matchee_id, parameterized_matchee_type_id))
         }
-        ExpressionId::Call(_) => {
-            // In this case, the variant is nullary.
-            Ok(variant_type_id)
+        ExpressionId::Name(_) => {
+            // In this case, the variant type is nullary.
+
+            let expected_case_param_arity = 0;
+            if case.param_list_id.len != expected_case_param_arity {
+                return Err(TypeCheckError::WrongNumberOfCaseParams {
+                    case_id,
+                    expected: expected_case_param_arity,
+                    actual: case.param_list_id.len,
+                });
+            }
+            // Since the case is nullary, we shift by zero.
+            let shifted_variant_dbi = variant_dbi;
+            let parameterized_matchee_id =
+                NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    fully_qualified_variant_name_component_ids,
+                    shifted_variant_dbi,
+                )));
+            Ok((parameterized_matchee_id, variant_type_id))
         }
-        other => panic!("A variant's type should always either be a Forall or a Call, but it was actually a {:?}", other),
+        other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
     }
 }
 

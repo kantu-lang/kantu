@@ -18,22 +18,24 @@ pub trait ShiftDbIndices {
             .safe_unwrap()
     }
 
-    fn try_upshift(
+    fn upshift_with_cutoff(
         self,
         amount: usize,
+        cutoff: usize,
         registry: &mut NodeRegistry,
-    ) -> Result<Self::Output, Infallible>
+    ) -> Self::Output
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Upshift(amount), 0, registry)
+        self.try_shift_with_cutoff(Upshift(amount), cutoff, registry)
+            .safe_unwrap()
     }
 
     fn downshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Downshift(amount), 0, registry)
+        self.try_downshift(amount, registry)
             .unwrap_or_else(|err| panic!("Downshift failed: {:?}", err))
     }
 
@@ -45,13 +47,59 @@ pub trait ShiftDbIndices {
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Downshift(amount), 0, registry)
+        self.try_downshift_with_cutoff(amount, 0, registry)
+    }
+
+    fn downshift_with_cutoff(
+        self,
+        amount: usize,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Self::Output
+    where
+        Self: Sized,
+    {
+        self.try_downshift_with_cutoff(amount, cutoff, registry)
+            .unwrap_or_else(|err| panic!("Downshift failed: {:?}", err))
+    }
+
+    fn try_downshift_with_cutoff(
+        self,
+        amount: usize,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
+    where
+        Self: Sized,
+    {
+        self.try_shift_with_cutoff(Downshift(amount), cutoff, registry)
+    }
+
+    fn bishift(self, len: usize, pivot: DbIndex, registry: &mut NodeRegistry) -> Self::Output
+    where
+        Self: Sized,
+    {
+        self.try_bishift(len, pivot, registry)
+            .unwrap_or_else(|err| panic!("Bishift failed: {:?}", err))
+    }
+
+    fn try_bishift(
+        self,
+        len: usize,
+        pivot: DbIndex,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
+    where
+        Self: Sized,
+    {
+        self.try_shift_with_cutoff(Bishift { len, pivot }, 0, registry)
     }
 }
 
 pub trait ShiftAmount: Copy {
-    type ShiftError;
-    fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Self::ShiftError>;
+    // TODO: Remove trait bound after debug
+    type ShiftError: std::fmt::Debug;
+    fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Self::ShiftError>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,8 +107,12 @@ struct Upshift(usize);
 
 impl ShiftAmount for Upshift {
     type ShiftError = Infallible;
-    fn try_apply(&self, i: DbIndex) -> Result<DbIndex, Infallible> {
-        Ok(DbIndex(i.0 + self.0))
+    fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Infallible> {
+        if i.0 < cutoff {
+            Ok(i)
+        } else {
+            Ok(DbIndex(i.0 + self.0))
+        }
     }
 }
 
@@ -69,8 +121,14 @@ struct Downshift(usize);
 
 impl ShiftAmount for Downshift {
     type ShiftError = DbIndexTooSmallForDownshiftError;
-    fn try_apply(&self, i: DbIndex) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
-        if i.0 < self.0 {
+    fn try_apply(
+        &self,
+        i: DbIndex,
+        cutoff: usize,
+    ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+        if i.0 < cutoff {
+            Ok(i)
+        } else if i.0 < self.0 {
             Err(DbIndexTooSmallForDownshiftError {
                 db_index: i,
                 downshift_amount: self.0,
@@ -82,9 +140,61 @@ impl ShiftAmount for Downshift {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Bishift {
+    len: usize,
+    pivot: DbIndex,
+}
+
+impl Bishift {
+    fn distance(self) -> usize {
+        self.pivot.0 - self.len
+    }
+}
+
+impl ShiftAmount for Bishift {
+    type ShiftError = DbIndexTooSmallForDownshiftError;
+    fn try_apply(
+        &self,
+        i: DbIndex,
+        cutoff: usize,
+    ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+        if (0..cutoff).contains(&i.0) {
+            Ok(i)
+        } else if (cutoff..cutoff + self.len).contains(&i.0) {
+            Ok(Upshift(self.distance()).try_apply(i, cutoff).safe_unwrap())
+        } else if (cutoff + self.len..cutoff + self.pivot.0).contains(&i.0) {
+            Downshift(self.len).try_apply(i, cutoff)
+        } else {
+            // Indices equal to or greater than the pivot are left as-is.
+            Ok(i)
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DbIndexTooSmallForDownshiftError {
     db_index: DbIndex,
     downshift_amount: usize,
+}
+
+impl ShiftDbIndices for ContextEntry {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self::Output, A::ShiftError> {
+        Ok(ContextEntry {
+            type_id: self
+                .type_id
+                .try_shift_with_cutoff(amount, cutoff, registry)?,
+            definition: self
+                .definition
+                .try_shift_with_cutoff(amount, cutoff, registry)?,
+        })
+    }
 }
 
 impl ShiftDbIndices for ContextEntryDefinition {
@@ -107,6 +217,21 @@ impl ShiftDbIndices for ContextEntryDefinition {
             | ContextEntryDefinition::Variant { name_id: _ }
             | ContextEntryDefinition::Uninterpreted => self,
         })
+    }
+}
+
+impl ShiftDbIndices for Substitution {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<A: ShiftAmount>(
+        self,
+        amount: A,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, A::ShiftError> {
+        let from = self.from.try_shift_with_cutoff(amount, cutoff, registry)?;
+        let to = self.to.try_shift_with_cutoff(amount, cutoff, registry)?;
+        Ok(Substitution { from, to })
     }
 }
 
@@ -164,16 +289,12 @@ impl ShiftDbIndices for NodeId<NameExpression> {
         registry: &mut NodeRegistry,
     ) -> Result<Self, A::ShiftError> {
         let name = registry.name_expression(self);
-        if name.db_index.0 < cutoff {
-            Ok(self)
-        } else {
-            let shifted_index = amount.try_apply(name.db_index)?;
-            let shifted_with_dummy_id = NameExpression {
-                db_index: shifted_index,
-                ..*name
-            };
-            Ok(registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id))
-        }
+        let shifted_index = amount.try_apply(name.db_index, cutoff)?;
+        let shifted_with_dummy_id = NameExpression {
+            db_index: shifted_index,
+            ..*name
+        };
+        Ok(registry.add_name_expression_and_overwrite_its_id(shifted_with_dummy_id))
     }
 }
 
@@ -246,6 +367,7 @@ impl ShiftDbIndices for NodeId<Fun> {
             param_list_id: shifted_param_list_id,
             return_type_id: shifted_return_type_id,
             body_id: shifted_body_id,
+            skip_type_checking_body: fun.skip_type_checking_body,
         }))
     }
 }

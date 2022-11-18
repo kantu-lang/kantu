@@ -186,12 +186,14 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> No
     let param_list_id = registry.add_param_list(param_ids);
     let return_type_id = register_expression(registry, unregistered.return_type);
     let body_id = register_expression(registry, unregistered.body);
+    let skip_type_checking_body = unregistered.skip_type_checking_body;
     registry.add_fun_and_overwrite_its_id(Fun {
         id: dummy_id(),
         name_id,
         param_list_id,
         return_type_id,
         body_id,
+        skip_type_checking_body,
     })
 }
 
