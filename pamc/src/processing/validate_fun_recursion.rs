@@ -1,5 +1,3 @@
-use std::cell::Ref;
-
 use crate::data::{
     x_light_ast::*,
     x_node_registry::{ListId, NodeId, NodeRegistry},
@@ -45,6 +43,15 @@ fn validate_fun_recursion_in_type_statement(
     registry: &NodeRegistry,
     type_statement: &TypeStatement,
 ) -> Result<(), IllegalFunRecursionError> {
+    validate_fun_recursion_in_params_and_leave_in_context(
+        context,
+        registry,
+        type_statement.param_list_id,
+    )?;
+    context.pop_n(type_statement.param_list_id.len);
+
+    context.push(ContextEntry::NoInformation);
+
     let variant_ids = registry.variant_list(type_statement.variant_list_id);
     for variant_id in variant_ids {
         let variant = registry.variant(*variant_id);
@@ -66,6 +73,9 @@ fn validate_fun_recursion_in_variant(
     )?;
     validate_fun_recursion_in_expression(context, registry, variant.return_type_id)?;
     context.pop_n(arity);
+
+    context.push(ContextEntry::NoInformation);
+
     Ok(())
 }
 
@@ -75,6 +85,7 @@ fn validate_fun_recursion_in_let_statement(
     let_statement: &LetStatement,
 ) -> Result<(), IllegalFunRecursionError> {
     validate_fun_recursion_in_expression(context, registry, let_statement.value_id)?;
+    context.push(ContextEntry::NoInformation);
     Ok(())
 }
 
@@ -135,8 +146,10 @@ fn validate_fun_recursion_in_call(
                                 ExpressionId::Name(expected_substruct_name_id) => {
                                     let expected_substruct =
                                         registry.name_expression(expected_substruct_name_id);
-                                    if !context.is_substruct_of_restricted_superstruct(
-                                        expected_substruct.db_index,
+                                    let expected_substruct_db_level =
+                                        context.index_to_level(expected_substruct.db_index);
+                                    if !context.is_left_strict_substruct_of_right(
+                                        expected_substruct_db_level,
                                         superstruct_db_level,
                                     ) {
                                         return err;
@@ -185,14 +198,12 @@ fn validate_fun_recursion_in_fun(
     validate_fun_recursion_in_expression(context, registry, fun.return_type_id)?;
 
     let param_ids = registry.param_list(fun.param_list_id);
-    let decreasing_param_position_and_decreasing_param =
-        param_ids.iter().enumerate().find(|(_i, param_id)| {
-            let param = registry.param(**param_id);
-            param.is_dashed
-        });
-    let reference_restriction = match decreasing_param_position_and_decreasing_param {
-        Some((param_position, decreasing_param_id)) => {
-            let decreasing_param = registry.param(*decreasing_param_id);
+    let decreasing_param_position = param_ids.iter().position(|param_id| {
+        let param = registry.param(*param_id);
+        param.is_dashed
+    });
+    let reference_restriction = match decreasing_param_position {
+        Some(param_position) => {
             let superstruct_db_index = DbIndex(param_ids.len() - param_position - 1);
             let superstruct_db_level = context.index_to_level(superstruct_db_index);
             ReferenceRestriction::MustCallWithSubstruct {
@@ -251,7 +262,25 @@ fn validate_fun_recursion_in_match_case(
     case_id: NodeId<MatchCase>,
     matchee_db_index: Option<DbIndex>,
 ) -> Result<(), IllegalFunRecursionError> {
-    unimplemented!()
+    let case = registry.match_case(case_id);
+    let case_arity = case.param_list_id.len;
+
+    if let Some(matchee_db_index) = matchee_db_index {
+        let matchee_db_level = context.index_to_level(matchee_db_index);
+        for _ in 0..case_arity {
+            context.push(ContextEntry::Substruct {
+                superstruct_db_level: matchee_db_level,
+            });
+        }
+    } else {
+        for _ in 0..case_arity {
+            context.push(ContextEntry::NoInformation);
+        }
+    }
+
+    validate_fun_recursion_in_expression(context, registry, case.output_id)?;
+    context.pop_n(case_arity);
+    Ok(())
 }
 
 fn validate_fun_recursion_in_forall(
@@ -276,7 +305,7 @@ struct Context {
 
 #[derive(Clone, Copy, Debug)]
 enum ContextEntry {
-    Substructure { superstruct_db_level: DbLevel },
+    Substruct { superstruct_db_level: DbLevel },
     Fun(ReferenceRestriction),
     NoInformation,
 }
@@ -299,10 +328,6 @@ impl Context {
 impl Context {
     fn len(&self) -> usize {
         self.stack.len()
-    }
-
-    fn level_to_index(&self, level: DbLevel) -> DbIndex {
-        DbIndex(self.len() - level.0 - 1)
     }
 
     fn index_to_level(&self, index: DbIndex) -> DbLevel {
@@ -333,17 +358,34 @@ impl Context {
         let level = self.index_to_level(index);
         let entry = self.stack[level.0];
         match entry {
-            ContextEntry::Substructure { .. } => None,
+            ContextEntry::Substruct { .. } => None,
             ContextEntry::Fun(restriction) => Some(restriction),
             ContextEntry::NoInformation => None,
         }
     }
 
-    fn is_substruct_of_restricted_superstruct(
-        &self,
-        possible_substruct_index: DbIndex,
-        possible_superstruct_level: DbLevel,
-    ) -> bool {
-        unimplemented!()
+    fn is_left_strict_substruct_of_right(&self, left: DbLevel, right: DbLevel) -> bool {
+        left != right && self.is_left_inclusive_substruct_of_right(left, right)
+    }
+
+    fn is_left_inclusive_substruct_of_right(&self, left: DbLevel, right: DbLevel) -> bool {
+        let mut current = left;
+        loop {
+            if current == right {
+                return true;
+            }
+            let entry = self.stack[current.0];
+            match entry {
+                ContextEntry::Substruct {
+                    superstruct_db_level,
+                } => {
+                    current = superstruct_db_level;
+                    continue;
+                }
+                ContextEntry::Fun(_) | ContextEntry::NoInformation => {
+                    return false;
+                }
+            }
+        }
     }
 }
