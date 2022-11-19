@@ -1,15 +1,11 @@
 use crate::data::{
-    light_ast as rst,
-    node_registry::{ExpressionRef, NodeId, NodeRegistry},
-    symbol_database::{Symbol, SymbolDatabase, SymbolSource},
-    variant_return_type::VariantReturnTypeDatabase,
+    x_light_ast as light,
+    x_node_registry::{ExpressionRef, NodeId, NodeRegistry},
     FileId,
 };
 use crate::processing::generate_code::CompileTarget;
 
 use js_ast::*;
-
-use rustc_hash::FxHashMap;
 
 pub mod format;
 pub mod js_ast;
@@ -29,11 +25,9 @@ impl CompileTarget for JavaScript {
 
     fn generate_code_with_options(
         registry: &NodeRegistry,
-        symbol_db: &SymbolDatabase,
-        _variant_db: &VariantReturnTypeDatabase,
-        file_ids: &[NodeId<rst::File>],
+        file_ids: &[NodeId<light::File>],
         _options: Self::Options,
     ) -> Result<Self::Ok, Self::Error> {
-        code_gen_impl::generate_code_with_options(registry, symbol_db, file_ids)
+        code_gen_impl::generate_code_with_options(registry, file_ids)
     }
 }

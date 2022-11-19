@@ -145,7 +145,7 @@ impl Context {
         input: &(Symbol, IdentifierName),
         output_source: &OwnedSymbolSource,
     ) -> Result<(), DotExpressionRhsClashError> {
-        if let Some(data) = self.get_symbol_data_for_name(&input.1) {
+        if let Some(data) = self.get_dot_target_symbol_data((input.0, &input.1)) {
             return Err(DotExpressionRhsClashError {
                 old: data.source.clone(),
                 new: output_source.clone(),

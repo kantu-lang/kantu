@@ -13,15 +13,14 @@ pub enum FileItem {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstStatement {
-    pub name: String,
+    pub name: ValidJsIdentifierName,
     pub value: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
     Literal(Literal),
-    /// The name is guaranteed to be a valid JavaScript identifier.
-    Identifier(String),
+    Identifier(ValidJsIdentifierName),
     Call(Box<Call>),
     New(Box<Call>),
     Function(Box<Function>),
@@ -31,6 +30,9 @@ pub enum Expression {
     Array(Box<Array>),
     Object(Box<Object>),
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ValidJsIdentifierName(pub String);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Literal {
@@ -47,16 +49,23 @@ pub struct Call {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Function {
-    pub name: String,
-    pub params: Vec<String>,
+    pub name: ValidJsIdentifierName,
+    pub params: Vec<ValidJsIdentifierName>,
     pub body: Vec<FunctionStatement>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FunctionStatement {
     Const(ConstStatement),
+    If(IfStatement),
     Return(Expression),
     Throw(Expression),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IfStatement {
+    pub condition: Expression,
+    pub body: Vec<FunctionStatement>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -75,7 +84,7 @@ pub enum BinaryOpKind {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Dot {
     pub left: Expression,
-    pub right: String,
+    pub right: ValidJsIdentifierName,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -97,6 +106,6 @@ pub struct Object {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ObjectEntry {
-    pub key: String,
+    pub key: ValidJsIdentifierName,
     pub value: Expression,
 }

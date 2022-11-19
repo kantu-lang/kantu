@@ -5,7 +5,6 @@ pub mod lex;
 pub mod parse;
 pub mod register;
 pub mod simplify_ast;
-pub mod type_check;
 pub mod validate_fun_recursion;
 
 pub mod x_bind_type_independent;

@@ -1,86 +1,73 @@
 use crate::data::{
-    light_ast::*,
-    node_registry::NodeRegistry,
-    symbol_database::SymbolDatabase,
-    variant_return_type::{VariantReturnType, VariantReturnTypeDatabase},
+    x_light_ast::*,
+    x_node_registry::{NodeId, NodeRegistry},
 };
 
 #[derive(Clone, Debug)]
 pub struct IllegalVariantReturnTypeError(pub ExpressionId);
 
 pub fn check_variant_return_types_for_file(
-    symbol_db: &SymbolDatabase,
     registry: &NodeRegistry,
     file: &File,
-) -> Result<VariantReturnTypeDatabase, IllegalVariantReturnTypeError> {
-    let mut map = VariantReturnTypeDatabase::empty();
+) -> Result<(), IllegalVariantReturnTypeError> {
     let item_ids = registry.file_item_list(file.item_list_id);
     for item_id in item_ids {
         if let FileItemNodeId::Type(type_id) = item_id {
             let type_statement = registry.type_statement(*type_id);
-            check_variant_return_types_for_type_statement(
-                symbol_db,
-                registry,
-                &mut map,
-                type_statement,
-            )?;
+            check_variant_return_types_for_type_statement(registry, type_statement)?;
         }
-    }
-    Ok(map)
-}
-
-fn check_variant_return_types_for_type_statement(
-    symbol_db: &SymbolDatabase,
-    registry: &NodeRegistry,
-    map: &mut VariantReturnTypeDatabase,
-    type_statement: &TypeStatement,
-) -> Result<(), IllegalVariantReturnTypeError> {
-    let variant_ids = registry.variant_list(type_statement.variant_list_id);
-    for variant_id in variant_ids {
-        let variant = registry.variant(*variant_id);
-        let args = get_variant_type_args(symbol_db, registry, type_statement, variant)?;
-        map.insert_new(variant.id, args);
     }
     Ok(())
 }
 
-fn get_variant_type_args(
-    symbol_db: &SymbolDatabase,
+fn check_variant_return_types_for_type_statement(
     registry: &NodeRegistry,
     type_statement: &TypeStatement,
+) -> Result<(), IllegalVariantReturnTypeError> {
+    let variant_ids = registry.variant_list(type_statement.variant_list_id);
+    for (variant_index, variant_id) in variant_ids.iter().copied().enumerate() {
+        let variant = registry.variant(variant_id);
+        check_return_type_for_variant(registry, variant, variant_index)?;
+    }
+    Ok(())
+}
+
+fn check_return_type_for_variant(
+    registry: &NodeRegistry,
     variant: &Variant,
-) -> Result<VariantReturnType, IllegalVariantReturnTypeError> {
-    let type_symbol = symbol_db.identifier_symbols.get(type_statement.name_id);
+    variant_index: usize,
+) -> Result<(), IllegalVariantReturnTypeError> {
+    fn check_return_type_name_db_index(
+        return_type_name_id: NodeId<NameExpression>,
+        (registry, return_type_id, variant, variant_index): (
+            &NodeRegistry,
+            ExpressionId,
+            &Variant,
+            usize,
+        ),
+    ) -> Result<(), IllegalVariantReturnTypeError> {
+        let adjusted_type_statement_db_index = DbIndex(variant_index + variant.param_list_id.len);
+        let return_db_index = registry.name_expression(return_type_name_id).db_index;
+        if adjusted_type_statement_db_index == return_db_index {
+            Ok(())
+        } else {
+            Err(IllegalVariantReturnTypeError(return_type_id))
+        }
+    }
+
     let return_type_id = variant.return_type_id;
     match return_type_id {
-        ExpressionId::Name(name_id) => {
-            let identifier_symbol = symbol_db
-                .identifier_symbols
-                .get_using_rightmost((name_id, registry));
-            if identifier_symbol == type_symbol {
-                Ok(VariantReturnType::Identifier {
-                    identifier_id: return_type_id,
-                })
-            } else {
-                Err(IllegalVariantReturnTypeError(return_type_id))
-            }
-        }
+        ExpressionId::Name(name_id) => check_return_type_name_db_index(
+            name_id,
+            (registry, return_type_id, variant, variant_index),
+        ),
         ExpressionId::Call(call_id) => {
             let call = registry.call(call_id);
             match call.callee_id {
-                ExpressionId::Name(name_id) => {
-                    let identifier_symbol = symbol_db
-                        .identifier_symbols
-                        .get_using_rightmost((name_id, registry));
-                    if identifier_symbol == type_symbol {
-                        Ok(VariantReturnType::Call {
-                            callee_id: call.callee_id,
-                            arg_list_id: call.arg_list_id,
-                        })
-                    } else {
-                        Err(IllegalVariantReturnTypeError(return_type_id))
-                    }
-                }
+                ExpressionId::Name(name_id) => check_return_type_name_db_index(
+                    name_id,
+                    (registry, return_type_id, variant, variant_index),
+                ),
                 _other_callee => Err(IllegalVariantReturnTypeError(return_type_id)),
             }
         }

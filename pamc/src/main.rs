@@ -60,8 +60,13 @@ fn main() {
                                     print_separator();
 
                                     use pamc::processing::{
+                                        generate_code::{
+                                            targets::javascript::format::FormatOptions,
+                                            CompileTarget,
+                                        },
                                         x_debug::debug_expression,
-                                        x_expand_lightened::expand_expression, x_type_check::*,
+                                        x_expand_lightened::expand_expression,
+                                        x_type_check::*,
                                     };
 
                                     let type_check_result =
@@ -69,6 +74,19 @@ fn main() {
                                     match type_check_result {
                                         Ok(_) => {
                                             println!("Type check success!");
+                                            println!();
+                                            let code_gen_result = pamc::processing::generate_code::targets::javascript::JavaScript::generate_code(&registry, &[lightened_file]);
+                                            match code_gen_result {
+                                                Ok(js_ast) => {
+                                                    println!("Code generation success!");
+                                                    print_separator();
+                                                    println!("{}", pamc::processing::generate_code::targets::javascript::format::format_file(&js_ast[0], &FormatOptions {indentation:4}));
+                                                }
+                                                Err(err) => {
+                                                    println!("Code generation failed!");
+                                                    println!("{:#?}", err);
+                                                }
+                                            }
                                         }
                                         Err(err) => {
                                             println!("Type check error: {:?}", err);

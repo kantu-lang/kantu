@@ -30,6 +30,8 @@ impl From<NameClashError> for BindError {
     }
 }
 
+pub use super::context::OwnedSymbolSource;
+
 #[derive(Clone, Debug)]
 pub struct DotExpressionRhsClashError {
     pub old: OwnedSymbolSource,

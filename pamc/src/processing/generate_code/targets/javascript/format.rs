@@ -26,7 +26,7 @@ fn write_file_item(out: &mut Writer, item: &FileItem, options: &FormatOptions) {
 
 fn write_const_statement(out: &mut Writer, const_: &ConstStatement, options: &FormatOptions) {
     out.push_str("const ");
-    out.push_str(&const_.name);
+    out.push_str(&const_.name.0);
     out.push_str(" = ");
     write_expression(out, &const_.value, options);
     out.push_str(";");
@@ -35,7 +35,7 @@ fn write_const_statement(out: &mut Writer, const_: &ConstStatement, options: &Fo
 fn write_expression(out: &mut Writer, expression: &Expression, options: &FormatOptions) {
     match expression {
         Expression::Literal(literal) => write_literal(out, literal),
-        Expression::Identifier(identifier) => out.push_str(identifier),
+        Expression::Identifier(identifier) => out.push_str(&identifier.0),
         Expression::Call(call) => write_call(out, call, options),
         Expression::New(call) => write_new_call(out, call, options),
         Expression::Function(function) => write_simple_function(out, function, options),
@@ -124,13 +124,13 @@ fn write_new_call(out: &mut Writer, call: &Call, options: &FormatOptions) {
 
 fn write_simple_function(out: &mut Writer, function: &Function, options: &FormatOptions) {
     out.push_str("function ");
-    out.push_str(&function.name);
+    out.push_str(&function.name.0);
     out.push_str("(");
     for (i, param) in function.params.iter().enumerate() {
         if i > 0 {
             out.push_str(", ");
         }
-        out.push_str(param);
+        out.push_str(&param.0);
     }
     out.push_str(") {");
 
@@ -139,8 +139,8 @@ fn write_simple_function(out: &mut Writer, function: &Function, options: &Format
     } else {
         out.push_str("\n");
         out.increase_indentation_level();
-        out.indent();
         for statement in &function.body {
+            out.indent();
             write_function_statement(out, statement, options);
             out.push_str("\n");
         }
@@ -157,10 +157,32 @@ fn write_function_statement(
 ) {
     match statement {
         FunctionStatement::Const(const_) => write_const_statement(out, const_, options),
+        FunctionStatement::If(if_) => write_if_statement(out, if_, options),
         FunctionStatement::Return(return_value) => {
             write_return_statement(out, return_value, options)
         }
         FunctionStatement::Throw(throw_value) => write_throw_statement(out, throw_value, options),
+    }
+}
+
+fn write_if_statement(out: &mut Writer, if_statement: &IfStatement, options: &FormatOptions) {
+    out.push_str("if (");
+    write_expression(out, &if_statement.condition, options);
+    out.push_str(") {");
+
+    if if_statement.body.is_empty() {
+        out.push_str("}");
+    } else {
+        out.push_str("\n");
+        out.increase_indentation_level();
+        for statement in &if_statement.body {
+            out.indent();
+            write_function_statement(out, statement, options);
+            out.push_str("\n");
+        }
+        out.decrease_indentation_level();
+        out.indent();
+        out.push_str("}");
     }
 }
 
@@ -198,12 +220,12 @@ fn write_dot(out: &mut Writer, dot: &Dot, options: &FormatOptions) {
     if let Expression::Identifier(_) = &dot.left {
         write_expression(out, &dot.left, options);
         out.push_str(".");
-        out.push_str(&dot.right);
+        out.push_str(&dot.right.0);
     } else {
         out.push_str("(");
         write_expression(out, &dot.left, options);
         out.push_str(").");
-        out.push_str(&dot.right);
+        out.push_str(&dot.right.0);
     }
 }
 
@@ -245,7 +267,7 @@ fn write_object(out: &mut Writer, object: &Object, options: &FormatOptions) {
             out.push_str(", ");
         }
         out.push_str("\"");
-        out.push_str(&escape_string_contents(&entry.key));
+        out.push_str(&escape_string_contents(&entry.key.0));
         out.push_str("\": ");
         write_expression(out, &entry.value, options);
     }
