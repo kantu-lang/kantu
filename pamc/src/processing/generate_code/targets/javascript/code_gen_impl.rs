@@ -195,42 +195,56 @@ fn generate_code_for_type_constructor(
 }
 
 fn generate_code_for_variant_constructor(
-    context: &NodeRegistry,
+    registry: &NodeRegistry,
     context: &mut Context,
     variant_id: NodeId<light::Variant>,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
     let variant = registry.variant(variant_id);
-    let variant_symbol_js_name = variant.name_id.symbol_js_name(registry, context);
-    let params: Vec<String> = {
-        let param_ids = registry.param_list(variant.param_list_id);
-        param_ids
+    let arity = variant.param_list_id.len;
+
+    let param_js_names: Vec<ValidJsIdentifierName> = {
+        let type_param_ids = registry.param_list(variant.param_list_id);
+        let param_js_names = type_param_ids
             .iter()
-            .map(|id| id.symbol_js_name(registry, context))
-            .collect()
+            .map(|id| {
+                let param = registry.param(*id);
+                let param_name = &registry.identifier(param.name_id).name;
+                context.push_name(param_name);
+                let param_js_name = context.js_name(DbIndex(0));
+                param_js_name
+            })
+            .collect();
+        param_js_names
     };
     let return_value = {
-        let mut items = Vec::with_capacity(params.len() + 1);
+        let mut items = Vec::with_capacity(arity + 1);
         items.push(Expression::Literal(Literal::String {
             // We must use the JS name instead of the Symbol JS name
             // since we won't know the Symbol of the match case patterns
             // (at the time of writing, the type checker isn't complete,
             // so we don't have that information during code generation).
             // Later, we can fix this.
-            unescaped: variant.name_id.js_name(context),
+            unescaped: registry.identifier(variant.name_id).name.js_name().0,
         }));
         items.extend(
-            params
+            param_js_names
                 .iter()
                 .map(|param| Expression::Identifier(param.clone())),
         );
         Expression::Array(Box::new(Array { items }))
     };
 
+    context.pop_n(arity);
+
+    let variant_name = &registry.identifier(variant.name_id).name;
+    context.push_name(variant_name);
+    let variant_symbol_js_name = context.js_name(DbIndex(0));
+
     Ok(ConstStatement {
         name: variant_symbol_js_name.clone(),
         value: Function {
             name: variant_symbol_js_name,
-            params: params,
+            params: param_js_names,
             body: vec![FunctionStatement::Return(return_value)],
         }
         .into_return_value_if_simple_nullary(),
@@ -238,22 +252,25 @@ fn generate_code_for_variant_constructor(
 }
 
 fn generate_code_for_let_statement(
-    context: &NodeRegistry,
+    registry: &NodeRegistry,
     context: &mut Context,
     let_id: NodeId<light::LetStatement>,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
-    let CodeGenContext { registry, .. } = context;
     let let_statement = registry.let_statement(let_id);
-    let identifier_name = let_statement.name_id.symbol_js_name(registry, context);
+
     let value = generate_code_for_expression(registry, context, let_statement.value_id)?;
+
+    let let_statement_name = &registry.identifier(let_statement.name_id).name;
+    context.push_name(let_statement_name);
+    let let_statement_js_name = context.js_name(DbIndex(0));
     Ok(ConstStatement {
-        name: identifier_name,
+        name: let_statement_js_name,
         value,
     })
 }
 
 fn generate_code_for_expression(
-    context: &NodeRegistry,
+    registry: &NodeRegistry,
     context: &mut Context,
     id: light::ExpressionId,
 ) -> Result<Expression, CompileToJavaScriptError> {
@@ -268,54 +285,16 @@ fn generate_code_for_expression(
 }
 
 fn generate_code_for_name_expression(
-    context: &NodeRegistry,
+    _registry: &NodeRegistry,
     context: &mut Context,
     name: &light::NameExpression,
 ) -> Result<Expression, CompileToJavaScriptError> {
-    let CodeGenContext {
-        symbol_db,
-        registry,
-        ..
-    } = context;
-    let symbol = symbol_db
-        .identifier_symbols
-        .get_using_rightmost((name.id, registry));
-    let source = *symbol_db
-        .symbol_sources
-        .get(&symbol)
-        .expect("A symbol bound to a name expression should have a source.");
-    match source {
-        // TODO: Come up with a more robust test to see if the symbol
-        // was defined by a match case.
-        // Currently, the only source of untyped params is match cases,
-        // so this works.
-        // But if this changes in the future, this will break.
-        SymbolSource::MatchCaseParam(_param_id, case_id, match_id) => {
-            let case = registry.match_case(case_id);
-            let param_ids = registry.identifier_list(case.param_list_id);
-            let param_index = param_ids
-                .iter()
-                .position(|id| symbol == symbol_db.identifier_symbols.get(*id))
-                .expect("The param list of a match case should contain the param id.");
-            let matchee_id = registry.match_(match_id).matchee_id;
-            Ok(Expression::BinaryOp(Box::new(BinaryOp {
-                left: generate_code_for_expression(registry, context, matchee_id)?,
-                op: BinaryOpKind::Index,
-                right: Expression::Literal(Literal::Number(
-                    i32::try_from(param_index + 1)
-                        .expect("param index should not be absurdly large"),
-                )),
-            })))
-        }
-        _ => {
-            let identifier_name = name.id.symbol_js_name(registry, context);
-            Ok(Expression::Identifier(identifier_name))
-        }
-    }
+    let identifier_name = context.js_name(name.db_index);
+    Ok(Expression::Identifier(identifier_name))
 }
 
 fn generate_code_for_call(
-    context: &NodeRegistry,
+    registry: &NodeRegistry,
     context: &mut Context,
     call: &light::Call,
 ) -> Result<Expression, CompileToJavaScriptError> {
@@ -331,23 +310,30 @@ fn generate_code_for_call(
 }
 
 fn generate_code_for_fun(
-    context: &NodeRegistry,
+    registry: &NodeRegistry,
     context: &mut Context,
     fun: &light::Fun,
 ) -> Result<Expression, CompileToJavaScriptError> {
-    let CodeGenContext { registry, .. } = context;
-    let name = fun.name_id.symbol_js_name(registry, context);
-    let param_names = {
-        let param_ids = registry.param_list(fun.param_list_id);
-        param_ids
-            .iter()
-            .map(|param_id| param_id.symbol_js_name(registry, context))
-            .collect::<Vec<_>>()
+    let param_js_names = registry
+        .param_list(fun.param_list_id)
+        .iter()
+        .map(|id| {
+            let param = registry.param(*id);
+            let param_name = &registry.identifier(param.name_id).name;
+            context.push_name(param_name);
+            let param_js_name = context.js_name(DbIndex(0));
+            param_js_name
+        })
+        .collect();
+    let fun_js_name = {
+        let fun_name = &registry.identifier(fun.name_id).name;
+        context.push_name(fun_name);
+        context.js_name(DbIndex(0))
     };
     let return_value = generate_code_for_expression(registry, context, fun.body_id)?;
     Ok(Expression::Function(Box::new(Function {
-        name,
-        params: param_names,
+        name: fun_js_name,
+        params: param_js_names,
         body: vec![FunctionStatement::Return(return_value)],
     })))
 }
@@ -367,55 +353,92 @@ fn generate_code_for_fun(
 //
 // We may need a more complex state object to implement this.
 fn generate_code_for_match(
-    context: &NodeRegistry,
+    registry: &NodeRegistry,
     context: &mut Context,
     match_: &light::Match,
 ) -> Result<Expression, CompileToJavaScriptError> {
-    let case_ids = registry.match_case_list(match_.case_list_id);
+    let matchee_temp_name = context.get_disposable_name();
+    let fun_temp_name = context.get_disposable_name();
+
     let matchee = generate_code_for_expression(registry, context, match_.matchee_id)?;
-    generate_ternary_for_match_cases(registry, context, &matchee, case_ids)
-}
+    let cases = registry
+        .match_case_list(match_.case_list_id)
+        .iter()
+        .map(|case_id| {
+            let case = registry.match_case(*case_id);
+            generate_code_for_match_case(registry, context, case, &matchee_temp_name)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-fn generate_ternary_for_match_cases(
-    context: &NodeRegistry,
-    context: &mut Context,
-    matchee: &Expression,
-    case_ids: &[NodeId<light::MatchCase>],
-) -> Result<Expression, CompileToJavaScriptError> {
-    if case_ids.is_empty() {
-        return Ok(generate_code_for_explosion_error(registry, context));
-    }
-
-    let CodeGenContext { registry, .. } = context;
-
-    let case = registry.match_case(case_ids[0]);
-    let case_variant_name: String = registry.identifier(case.variant_name_id).name.js_name();
-    let condition = Expression::BinaryOp(Box::new(BinaryOp {
-        left: Expression::BinaryOp(Box::new(BinaryOp {
-            left: matchee.clone(),
-            op: BinaryOpKind::Index,
-            right: js_constant_zero(),
+    Ok(Expression::Call(Box::new(Call {
+        callee: Expression::Function(Box::new(Function {
+            name: fun_temp_name,
+            params: vec![matchee_temp_name.clone()],
+            body: cases.into_iter().map(FunctionStatement::If).collect(),
         })),
-        op: BinaryOpKind::TripleEqual,
-        right: Expression::Literal(Literal::String {
-            unescaped: case_variant_name,
-        }),
-    }));
-    let true_body = generate_code_for_expression(registry, context, case.output_id)?;
-    let false_body = generate_ternary_for_match_cases(registry, context, matchee, &case_ids[1..])?;
-
-    Ok(Expression::Ternary(Box::new(Ternary {
-        condition,
-        true_body,
-        false_body,
+        args: vec![matchee],
     })))
 }
 
-fn generate_code_for_explosion_error(_: &NodeRegistry, context: &mut Context) -> Expression {
-    Expression::Call(Box::new(Call {
-        callee: Expression::Identifier(state.explosion_error_thrower_function_name()),
-        args: vec![],
-    }))
+fn generate_code_for_match_case(
+    registry: &NodeRegistry,
+    context: &mut Context,
+    case: &light::MatchCase,
+    matchee_js_name: &ValidJsIdentifierName,
+) -> Result<IfStatement, CompileToJavaScriptError> {
+    let condition = {
+        let case_js_name = registry.identifier(case.variant_name_id).name.js_name();
+        Expression::BinaryOp(Box::new(BinaryOp {
+            left: Expression::BinaryOp(Box::new(BinaryOp {
+                left: Expression::Identifier(matchee_js_name.clone()),
+                op: BinaryOpKind::Index,
+                right: Expression::Literal(Literal::Number(0)),
+            })),
+            op: BinaryOpKind::TripleEqual,
+            right: Expression::Literal(Literal::String {
+                unescaped: case_js_name.0,
+            }),
+        }))
+    };
+
+    let body = {
+        let arity = case.param_list_id.len;
+        let mut body = Vec::with_capacity(arity + 1);
+
+        for (param_index, param_id) in registry
+            .identifier_list(case.param_list_id)
+            .iter()
+            .copied()
+            .enumerate()
+        {
+            let param_name = &registry.identifier(param_id).name;
+            context.push_name(param_name);
+            let param_js_name = context.js_name(DbIndex(0));
+            let field_index = i32::try_from(1 + param_index)
+                .expect("The param index should not be absurdly large.");
+            let param_value = Expression::BinaryOp(Box::new(BinaryOp {
+                left: Expression::Identifier(matchee_js_name.clone()),
+                op: BinaryOpKind::Index,
+                right: Expression::Literal(Literal::Number(field_index)),
+            }));
+            body.push(FunctionStatement::Const(ConstStatement {
+                name: param_js_name,
+                value: param_value,
+            }));
+        }
+
+        body.push(FunctionStatement::Return(generate_code_for_expression(
+            registry,
+            context,
+            case.output_id,
+        )?));
+
+        context.pop_n(arity);
+
+        body
+    };
+
+    Ok(IfStatement { condition, body })
 }
 
 const TYPE_SPECIES_KEY: &str = "type_species";
@@ -424,24 +447,21 @@ const TYPE_SPECIES_VALUE__TYPE0: &str = "Type0";
 const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
 const TYPE_ARGS_KEY: &str = "type_args";
 const EXPLOSION_THROWER_NAME: &str = "unreachable";
+const DISPOSABLE_NAME_PREFIX: &str = "temp";
 
 fn generate_code_for_forall(
-    _context: &NodeRegistry,
-    _state: &mut CodeGenState,
+    _registry: &NodeRegistry,
+    _context: &mut Context,
     _name: &light::Forall,
 ) -> Result<Expression, CompileToJavaScriptError> {
     Ok(Expression::Object(Box::new(Object {
         entries: vec![ObjectEntry {
-            key: TYPE_SPECIES_KEY.to_owned(),
+            key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
             value: Expression::Literal(Literal::String {
-                unescaped: TYPE_SPECIES_VALUE__FORALL.to_owned(),
+                unescaped: TYPE_SPECIES_VALUE__FORALL.to_string(),
             }),
         }],
     })))
-}
-
-fn js_constant_zero() -> Expression {
-    Expression::Literal(Literal::Number(0))
 }
 
 impl Function {
@@ -517,7 +537,7 @@ impl Function {
 //         /// followed by one or more digits.
 //         /// Since this does not end with a digit, it is guaranteed to not collide.
 //         const EXPLOSION_THROWER_NAME: &str = "unreachable_path";
-//         EXPLOSION_THROWER_NAME.to_owned()
+//         EXPLOSION_THROWER_NAME.to_string()
 //     }
 // }
 
@@ -598,28 +618,122 @@ impl Function {
 
 impl light::IdentifierName {
     fn js_name(&self) -> ValidJsIdentifierName {
-        let sanitized = match self {
-            light::IdentifierName::Standard(s) => unimplemented!(),
+        match self {
+            light::IdentifierName::Standard(s) => sanitize_js_identifier_name(s),
             light::IdentifierName::Reserved(light::ReservedIdentifierName::Underscore) => {
-                "_".to_owned()
+                ValidJsIdentifierName("_".to_string())
             }
             light::IdentifierName::Reserved(light::ReservedIdentifierName::TypeTitleCase) => {
-                TYPE_SPECIES_VALUE__TYPE0.to_owned()
+                ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string())
             }
-        };
-        ValidJsIdentifierName(sanitized)
+        }
     }
 }
 
-impl NodeId<light::NameExpression> {
-    fn db_index_js_name(
-        self,
-        registry: &NodeRegistry,
-        context: &mut Context,
-    ) -> ValidJsIdentifierName {
-        let db_index = registry.name_expression(self).db_index;
-        context.js_name(db_index)
+fn sanitize_js_identifier_name(s: &str) -> ValidJsIdentifierName {
+    let mut out = String::new();
+
+    // The first character cannot be a digit
+    for c in s.chars().take(1) {
+        if c.is_ascii_alphabetic() || c == '_' || c == '$' {
+            out.push(c);
+        } else {
+            out.push('_');
+        }
     }
+
+    // ...but the rest can be digits.
+    for c in s.chars().skip(1) {
+        if c.is_ascii_alphanumeric() || c == '_' || c == '$' {
+            out.push(c);
+        } else {
+            out.push('_');
+        }
+    }
+
+    while is_js_reserved_word(&out) {
+        out.push('_');
+    }
+
+    ValidJsIdentifierName(out)
+}
+
+fn is_js_reserved_word(s: &str) -> bool {
+    [
+        "abstract",
+        "arguments",
+        "as",
+        "async",
+        "await",
+        "boolean",
+        "break",
+        "byte",
+        "case",
+        "catch",
+        "char",
+        "class",
+        "const",
+        "continue",
+        "debugger",
+        "default",
+        "delete",
+        "do",
+        "double",
+        "else",
+        "enum",
+        "eval",
+        "export",
+        "extends",
+        "false",
+        "final",
+        "finally",
+        "float",
+        "for",
+        "from",
+        "function",
+        "get",
+        "goto",
+        "if",
+        "implements",
+        "import",
+        "in",
+        "instanceof",
+        "int",
+        "interface",
+        "let",
+        "long",
+        "native",
+        "new",
+        "null",
+        "of",
+        "package",
+        "private",
+        "protected",
+        "public",
+        "return",
+        "set",
+        "short",
+        "static",
+        "super",
+        "switch",
+        "synchronized",
+        "this",
+        "throw",
+        "throws",
+        "transient",
+        "true",
+        "try",
+        "typeof",
+        "undefined",
+        "var",
+        "void",
+        "volatile",
+        "while",
+        "with",
+        "yield",
+    ]
+    .iter()
+    .any(|&reserved| reserved == s)
 }
 
 #[derive(Clone, Debug)]
@@ -656,7 +770,7 @@ impl Context {
 
     fn push_name(&mut self, original: &IdentifierName) {
         let preferred = original.js_name();
-        if !self.contains(preferred) {
+        if !self.contains(&preferred) {
             self.push(ContextEntry { name: preferred });
             return;
         }
@@ -664,15 +778,28 @@ impl Context {
         let mut i = 2;
         loop {
             let name = ValidJsIdentifierName(format!("{}{}", preferred.0, i));
-            if !self.contains(name) {
+            if !self.contains(&name) {
                 self.push(ContextEntry { name });
                 return;
             }
+            i += 1;
         }
     }
 
-    fn contains(&self, name: ValidJsIdentifierName) -> bool {
-        self.stack.iter().any(|x| x.name == name)
+    fn get_disposable_name(&mut self) -> ValidJsIdentifierName {
+        let mut i = 0;
+        loop {
+            let name = ValidJsIdentifierName(format!("{}_{:x}", DISPOSABLE_NAME_PREFIX, i));
+            if !self.contains(&name) {
+                self.other_reserved_names.push(name.clone());
+                return name;
+            }
+            i += 1;
+        }
+    }
+
+    fn contains(&self, name: &ValidJsIdentifierName) -> bool {
+        self.stack.iter().any(|x| x.name == *name)
     }
 
     fn push(&mut self, entry: ContextEntry) {

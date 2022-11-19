@@ -57,8 +57,15 @@ pub struct Function {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FunctionStatement {
     Const(ConstStatement),
+    If(IfStatement),
     Return(Expression),
     Throw(Expression),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IfStatement {
+    pub condition: Expression,
+    pub body: Vec<FunctionStatement>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
