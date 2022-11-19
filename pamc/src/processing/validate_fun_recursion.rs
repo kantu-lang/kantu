@@ -1,3 +1,5 @@
+use std::cell::Ref;
+
 use crate::data::{
     x_light_ast::*,
     x_node_registry::{ListId, NodeId, NodeRegistry},
@@ -21,7 +23,7 @@ pub fn validate_fun_recursion_in_file(
     registry: &NodeRegistry,
     file: &File,
 ) -> Result<(), IllegalFunRecursionError> {
-    let mut context = Context::new(registry);
+    let mut context = Context::new();
     let item_ids = registry.file_item_list(file.item_list_id);
     for item_id in item_ids {
         match item_id {
@@ -56,11 +58,14 @@ fn validate_fun_recursion_in_variant(
     registry: &NodeRegistry,
     variant: &Variant,
 ) -> Result<(), IllegalFunRecursionError> {
-    let param_ids = registry.param_list(variant.param_list_id);
-    for param_id in param_ids {
-        let param = registry.param(*param_id);
-        validate_fun_recursion_in_param(context, registry, param)?;
-    }
+    let arity = variant.param_list_id.len;
+    validate_fun_recursion_in_params_and_leave_in_context(
+        context,
+        registry,
+        variant.param_list_id,
+    )?;
+    validate_fun_recursion_in_expression(context, registry, variant.return_type_id)?;
+    context.pop_n(arity);
     Ok(())
 }
 
@@ -92,7 +97,8 @@ fn validate_fun_recursion_in_name(
     registry: &NodeRegistry,
     name_id: NodeId<NameExpression>,
 ) -> Result<(), IllegalFunRecursionError> {
-    if context.reference_restriction(name_id).is_some() {
+    let name = registry.name_expression(name_id);
+    if context.reference_restriction(name.db_index).is_some() {
         return Err(
             IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall { reference: name_id },
         );
@@ -109,7 +115,7 @@ fn validate_fun_recursion_in_call(
     let is_call_restricted = match call.callee_id {
         ExpressionId::Name(callee_name_id) => {
             let callee_name = registry.name_expression(callee_name_id);
-            if let Some(restriction) = context.reference_restriction(callee_name_id) {
+            if let Some(restriction) = context.reference_restriction(callee_name.db_index) {
                 match restriction {
                     ReferenceRestriction::MustCallWithSubstruct {
                         arg_position,
@@ -127,8 +133,10 @@ fn validate_fun_recursion_in_call(
                             );
                             match expected_substruct_id {
                                 ExpressionId::Name(expected_substruct_name_id) => {
+                                    let expected_substruct =
+                                        registry.name_expression(expected_substruct_name_id);
                                     if !context.is_substruct_of_restricted_superstruct(
-                                        expected_substruct_name_id,
+                                        expected_substruct.db_index,
                                         superstruct_db_level,
                                     ) {
                                         return err;
@@ -176,6 +184,7 @@ fn validate_fun_recursion_in_fun(
     validate_fun_recursion_in_params_and_leave_in_context(context, registry, fun.param_list_id)?;
     validate_fun_recursion_in_expression(context, registry, fun.return_type_id)?;
 
+    let param_ids = registry.param_list(fun.param_list_id);
     let decreasing_param_position_and_decreasing_param =
         param_ids.iter().enumerate().find(|(_i, param_id)| {
             let param = registry.param(**param_id);
@@ -184,18 +193,19 @@ fn validate_fun_recursion_in_fun(
     let reference_restriction = match decreasing_param_position_and_decreasing_param {
         Some((param_position, decreasing_param_id)) => {
             let decreasing_param = registry.param(*decreasing_param_id);
-            context.create_must_call_with_substruct_restriction(
-                fun.name_id,
-                param_position,
-                decreasing_param.name_id,
-            )
+            let superstruct_db_index = DbIndex(param_ids.len() - param_position - 1);
+            let superstruct_db_level = context.index_to_level(superstruct_db_index);
+            ReferenceRestriction::MustCallWithSubstruct {
+                superstruct_db_level,
+                arg_position: param_position,
+            }
         }
-        None => context.create_cannot_call_restriction(fun.name_id),
+        None => ReferenceRestriction::CannotCall,
     };
 
-    context.push_reference_restriction(reference_restriction);
+    context.push(ContextEntry::Fun(reference_restriction));
     validate_fun_recursion_in_expression(context, registry, fun.body_id)?;
-    context.pop_reference_restriction();
+    context.pop_n(param_ids.len() + 1);
 
     Ok(())
 }
@@ -209,7 +219,7 @@ fn validate_fun_recursion_in_params_and_leave_in_context(
     for param_id in param_ids {
         let param = registry.param(*param_id);
         validate_fun_recursion_in_expression(context, registry, param.type_id)?;
-        context.push_informationless_entry();
+        context.push(ContextEntry::NoInformation);
     }
     Ok(())
 }
@@ -222,26 +232,26 @@ fn validate_fun_recursion_in_match(
     let match_ = registry.match_(match_id);
     validate_fun_recursion_in_expression(context, registry, match_.matchee_id)?;
     let case_ids = registry.match_case_list(match_.case_list_id);
-    match match_.matchee_id {
+    let matchee_db_index = match match_.matchee_id {
         ExpressionId::Name(matchee_name_id) => {
-            if let Some(mut substructs) = context.matchee_substructs_mut(matchee_name_id) {
-                for case_id in case_ids {
-                    let case = registry.match_case(*case_id);
-                    let param_ids = registry.identifier_list(case.param_list_id);
-                    for case_param_id in param_ids {
-                        let case_param = registry.identifier(*case_param_id);
-                        substructs.push(case_param.id);
-                    }
-                }
-            }
+            let matchee_name = registry.name_expression(matchee_name_id);
+            Some(matchee_name.db_index)
         }
-        _ => {}
-    }
+        _ => None,
+    };
     for case_id in case_ids {
-        let case = registry.match_case(*case_id);
-        validate_fun_recursion_in_expression(context, registry, case.output_id)?;
+        validate_fun_recursion_in_match_case(context, registry, *case_id, matchee_db_index)?;
     }
     Ok(())
+}
+
+fn validate_fun_recursion_in_match_case(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    case_id: NodeId<MatchCase>,
+    matchee_db_index: Option<DbIndex>,
+) -> Result<(), IllegalFunRecursionError> {
+    unimplemented!()
 }
 
 fn validate_fun_recursion_in_forall(
@@ -250,56 +260,17 @@ fn validate_fun_recursion_in_forall(
     forall_id: NodeId<Forall>,
 ) -> Result<(), IllegalFunRecursionError> {
     let forall = registry.forall(forall_id);
-    let param_ids = registry.param_list(forall.param_list_id);
-    for param_id in param_ids {
-        let param = registry.param(*param_id);
-        validate_fun_recursion_in_expression(context, registry, param.type_id)?;
-    }
+    let arity = forall.param_list_id.len;
+
+    validate_fun_recursion_in_params_and_leave_in_context(context, registry, forall.param_list_id)?;
     validate_fun_recursion_in_expression(context, registry, forall.output_id)?;
+    context.pop_n(arity);
 
     Ok(())
 }
 
 #[derive(Clone, Debug)]
-struct Context<'a> {
-    registry: &'a NodeRegistry,
-    raw: RawContext,
-}
-
-impl<'a> Context<'a> {
-    fn new(registry: &'a NodeRegistry) -> Self {
-        Self {
-            registry,
-            raw: RawContext::new(),
-        }
-    }
-}
-
-impl Context<'_> {
-    fn reference_restriction(
-        &self,
-        name_id: NodeId<NameExpression>,
-    ) -> Option<ReferenceRestriction> {
-        let index = self.registry.name_expression(name_id).db_index;
-        let level = self.raw.index_to_level(index);
-        self.raw.reference_restriction(level)
-    }
-
-    fn is_substruct_of_restricted_superstruct(
-        &self,
-        possible_substruct_id: NodeId<NameExpression>,
-        possible_superstruct_level: DbLevel,
-    ) -> bool {
-        unimplemented!()
-    }
-
-    fn push_informationless_entry(&mut self) {
-        self.raw.push(ContextEntry::NoInformation)
-    }
-}
-
-#[derive(Clone, Debug)]
-struct RawContext {
+struct Context {
     stack: Vec<ContextEntry>,
 }
 
@@ -319,13 +290,13 @@ enum ReferenceRestriction {
     CannotCall,
 }
 
-impl RawContext {
+impl Context {
     fn new() -> Self {
         Self { stack: Vec::new() }
     }
 }
 
-impl RawContext {
+impl Context {
     fn len(&self) -> usize {
         self.stack.len()
     }
@@ -339,7 +310,7 @@ impl RawContext {
     }
 }
 
-impl RawContext {
+impl Context {
     /// Panics if `n > self.len()`.
     fn pop_n(&mut self, n: usize) {
         if n > self.len() {
@@ -357,13 +328,22 @@ impl RawContext {
     }
 }
 
-impl RawContext {
-    fn reference_restriction(&self, level: DbLevel) -> Option<ReferenceRestriction> {
+impl Context {
+    fn reference_restriction(&self, index: DbIndex) -> Option<ReferenceRestriction> {
+        let level = self.index_to_level(index);
         let entry = self.stack[level.0];
         match entry {
             ContextEntry::Substructure { .. } => None,
             ContextEntry::Fun(restriction) => Some(restriction),
             ContextEntry::NoInformation => None,
         }
+    }
+
+    fn is_substruct_of_restricted_superstruct(
+        &self,
+        possible_substruct_index: DbIndex,
+        possible_superstruct_level: DbLevel,
+    ) -> bool {
+        unimplemented!()
     }
 }
