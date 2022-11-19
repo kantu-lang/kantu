@@ -321,7 +321,9 @@ enum ReferenceRestriction {
 
 impl Context {
     fn new() -> Self {
-        Self { stack: Vec::new() }
+        Self {
+            stack: vec![ContextEntry::NoInformation, ContextEntry::NoInformation],
+        }
     }
 }
 
