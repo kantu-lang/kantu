@@ -1,428 +1,471 @@
+use light::{DbIndex, IdentifierName};
+
 use super::*;
 
 pub fn generate_code_with_options(
     registry: &NodeRegistry,
     file_ids: &[NodeId<light::File>],
 ) -> Result<Vec<File>, CompileToJavaScriptError> {
-    unimplemented!()
-    // let context = CodeGenContext {
-    //     registry,
-    //     symbol_db,
-    // };
-    // let mut state = CodeGenState::new();
-    // file_ids
-    //     .iter()
-    //     .map(|file_id| generate_code_for_file(&context, &mut state, *file_id))
-    //     .collect()
+    file_ids
+        .iter()
+        .map(|file_id| generate_code_for_file(registry, *file_id))
+        .collect()
 }
 
-// fn generate_code_for_file(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     file_id: NodeId<rst::File>,
-// ) -> Result<File, CompileToJavaScriptError> {
-//     let file = context.registry.file(file_id);
-//     let item_ids = context.registry.file_item_list(file.item_list_id);
-//     let items = {
-//         let mut out = vec![];
-//         out.extend(generate_code_for_explosion_thrower(context, state));
-//         for item_id in item_ids {
-//             match *item_id {
-//                 rst::FileItemNodeId::Type(type_id) => {
-//                     out.extend(generate_code_for_type_statement(context, state, type_id)?);
-//                 }
-//                 rst::FileItemNodeId::Let(let_id) => {
-//                     out.push(FileItem::Const(generate_code_for_let_statement(
-//                         context, state, let_id,
-//                     )?));
-//                 }
-//             }
-//         }
-//         out
-//     };
-//     Ok(File {
-//         id: file.file_id,
-//         items,
-//     })
-// }
+fn generate_code_for_file(
+    registry: &NodeRegistry,
+    file_id: NodeId<light::File>,
+) -> Result<File, CompileToJavaScriptError> {
+    let mut context = Context::new();
+    let file = registry.file(file_id);
+    let item_ids = registry.file_item_list(file.item_list_id);
+    let items = {
+        let mut out = vec![];
+        out.extend(generate_code_for_type1_and_type0_without_adding_to_context());
+        out.extend(generate_code_for_explosion_thrower());
+        for item_id in item_ids {
+            match *item_id {
+                light::FileItemNodeId::Type(type_id) => {
+                    out.extend(generate_code_for_type_statement(
+                        registry,
+                        &mut context,
+                        type_id,
+                    )?);
+                }
+                light::FileItemNodeId::Let(let_id) => {
+                    out.push(FileItem::Const(generate_code_for_let_statement(
+                        registry,
+                        &mut context,
+                        let_id,
+                    )?));
+                }
+            }
+        }
+        out
+    };
+    Ok(File {
+        id: file.file_id,
+        items,
+    })
+}
 
-// fn generate_code_for_explosion_thrower(
-//     _context: &CodeGenContext,
-//     state: &mut CodeGenState,
-// ) -> Vec<FileItem> {
-//     let thrower_name = state.explosion_error_thrower_function_name();
-//     vec![FileItem::Const(ConstStatement {
-//         name: thrower_name.clone(),
-//         value: Expression::Function(Box::new(Function {
-//             name: thrower_name,
-//             params: vec![],
-//             body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
-//                 callee: Expression::Identifier("Error".to_string()),
-//                 args: vec![Expression::Literal(Literal::String {
-//                     unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions.".to_string(),
-//                 })],
-//             })))],
-//         })),
-//     })]
-// }
+fn generate_code_for_type1_and_type0_without_adding_to_context() -> Vec<FileItem> {
+    vec![
+        FileItem::Const(ConstStatement {
+            name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE1.to_string()),
+            value: Expression::Object(Box::new(Object {
+                entries: vec![ObjectEntry {
+                    key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
+                    value: Expression::Literal(Literal::String {
+                        unescaped: TYPE_SPECIES_VALUE__TYPE1.to_string(),
+                    }),
+                }],
+            })),
+        }),
+        FileItem::Const(ConstStatement {
+            name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string()),
+            value: Expression::Object(Box::new(Object {
+                entries: vec![ObjectEntry {
+                    key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
+                    value: Expression::Literal(Literal::String {
+                        unescaped: TYPE_SPECIES_VALUE__TYPE0.to_string(),
+                    }),
+                }],
+            })),
+        }),
+    ]
+}
 
-// /// This produces a Const for the type constructor,
-// /// plus a Const for each variant constructor.
-// ///
-// /// For example if we have
-// /// ```pamlihu
-// /// type List(T: Type) {
-// ///    .Nil(T: Type): List(T),
-// ///    .Cons(T: Type; car: T, cdr: List(T)): List(T),
-// /// }
-// /// ```
-// /// then we need to emit something like:
-// /// ```js
-// /// const List_37 = function List_37(T_38) {
-// ///     return { type_: "List_37", args: [T_38] };
-// /// };
-// /// const List_37__Nil_39 = function List_37__Nil_39(T_40) {
-// ///     return ["Nil", T_40];
-// /// };
-// /// const List_37__Cons_41 = function List_37__Cons_41(T_42, car_43, cdr_44) {
-// ///     return ["Cons", T_42, car_43, cdr_44];
-// /// };
-// /// ```
-// fn generate_code_for_type_statement(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     type_id: NodeId<rst::TypeStatement>,
-// ) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
-//     let type_ = context.registry.type_statement(type_id);
-//     let variant_ids = context.registry.variant_list(type_.variant_list_id);
-//     let mut out = Vec::with_capacity(variant_ids.len() + 1);
+fn generate_code_for_explosion_thrower() -> Vec<FileItem> {
+    let thrower_name = ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string());
+    vec![FileItem::Const(ConstStatement {
+        name: thrower_name.clone(),
+        value: Expression::Function(Box::new(Function {
+            name: thrower_name,
+            params: vec![],
+            body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
+                callee: Expression::Identifier(ValidJsIdentifierName("Error".to_string())),
+                args: vec![Expression::Literal(Literal::String {
+                    unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions.".to_string(),
+                })],
+            })))],
+        })),
+    })]
+}
 
-//     let type_constructor = generate_code_for_type_constructor(context, state, type_id)?;
-//     out.push(FileItem::Const(type_constructor));
+/// This produces a Const for the type constructor,
+/// plus a Const for each variant constructor.
+///
+/// For example if we have
+/// ```pamlihu
+/// type List(T: Type) {
+///    .Nil(T: Type): List(T),
+///    .Cons(T: Type; car: T, cdr: List(T)): List(T),
+/// }
+/// ```
+/// then we need to emit something like:
+/// ```js
+/// const List_37 = function List_37(T_38) {
+///     return { type_: "List_37", args: [T_38] };
+/// };
+/// const List_37__Nil_39 = function List_37__Nil_39(T_40) {
+///     return ["Nil", T_40];
+/// };
+/// const List_37__Cons_41 = function List_37__Cons_41(T_42, car_43, cdr_44) {
+///     return ["Cons", T_42, car_43, cdr_44];
+/// };
+/// ```
+fn generate_code_for_type_statement(
+    registry: &NodeRegistry,
+    context: &mut Context,
+    type_id: NodeId<light::TypeStatement>,
+) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
+    let type_ = registry.type_statement(type_id);
+    let variant_ids = registry.variant_list(type_.variant_list_id);
+    let mut out = Vec::with_capacity(variant_ids.len() + 1);
 
-//     for variant_id in variant_ids {
-//         let variant_constructor =
-//             generate_code_for_variant_constructor(context, state, *variant_id)?;
-//         out.push(FileItem::Const(variant_constructor));
-//     }
+    let type_constructor = generate_code_for_type_constructor(registry, context, type_id)?;
+    out.push(FileItem::Const(type_constructor));
 
-//     Ok(out)
-// }
+    for variant_id in variant_ids {
+        let variant_constructor =
+            generate_code_for_variant_constructor(registry, context, *variant_id)?;
+        out.push(FileItem::Const(variant_constructor));
+    }
 
-// fn generate_code_for_type_constructor(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     type_id: NodeId<rst::TypeStatement>,
-// ) -> Result<ConstStatement, CompileToJavaScriptError> {
-//     let type_ = context.registry.type_statement(type_id);
-//     let type_js_name = type_.name_id.symbol_js_name(context, state);
-//     let params: Vec<String> = {
-//         let type_param_ids = context.registry.param_list(type_.param_list_id);
-//         type_param_ids
-//             .iter()
-//             .map(|id| id.symbol_js_name(context, state))
-//             .collect()
-//     };
-//     let return_value = Expression::Object(Box::new(Object {
-//         entries: vec![
-//             ObjectEntry {
-//                 key: TYPE_SPECIES_KEY.to_string(),
-//                 value: Expression::Literal(Literal::String {
-//                     unescaped: type_js_name.clone(),
-//                 }),
-//             },
-//             ObjectEntry {
-//                 key: TYPE_ARGS_KEY.to_string(),
-//                 value: Expression::Array(Box::new(Array {
-//                     items: params
-//                         .iter()
-//                         .map(|param| Expression::Identifier(param.clone()))
-//                         .collect(),
-//                 })),
-//             },
-//         ],
-//     }));
+    Ok(out)
+}
 
-//     Ok(ConstStatement {
-//         name: type_js_name.clone(),
-//         value: Function {
-//             name: type_js_name,
-//             params: params,
-//             body: vec![FunctionStatement::Return(return_value)],
-//         }
-//         .into_return_value_if_simple_nullary(),
-//     })
-// }
+fn generate_code_for_type_constructor(
+    registry: &NodeRegistry,
+    context: &mut Context,
+    type_id: NodeId<light::TypeStatement>,
+) -> Result<ConstStatement, CompileToJavaScriptError> {
+    let type_ = registry.type_statement(type_id);
 
-// fn generate_code_for_variant_constructor(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     variant_id: NodeId<rst::Variant>,
-// ) -> Result<ConstStatement, CompileToJavaScriptError> {
-//     let variant = context.registry.variant(variant_id);
-//     let variant_symbol_js_name = variant.name_id.symbol_js_name(context, state);
-//     let params: Vec<String> = {
-//         let param_ids = context.registry.param_list(variant.param_list_id);
-//         param_ids
-//             .iter()
-//             .map(|id| id.symbol_js_name(context, state))
-//             .collect()
-//     };
-//     let return_value = {
-//         let mut items = Vec::with_capacity(params.len() + 1);
-//         items.push(Expression::Literal(Literal::String {
-//             // We must use the JS name instead of the Symbol JS name
-//             // since we won't know the Symbol of the match case patterns
-//             // (at the time of writing, the type checker isn't complete,
-//             // so we don't have that information during code generation).
-//             // Later, we can fix this.
-//             unescaped: variant.name_id.js_name(context),
-//         }));
-//         items.extend(
-//             params
-//                 .iter()
-//                 .map(|param| Expression::Identifier(param.clone())),
-//         );
-//         Expression::Array(Box::new(Array { items }))
-//     };
+    let param_js_names: Vec<ValidJsIdentifierName> = {
+        let type_param_ids = registry.param_list(type_.param_list_id);
+        let param_js_names = type_param_ids
+            .iter()
+            .map(|id| {
+                let param = registry.param(*id);
+                let param_name = &registry.identifier(param.name_id).name;
+                context.push_name(param_name);
+                let param_js_name = context.js_name(DbIndex(0));
+                param_js_name
+            })
+            .collect();
+        context.pop_n(type_param_ids.len());
+        param_js_names
+    };
 
-//     Ok(ConstStatement {
-//         name: variant_symbol_js_name.clone(),
-//         value: Function {
-//             name: variant_symbol_js_name,
-//             params: params,
-//             body: vec![FunctionStatement::Return(return_value)],
-//         }
-//         .into_return_value_if_simple_nullary(),
-//     })
-// }
+    let type_name = &registry.identifier(type_.name_id).name;
+    context.push_name(type_name);
+    let type_js_name = context.js_name(DbIndex(0));
 
-// fn generate_code_for_let_statement(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     let_id: NodeId<rst::LetStatement>,
-// ) -> Result<ConstStatement, CompileToJavaScriptError> {
-//     let CodeGenContext { registry, .. } = context;
-//     let let_statement = registry.let_statement(let_id);
-//     let identifier_name = let_statement.name_id.symbol_js_name(context, state);
-//     let value = generate_code_for_expression(context, state, let_statement.value_id)?;
-//     Ok(ConstStatement {
-//         name: identifier_name,
-//         value,
-//     })
-// }
+    let return_value = Expression::Object(Box::new(Object {
+        entries: vec![
+            ObjectEntry {
+                key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
+                value: Expression::Literal(Literal::String {
+                    unescaped: type_js_name.0.clone(),
+                }),
+            },
+            ObjectEntry {
+                key: ValidJsIdentifierName(TYPE_ARGS_KEY.to_string()),
+                value: Expression::Array(Box::new(Array {
+                    items: param_js_names
+                        .iter()
+                        .map(|param| Expression::Identifier(param.clone()))
+                        .collect(),
+                })),
+            },
+        ],
+    }));
 
-// fn generate_code_for_expression(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     id: rst::ExpressionId,
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     let expression = context.registry.expression_ref(id);
-//     match expression {
-//         ExpressionRef::Name(name) => generate_code_for_name_expression(context, state, name),
-//         ExpressionRef::Call(call) => generate_code_for_call(context, state, call),
-//         ExpressionRef::Fun(fun) => generate_code_for_fun(context, state, fun),
-//         ExpressionRef::Match(match_) => generate_code_for_match(context, state, match_),
-//         ExpressionRef::Forall(forall) => generate_code_for_forall(context, state, forall),
-//     }
-// }
+    Ok(ConstStatement {
+        name: type_js_name.clone(),
+        value: Function {
+            name: type_js_name,
+            params: param_js_names,
+            body: vec![FunctionStatement::Return(return_value)],
+        }
+        .into_return_value_if_simple_nullary(),
+    })
+}
 
-// fn generate_code_for_name_expression(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     name: &rst::NameExpression,
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     let CodeGenContext {
-//         symbol_db,
-//         registry,
-//         ..
-//     } = context;
-//     let symbol = symbol_db
-//         .identifier_symbols
-//         .get_using_rightmost((name.id, context.registry));
-//     let source = *symbol_db
-//         .symbol_sources
-//         .get(&symbol)
-//         .expect("A symbol bound to a name expression should have a source.");
-//     match source {
-//         // TODO: Come up with a more robust test to see if the symbol
-//         // was defined by a match case.
-//         // Currently, the only source of untyped params is match cases,
-//         // so this works.
-//         // But if this changes in the future, this will break.
-//         SymbolSource::MatchCaseParam(_param_id, case_id, match_id) => {
-//             let case = registry.match_case(case_id);
-//             let param_ids = registry.identifier_list(case.param_list_id);
-//             let param_index = param_ids
-//                 .iter()
-//                 .position(|id| symbol == symbol_db.identifier_symbols.get(*id))
-//                 .expect("The param list of a match case should contain the param id.");
-//             let matchee_id = registry.match_(match_id).matchee_id;
-//             Ok(Expression::BinaryOp(Box::new(BinaryOp {
-//                 left: generate_code_for_expression(context, state, matchee_id)?,
-//                 op: BinaryOpKind::Index,
-//                 right: Expression::Literal(Literal::Number(
-//                     i32::try_from(param_index + 1)
-//                         .expect("param index should not be absurdly large"),
-//                 )),
-//             })))
-//         }
-//         _ => {
-//             let identifier_name = name.id.symbol_js_name(context, state);
-//             Ok(Expression::Identifier(identifier_name))
-//         }
-//     }
-// }
+fn generate_code_for_variant_constructor(
+    context: &NodeRegistry,
+    context: &mut Context,
+    variant_id: NodeId<light::Variant>,
+) -> Result<ConstStatement, CompileToJavaScriptError> {
+    let variant = registry.variant(variant_id);
+    let variant_symbol_js_name = variant.name_id.symbol_js_name(registry, context);
+    let params: Vec<String> = {
+        let param_ids = registry.param_list(variant.param_list_id);
+        param_ids
+            .iter()
+            .map(|id| id.symbol_js_name(registry, context))
+            .collect()
+    };
+    let return_value = {
+        let mut items = Vec::with_capacity(params.len() + 1);
+        items.push(Expression::Literal(Literal::String {
+            // We must use the JS name instead of the Symbol JS name
+            // since we won't know the Symbol of the match case patterns
+            // (at the time of writing, the type checker isn't complete,
+            // so we don't have that information during code generation).
+            // Later, we can fix this.
+            unescaped: variant.name_id.js_name(context),
+        }));
+        items.extend(
+            params
+                .iter()
+                .map(|param| Expression::Identifier(param.clone())),
+        );
+        Expression::Array(Box::new(Array { items }))
+    };
 
-// fn generate_code_for_call(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     call: &rst::Call,
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     let callee = generate_code_for_expression(context, state, call.callee_id)?;
-//     let args = {
-//         let arg_ids = context.registry.expression_list(call.arg_list_id);
-//         arg_ids
-//             .iter()
-//             .map(|arg_id| generate_code_for_expression(context, state, *arg_id))
-//             .collect::<Result<Vec<_>, _>>()?
-//     };
-//     Ok(Expression::Call(Box::new(Call { callee, args })))
-// }
+    Ok(ConstStatement {
+        name: variant_symbol_js_name.clone(),
+        value: Function {
+            name: variant_symbol_js_name,
+            params: params,
+            body: vec![FunctionStatement::Return(return_value)],
+        }
+        .into_return_value_if_simple_nullary(),
+    })
+}
 
-// fn generate_code_for_fun(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     fun: &rst::Fun,
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     let CodeGenContext { registry, .. } = context;
-//     let name = fun.name_id.symbol_js_name(context, state);
-//     let param_names = {
-//         let param_ids = registry.param_list(fun.param_list_id);
-//         param_ids
-//             .iter()
-//             .map(|param_id| param_id.symbol_js_name(context, state))
-//             .collect::<Vec<_>>()
-//     };
-//     let return_value = generate_code_for_expression(context, state, fun.body_id)?;
-//     Ok(Expression::Function(Box::new(Function {
-//         name,
-//         params: param_names,
-//         body: vec![FunctionStatement::Return(return_value)],
-//     })))
-// }
+fn generate_code_for_let_statement(
+    context: &NodeRegistry,
+    context: &mut Context,
+    let_id: NodeId<light::LetStatement>,
+) -> Result<ConstStatement, CompileToJavaScriptError> {
+    let CodeGenContext { registry, .. } = context;
+    let let_statement = registry.let_statement(let_id);
+    let identifier_name = let_statement.name_id.symbol_js_name(registry, context);
+    let value = generate_code_for_expression(registry, context, let_statement.value_id)?;
+    Ok(ConstStatement {
+        name: identifier_name,
+        value,
+    })
+}
 
-// // TODO: This approach fails to bind match case params.
-// // The simplest way is probably to translate a `match` into a
-// // JavaScript `switch` statement, wrapped in an IIFE.
-// // This has the benefit of
-// //
-// // (1) flattening the code (in cases where
-// // the match has more than 2 cases)
-// //
-// // (2) letting us declare a temporary variable to hold the matchee
-// // to avoid re-evaluating it.
-// //
-// // (3) letting us declare a temporary variable for match case params.
-// //
-// // We may need a more complex state object to implement this.
-// fn generate_code_for_match(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     match_: &rst::Match,
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     let case_ids = context.registry.match_case_list(match_.case_list_id);
-//     let matchee = generate_code_for_expression(context, state, match_.matchee_id)?;
-//     generate_ternary_for_match_cases(context, state, &matchee, case_ids)
-// }
+fn generate_code_for_expression(
+    context: &NodeRegistry,
+    context: &mut Context,
+    id: light::ExpressionId,
+) -> Result<Expression, CompileToJavaScriptError> {
+    let expression = registry.expression_ref(id);
+    match expression {
+        ExpressionRef::Name(name) => generate_code_for_name_expression(registry, context, name),
+        ExpressionRef::Call(call) => generate_code_for_call(registry, context, call),
+        ExpressionRef::Fun(fun) => generate_code_for_fun(registry, context, fun),
+        ExpressionRef::Match(match_) => generate_code_for_match(registry, context, match_),
+        ExpressionRef::Forall(forall) => generate_code_for_forall(registry, context, forall),
+    }
+}
 
-// fn generate_ternary_for_match_cases(
-//     context: &CodeGenContext,
-//     state: &mut CodeGenState,
-//     matchee: &Expression,
-//     case_ids: &[NodeId<rst::MatchCase>],
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     if case_ids.is_empty() {
-//         return Ok(generate_code_for_explosion_error(context, state));
-//     }
+fn generate_code_for_name_expression(
+    context: &NodeRegistry,
+    context: &mut Context,
+    name: &light::NameExpression,
+) -> Result<Expression, CompileToJavaScriptError> {
+    let CodeGenContext {
+        symbol_db,
+        registry,
+        ..
+    } = context;
+    let symbol = symbol_db
+        .identifier_symbols
+        .get_using_rightmost((name.id, registry));
+    let source = *symbol_db
+        .symbol_sources
+        .get(&symbol)
+        .expect("A symbol bound to a name expression should have a source.");
+    match source {
+        // TODO: Come up with a more robust test to see if the symbol
+        // was defined by a match case.
+        // Currently, the only source of untyped params is match cases,
+        // so this works.
+        // But if this changes in the future, this will break.
+        SymbolSource::MatchCaseParam(_param_id, case_id, match_id) => {
+            let case = registry.match_case(case_id);
+            let param_ids = registry.identifier_list(case.param_list_id);
+            let param_index = param_ids
+                .iter()
+                .position(|id| symbol == symbol_db.identifier_symbols.get(*id))
+                .expect("The param list of a match case should contain the param id.");
+            let matchee_id = registry.match_(match_id).matchee_id;
+            Ok(Expression::BinaryOp(Box::new(BinaryOp {
+                left: generate_code_for_expression(registry, context, matchee_id)?,
+                op: BinaryOpKind::Index,
+                right: Expression::Literal(Literal::Number(
+                    i32::try_from(param_index + 1)
+                        .expect("param index should not be absurdly large"),
+                )),
+            })))
+        }
+        _ => {
+            let identifier_name = name.id.symbol_js_name(registry, context);
+            Ok(Expression::Identifier(identifier_name))
+        }
+    }
+}
 
-//     let CodeGenContext { registry, .. } = context;
+fn generate_code_for_call(
+    context: &NodeRegistry,
+    context: &mut Context,
+    call: &light::Call,
+) -> Result<Expression, CompileToJavaScriptError> {
+    let callee = generate_code_for_expression(registry, context, call.callee_id)?;
+    let args = {
+        let arg_ids = registry.expression_list(call.arg_list_id);
+        arg_ids
+            .iter()
+            .map(|arg_id| generate_code_for_expression(registry, context, *arg_id))
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    Ok(Expression::Call(Box::new(Call { callee, args })))
+}
 
-//     let case = registry.match_case(case_ids[0]);
-//     let case_variant_name: String = registry.identifier(case.variant_name_id).name.js_name();
-//     let condition = Expression::BinaryOp(Box::new(BinaryOp {
-//         left: Expression::BinaryOp(Box::new(BinaryOp {
-//             left: matchee.clone(),
-//             op: BinaryOpKind::Index,
-//             right: js_constant_zero(),
-//         })),
-//         op: BinaryOpKind::TripleEqual,
-//         right: Expression::Literal(Literal::String {
-//             unescaped: case_variant_name,
-//         }),
-//     }));
-//     let true_body = generate_code_for_expression(context, state, case.output_id)?;
-//     let false_body = generate_ternary_for_match_cases(context, state, matchee, &case_ids[1..])?;
+fn generate_code_for_fun(
+    context: &NodeRegistry,
+    context: &mut Context,
+    fun: &light::Fun,
+) -> Result<Expression, CompileToJavaScriptError> {
+    let CodeGenContext { registry, .. } = context;
+    let name = fun.name_id.symbol_js_name(registry, context);
+    let param_names = {
+        let param_ids = registry.param_list(fun.param_list_id);
+        param_ids
+            .iter()
+            .map(|param_id| param_id.symbol_js_name(registry, context))
+            .collect::<Vec<_>>()
+    };
+    let return_value = generate_code_for_expression(registry, context, fun.body_id)?;
+    Ok(Expression::Function(Box::new(Function {
+        name,
+        params: param_names,
+        body: vec![FunctionStatement::Return(return_value)],
+    })))
+}
 
-//     Ok(Expression::Ternary(Box::new(Ternary {
-//         condition,
-//         true_body,
-//         false_body,
-//     })))
-// }
+// TODO: This approach fails to bind match case params.
+// The simplest way is probably to translate a `match` into a
+// JavaScript `switch` statement, wrapped in an IIFE.
+// This has the benefit of
+//
+// (1) flattening the code (in cases where
+// the match has more than 2 cases)
+//
+// (2) letting us declare a temporary variable to hold the matchee
+// to avoid re-evaluating it.
+//
+// (3) letting us declare a temporary variable for match case params.
+//
+// We may need a more complex state object to implement this.
+fn generate_code_for_match(
+    context: &NodeRegistry,
+    context: &mut Context,
+    match_: &light::Match,
+) -> Result<Expression, CompileToJavaScriptError> {
+    let case_ids = registry.match_case_list(match_.case_list_id);
+    let matchee = generate_code_for_expression(registry, context, match_.matchee_id)?;
+    generate_ternary_for_match_cases(registry, context, &matchee, case_ids)
+}
 
-// fn generate_code_for_explosion_error(_: &CodeGenContext, state: &mut CodeGenState) -> Expression {
-//     Expression::Call(Box::new(Call {
-//         callee: Expression::Identifier(state.explosion_error_thrower_function_name()),
-//         args: vec![],
-//     }))
-// }
+fn generate_ternary_for_match_cases(
+    context: &NodeRegistry,
+    context: &mut Context,
+    matchee: &Expression,
+    case_ids: &[NodeId<light::MatchCase>],
+) -> Result<Expression, CompileToJavaScriptError> {
+    if case_ids.is_empty() {
+        return Ok(generate_code_for_explosion_error(registry, context));
+    }
 
-// const TYPE_SPECIES_KEY: &str = "type_species";
-// const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
-// const TYPE_ARGS_KEY: &str = "type_args";
+    let CodeGenContext { registry, .. } = context;
 
-// fn generate_code_for_forall(
-//     _context: &CodeGenContext,
-//     _state: &mut CodeGenState,
-//     _name: &rst::Forall,
-// ) -> Result<Expression, CompileToJavaScriptError> {
-//     Ok(Expression::Object(Box::new(Object {
-//         entries: vec![ObjectEntry {
-//             key: TYPE_SPECIES_KEY.to_owned(),
-//             value: Expression::Literal(Literal::String {
-//                 unescaped: TYPE_SPECIES_VALUE__FORALL.to_owned(),
-//             }),
-//         }],
-//     })))
-// }
+    let case = registry.match_case(case_ids[0]);
+    let case_variant_name: String = registry.identifier(case.variant_name_id).name.js_name();
+    let condition = Expression::BinaryOp(Box::new(BinaryOp {
+        left: Expression::BinaryOp(Box::new(BinaryOp {
+            left: matchee.clone(),
+            op: BinaryOpKind::Index,
+            right: js_constant_zero(),
+        })),
+        op: BinaryOpKind::TripleEqual,
+        right: Expression::Literal(Literal::String {
+            unescaped: case_variant_name,
+        }),
+    }));
+    let true_body = generate_code_for_expression(registry, context, case.output_id)?;
+    let false_body = generate_ternary_for_match_cases(registry, context, matchee, &case_ids[1..])?;
 
-// fn js_constant_zero() -> Expression {
-//     Expression::Literal(Literal::Number(0))
-// }
+    Ok(Expression::Ternary(Box::new(Ternary {
+        condition,
+        true_body,
+        false_body,
+    })))
+}
 
-// impl Function {
-//     /// A "simple" function is one that has a body that has a return statement
-//     /// and no other statements.
-//     /// This method returns the return value of the function if it is a simple
-//     /// function with zero parameters, otherwise it returns the function itself.
-//     ///
-//     /// Invocations of nullary type constructors and variant constructors
-//     /// are represented as identifiers, not calls.
-//     /// Thus, when we're declaring these constructors, we must make sure
-//     /// to declare non-nullary constructors as values rather than nullary
-//     /// functions.
-//     fn into_return_value_if_simple_nullary(self) -> Expression {
-//         if self.params.is_empty() && matches!(&self.body[..], [FunctionStatement::Return(_)]) {
-//             match self.body.into_iter().next() {
-//                 Some(FunctionStatement::Return(value)) => value,
-//                 _ => unreachable!(),
-//             }
-//         } else {
-//             Expression::Function(Box::new(self))
-//         }
-//     }
-// }
+fn generate_code_for_explosion_error(_: &NodeRegistry, context: &mut Context) -> Expression {
+    Expression::Call(Box::new(Call {
+        callee: Expression::Identifier(state.explosion_error_thrower_function_name()),
+        args: vec![],
+    }))
+}
+
+const TYPE_SPECIES_KEY: &str = "type_species";
+const TYPE_SPECIES_VALUE__TYPE1: &str = "Type1";
+const TYPE_SPECIES_VALUE__TYPE0: &str = "Type0";
+const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
+const TYPE_ARGS_KEY: &str = "type_args";
+const EXPLOSION_THROWER_NAME: &str = "unreachable";
+
+fn generate_code_for_forall(
+    _context: &NodeRegistry,
+    _state: &mut CodeGenState,
+    _name: &light::Forall,
+) -> Result<Expression, CompileToJavaScriptError> {
+    Ok(Expression::Object(Box::new(Object {
+        entries: vec![ObjectEntry {
+            key: TYPE_SPECIES_KEY.to_owned(),
+            value: Expression::Literal(Literal::String {
+                unescaped: TYPE_SPECIES_VALUE__FORALL.to_owned(),
+            }),
+        }],
+    })))
+}
+
+fn js_constant_zero() -> Expression {
+    Expression::Literal(Literal::Number(0))
+}
+
+impl Function {
+    /// A "simple" function is one that has a body that has a return statement
+    /// and no other statements.
+    /// This method returns the return value of the function if it is a simple
+    /// function with zero parameters, otherwise it returns the function itself.
+    ///
+    /// Invocations of nullary type constructors and variant constructors
+    /// are represented as identifiers, not calls.
+    /// Thus, when we're declaring these constructors, we must make sure
+    /// to declare non-nullary constructors as values rather than nullary
+    /// functions.
+    fn into_return_value_if_simple_nullary(self) -> Expression {
+        if self.params.is_empty() && matches!(&self.body[..], [FunctionStatement::Return(_)]) {
+            match self.body.into_iter().next() {
+                Some(FunctionStatement::Return(value)) => value,
+                _ => unreachable!(),
+            }
+        } else {
+            Expression::Function(Box::new(self))
+        }
+    }
+}
 
 // #[derive(Clone, Debug)]
 // struct CodeGenContext<'a> {
@@ -503,11 +546,11 @@ pub fn generate_code_with_options(
 // trait SymbolJsName {
 //     /// Guarantees that every Symbol will have exactly one name, and that every name will
 //     /// have at most one Symbol.
-//     fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String;
+//     fn symbol_js_name(&self, context: &NodeRegistry, context: &mut Context) -> String;
 // }
 
-// impl SymbolJsName for NodeId<rst::Identifier> {
-//     fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+// impl SymbolJsName for NodeId<light::Identifier> {
+//     fn symbol_js_name(&self, context: &NodeRegistry, context: &mut Context) -> String {
 //         let CodeGenContext {
 //             symbol_db,
 //             registry,
@@ -519,15 +562,15 @@ pub fn generate_code_with_options(
 //     }
 // }
 
-// impl SymbolJsName for NodeId<rst::Param> {
-//     fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
-//         let param = context.registry.param(*self);
-//         param.name_id.symbol_js_name(context, state)
+// impl SymbolJsName for NodeId<light::Param> {
+//     fn symbol_js_name(&self, context: &NodeRegistry, context: &mut Context) -> String {
+//         let param = registry.param(*self);
+//         param.name_id.symbol_js_name(registry, context)
 //     }
 // }
 
-// impl SymbolJsName for NodeId<rst::NameExpression> {
-//     fn symbol_js_name(&self, context: &CodeGenContext, state: &mut CodeGenState) -> String {
+// impl SymbolJsName for NodeId<light::NameExpression> {
+//     fn symbol_js_name(&self, context: &NodeRegistry, context: &mut Context) -> String {
 //         let CodeGenContext {
 //             symbol_db,
 //             registry,
@@ -535,7 +578,7 @@ pub fn generate_code_with_options(
 //         } = context;
 //         let symbol = symbol_db
 //             .identifier_symbols
-//             .get_using_rightmost((*self, context.registry));
+//             .get_using_rightmost((*self, registry));
 //         let component_ids =
 //             registry.identifier_list(registry.name_expression(*self).component_list_id);
 //         let preferred_name = component_ids
@@ -547,22 +590,96 @@ pub fn generate_code_with_options(
 //     }
 // }
 
-// impl NodeId<rst::Identifier> {
-//     fn js_name(&self, context: &CodeGenContext) -> String {
-//         context.registry.identifier(*self).name.js_name()
+// impl NodeId<light::Identifier> {
+//     fn js_name(&self, context: &NodeRegistry) -> String {
+//         registry.identifier(*self).name.js_name()
 //     }
 // }
 
-// impl rst::IdentifierName {
-//     fn js_name(&self) -> String {
-//         match self {
-//             rst::IdentifierName::Standard(s) => s.to_owned(),
-//             rst::IdentifierName::Reserved(rst::ReservedIdentifierName::Underscore) => {
-//                 "_".to_owned()
-//             }
-//             rst::IdentifierName::Reserved(rst::ReservedIdentifierName::TypeTitleCase) => {
-//                 "Type0".to_owned()
-//             }
-//         }
-//     }
-// }
+impl light::IdentifierName {
+    fn js_name(&self) -> ValidJsIdentifierName {
+        let sanitized = match self {
+            light::IdentifierName::Standard(s) => unimplemented!(),
+            light::IdentifierName::Reserved(light::ReservedIdentifierName::Underscore) => {
+                "_".to_owned()
+            }
+            light::IdentifierName::Reserved(light::ReservedIdentifierName::TypeTitleCase) => {
+                TYPE_SPECIES_VALUE__TYPE0.to_owned()
+            }
+        };
+        ValidJsIdentifierName(sanitized)
+    }
+}
+
+impl NodeId<light::NameExpression> {
+    fn db_index_js_name(
+        self,
+        registry: &NodeRegistry,
+        context: &mut Context,
+    ) -> ValidJsIdentifierName {
+        let db_index = registry.name_expression(self).db_index;
+        context.js_name(db_index)
+    }
+}
+
+#[derive(Clone, Debug)]
+struct Context {
+    stack: Vec<ContextEntry>,
+    other_reserved_names: Vec<ValidJsIdentifierName>,
+}
+
+#[derive(Clone, Debug)]
+struct ContextEntry {
+    name: ValidJsIdentifierName,
+}
+
+impl Context {
+    fn new() -> Self {
+        Self {
+            stack: vec![
+                ContextEntry {
+                    name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE1.to_string()),
+                },
+                ContextEntry {
+                    name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string()),
+                },
+            ],
+            other_reserved_names: vec![ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string())],
+        }
+    }
+}
+
+impl Context {
+    fn js_name(&self, index: DbIndex) -> ValidJsIdentifierName {
+        self.stack[index.0].name.clone()
+    }
+
+    fn push_name(&mut self, original: &IdentifierName) {
+        let preferred = original.js_name();
+        if !self.contains(preferred) {
+            self.push(ContextEntry { name: preferred });
+            return;
+        }
+
+        let mut i = 2;
+        loop {
+            let name = ValidJsIdentifierName(format!("{}{}", preferred.0, i));
+            if !self.contains(name) {
+                self.push(ContextEntry { name });
+                return;
+            }
+        }
+    }
+
+    fn contains(&self, name: ValidJsIdentifierName) -> bool {
+        self.stack.iter().any(|x| x.name == name)
+    }
+
+    fn push(&mut self, entry: ContextEntry) {
+        self.stack.push(entry);
+    }
+
+    fn pop_n(&mut self, n: usize) {
+        self.stack.truncate(self.stack.len() - n);
+    }
+}
