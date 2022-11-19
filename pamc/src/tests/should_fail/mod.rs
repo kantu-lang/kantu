@@ -17,7 +17,7 @@ use crate::{
         parse::{parse_file, ParseError},
         simplify_ast::{simplify_file, SimplifyAstError},
         validate_fun_recursion::{validate_fun_recursion_in_file, IllegalFunRecursionError},
-        x_bind_type_independent::{bind_files, BindError},
+        x_bind_type_independent::{bind_files, BindError, OwnedSymbolSource},
         x_lighten::lighten_file,
     },
 };
