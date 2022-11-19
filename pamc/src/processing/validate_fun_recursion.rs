@@ -1,6 +1,6 @@
 use crate::data::{
     x_light_ast::*,
-    x_node_registry::{NodeId, NodeRegistry},
+    x_node_registry::{ListId, NodeId, NodeRegistry},
 };
 
 #[derive(Clone, Debug)]
@@ -61,15 +61,6 @@ fn validate_fun_recursion_in_variant(
         let param = registry.param(*param_id);
         validate_fun_recursion_in_param(context, registry, param)?;
     }
-    Ok(())
-}
-
-fn validate_fun_recursion_in_param(
-    context: &mut Context,
-    registry: &NodeRegistry,
-    param: &Param,
-) -> Result<(), IllegalFunRecursionError> {
-    validate_fun_recursion_in_expression(context, registry, param.type_id)?;
     Ok(())
 }
 
@@ -182,11 +173,7 @@ fn validate_fun_recursion_in_fun(
     fun_id: NodeId<Fun>,
 ) -> Result<(), IllegalFunRecursionError> {
     let fun = registry.fun(fun_id);
-    let param_ids = registry.param_list(fun.param_list_id);
-    for param_id in param_ids {
-        let param = registry.param(*param_id);
-        validate_fun_recursion_in_expression(context, registry, param.type_id)?;
-    }
+    validate_fun_recursion_in_params_and_leave_in_context(context, registry, fun.param_list_id)?;
     validate_fun_recursion_in_expression(context, registry, fun.return_type_id)?;
 
     let decreasing_param_position_and_decreasing_param =
@@ -210,6 +197,20 @@ fn validate_fun_recursion_in_fun(
     validate_fun_recursion_in_expression(context, registry, fun.body_id)?;
     context.pop_reference_restriction();
 
+    Ok(())
+}
+
+fn validate_fun_recursion_in_params_and_leave_in_context(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    param_list_id: ListId<NodeId<Param>>,
+) -> Result<(), IllegalFunRecursionError> {
+    let param_ids = registry.param_list(param_list_id);
+    for param_id in param_ids {
+        let param = registry.param(*param_id);
+        validate_fun_recursion_in_expression(context, registry, param.type_id)?;
+        context.push_informationless_entry();
+    }
     Ok(())
 }
 
@@ -290,6 +291,10 @@ impl Context<'_> {
         possible_superstruct_level: DbLevel,
     ) -> bool {
         unimplemented!()
+    }
+
+    fn push_informationless_entry(&mut self) {
+        self.raw.push(ContextEntry::NoInformation)
     }
 }
 
