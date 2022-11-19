@@ -7,12 +7,18 @@ fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFun
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let file = simplify_file(file).expect("AST Simplification failed");
+    let file = bind_files(vec![file])
+        .expect("Binding failed")
+        .0
+        .into_iter()
+        .next()
+        .unwrap();
     let mut registry = NodeRegistry::empty();
-    let file_id = register_file(&mut registry, file);
+    let file_id = lighten_file(&mut registry, file);
     let file = registry.file(file_id);
-    let symbol_db = bind_symbols_to_identifiers(&registry, vec![file_id]).expect("Binding failed");
-    let _variant_return_type_map = check_variant_return_types_for_file(&symbol_db, &registry, file);
-    let err = validate_fun_recursion_in_file(&symbol_db, &registry, file)
+
+    let _variant_return_type_map = check_variant_return_types_for_file(&registry, file);
+    let err = validate_fun_recursion_in_file(&registry, file)
         .expect_err("Fun recursion validation unexpectedly succeeded");
     panicker(&registry, err);
 }

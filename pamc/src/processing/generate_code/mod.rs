@@ -1,8 +1,6 @@
 use crate::data::{
-    light_ast::*,
-    node_registry::{NodeId, NodeRegistry},
-    symbol_database::SymbolDatabase,
-    variant_return_type::VariantReturnTypeDatabase,
+    x_light_ast::*,
+    x_node_registry::{NodeId, NodeRegistry},
 };
 
 pub mod targets;
@@ -14,27 +12,17 @@ pub trait CompileTarget {
 
     fn generate_code_with_options(
         registry: &NodeRegistry,
-        symbol_db: &SymbolDatabase,
-        variant_db: &VariantReturnTypeDatabase,
         file_ids: &[NodeId<File>],
         options: Self::Options,
     ) -> Result<Self::Ok, Self::Error>;
 
     fn generate_code(
         registry: &NodeRegistry,
-        symbol_db: &SymbolDatabase,
-        variant_db: &VariantReturnTypeDatabase,
         file_ids: &[NodeId<File>],
     ) -> Result<Self::Ok, Self::Error>
     where
         Self::Options: Default,
     {
-        Self::generate_code_with_options(
-            registry,
-            symbol_db,
-            variant_db,
-            file_ids,
-            Default::default(),
-        )
+        Self::generate_code_with_options(registry, file_ids, Default::default())
     }
 }
