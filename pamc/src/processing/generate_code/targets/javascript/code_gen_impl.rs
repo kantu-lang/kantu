@@ -324,6 +324,7 @@ fn generate_code_for_fun(
     context: &mut Context,
     fun: &light::Fun,
 ) -> Result<Expression, CompileToJavaScriptError> {
+    let param_arity = fun.param_list_id.len;
     let param_js_names = registry
         .param_list(fun.param_list_id)
         .iter()
@@ -341,6 +342,7 @@ fn generate_code_for_fun(
         context.js_name(DbIndex(0))
     };
     let return_value = generate_code_for_expression(registry, context, fun.body_id)?;
+    context.pop_n(param_arity + 1);
     Ok(Expression::Function(Box::new(Function {
         name: fun_js_name,
         params: param_js_names,
