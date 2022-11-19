@@ -1,4 +1,4 @@
-use light::{DbIndex, DbLevel, IdentifierName};
+use light::{DbIndex, DbLevel};
 
 use super::*;
 
