@@ -1,4 +1,4 @@
-use light::{DbIndex, IdentifierName};
+use light::{DbIndex, DbLevel, IdentifierName};
 
 use super::*;
 
@@ -635,8 +635,15 @@ impl Context {
 }
 
 impl Context {
+    fn index_to_level(&self, index: DbIndex) -> DbLevel {
+        DbLevel(self.stack.len() - index.0 - 1)
+    }
+}
+
+impl Context {
     fn js_name(&self, index: DbIndex) -> ValidJsIdentifierName {
-        self.stack[index.0].name.clone()
+        let level = self.index_to_level(index);
+        self.stack[level.0].name.clone()
     }
 
     fn push_name(&mut self, original: &IdentifierName) {
@@ -671,6 +678,7 @@ impl Context {
 
     fn contains(&self, name: &ValidJsIdentifierName) -> bool {
         self.stack.iter().any(|x| x.name == *name)
+            || self.other_reserved_names.iter().any(|x| x == name)
     }
 
     fn push(&mut self, entry: ContextEntry) {
