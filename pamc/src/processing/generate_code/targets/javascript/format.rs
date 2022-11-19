@@ -139,8 +139,8 @@ fn write_simple_function(out: &mut Writer, function: &Function, options: &Format
     } else {
         out.push_str("\n");
         out.increase_indentation_level();
-        out.indent();
         for statement in &function.body {
+            out.indent();
             write_function_statement(out, statement, options);
             out.push_str("\n");
         }
@@ -175,8 +175,8 @@ fn write_if_statement(out: &mut Writer, if_statement: &IfStatement, options: &Fo
     } else {
         out.push_str("\n");
         out.increase_indentation_level();
-        out.indent();
         for statement in &if_statement.body {
+            out.indent();
             write_function_statement(out, statement, options);
             out.push_str("\n");
         }
