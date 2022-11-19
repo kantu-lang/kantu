@@ -79,19 +79,25 @@ fn reference_variant_in_variant_param_type() {
     expect_invalid_dot_rhs_error(src, "D");
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum SymbolSourceKind {
-    Type,
-    Variant,
-    Param,
-    Let,
-    Fun,
-    BuiltinTypeTitleCase,
-}
-
 fn expect_name_clash_error(src: &str, expected_name: &str) {
     expect_bind_error(src, |err| match err {
         BindError::NameClash(err) => {
+            assert!(
+                matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
+                "Unexpected old name"
+            );
+            assert!(
+                matches!(err.new, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
+                "Unexpected new name"
+            );
+        }
+        _ => panic!("Unexpected error: {:#?}", err),
+    });
+}
+
+fn expect_dot_expression_rhs_clash_error(src: &str, expected_name: &str) {
+    expect_bind_error(src, |err| match err {
+        BindError::DotExpressionRhsClash(err) => {
             assert!(
                 matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
                 "Unexpected old name"
@@ -114,7 +120,7 @@ fn fun_shadows_own_param() {
 #[test]
 fn duplicate_variants() {
     let src = include_str!("../sample_code/should_fail/scope/duplicate_variants.ph");
-    expect_name_clash_error(src, "F");
+    expect_dot_expression_rhs_clash_error(src, "F");
 }
 
 #[test]
