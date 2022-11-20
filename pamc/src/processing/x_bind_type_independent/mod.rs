@@ -2,7 +2,6 @@ use crate::data::{
     bound_ast::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
-    symbol_database::{Symbol, SymbolProvider},
     FileId,
 };
 

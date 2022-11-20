@@ -4,51 +4,119 @@ use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    provider: SymbolProvider,
-    scope_stack: Vec<Scope>,
+    stack: Vec<ContextEntry>,
+}
+
+/// Instead of implementing this as an enum,
+/// we could have just as easily implemented it
+/// as a struct with a `is_restricted: bool` field.
+///
+/// However, then developers might access the other
+/// fields without first checking the `is_restricted` field,
+/// making it really easy for bugs to sneak in.
+///
+/// By using an enum, developers are forced to use a
+/// `match` statement, which forces acknowledgement of
+/// the is-restricted status.
+#[derive(Clone, Debug)]
+pub enum ContextEntry {
+    Restricted {
+        name_components: Vec<IdentifierName>,
+        source: OwnedSymbolSource,
+    },
+    Unrestricted {
+        name_components: Vec<IdentifierName>,
+        source: OwnedSymbolSource,
+    },
+}
+
+/// Instead of implementing this as an enum,
+/// we could have just as easily implemented it
+/// as a struct with a `is_restricted: bool` field.
+///
+/// However, then developers might access the other
+/// fields without first checking the `is_restricted` field,
+/// making it really easy for bugs to sneak in.
+///
+/// By using an enum, developers are forced to use a
+/// `match` statement, which forces acknowledgement of
+/// the is-restricted status.
+#[derive(Clone, Debug)]
+pub enum ContextEntryWithDbIndex {
+    Restricted {
+        name_components: Vec<IdentifierName>,
+        source: OwnedSymbolSource,
+        db_index: DbIndex,
+    },
+    Unrestricted {
+        name_components: Vec<IdentifierName>,
+        source: OwnedSymbolSource,
+        db_index: DbIndex,
+    },
 }
 
 #[derive(Clone, Debug)]
 pub enum OwnedSymbolSource {
     Identifier(ub::Identifier),
-    Builtin(ReservedIdentifierName),
+    Builtin,
 }
 
 impl Context {
     pub fn with_builtins() -> Self {
-        let provider = SymbolProvider::new();
-        let mut bottom_scope = Scope::empty();
-        bottom_scope.insert_unqualified_name(
-            IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
-            (
-                provider.type0_symbol(),
-                OwnedSymbolSource::Builtin(ReservedIdentifierName::TypeTitleCase),
-            ),
-        );
-
+        let type1_entry = ContextEntry::Unrestricted {
+            name_components: vec![],
+            source: OwnedSymbolSource::Builtin,
+        };
+        let type0_entry = ContextEntry::Unrestricted {
+            name_components: vec![IdentifierName::Reserved(
+                ReservedIdentifierName::TypeTitleCase,
+            )],
+            source: OwnedSymbolSource::Builtin,
+        };
         Self {
-            provider,
-            scope_stack: vec![bottom_scope],
+            stack: vec![type1_entry, type0_entry],
         }
     }
 }
 
 impl Context {
-    pub fn push_scope(&mut self) {
-        self.scope_stack.push(Scope::empty());
+    pub fn push(&mut self, entry: ContextEntry) {
+        self.stack.push(entry);
     }
 
-    pub fn pop_scope_or_panic(&mut self) {
-        self.scope_stack
-            .pop()
-            .expect("Tried to pop scope from empty stack");
+    /// Panics if `n > self.len()`.
+    pub fn pop_n(&mut self, n: usize) {
+        if n > self.len() {
+            panic!(
+                "Tried to pop {} elements from a context with only {} elements",
+                n,
+                self.len()
+            );
+        }
+        self.stack.truncate(self.len() - n);
     }
 }
 
 impl Context {
-    pub fn get_symbol(&self, identifier: &ub::Identifier) -> Result<Symbol, NameNotFoundError> {
-        if let Some(data) = self.get_symbol_data_for_name(&identifier.name) {
-            Ok(data.symbol)
+    pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
+        DbIndex(self.len() - level.0 - 1)
+    }
+
+    pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
+        DbLevel(self.len() - index.0 - 1)
+    }
+}
+
+impl Context {
+    pub fn get_symbol(&self, identifier: &ub::Identifier) -> Result<DbIndex, NameNotFoundError> {
+        if let Some((
+            ContextEntry::Unrestricted {
+                name_components,
+                source,
+            },
+            db_index,
+        )) = self.lookup_name(&[&identifier.name])
+        {
         } else {
             Err(NameNotFoundError {
                 name: identifier.clone().into(),
@@ -56,75 +124,54 @@ impl Context {
         }
     }
 
-    fn get_symbol_data_for_name(&self, name: &IdentifierName) -> Option<&SymbolData> {
-        for scope in self.scope_stack.iter().rev() {
-            if let Some(data) = scope.get_symbol_data_by_name(name) {
-                return Some(data);
-            }
-        }
-        None
+    fn lookup_name(&self, name_components: &[&IdentifierName]) -> Option<(&ContextEntry, DbIndex)> {
+        self.stack
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(raw_index, entry)| {
+                if entry
+                    .name_components
+                    .iter()
+                    .eq(name_components.iter().copied())
+                {
+                    let db_level = DbLevel(raw_index);
+                    let db_index = self.level_to_index(db_level);
+                    Some((entry, db_index))
+                } else {
+                    None
+                }
+            })
     }
 
-    pub fn add_name_to_scope(
+    pub fn add_unrestricted_unqualified_name_to_scope(
         &mut self,
         identifier: &ub::Identifier,
-    ) -> Result<Symbol, NameClashError> {
+    ) -> Result<(), NameClashError> {
         self.check_for_name_clash(identifier)?;
 
-        let symbol = self.provider.new_symbol();
-        self.scope_stack
-            .last_mut()
-            .expect("Tried to declare name in a zero-scope state.")
-            .insert_unqualified_name(
-                identifier.name.clone(),
-                (symbol, OwnedSymbolSource::Identifier(identifier.clone())),
-            );
+        self.push(ContextEntry {
+            name_components: vec![identifier.name.clone()],
+            source: OwnedSymbolSource::Identifier(identifier.clone()),
+            is_restricted: false,
+        });
 
-        Ok(symbol)
+        Ok(())
     }
 
     fn check_for_name_clash(&self, identifier: &ub::Identifier) -> Result<(), NameClashError> {
-        if let Some(data) = self.get_symbol_data_for_name(&identifier.name) {
+        if let Some((entry, _)) = self.lookup_name(&[&identifier.name]) {
             return Err(NameClashError {
-                old: data.source.clone(),
+                old: entry.source.clone(),
                 new: OwnedSymbolSource::Identifier(identifier.clone()),
             });
         } else {
             Ok(())
         }
     }
-
-    pub fn new_symbol(&mut self) -> Symbol {
-        self.provider.new_symbol()
-    }
 }
 
 impl Context {
-    pub fn get_dot_target_symbol(
-        &self,
-        input: (Symbol, &ub::Identifier),
-    ) -> Result<Symbol, InvalidDotExpressionRhsError> {
-        if let Some(data) = self.get_dot_target_symbol_data((input.0, &input.1.name)) {
-            Ok(data.symbol)
-        } else {
-            Err(InvalidDotExpressionRhsError {
-                rhs: input.1.clone().into(),
-            })
-        }
-    }
-
-    pub fn get_dot_target_symbol_data(
-        &self,
-        input: (Symbol, &IdentifierName),
-    ) -> Option<&SymbolData> {
-        for scope in self.scope_stack.iter().rev() {
-            if let Some(symbol) = scope.get_dot_target_symbol_data(input) {
-                return Some(symbol);
-            }
-        }
-        None
-    }
-
     pub fn add_restricted_dot_target_to_scope(
         &mut self,
         input: (Symbol, IdentifierName),
