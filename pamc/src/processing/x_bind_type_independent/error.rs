@@ -6,7 +6,6 @@ pub enum BindError {
     NameNotFound(NameNotFoundError),
     InvalidDotExpressionRhs(InvalidDotExpressionRhsError),
     NameClash(NameClashError),
-    DotExpressionRhsClash(DotExpressionRhsClashError),
 }
 
 #[derive(Clone, Debug)]
@@ -31,17 +30,6 @@ impl From<NameClashError> for BindError {
 }
 
 pub use super::context::OwnedSymbolSource;
-
-#[derive(Clone, Debug)]
-pub struct DotExpressionRhsClashError {
-    pub old: OwnedSymbolSource,
-    pub new: OwnedSymbolSource,
-}
-impl From<DotExpressionRhsClashError> for BindError {
-    fn from(error: DotExpressionRhsClashError) -> Self {
-        Self::DotExpressionRhsClash(error)
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct NameNotFoundError {
