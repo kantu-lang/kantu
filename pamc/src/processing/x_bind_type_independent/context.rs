@@ -195,21 +195,6 @@ impl Context {
     }
 }
 
-impl Context {
-    pub fn into_provider_and_dot_targets(self) -> (SymbolProvider, SymbolToDotTargetsMap) {
-        let dot_targets = {
-            let mut out = SymbolToDotTargetsMap::empty();
-            for scope in self.scope_stack {
-                for ((left, name), data) in scope.into_dot_targets() {
-                    out.insert(left, name, data.symbol);
-                }
-            }
-            out
-        };
-        (self.provider, dot_targets)
-    }
-}
-
 use scope::*;
 mod scope {
     use super::*;
@@ -312,16 +297,6 @@ mod scope {
             input: (Symbol, &IdentifierName),
         ) -> Option<&SymbolData> {
             Some(&self.dot_targets.get(&(input.0, input.1.clone()))?.1)
-        }
-    }
-
-    impl Scope {
-        pub fn into_dot_targets(
-            self,
-        ) -> impl IntoIterator<Item = ((Symbol, IdentifierName), SymbolData)> {
-            self.dot_targets
-                .into_iter()
-                .map(|(left, (_, data))| (left, data))
         }
     }
 }

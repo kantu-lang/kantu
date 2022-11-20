@@ -2,7 +2,7 @@ use crate::data::{
     bound_ast::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
-    symbol_database::{Symbol, SymbolProvider, SymbolToDotTargetsMap},
+    symbol_database::{Symbol, SymbolProvider},
     FileId,
 };
 
@@ -13,9 +13,7 @@ pub use error::*;
 mod error;
 
 /// The returned `Vec<File>` is not guaranteed to be in any particular order.
-pub fn bind_files(
-    files: Vec<ub::File>,
-) -> Result<(Vec<File>, SymbolProvider, SymbolToDotTargetsMap), BindError> {
+pub fn bind_files(files: Vec<ub::File>) -> Result<Vec<File>, BindError> {
     let files = sort_by_dependencies(files)?;
     let mut context = Context::with_builtins();
 
@@ -24,8 +22,7 @@ pub fn bind_files(
         .map(|file| bind_file(&mut context, file))
         .collect::<Result<Vec<_>, BindError>>()?;
 
-    let (provider, dot_targets) = context.into_provider_and_dot_targets();
-    Ok((files, provider, dot_targets))
+    Ok(files)
 }
 
 fn sort_by_dependencies(

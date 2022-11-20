@@ -31,7 +31,6 @@ fn expect_success(src: &str) {
     let file = simplify_file(file).expect("AST Simplification failed");
     let file = bind_files(vec![file])
         .expect("Binding failed")
-        .0
         .into_iter()
         .next()
         .unwrap();

@@ -46,7 +46,7 @@ fn main() {
                             let bind_result =
                                 pamc::processing::x_bind_type_independent::bind_files(vec![file]);
                             match bind_result {
-                                Ok((files, _symbol_provider, _dot_targets)) => {
+                                Ok(files) => {
                                     println!("Bind success!");
                                     println!("{:#?}", &files[0]);
 
