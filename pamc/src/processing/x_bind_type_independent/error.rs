@@ -4,7 +4,6 @@ use super::*;
 pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
     NameNotFound(NameNotFoundError),
-    InvalidDotExpressionRhs(InvalidDotExpressionRhsError),
     NameClash(NameClashError),
 }
 
@@ -38,15 +37,5 @@ pub struct NameNotFoundError {
 impl From<NameNotFoundError> for BindError {
     fn from(error: NameNotFoundError) -> Self {
         Self::NameNotFound(error)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct InvalidDotExpressionRhsError {
-    pub rhs: Identifier,
-}
-impl From<InvalidDotExpressionRhsError> for BindError {
-    fn from(error: InvalidDotExpressionRhsError) -> Self {
-        Self::InvalidDotExpressionRhs(error)
     }
 }

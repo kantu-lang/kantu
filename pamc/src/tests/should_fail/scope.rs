@@ -1,25 +1,20 @@
 use super::*;
 
-fn expect_name_not_found_error(src: &str, expected_unfindable_name: &str) {
+fn expect_name_not_found_error<'a, N>(src: &str, name_components: N)
+where
+    N: Copy + IntoIterator<Item = &'a str>,
+{
     expect_bind_error(src, |err| match err {
         BindError::NameNotFound(err) => {
             assert_eq!(
-                err.name.name,
-                standard_ident_name(expected_unfindable_name),
-                "Unexpected param name"
-            );
-        }
-        _ => panic!("Unexpected error: {:#?}", err),
-    });
-}
-
-fn expect_invalid_dot_rhs_error(src: &str, expected_unfindable_name: &str) {
-    expect_bind_error(src, |err| match err {
-        BindError::InvalidDotExpressionRhs(err) => {
-            let invalid_rhs = err.rhs;
-            assert_eq!(
-                invalid_rhs.name,
-                standard_ident_name(expected_unfindable_name),
+                err.name_components
+                    .iter()
+                    .map(|identifier| identifier.name.clone())
+                    .collect::<Vec<_>>(),
+                name_components
+                    .into_iter()
+                    .map(standard_ident_name)
+                    .collect::<Vec<_>>(),
                 "Unexpected param name"
             );
         }
@@ -30,25 +25,25 @@ fn expect_invalid_dot_rhs_error(src: &str, expected_unfindable_name: &str) {
 #[test]
 fn reference_let_in_body() {
     let src = include_str!("../sample_code/should_fail/scope/ref_let_in_body.ph");
-    expect_name_not_found_error(src, "a");
+    expect_name_not_found_error(src, ["a"]);
 }
 
 #[test]
 fn reference_type_in_param() {
     let src = include_str!("../sample_code/should_fail/scope/ref_type_in_param.ph");
-    expect_name_not_found_error(src, "U");
+    expect_name_not_found_error(src, ["U"]);
 }
 
 #[test]
 fn reference_fun_in_param() {
     let src = include_str!("../sample_code/should_fail/scope/ref_fun_in_param.ph");
-    expect_name_not_found_error(src, "g");
+    expect_name_not_found_error(src, ["g"]);
 }
 
 #[test]
 fn reference_fun_in_return_type() {
     let src = include_str!("../sample_code/should_fail/scope/ref_fun_in_return_type.ph");
-    expect_name_not_found_error(src, "g");
+    expect_name_not_found_error(src, ["g"]);
 }
 
 fn expect_bind_error(src: &str, panicker: impl Fn(BindError)) {
@@ -63,47 +58,31 @@ fn expect_bind_error(src: &str, panicker: impl Fn(BindError)) {
 #[test]
 fn reference_variant_in_prev_variant() {
     let src = include_str!("../sample_code/should_fail/scope/ref_variant_in_prev_variant.ph");
-    expect_invalid_dot_rhs_error(src, "C");
+    expect_name_not_found_error(src, ["Bar", "C"]);
 }
 
 #[test]
 fn reference_variant_in_variant_return_type() {
     let src =
         include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_return_type.ph");
-    expect_invalid_dot_rhs_error(src, "B");
+    expect_name_not_found_error(src, ["Bar", "B"]);
 }
 
 #[test]
 fn reference_variant_in_variant_param_type() {
     let src = include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_param_type.ph");
-    expect_invalid_dot_rhs_error(src, "D");
+    expect_name_not_found_error(src, ["Bar", "D"]);
 }
 
-fn expect_name_clash_error(src: &str, expected_name: &str) {
+fn expect_name_clash_error(src: &str, expected_source_name: &str) {
     expect_bind_error(src, |err| match err {
         BindError::NameClash(err) => {
             assert!(
-                matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
+                matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_source_name)),
                 "Unexpected old name"
             );
             assert!(
-                matches!(err.new, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
-                "Unexpected new name"
-            );
-        }
-        _ => panic!("Unexpected error: {:#?}", err),
-    });
-}
-
-fn expect_dot_expression_rhs_clash_error(src: &str, expected_name: &str) {
-    expect_bind_error(src, |err| match err {
-        BindError::DotExpressionRhsClash(err) => {
-            assert!(
-                matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
-                "Unexpected old name"
-            );
-            assert!(
-                matches!(err.new, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_name)),
+                matches!(err.new, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_source_name)),
                 "Unexpected new name"
             );
         }
@@ -120,7 +99,7 @@ fn fun_shadows_own_param() {
 #[test]
 fn duplicate_variants() {
     let src = include_str!("../sample_code/should_fail/scope/duplicate_variants.ph");
-    expect_dot_expression_rhs_clash_error(src, "F");
+    expect_name_clash_error(src, "F");
 }
 
 #[test]

@@ -163,13 +163,6 @@ fn bind_name_expression(
     }))
 }
 
-fn split_first_and_rest<T>(components: &[T]) -> Option<(&T, &[T])> {
-    if components.is_empty() {
-        return None;
-    }
-    Some((&components[0], &components[1..]))
-}
-
 fn bind_call_expression(context: &mut Context, call: ub::Call) -> Result<Expression, BindError> {
     let callee = bind_expression(context, call.callee)?;
     let args = call
@@ -247,7 +240,7 @@ fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, 
 }
 
 fn create_name_without_adding_to_scope(
-    context: &mut Context,
+    _context: &mut Context,
     identifier: ub::Identifier,
 ) -> Identifier {
     identifier.into()

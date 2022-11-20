@@ -12,7 +12,7 @@ enum PossiblyRestricted<T> {
 }
 
 impl<T> PossiblyRestricted<T> {
-    fn map<U>(self, mut f: impl FnMut(T) -> U) -> PossiblyRestricted<U> {
+    fn map<U>(self, f: impl FnOnce(T) -> U) -> PossiblyRestricted<U> {
         match self {
             Self::Restricted(t) => PossiblyRestricted::Restricted(f(t)),
             Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(f(t)),
@@ -37,13 +37,6 @@ impl<T> PossiblyRestricted<T> {
         match self {
             Self::Restricted(t) => Some(t),
             Self::Unrestricted(_) => None,
-        }
-    }
-
-    fn unrestricted(self) -> Option<T> {
-        match self {
-            Self::Restricted(_) => None,
-            Self::Unrestricted(t) => Some(t),
         }
     }
 
@@ -124,10 +117,6 @@ impl Context {
     pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
         DbIndex(self.len() - level.0 - 1)
     }
-
-    pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
-        DbLevel(self.len() - index.0 - 1)
-    }
 }
 
 impl Context {
@@ -151,14 +140,18 @@ impl Context {
         name_components: N,
     ) -> Option<PossiblyRestricted<(&ContextEntry, DbIndex)>>
     where
-        N: IntoIterator<Item = &'a IdentifierName>,
+        N: Clone + IntoIterator<Item = &'a IdentifierName>,
     {
         self.stack.iter().enumerate().rev().find_map(
             |(raw_index, entry)| -> Option<PossiblyRestricted<(&ContextEntry, DbIndex)>> {
                 entry
                     .as_ref()
                     .map(|entry| -> Option<(&ContextEntry, DbIndex)> {
-                        if entry.name_components.iter().eq(name_components.into_iter()) {
+                        if entry
+                            .name_components
+                            .iter()
+                            .eq(name_components.clone().into_iter())
+                        {
                             let db_level = DbLevel(raw_index);
                             let db_index = self.level_to_index(db_level);
                             Some((entry, db_index))
@@ -191,7 +184,7 @@ impl Context {
         source: &ub::Identifier,
     ) -> Result<(), NameClashError>
     where
-        N: IntoIterator<Item = &'a IdentifierName>,
+        N: Clone + IntoIterator<Item = &'a IdentifierName>,
     {
         if let Some((entry, _)) = self
             .lookup_name(name_components)
@@ -214,9 +207,9 @@ impl Context {
         source: &ub::Identifier,
     ) -> Result<(), NameClashError>
     where
-        N: IntoIterator<Item = &'a IdentifierName>,
+        N: Clone + IntoIterator<Item = &'a IdentifierName>,
     {
-        self.check_for_name_clash(name_components, source)?;
+        self.check_for_name_clash(name_components.clone(), source)?;
 
         self.push_restricted(ContextEntry {
             name_components: name_components.into_iter().cloned().collect(),
@@ -233,7 +226,9 @@ impl Context {
             .expect("Tried to lift a restriction on a name that doesn't exist");
         *wrapped_entry = PossiblyRestricted::Unrestricted(
             wrapped_entry
+                .as_mut()
                 .restricted()
+                .take()
                 .expect("Tried to lift restriction on an unrestricted entry.")
                 .clone(),
         );
@@ -243,8 +238,8 @@ impl Context {
         &mut self,
         name_components: &[&IdentifierName],
     ) -> Option<&mut PossiblyRestricted<ContextEntry>> {
-        self.stack.iter_mut().enumerate().rev().find_map(
-            |(raw_index, entry)| -> Option<&mut PossiblyRestricted<ContextEntry>> {
+        self.stack.iter_mut().rev().find_map(
+            |entry| -> Option<&mut PossiblyRestricted<ContextEntry>> {
                 if entry
                     .as_ref()
                     .ignore_status()
@@ -252,8 +247,6 @@ impl Context {
                     .iter()
                     .eq(name_components.iter().copied())
                 {
-                    let db_level = DbLevel(raw_index);
-                    let db_index = self.level_to_index(db_level);
                     Some(entry)
                 } else {
                     None
