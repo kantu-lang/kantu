@@ -8,6 +8,7 @@ use crate::{
         lighten_ast::lighten_file,
         parse::parse_file,
         simplify_ast::simplify_file,
+        type_check::type_check_files,
         validate_fun_recursion::validate_fun_recursion_in_file,
     },
 };
@@ -38,7 +39,8 @@ fn expect_success(src: &str) {
     let file_id = lighten_file(&mut registry, file);
     let file = registry.file(file_id);
     check_variant_return_types_for_file(&registry, file)
-        .expect("Extracting variant type args failed");
+        .expect("Variant return type validation failed");
     validate_fun_recursion_in_file(&registry, file).expect("Fun recursion validation failed");
+    type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
     let _js_ast = JavaScript::generate_code(&registry, &[file_id]).expect("Code generation failed");
 }

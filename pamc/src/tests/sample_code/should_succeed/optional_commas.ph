@@ -56,10 +56,10 @@ let match_case_param1 = match VariantParam1.O(U.U) {
 let match_case_param2 = match VariantParam2.O(U.U) {
     .O(a,) => U.U
 };
-let match_case_param3 = match VariantParam3.O(U.U) {
+let match_case_param3 = match VariantParam3.O(U.U, U.U) {
     .O(a, b) => U.U
 };
-let match_case_param4 = match VariantParam4.O(U.U) {
+let match_case_param4 = match VariantParam4.O(U.U, U.U) {
     .O(a, b,) => U.U
 };
 
@@ -68,11 +68,11 @@ type Bool {
     .False: Bool,
 }
 
-let match_case1 = match Bool.True {
-    .True => U.U
+let match_case1 = match U.U {
+    .U => U.U
 };
-let match_case2 = match Bool.True {
-    .True => U.U,
+let match_case2 = match U.U {
+    .U => U.U,
 };
 let match_case3 = match Bool.True {
     .True => U.U,
