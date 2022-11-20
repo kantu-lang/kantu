@@ -44,7 +44,7 @@ pub struct MatchCase {
     pub output_id: ExpressionSemanticId,
 }
 
-pub use crate::data::light_ast::IdentifierName;
+pub use crate::data::x_light_ast::IdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {

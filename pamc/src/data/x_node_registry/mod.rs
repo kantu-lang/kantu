@@ -1,25 +1,44 @@
 use crate::data::x_light_ast::*;
 
-pub use crate::data::node_registry::ListId;
-pub use crate::data::node_registry::NodeId;
-
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
 
 use remove_id::RemoveId;
 mod remove_id;
 
-// For example, if the first NameExpression with a
-// `db_index` of 0 will be the _only_ name expression to
-// be registered.
-// Consequently, all subsequent NameExpressions with a
-// `db_index` of 0 will be assigned the same id as the first
-// NameExpression, which will give them incorrect `name` and
-// `start` values.
-// For type checking, we don't care about `name` and `start`,
-// which is the whole reason we're stripping in the first place.
-// However, a developer obviously wants to know the name and location
-// of the identifiers in their erroneous code.
+// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
+// since #[derive] only works if T implements the respective traits.
+#[derive(Debug, PartialEq, Eq)]
+pub struct NodeId<T> {
+    pub raw: usize,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> NodeId<T> {
+    pub fn new(raw: usize) -> Self {
+        Self {
+            raw,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> Clone for NodeId<T> {
+    fn clone(&self) -> NodeId<T> {
+        NodeId {
+            raw: self.raw,
+            _phantom: self._phantom,
+        }
+    }
+}
+
+impl<T> Copy for NodeId<T> {}
+
+impl<T> std::hash::Hash for NodeId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.raw.hash(state);
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FileItemNodeId {
@@ -34,6 +53,38 @@ pub enum ExpressionId {
     Fun(NodeId<Fun>),
     Match(NodeId<Match>),
     Forall(NodeId<Forall>),
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct ListId<T> {
+    pub start: usize,
+    pub len: usize,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> ListId<T> {
+    pub fn new(start: usize, len: usize) -> Self {
+        Self {
+            start,
+            len,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T> Clone for ListId<T> {
+    fn clone(&self) -> ListId<T> {
+        Self::new(self.start, self.len)
+    }
+}
+
+impl<T> Copy for ListId<T> {}
+
+impl<T> std::hash::Hash for ListId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.start.hash(state);
+        self.len.hash(state);
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
