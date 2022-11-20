@@ -118,7 +118,10 @@ fn bind_variant_and_add_restricted_dot_target(
     let unbound_name = variant.name;
     let name = create_name_without_adding_to_scope(context, unbound_name.clone());
 
-    context.add_restricted_name_to_scope(&[type_name, &unbound_name.name], &unbound_name)?;
+    context.add_restricted_name_to_scope(
+        [type_name, &unbound_name.name].iter().copied(),
+        &unbound_name,
+    )?;
 
     Ok(Variant {
         name,
@@ -153,10 +156,7 @@ fn bind_name_expression(
     context: &mut Context,
     name: ub::NameExpression,
 ) -> Result<Expression, BindError> {
-    let name_components = name.components.iter().map(|identifier| &identifier.name);
-    let db_index = context
-        .get_db_index(name_components)
-        .expect("Symbol should be within scope.");
+    let db_index = context.get_db_index(&name.components)?;
     Ok(Expression::Name(NameExpression {
         components: name.components.into_iter().map(Into::into).collect(),
         db_index,
@@ -181,8 +181,7 @@ fn bind_call_expression(context: &mut Context, call: ub::Call) -> Result<Express
 }
 
 fn bind_fun(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError> {
-    context.push_scope();
-
+    let param_arity = fun.params.len();
     let params = fun
         .params
         .into_iter()
@@ -190,7 +189,7 @@ fn bind_fun(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError
         .collect::<Result<Vec<_>, BindError>>()?;
     let return_type = bind_expression(context, fun.return_type)?;
 
-    let (name, _) = create_name_and_add_to_scope(context, fun.name)?;
+    let name = create_name_and_add_to_scope(context, fun.name)?;
 
     let body = bind_expression(context, fun.body)?;
     let fun = Expression::Fun(Box::new(Fun {
@@ -201,7 +200,7 @@ fn bind_fun(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError
         skip_type_checking_body: false,
     }));
 
-    context.pop_scope_or_panic();
+    context.pop_n(param_arity + 1);
     Ok(fun)
 }
 
@@ -216,17 +215,16 @@ fn bind_match(context: &mut Context, match_: ub::Match) -> Result<Expression, Bi
 }
 
 fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCase, BindError> {
-    context.push_scope();
+    let arity = case.params.len();
     let variant_name = case.variant_name.into();
     let params = case
         .params
         .into_iter()
-        .map(|param| -> Result<_, BindError> {
-            Ok(create_name_and_add_to_scope(context, param)?.0)
-        })
+        .map(|param| -> Result<_, BindError> { Ok(create_name_and_add_to_scope(context, param)?) })
         .collect::<Result<Vec<_>, _>>()?;
     let output = bind_expression(context, case.output)?;
-    context.pop_scope_or_panic();
+
+    context.pop_n(arity);
     Ok(MatchCase {
         variant_name,
         params,
@@ -235,8 +233,7 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
 }
 
 fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, BindError> {
-    context.push_scope();
-
+    let arity = forall.params.len();
     let params = forall
         .params
         .into_iter()
@@ -245,7 +242,7 @@ fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, 
     let output = bind_expression(context, forall.output)?;
     let forall = Expression::Forall(Box::new(Forall { params, output }));
 
-    context.pop_scope_or_panic();
+    context.pop_n(arity);
     Ok(forall)
 }
 

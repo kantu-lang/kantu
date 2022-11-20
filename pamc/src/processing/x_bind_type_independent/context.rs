@@ -12,7 +12,7 @@ enum PossiblyRestricted<T> {
 }
 
 impl<T> PossiblyRestricted<T> {
-    fn map<U>(self, f: impl FnMut(T) -> U) -> PossiblyRestricted<U> {
+    fn map<U>(self, mut f: impl FnMut(T) -> U) -> PossiblyRestricted<U> {
         match self {
             Self::Restricted(t) => PossiblyRestricted::Restricted(f(t)),
             Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(f(t)),
@@ -28,8 +28,8 @@ impl<T> PossiblyRestricted<T> {
 
     fn as_mut(&mut self) -> PossiblyRestricted<&mut T> {
         match self {
-            Self::Restricted(t) => PossiblyRestricted::Restricted(&mut t),
-            Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(&mut t),
+            Self::Restricted(t) => PossiblyRestricted::Restricted(t),
+            Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(t),
         }
     }
 
@@ -131,32 +131,34 @@ impl Context {
 }
 
 impl Context {
-    pub fn get_db_index(&self, identifier: &ub::Identifier) -> Result<DbIndex, NameNotFoundError> {
+    pub fn get_db_index(
+        &self,
+        name_components: &[ub::Identifier],
+    ) -> Result<DbIndex, NameNotFoundError> {
         if let Some(PossiblyRestricted::Unrestricted((_, db_index))) =
-            self.lookup_name(&[&identifier.name])
+            self.lookup_name(name_components.iter().map(|identifier| &identifier.name))
         {
             Ok(db_index)
         } else {
             Err(NameNotFoundError {
-                name: identifier.clone().into(),
+                name_components: name_components.iter().cloned().collect(),
             })
         }
     }
 
-    fn lookup_name(
+    fn lookup_name<'a, N>(
         &self,
-        name_components: &[&IdentifierName],
-    ) -> Option<PossiblyRestricted<(&ContextEntry, DbIndex)>> {
+        name_components: N,
+    ) -> Option<PossiblyRestricted<(&ContextEntry, DbIndex)>>
+    where
+        N: IntoIterator<Item = &'a IdentifierName>,
+    {
         self.stack.iter().enumerate().rev().find_map(
             |(raw_index, entry)| -> Option<PossiblyRestricted<(&ContextEntry, DbIndex)>> {
                 entry
                     .as_ref()
                     .map(|entry| -> Option<(&ContextEntry, DbIndex)> {
-                        if entry
-                            .name_components
-                            .iter()
-                            .eq(name_components.iter().copied())
-                        {
+                        if entry.name_components.iter().eq(name_components.into_iter()) {
                             let db_level = DbLevel(raw_index);
                             let db_index = self.level_to_index(db_level);
                             Some((entry, db_index))
@@ -173,7 +175,7 @@ impl Context {
         &mut self,
         identifier: &ub::Identifier,
     ) -> Result<(), NameClashError> {
-        self.check_for_name_clash(&[&identifier.name], identifier)?;
+        self.check_for_name_clash(std::iter::once(&identifier.name), identifier)?;
 
         self.push_unrestricted(ContextEntry {
             name_components: vec![identifier.name.clone()],
@@ -183,11 +185,14 @@ impl Context {
         Ok(())
     }
 
-    fn check_for_name_clash(
+    fn check_for_name_clash<'a, N>(
         &self,
-        name_components: &[&IdentifierName],
+        name_components: N,
         source: &ub::Identifier,
-    ) -> Result<(), NameClashError> {
+    ) -> Result<(), NameClashError>
+    where
+        N: IntoIterator<Item = &'a IdentifierName>,
+    {
         if let Some((entry, _)) = self
             .lookup_name(name_components)
             .map(PossiblyRestricted::ignore_status)
@@ -203,15 +208,18 @@ impl Context {
 }
 
 impl Context {
-    pub fn add_restricted_name_to_scope(
+    pub fn add_restricted_name_to_scope<'a, N>(
         &mut self,
-        name_components: &[&IdentifierName],
+        name_components: N,
         source: &ub::Identifier,
-    ) -> Result<(), NameClashError> {
+    ) -> Result<(), NameClashError>
+    where
+        N: IntoIterator<Item = &'a IdentifierName>,
+    {
         self.check_for_name_clash(name_components, source)?;
 
         self.push_restricted(ContextEntry {
-            name_components: name_components.iter().copied().cloned().collect(),
+            name_components: name_components.into_iter().cloned().collect(),
             source: OwnedSymbolSource::Identifier(source.clone()),
         });
 

@@ -33,7 +33,7 @@ pub use super::context::OwnedSymbolSource;
 
 #[derive(Clone, Debug)]
 pub struct NameNotFoundError {
-    pub name: Identifier,
+    pub name_components: Vec<ub::Identifier>,
 }
 impl From<NameNotFoundError> for BindError {
     fn from(error: NameNotFoundError) -> Self {
