@@ -8,5 +8,7 @@ pub mod simplify_ast;
 pub mod type_check;
 pub mod validate_fun_recursion;
 
+// TODO: Add strict positivity checker
+
 pub mod x_debug;
 pub mod x_expand_lightened;
