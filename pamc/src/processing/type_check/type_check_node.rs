@@ -381,10 +381,6 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
 
 fn get_type_of_match(
     state: &mut State,
-    // TODO: Instead of using coercion targets, we should
-    // use goals, where a goal is a non-optional coercion
-    // target (i.e., a type mismatch error will be returned)
-    // if the coercion is not possible.
     coercion_target_id: Option<NormalFormId>,
     match_id: NodeId<Match>,
 ) -> Result<NormalFormId, TypeCheckError> {

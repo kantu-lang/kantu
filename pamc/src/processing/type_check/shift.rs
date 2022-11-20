@@ -97,8 +97,7 @@ pub trait ShiftDbIndices {
 }
 
 pub trait ShiftAmount: Copy {
-    // TODO: Remove trait bound after debug
-    type ShiftError: std::fmt::Debug;
+    type ShiftError;
     fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Self::ShiftError>;
 }
 

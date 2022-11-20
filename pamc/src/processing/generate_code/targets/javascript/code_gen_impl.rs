@@ -350,20 +350,6 @@ fn generate_code_for_fun(
     })))
 }
 
-// TODO: This approach fails to bind match case params.
-// The simplest way is probably to translate a `match` into a
-// JavaScript `switch` statement, wrapped in an IIFE.
-// This has the benefit of
-//
-// (1) flattening the code (in cases where
-// the match has more than 2 cases)
-//
-// (2) letting us declare a temporary variable to hold the matchee
-// to avoid re-evaluating it.
-//
-// (3) letting us declare a temporary variable for match case params.
-//
-// We may need a more complex state object to implement this.
 fn generate_code_for_match(
     registry: &NodeRegistry,
     context: &mut Context,
