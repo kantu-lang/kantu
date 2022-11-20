@@ -1,7 +1,7 @@
 use crate::data::{
     bound_ast as heavy,
-    x_light_ast::*,
-    x_node_registry::{NodeId, NodeRegistry},
+    light_ast::*,
+    node_registry::{NodeId, NodeRegistry},
 };
 
 fn dummy_id<T>() -> NodeId<T> {

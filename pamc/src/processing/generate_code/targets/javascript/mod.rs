@@ -1,6 +1,6 @@
 use crate::data::{
-    x_light_ast as light,
-    x_node_registry::{ExpressionRef, NodeId, NodeRegistry},
+    light_ast as light,
+    node_registry::{ExpressionRef, NodeId, NodeRegistry},
     FileId,
 };
 use crate::processing::generate_code::CompileTarget;

@@ -1,7 +1,7 @@
 use crate::data::{
+    light_ast::*,
     node_equality_checker::NodeEqualityChecker,
-    x_light_ast::*,
-    x_node_registry::{ListId, NodeId, NodeRegistry},
+    node_registry::{ListId, NodeId, NodeRegistry},
 };
 
 use eval_possibly_ill_typed::*;

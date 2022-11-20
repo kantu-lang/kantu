@@ -1,14 +1,14 @@
 use crate::{
-    data::{x_node_registry::NodeRegistry, FileId},
+    data::{node_registry::NodeRegistry, FileId},
     processing::{
+        bind_type_independent::bind_files,
         check_variant_return_types::check_variant_return_types_for_file,
         generate_code::{targets::javascript::JavaScript, CompileTarget},
         lex::lex,
+        lighten_ast::lighten_file,
         parse::parse_file,
         simplify_ast::simplify_file,
         validate_fun_recursion::validate_fun_recursion_in_file,
-        x_bind_type_independent::bind_files,
-        x_lighten::lighten_file,
     },
 };
 

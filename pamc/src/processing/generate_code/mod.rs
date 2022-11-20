@@ -1,6 +1,6 @@
 use crate::data::{
-    x_light_ast::*,
-    x_node_registry::{NodeId, NodeRegistry},
+    light_ast::*,
+    node_registry::{NodeId, NodeRegistry},
 };
 
 pub mod targets;

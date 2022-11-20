@@ -1,6 +1,6 @@
 use crate::data::{
-    x_light_ast::*,
-    x_node_registry::{ListId, NodeId, NodeRegistry},
+    light_ast::*,
+    node_registry::{ListId, NodeId, NodeRegistry},
 };
 
 use std::{fmt::Debug, hash::Hash};

@@ -6,19 +6,19 @@ mod variant_return_type;
 
 use crate::{
     data::{
+        light_ast::*,
+        node_registry::{ExpressionRef, NodeId, NodeRegistry},
         token::TokenKind,
-        x_light_ast::*,
-        x_node_registry::{ExpressionRef, NodeId, NodeRegistry},
         FileId,
     },
     processing::{
+        bind_type_independent::{bind_files, BindError, OwnedSymbolSource},
         check_variant_return_types::check_variant_return_types_for_file,
         lex::lex,
+        lighten_ast::lighten_file,
         parse::{parse_file, ParseError},
         simplify_ast::{simplify_file, SimplifyAstError},
         validate_fun_recursion::{validate_fun_recursion_in_file, IllegalFunRecursionError},
-        x_bind_type_independent::{bind_files, BindError, OwnedSymbolSource},
-        x_lighten::lighten_file,
     },
 };
 

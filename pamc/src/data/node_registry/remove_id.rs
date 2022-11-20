@@ -1,6 +1,6 @@
 use crate::data::{
-    x_light_ast as with_id,
-    x_node_registry::{ListId, NodeId},
+    light_ast as with_id,
+    node_registry::{ListId, NodeId},
     FileId, TextPosition,
 };
 
@@ -24,7 +24,7 @@ impl RemoveId for with_id::File {
     }
 }
 
-pub type FileItemNodeId = crate::data::x_node_registry::FileItemNodeId;
+pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
@@ -92,7 +92,7 @@ impl RemoveId for with_id::LetStatement {
     }
 }
 
-pub type ExpressionId = crate::data::x_node_registry::ExpressionId;
+pub type ExpressionId = crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {

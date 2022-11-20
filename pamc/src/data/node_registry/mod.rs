@@ -1,4 +1,4 @@
-use crate::data::x_light_ast::*;
+use crate::data::light_ast::*;
 
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;

@@ -44,18 +44,19 @@ fn main() {
                             print_separator();
 
                             let bind_result =
-                                pamc::processing::x_bind_type_independent::bind_files(vec![file]);
+                                pamc::processing::bind_type_independent::bind_files(vec![file]);
                             match bind_result {
                                 Ok(files) => {
                                     println!("Bind success!");
                                     println!("{:#?}", &files[0]);
 
                                     let mut registry =
-                                        pamc::data::x_node_registry::NodeRegistry::empty();
-                                    let lightened_file = pamc::processing::x_lighten::lighten_file(
-                                        &mut registry,
-                                        files[0].clone(),
-                                    );
+                                        pamc::data::node_registry::NodeRegistry::empty();
+                                    let lightened_file =
+                                        pamc::processing::lighten_ast::lighten_file(
+                                            &mut registry,
+                                            files[0].clone(),
+                                        );
                                     println!("Lightened file!");
                                     print_separator();
 
@@ -64,9 +65,9 @@ fn main() {
                                             targets::javascript::format::FormatOptions,
                                             CompileTarget,
                                         },
+                                        type_check::*,
                                         x_debug::debug_expression,
                                         x_expand_lightened::expand_expression,
-                                        x_type_check::*,
                                     };
 
                                     let type_check_result =
@@ -146,7 +147,7 @@ fn main() {
                                                     "WRONG_NUM_OF_ARGS.call: {:#?}",
                                                     &expand_expression(
                                                         &registry,
-                                                        pamc::data::x_light_ast::ExpressionId::Call(
+                                                        pamc::data::light_ast::ExpressionId::Call(
                                                             *call_id
                                                         ),
                                                     ),

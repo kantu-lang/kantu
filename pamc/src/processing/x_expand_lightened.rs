@@ -1,7 +1,7 @@
 use crate::data::{
     bound_ast::*,
-    x_light_ast as light,
-    x_node_registry::{FileItemNodeId, ListId, NodeId, NodeRegistry},
+    light_ast as light,
+    node_registry::{FileItemNodeId, ListId, NodeId, NodeRegistry},
 };
 
 pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
