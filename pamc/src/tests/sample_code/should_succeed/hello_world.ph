@@ -46,6 +46,8 @@ let foo = fun foo_(a: Nat, H: IsO(a)): IsO(a) {
     }
 };
 
+type False {}
+
 type List(T: Type) {
     .Nil(T: Type): List(T),
     .Cons(T: Type, car: T, cdr: List(T)): List(T),
