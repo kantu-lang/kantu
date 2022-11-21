@@ -6,9 +6,6 @@ use std::fmt::Debug;
 use remove_id::RemoveId;
 mod remove_id;
 
-// TODO: Implement Debug, PartialEq, Eq for NodeId<T>,
-// since #[derive] only works if T implements the respective traits.
-#[derive(Debug, PartialEq, Eq)]
 pub struct NodeId<T> {
     pub raw: usize,
     _phantom: std::marker::PhantomData<T>,
@@ -40,6 +37,20 @@ impl<T> std::hash::Hash for NodeId<T> {
     }
 }
 
+impl<T> std::fmt::Debug for NodeId<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NodeId({})", self.raw)
+    }
+}
+
+impl<T> PartialEq<NodeId<T>> for NodeId<T> {
+    fn eq(&self, other: &NodeId<T>) -> bool {
+        self.raw == other.raw
+    }
+}
+
+impl<T> Eq for NodeId<T> {}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FileItemNodeId {
     Type(NodeId<TypeStatement>),
@@ -55,7 +66,6 @@ pub enum ExpressionId {
     Forall(NodeId<Forall>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
 pub struct ListId<T> {
     pub start: usize,
     pub len: usize,
@@ -86,6 +96,20 @@ impl<T> std::hash::Hash for ListId<T> {
         self.len.hash(state);
     }
 }
+
+impl<T> std::fmt::Debug for ListId<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ListId {{ start: {}, len: {} }}", self.start, self.len)
+    }
+}
+
+impl<T> PartialEq<ListId<T>> for ListId<T> {
+    fn eq(&self, other: &ListId<T>) -> bool {
+        self.start == other.start && self.len == other.len
+    }
+}
+
+impl<T> Eq for ListId<T> {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExpressionRef<'a> {
