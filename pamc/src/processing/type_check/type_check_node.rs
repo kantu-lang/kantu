@@ -199,15 +199,7 @@ fn get_type_of_call(
         .copied()
         .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
         .collect();
-    let arg_type_ids = arg_ids
-        .iter()
-        .copied()
-        .map(|arg_id| {
-            get_type_of_expression(
-                state, /* TODO: Infer from call param types. */ None, arg_id,
-            )
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+        
     let callee_type = state.registry.forall(callee_type_id).clone();
     // We use the params of the callee _type_ rather than the params of the
     // callee itself, since the callee type is a normal form, which guarantees
@@ -219,7 +211,7 @@ fn get_type_of_call(
     {
         let expected_arity = callee_type_param_ids.len();
         let actual_arity = arg_ids.len();
-        if callee_type_param_ids.len() != arg_type_ids.len() {
+        if callee_type_param_ids.len() != arg_ids.len() {
             return Err(TypeCheckError::WrongNumberOfArguments {
                 call_id: call_id,
                 expected: expected_arity,
@@ -227,10 +219,9 @@ fn get_type_of_call(
             });
         }
     }
-    for (i, (callee_type_param_id, arg_type_id)) in callee_type_param_ids
+    for (i, callee_type_param_id) in callee_type_param_ids
         .iter()
         .copied()
-        .zip(arg_type_ids.iter().copied())
         .enumerate()
     {
         let substituted_param_type_id = {
@@ -262,6 +253,9 @@ fn get_type_of_call(
                 .downshift(i, state.registry);
             evaluate_well_typed_expression(state, substituted)
         };
+
+        let arg_type_id = get_type_of_expression(state, Some(substituted_param_type_id), arg_ids[i])?;
+
         if !is_left_type_assignable_to_right_type(state, arg_type_id, substituted_param_type_id) {
             return Err(TypeCheckError::TypeMismatch {
                 expression_id: arg_ids[i],
