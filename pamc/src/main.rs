@@ -65,9 +65,11 @@ fn main() {
                                             targets::javascript::format::FormatOptions,
                                             CompileTarget,
                                         },
+                                        test_utils::{
+                                            expand_lightened::expand_expression,
+                                            format::format_expression_with_default_options,
+                                        },
                                         type_check::*,
-                                        x_debug::debug_expression,
-                                        x_expand_lightened::expand_expression,
                                     };
 
                                     let type_check_result =
@@ -108,32 +110,29 @@ fn main() {
                                             {
                                                 println!(
                                                     "TYPE_MISMATCH.expression: \n{}",
-                                                    debug_expression(
+                                                    format_expression_with_default_options(
                                                         &expand_expression(
                                                             &registry,
                                                             *expression_id
                                                         ),
-                                                        0
                                                     )
                                                 );
                                                 println!(
                                                     "TYPE_MISMATCH.expected_type: \n{}",
-                                                    debug_expression(
+                                                    format_expression_with_default_options(
                                                         &expand_expression(
                                                             &registry,
                                                             expected_type_id.raw()
                                                         ),
-                                                        0
                                                     )
                                                 );
                                                 println!(
                                                     "TYPE_MISMATCH.actual_type: \n{}",
-                                                    debug_expression(
+                                                    format_expression_with_default_options(
                                                         &expand_expression(
                                                             &registry,
                                                             actual_type_id.raw()
                                                         ),
-                                                        0
                                                     )
                                                 );
                                             }
