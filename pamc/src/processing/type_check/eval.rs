@@ -1,43 +1,60 @@
 use super::*;
 
-// TODO: DRY with respect to eval_possibly_ill_typed.rs
+#[derive(Clone, Debug)]
+pub enum EvalError {
+    BadCallee(NormalFormId),
+    IllTypedParams(ListId<NodeId<Param>>, TypeCheckError),
+    NoMatchingCase(NodeId<Match>),
+}
 
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
+    evaluate_possibly_ill_typed_expression(state, id).expect(
+        "evaluate_possibly_ill_typed_expression should return Ok() if the expression is well-typed",
+    )
+}
+
+pub(super) fn evaluate_possibly_ill_typed_expression(
+    state: &mut State,
+    id: ExpressionId,
+) -> Result<NormalFormId, EvalError> {
     let out = match id {
-        ExpressionId::Name(name_id) => evaluate_well_typed_name_expression(state, name_id),
-        ExpressionId::Call(call_id) => evaluate_well_typed_call(state, call_id),
-        ExpressionId::Fun(fun_id) => evaluate_well_typed_fun(state, fun_id),
-        ExpressionId::Match(match_id) => evaluate_well_typed_match(state, match_id),
-        ExpressionId::Forall(forall_id) => evaluate_well_typed_forall(state, forall_id),
+        ExpressionId::Name(name_id) => evaluate_possibly_ill_typed_name_expression(state, name_id),
+        ExpressionId::Call(call_id) => evaluate_possibly_ill_typed_call(state, call_id),
+        ExpressionId::Fun(fun_id) => evaluate_possibly_ill_typed_fun(state, fun_id),
+        ExpressionId::Match(match_id) => evaluate_possibly_ill_typed_match(state, match_id),
+        ExpressionId::Forall(forall_id) => evaluate_possibly_ill_typed_forall(state, forall_id),
     };
     out
 }
 
-fn evaluate_well_typed_name_expression(
+fn evaluate_possibly_ill_typed_name_expression(
     state: &mut State,
     name_id: NodeId<NameExpression>,
-) -> NormalFormId {
+) -> Result<NormalFormId, EvalError> {
     let name = state.registry.name_expression(name_id);
     let definition = state.context.get_definition(name.db_index, state.registry);
     match definition {
-        ContextEntryDefinition::Alias { value_id } => value_id,
+        ContextEntryDefinition::Alias { value_id } => Ok(value_id),
 
         ContextEntryDefinition::Adt {
             variant_name_list_id: _,
         }
         | ContextEntryDefinition::Variant { name_id: _ }
         | ContextEntryDefinition::Uninterpreted => {
-            NormalFormId::unchecked_new(ExpressionId::Name(name_id))
+            Ok(NormalFormId::unchecked_new(ExpressionId::Name(name_id)))
         }
     }
 }
 
-fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalFormId {
+fn evaluate_possibly_ill_typed_call(
+    state: &mut State,
+    call_id: NodeId<Call>,
+) -> Result<NormalFormId, EvalError> {
     fn register_normalized_nonsubstituted_fun(
         registry: &mut NodeRegistry,
         normalized_callee_id: NormalFormId,
         normalized_arg_ids: &[NormalFormId],
-    ) -> NormalFormId {
+    ) -> Result<NormalFormId, EvalError> {
         let normalized_arg_ids = normalized_arg_ids
             .iter()
             .copied()
@@ -49,19 +66,21 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
             callee_id: normalized_callee_id.raw(),
             arg_list_id: normalized_arg_list_id,
         });
-        NormalFormId::unchecked_new(ExpressionId::Call(normalized_call_id))
+        Ok(NormalFormId::unchecked_new(ExpressionId::Call(
+            normalized_call_id,
+        )))
     }
 
     let call = state.registry.call(call_id).clone();
 
-    let normalized_callee_id = evaluate_well_typed_expression(state, call.callee_id);
+    let normalized_callee_id = evaluate_possibly_ill_typed_expression(state, call.callee_id)?;
 
     let normalized_arg_ids: Vec<NormalFormId> = {
         let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
         arg_ids
             .into_iter()
-            .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
-            .collect()
+            .map(|arg_id| evaluate_possibly_ill_typed_expression(state, arg_id))
+            .collect::<Result<Vec<_>, _>>()?
     };
 
     match normalized_callee_id.raw() {
@@ -120,7 +139,7 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                 .body_id
                 .subst_all(&substitutions, &mut state.without_context());
             let shifted_body_id = body_id.downshift(arity + 1, state.registry);
-            evaluate_well_typed_expression(state, shifted_body_id)
+            evaluate_possibly_ill_typed_expression(state, shifted_body_id)
         }
         ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
             register_normalized_nonsubstituted_fun(
@@ -129,9 +148,7 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                 &normalized_arg_ids,
             )
         }
-        ExpressionId::Forall(_) => {
-            panic!("A well-typed Call expression cannot have a Forall as its callee.")
-        }
+        ExpressionId::Forall(_) => Err(EvalError::BadCallee(normalized_callee_id)),
     }
 }
 
@@ -170,15 +187,21 @@ fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool
     try_as_variant_expression(state, expression_id.raw()).is_some()
 }
 
-fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalFormId {
+fn evaluate_possibly_ill_typed_fun(
+    state: &mut State,
+    fun_id: NodeId<Fun>,
+) -> Result<NormalFormId, EvalError> {
     let fun = state.registry.fun(fun_id).clone();
     let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, fun.param_list_id)
-            .expect("A well-typed Fun should have well-typed params.");
-    let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
+        match normalize_params_and_leave_params_in_context(state, fun.param_list_id) {
+            Ok(id) => id,
+            Err(err) => return Err(EvalError::IllTypedParams(fun.param_list_id, err)),
+        };
+    let normalized_return_type_id =
+        evaluate_possibly_ill_typed_expression(state, fun.return_type_id)?;
     state.context.pop_n(fun.param_list_id.len);
 
-    NormalFormId::unchecked_new(ExpressionId::Fun(
+    Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
         state.registry.add_fun_and_overwrite_its_id(Fun {
             id: dummy_id(),
             name_id: fun.name_id,
@@ -187,12 +210,15 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
             body_id: fun.body_id,
             skip_type_checking_body: fun.skip_type_checking_body,
         }),
-    ))
+    )))
 }
 
-fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> NormalFormId {
+fn evaluate_possibly_ill_typed_match(
+    state: &mut State,
+    match_id: NodeId<Match>,
+) -> Result<NormalFormId, EvalError> {
     let match_ = state.registry.match_(match_id).clone();
-    let normalized_matchee_id = evaluate_well_typed_expression(state, match_.matchee_id);
+    let normalized_matchee_id = evaluate_possibly_ill_typed_expression(state, match_.matchee_id)?;
 
     let (normalized_matchee_variant_name_id, normalized_matchee_arg_list_id) =
         if let Some((variant_name_id, arg_list_id)) =
@@ -200,33 +226,39 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
         {
             (variant_name_id, arg_list_id)
         } else {
-            return NormalFormId::unchecked_new(ExpressionId::Match(
+            return Ok(NormalFormId::unchecked_new(ExpressionId::Match(
                 state.registry.add_match_and_overwrite_its_id(Match {
                     id: dummy_id(),
                     matchee_id: normalized_matchee_id.raw(),
                     case_list_id: match_.case_list_id,
                 }),
-            ));
+            )));
         };
 
-    let case_id = *state.registry
+    let case_id = state
+        .registry
         .match_case_list(match_.case_list_id)
         .iter()
         .find(|case_id| {
             let case = state.registry.match_case(**case_id);
-            let case_variant_name: &IdentifierName = &state
+            let case_variant_name: &IdentifierName =
+                &state.registry.identifier(case.variant_name_id).name;
+            let matchee_variant_name: &IdentifierName = &state
                 .registry
-                .identifier(case.variant_name_id)
+                .identifier(normalized_matchee_variant_name_id)
                 .name;
-            let matchee_variant_name: &IdentifierName = &state.registry.identifier(normalized_matchee_variant_name_id).name;
             case_variant_name == matchee_variant_name
         })
-         .expect("A well-typed Match expression should have a case for every variant of its matchee's type.");
+        .copied();
+    let case_id = match case_id {
+        Some(id) => id,
+        None => return Err(EvalError::NoMatchingCase(match_id)),
+    };
 
     let case = state.registry.match_case(case_id).clone();
 
     match normalized_matchee_arg_list_id {
-        PossibleArgListId::Nullary => evaluate_well_typed_expression(state, case.output_id),
+        PossibleArgListId::Nullary => evaluate_possibly_ill_typed_expression(state, case.output_id),
         PossibleArgListId::Some(normalized_matchee_arg_list_id) => {
             let case_param_ids = state.registry.identifier_list(case.param_list_id).to_vec();
             let case_arity = case_param_ids.len();
@@ -260,24 +292,29 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .output_id
                 .subst_all(&substitutions, &mut state.without_context())
                 .downshift(case_arity, state.registry);
-            evaluate_well_typed_expression(state, substituted_body)
+            evaluate_possibly_ill_typed_expression(state, substituted_body)
         }
     }
 }
 
-fn evaluate_well_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> NormalFormId {
+fn evaluate_possibly_ill_typed_forall(
+    state: &mut State,
+    forall_id: NodeId<Forall>,
+) -> Result<NormalFormId, EvalError> {
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, forall.param_list_id)
-            .expect("A well-typed Forall should have well-typed params.");
-    let normalized_output_id = evaluate_well_typed_expression(state, forall.output_id);
+        match normalize_params_and_leave_params_in_context(state, forall.param_list_id) {
+            Ok(id) => id,
+            Err(err) => return Err(EvalError::IllTypedParams(forall.param_list_id, err)),
+        };
+    let normalized_output_id = evaluate_possibly_ill_typed_expression(state, forall.output_id)?;
     state.context.pop_n(forall.param_list_id.len);
 
-    NormalFormId::unchecked_new(ExpressionId::Forall(
+    Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
         state.registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
             param_list_id: normalized_param_list_id,
             output_id: normalized_output_id.raw(),
         }),
-    ))
+    )))
 }
