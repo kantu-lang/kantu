@@ -37,3 +37,5 @@ fn component_identifier_names(
         .map(|component_id| registry.identifier(*component_id).name.clone())
         .collect()
 }
+
+// TODO: Add type checker tests
