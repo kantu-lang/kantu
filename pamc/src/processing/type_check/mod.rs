@@ -23,6 +23,10 @@ pub use type_check_node::type_check_files;
 use type_check_node::*;
 mod type_check_node;
 
+// TODO: Make sure we clean up the context
+// when we short-circuit out of a function with
+// `?`.
+
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
     IllegalTypeExpression(ExpressionId),
