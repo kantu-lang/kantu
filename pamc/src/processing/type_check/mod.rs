@@ -26,7 +26,7 @@ mod type_check_node;
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
     IllegalTypeExpression(ExpressionId),
-    BadCallee(ExpressionId),
+    IllegalCallee(ExpressionId),
     WrongNumberOfArguments {
         call_id: NodeId<Call>,
         expected: usize,

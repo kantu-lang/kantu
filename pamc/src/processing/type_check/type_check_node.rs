@@ -191,7 +191,7 @@ fn get_type_of_call(
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
     } else {
-        return Err(TypeCheckError::BadCallee(call.callee_id));
+        return Err(TypeCheckError::IllegalCallee(call.callee_id));
     };
     let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
     let normalized_arg_ids: Vec<NormalFormId> = arg_ids
@@ -199,7 +199,7 @@ fn get_type_of_call(
         .copied()
         .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
         .collect();
-        
+
     let callee_type = state.registry.forall(callee_type_id).clone();
     // We use the params of the callee _type_ rather than the params of the
     // callee itself, since the callee type is a normal form, which guarantees
