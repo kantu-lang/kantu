@@ -141,10 +141,10 @@ mod illegal_callee {
     }
 }
 
-mod arity_mismatch {
+mod wrong_number_of_arguments {
     use super::*;
 
-    fn expect_arity_mismatch_error(
+    fn expect_wrong_number_of_arguments_error(
         src: &str,
         expected_illegal_call_src: &str,
         expected_expected_arity: usize,
@@ -173,20 +173,24 @@ mod arity_mismatch {
 
     #[test]
     fn forall() {
-        let src = include_str!("../sample_code/should_fail/type_check/arity_mismatch/fun.ph");
-        expect_arity_mismatch_error(src, "bar_(U.U, U.U,)", 1);
+        let src =
+            include_str!("../sample_code/should_fail/type_check/wrong_number_of_arguments/fun.ph");
+        expect_wrong_number_of_arguments_error(src, "bar_(U.U, U.U,)", 1);
     }
 
     #[test]
     fn type_() {
-        let src = include_str!("../sample_code/should_fail/type_check/arity_mismatch/type.ph");
-        expect_arity_mismatch_error(src, "V(U.U, U.U,)", 1);
+        let src =
+            include_str!("../sample_code/should_fail/type_check/wrong_number_of_arguments/type.ph");
+        expect_wrong_number_of_arguments_error(src, "V(U.U, U.U,)", 1);
     }
 
     #[test]
     fn variant() {
-        let src = include_str!("../sample_code/should_fail/type_check/arity_mismatch/variant.ph");
-        expect_arity_mismatch_error(src, "Bar.B(Empty, Empty,)", 1);
+        let src = include_str!(
+            "../sample_code/should_fail/type_check/wrong_number_of_arguments/variant.ph"
+        );
+        expect_wrong_number_of_arguments_error(src, "Bar.B(Empty, Empty,)", 1);
     }
 }
 
