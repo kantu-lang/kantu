@@ -20,8 +20,8 @@ use crate::{
         parse::{parse_file, ParseError},
         simplify_ast::{simplify_file, SimplifyAstError},
         test_utils::{
-            expand_lightened::expand_expression,
-            format::{format_expression, FormatOptions},
+            expand_lightened::{expand_expression, expand_match_case},
+            format::{format_expression, format_match_case, FormatOptions},
         },
         type_check::{type_check_files, TypeCheckError},
         validate_fun_recursion::{validate_fun_recursion_in_file, IllegalFunRecursionError},
