@@ -2,7 +2,7 @@ use super::*;
 
 /// The job of `panicker` is to panic if the error is different than the expected
 /// error.
-fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheckError)) {
+fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheckError)) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -27,7 +27,7 @@ mod illegal_type {
     use super::*;
 
     fn expect_illegal_type_error(src: &str, expected_illegal_type_src: &str) {
-        expect_recursion_error(src, |registry, err| match err {
+        expect_type_check_error(src, |registry, err| match err {
             TypeCheckError::IllegalTypeExpression(id) => {
                 let actual_src = format_expression(
                     &expand_expression(registry, id),
@@ -88,7 +88,7 @@ mod illegal_callee {
     use super::*;
 
     fn expect_illegal_callee_error(src: &str, expected_illegal_type_src: &str) {
-        expect_recursion_error(src, |registry, err| match err {
+        expect_type_check_error(src, |registry, err| match err {
             TypeCheckError::IllegalCallee(id) => {
                 let actual_src = format_expression(
                     &expand_expression(registry, id),
@@ -138,6 +138,55 @@ mod illegal_callee {
     fn type0() {
         let src = include_str!("../sample_code/should_fail/type_check/illegal_callee/type0.ph");
         expect_illegal_callee_error(src, "Type");
+    }
+}
+
+mod arity_mismatch {
+    use super::*;
+
+    fn expect_arity_mismatch_error(
+        src: &str,
+        expected_illegal_type_src: &str,
+        expected_expected_arity: usize,
+    ) {
+        expect_type_check_error(src, |registry, err| match err {
+            TypeCheckError::WrongNumberOfArguments {
+                call_id,
+                expected: actual_expected_arity,
+                ..
+            } => {
+                let actual_src = format_expression(
+                    &expand_expression(registry, ExpressionId::Call(call_id)),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: false,
+                        print_fun_body_status: false,
+                    },
+                );
+                assert_eq_up_to_white_space(&actual_src, expected_illegal_type_src);
+                assert_eq!(expected_expected_arity, actual_expected_arity);
+            }
+            _ => panic!("Unexpected error: {:#?}", err),
+        });
+    }
+
+    #[test]
+    fn forall() {
+        let src = include_str!("../sample_code/should_fail/type_check/arity_mismatch/fun.ph");
+        expect_arity_mismatch_error(src, "bar_(U.U, U.U,)", 1);
+    }
+
+    #[test]
+    fn type_() {
+        let src = include_str!("../sample_code/should_fail/type_check/arity_mismatch/type.ph");
+        expect_arity_mismatch_error(src, "V(U.U, U.U,)", 1);
+    }
+
+    #[test]
+    fn variant() {
+        let src = include_str!("../sample_code/should_fail/type_check/arity_mismatch/variant.ph");
+        expect_arity_mismatch_error(src, "Bar.B(Empty, Empty,)", 1);
     }
 }
 
