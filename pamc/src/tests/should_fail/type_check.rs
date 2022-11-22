@@ -47,4 +47,34 @@ fn illegal_type_forall_output() {
     expect_illegal_type_error(src, "U.U");
 }
 
+#[test]
+fn illegal_type_forall_param() {
+    let src = include_str!("../sample_code/should_fail/type_check/illegal_type/forall_param.ph");
+    expect_illegal_type_error(src, "U.U");
+}
+
+#[test]
+fn illegal_type_fun_param() {
+    let src = include_str!("../sample_code/should_fail/type_check/illegal_type/fun_param.ph");
+    expect_illegal_type_error(src, "U.U");
+}
+
+#[test]
+fn illegal_type_fun_return() {
+    let src = include_str!("../sample_code/should_fail/type_check/illegal_type/fun_return.ph");
+    expect_illegal_type_error(src, "U.U");
+}
+
+#[test]
+fn illegal_type_type_param() {
+    let src = include_str!("../sample_code/should_fail/type_check/illegal_type/type_param.ph");
+    expect_illegal_type_error(src, "U.U");
+}
+
+#[test]
+fn illegal_type_variant_param() {
+    let src = include_str!("../sample_code/should_fail/type_check/illegal_type/variant_param.ph");
+    expect_illegal_type_error(src, "U.U");
+}
+
 // TODO: Add other tests
