@@ -19,7 +19,8 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
     check_variant_return_types_for_file(&registry, file)
         .expect("Variant return type validation failed");
     validate_fun_recursion_in_file(&registry, file).expect("Fun recursion validation failed");
-    let err = type_check_files(&mut registry, &[file_id]).expect_err("Type checking failed");
+    let err = type_check_files(&mut registry, &[file_id])
+        .expect_err("Type checking unexpected succeeded");
     panicker(&registry, err);
 }
 
@@ -246,6 +247,74 @@ mod wrong_number_of_case_params {
     fn expected_2_actually_1() {
         let src = include_str!("../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_2_actually_1.ph");
         expect_wrong_number_of_case_params_error(src, "Refl(O) => O,", 2);
+    }
+}
+
+mod type_mismatch {
+    use super::*;
+
+    fn expect_type_mismatch_error(
+        src: &str,
+        expected_expression_src: &str,
+        expected_expected_type_src: &str,
+        expected_actual_type_src: &str,
+    ) {
+        expect_type_check_error(src, |registry, err| match err {
+            TypeCheckError::TypeMismatch {
+                expression_id,
+                expected_type_id,
+                actual_type_id,
+            } => {
+                let actual_expression_src = format_expression(
+                    &expand_expression(registry, expression_id),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: false,
+                        print_fun_body_status: false,
+                    },
+                );
+                assert_eq_up_to_white_space(&actual_expression_src, expected_expression_src);
+
+                let actual_expected_type_src = format_expression(
+                    &expand_expression(registry, expected_type_id.raw()),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: false,
+                        print_fun_body_status: false,
+                    },
+                );
+                assert_eq_up_to_white_space(&actual_expected_type_src, expected_expected_type_src);
+
+                let actual_actual_type_src = format_expression(
+                    &expand_expression(registry, actual_type_id.raw()),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: false,
+                        print_fun_body_status: false,
+                    },
+                );
+                assert_eq_up_to_white_space(&actual_actual_type_src, expected_actual_type_src);
+            }
+            _ => panic!("Unexpected error: {:#?}", err),
+        });
+    }
+
+    #[test]
+    fn adt() {
+        let src = include_str!("../sample_code/should_fail/type_check/type_mismatch/adt.ph");
+        expect_type_mismatch_error(src, "U2.U2", "U1", "U2");
+    }
+
+    // TODO: Fix
+    #[ignore]
+    #[test]
+    fn type_not_a_type() {
+        let src =
+            include_str!("../sample_code/should_fail/type_check/type_mismatch/type_not_a_type.ph");
+        expect_type_mismatch_error(src, "Type", "Type", "Type1");
     }
 }
 
