@@ -14,6 +14,6 @@ let foo = fun bar_(x: Nat): Nat {
             .O => Eq.Refl(Nat, Nat.O),
         }
     {
-        .Refl(_U, _x) => U.U,
+        .Refl(_U, _x) => Nat.O,
     }
 };
