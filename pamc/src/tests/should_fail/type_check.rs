@@ -362,8 +362,6 @@ mod non_adt_matchee {
         expect_non_adt_matchee_error(src, "U", "Type");
     }
 
-    // TODO: Fix
-    #[ignore]
     #[test]
     fn type1() {
         let src = include_str!("../sample_code/should_fail/type_check/non_adt_matchee/type1.ph");
