@@ -570,11 +570,14 @@ pub(super) fn try_as_variant_expression(
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct HasExploded(pub bool);
+
 pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, Output = E>>(
     state: &mut State,
     substitutions: Vec<DynamicSubstitution>,
     expressions_to_substitute: E,
-) -> (Context, E) {
+) -> (HasExploded, Context, E) {
     let original_state = state;
     let n = substitutions.len();
 
@@ -586,14 +589,22 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
         equality_checker: original_state.equality_checker,
     };
     let mut expressions_to_substitute = expressions_to_substitute;
+    let mut has_exploded = HasExploded(false);
 
     for i in 0..n {
-        let substitution =
-            if let Some(substitution) = get_concrete_substitution(&mut state, substitutions[i]) {
-                substitution
-            } else {
-                continue;
-            };
+        let dynamic_substitution = substitutions[i];
+
+        let causes_explosion =
+            backfuse(&mut state, dynamic_substitution.0, dynamic_substitution.1).has_exploded;
+        has_exploded.0 |= causes_explosion;
+
+        let substitution = if let Some(substitution) =
+            get_concrete_substitution(&mut state, dynamic_substitution)
+        {
+            substitution
+        } else {
+            continue;
+        };
 
         let remaining_substitutions = &mut substitutions[i + 1..];
         loop {
@@ -623,9 +634,10 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
         }
     }
 
-    (context, expressions_to_substitute)
+    (has_exploded, context, expressions_to_substitute)
 }
 
+/// Returns `None` if the dynamic substitution is a no-op.
 fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Option<Substitution> {
     if d.0.raw() == d.1.raw() {
         return None;

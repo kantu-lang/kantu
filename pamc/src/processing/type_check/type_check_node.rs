@@ -516,12 +516,11 @@ fn get_type_of_match_case(
     let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
     if type_fusion.has_exploded {
         if let Some(original_coercion_target_id) = original_coercion_target_id {
-            original_context.pop_n(case_arity);
             return Ok(original_coercion_target_id);
         }
     }
 
-    let (mut context, (coercion_target_id, (case_output_id,))) =
+    let (has_exploded, mut context, (coercion_target_id, (case_output_id,))) =
         apply_dynamic_substitutions_with_compounding(
             state,
             type_fusion.substitutions,
@@ -530,6 +529,12 @@ fn get_type_of_match_case(
                 (case_output_id.raw(),),
             ),
         );
+
+    if has_exploded.0 {
+        if let Some(original_coercion_target_id) = original_coercion_target_id {
+            return Ok(original_coercion_target_id);
+        }
+    }
 
     let mut state = State {
         context: &mut context,

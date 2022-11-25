@@ -31,8 +31,6 @@ fn empty_implies_anything() {
     expect_success(src);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn match_explosion() {
     let src = include_str!("sample_code/should_succeed/match_explosion.ph");
