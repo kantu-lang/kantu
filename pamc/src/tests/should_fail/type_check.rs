@@ -309,7 +309,6 @@ mod type_mismatch {
     }
 
     // TODO: Fix
-    #[ignore]
     #[test]
     fn type_not_a_type() {
         let src =

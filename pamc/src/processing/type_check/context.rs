@@ -175,9 +175,6 @@ impl Context {
         registry: &mut NodeRegistry,
     ) -> ContextEntryDefinition {
         let level = self.index_to_level(index);
-        if level == TYPE1_LEVEL {
-            panic!("Type1 has no type. We may add support for infinite type hierarchies in the future. However, for now, Type1 is the \"limit\" type.");
-        }
         self.local_type_stack[level.0]
             .definition
             .upshift(index.0 + 1, registry)
