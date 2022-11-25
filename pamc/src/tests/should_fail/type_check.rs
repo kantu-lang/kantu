@@ -492,12 +492,50 @@ mod ambiguous_output_type {
                     expected_ambiguous_match_case_src,
                 );
             }
+            TypeCheckError::TypeMismatch {
+                expression_id,
+                expected_type_id,
+                actual_type_id,
+            } => {
+                let expression_src = format_expression(
+                    &expand_expression(registry, expression_id),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: true,
+                        print_fun_body_status: false,
+                    },
+                );
+                println!("TYPE_MISMATCH.expression:\n{}", expression_src);
+
+                let expected_type_src = format_expression(
+                    &expand_expression(registry, expected_type_id.raw()),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: true,
+                        print_fun_body_status: false,
+                    },
+                );
+                println!("TYPE_MISMATCH.expected_type:\n{}", expected_type_src);
+
+                let actual_type_src = format_expression(
+                    &expand_expression(registry, actual_type_id.raw()),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: true,
+                        print_fun_body_status: false,
+                    },
+                );
+                println!("TYPE_MISMATCH.actual_type:\n{}", actual_type_src);
+
+                panic!("Unexpected TypeMismatch error: {:#?}", err);
+            }
             _ => panic!("Unexpected error: {:#?}", err),
         });
     }
 
-    // TODO: Fix
-    #[ignore]
     #[test]
     fn ambiguous_output_type() {
         let src = include_str!("../sample_code/should_fail/type_check/ambiguous_output_type.ph");

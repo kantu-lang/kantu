@@ -568,6 +568,10 @@ fn get_type_of_match_case(
         }
     }
 
+    // TODO: Undo the context reordering that occurred in the process of
+    // performing the forward substitutions.
+    let output_type_id = output_type_id;
+
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
         Err(_) => {
