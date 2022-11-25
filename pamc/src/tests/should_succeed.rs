@@ -25,6 +25,12 @@ fn optional_commas() {
     expect_success(src);
 }
 
+#[test]
+fn empty_implies_anything() {
+    let src = include_str!("sample_code/should_succeed/empty_implies_anything.ph");
+    expect_success(src);
+}
+
 fn expect_success(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
