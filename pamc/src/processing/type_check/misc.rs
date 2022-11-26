@@ -1125,53 +1125,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     substitution: ForwardReferencingSubstitution,
     num_of_forward_references: usize,
     expressions_to_substitute: E,
-) -> (Context, E) {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    struct BishiftFn {
-        len: usize,
-        pivot: DbIndex,
-    }
-
-    impl BishiftFn {
-        fn distance(self) -> usize {
-            self.pivot.0 - self.len
-        }
-    }
-
-    impl ShiftFn for BishiftFn {
-        type ShiftError = DbIndexTooSmallForDownshiftError;
-        fn try_apply(
-            &self,
-            i: DbIndex,
-            cutoff: usize,
-        ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
-            if (0..cutoff).contains(&i.0) {
-                Ok(i)
-            } else if (cutoff..cutoff + self.len).contains(&i.0) {
-                Ok(UpshiftFn(self.distance())
-                    .try_apply(i, cutoff)
-                    .safe_unwrap())
-            } else if (cutoff + self.len..cutoff + self.pivot.0).contains(&i.0) {
-                DownshiftFn(self.len).try_apply(i, cutoff)
-            } else {
-                // Indices equal to or greater than the pivot are left as-is.
-                Ok(i)
-            }
-        }
-    }
-
-    trait Bishift: ShiftDbIndices {
-        fn bishift(self, len: usize, pivot: DbIndex, registry: &mut NodeRegistry) -> Self::Output
-        where
-            Self: Sized,
-        {
-            self.try_shift_with_cutoff(BishiftFn { len, pivot }, 0, registry)
-                .unwrap_or_else(|err| panic!("Bishift failed: {:?}", err))
-        }
-    }
-
-    impl<T> Bishift for T where T: ShiftDbIndices {}
-
+) -> (Context, Bishift, E) {
     let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from);
 
     let context = {
@@ -1183,10 +1137,17 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
         );
         c
     };
-    let substitution =
-        substitution.bishift(num_of_forward_references, min_db_index, state.registry);
-    let expressions_to_substitute = expressions_to_substitute
-        .map(|e| e.bishift(num_of_forward_references, min_db_index, state.registry));
+    let bishift = Bishift {
+        len: num_of_forward_references,
+        pivot: min_db_index,
+    };
+    let substitution = substitution
+        .try_shift_with_cutoff(bishift, 0, state.registry)
+        .expect("Should be able to bishift substitution");
+    let expressions_to_substitute = expressions_to_substitute.map(|e| {
+        e.try_shift_with_cutoff(bishift, 0, state.registry)
+            .expect("Should be able to bishift expression")
+    });
 
     let expressions_to_substitute = expressions_to_substitute.map(|e| e);
 
@@ -1198,7 +1159,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     let expressions_to_substitute =
         expressions_to_substitute.map(|e| e.subst(substitution.0, &mut state.without_context()));
 
-    (context, expressions_to_substitute)
+    (context, bishift, expressions_to_substitute)
 }
 
 impl ShiftDbIndices for ForwardReferencingSubstitution {
@@ -1213,6 +1174,45 @@ impl ShiftDbIndices for ForwardReferencingSubstitution {
         Ok(Self(
             self.0.try_shift_with_cutoff(amount, cutoff, registry)?,
         ))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Bishift {
+    pub len: usize,
+    pub pivot: DbIndex,
+}
+
+impl Bishift {
+    pub fn distance(self) -> usize {
+        self.pivot.0 - self.len
+    }
+
+    pub fn inverse(self) -> Self {
+        Self {
+            len: self.distance(),
+            pivot: self.pivot,
+        }
+    }
+}
+
+impl ShiftFn for Bishift {
+    type ShiftError = DbIndexTooSmallForDownshiftError;
+    fn try_apply(
+        &self,
+        i: DbIndex,
+        cutoff: usize,
+    ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+        if (0..cutoff).contains(&i.0) {
+            Ok(i)
+        } else if (cutoff..cutoff + self.len).contains(&i.0) {
+            Ok(Upshift(self.distance()).try_apply(i, cutoff).safe_unwrap())
+        } else if (cutoff + self.len..cutoff + self.pivot.0).contains(&i.0) {
+            Downshift(self.len).try_apply(i, cutoff)
+        } else {
+            // Indices equal to or greater than the pivot are left as-is.
+            Ok(i)
+        }
     }
 }
 

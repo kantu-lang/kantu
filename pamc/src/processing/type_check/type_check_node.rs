@@ -460,6 +460,7 @@ fn get_type_of_match_case(
 
     let (
         mut context,
+        bishift,
         (
             coercion_target_id,
             (case_output_id,),
@@ -568,9 +569,7 @@ fn get_type_of_match_case(
         }
     }
 
-    // TODO: Undo the context reordering that occurred in the process of
-    // performing the forward substitutions.
-    let output_type_id = output_type_id;
+    let output_type_id = output_type_id.try_shift_with_cutoff(bishift.inverse(), 0, state.registry).expect("Should be able to bishift back");
 
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),

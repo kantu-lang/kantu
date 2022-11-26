@@ -7,74 +7,74 @@ pub trait ShiftDbIndices {
 
     fn try_shift_with_cutoff<F: ShiftFn>(
         self,
-        amount: F,
+        f: F,
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Result<Self::Output, F::ShiftError>;
 
-    fn upshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
+    fn upshift(self, f: usize, registry: &mut NodeRegistry) -> Self::Output
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(UpshiftFn(amount), 0, registry)
+        self.try_shift_with_cutoff(Upshift(f), 0, registry)
             .safe_unwrap()
     }
 
     fn upshift_with_cutoff(
         self,
-        amount: usize,
+        f: usize,
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Self::Output
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(UpshiftFn(amount), cutoff, registry)
+        self.try_shift_with_cutoff(Upshift(f), cutoff, registry)
             .safe_unwrap()
     }
 
-    fn downshift(self, amount: usize, registry: &mut NodeRegistry) -> Self::Output
+    fn downshift(self, f: usize, registry: &mut NodeRegistry) -> Self::Output
     where
         Self: Sized,
     {
-        self.try_downshift(amount, registry)
+        self.try_downshift(f, registry)
             .unwrap_or_else(|err| panic!("Downshift failed: {:?}", err))
     }
 
     fn try_downshift(
         self,
-        amount: usize,
+        f: usize,
         registry: &mut NodeRegistry,
     ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
     where
         Self: Sized,
     {
-        self.try_downshift_with_cutoff(amount, 0, registry)
+        self.try_downshift_with_cutoff(f, 0, registry)
     }
 
     fn downshift_with_cutoff(
         self,
-        amount: usize,
+        f: usize,
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Self::Output
     where
         Self: Sized,
     {
-        self.try_downshift_with_cutoff(amount, cutoff, registry)
+        self.try_downshift_with_cutoff(f, cutoff, registry)
             .unwrap_or_else(|err| panic!("Downshift failed: {:?}", err))
     }
 
     fn try_downshift_with_cutoff(
         self,
-        amount: usize,
+        f: usize,
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(DownshiftFn(amount), cutoff, registry)
+        self.try_shift_with_cutoff(Downshift(f), cutoff, registry)
     }
 }
 
@@ -84,9 +84,9 @@ pub trait ShiftFn: Copy {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct UpshiftFn(pub usize);
+pub struct Upshift(pub usize);
 
-impl ShiftFn for UpshiftFn {
+impl ShiftFn for Upshift {
     type ShiftError = Infallible;
     fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Infallible> {
         if i.0 < cutoff {
@@ -98,9 +98,9 @@ impl ShiftFn for UpshiftFn {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DownshiftFn(pub usize);
+pub struct Downshift(pub usize);
 
-impl ShiftFn for DownshiftFn {
+impl ShiftFn for Downshift {
     type ShiftError = DbIndexTooSmallForDownshiftError;
     fn try_apply(
         &self,
