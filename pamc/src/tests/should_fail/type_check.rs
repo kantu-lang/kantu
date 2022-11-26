@@ -308,7 +308,6 @@ mod type_mismatch {
         expect_type_mismatch_error(src, "U2.U2", "U1", "U2");
     }
 
-    // TODO: Fix
     #[test]
     fn type_not_a_type() {
         let src =

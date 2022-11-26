@@ -93,5 +93,3 @@ fn assert_eq_up_to_white_space(left: &str, right: &str) {
         }
     }
 }
-
-// TODO: Add type checker tests
