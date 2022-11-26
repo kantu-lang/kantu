@@ -1158,7 +1158,7 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
 impl ShiftDbIndices for ForwardReferencingSubstitution {
     type Output = Self;
 
-    fn try_shift_with_cutoff<A: ShiftAmount>(
+    fn try_shift_with_cutoff<A: ShiftFn>(
         self,
         amount: A,
         cutoff: usize,
