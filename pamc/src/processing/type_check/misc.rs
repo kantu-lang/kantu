@@ -1126,6 +1126,52 @@ pub(super) fn apply_forward_referencing_substitution<E: Map<ExpressionId, Output
     num_of_forward_references: usize,
     expressions_to_substitute: E,
 ) -> (Context, E) {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    struct BishiftFn {
+        len: usize,
+        pivot: DbIndex,
+    }
+
+    impl BishiftFn {
+        fn distance(self) -> usize {
+            self.pivot.0 - self.len
+        }
+    }
+
+    impl ShiftFn for BishiftFn {
+        type ShiftError = DbIndexTooSmallForDownshiftError;
+        fn try_apply(
+            &self,
+            i: DbIndex,
+            cutoff: usize,
+        ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
+            if (0..cutoff).contains(&i.0) {
+                Ok(i)
+            } else if (cutoff..cutoff + self.len).contains(&i.0) {
+                Ok(UpshiftFn(self.distance())
+                    .try_apply(i, cutoff)
+                    .safe_unwrap())
+            } else if (cutoff + self.len..cutoff + self.pivot.0).contains(&i.0) {
+                DownshiftFn(self.len).try_apply(i, cutoff)
+            } else {
+                // Indices equal to or greater than the pivot are left as-is.
+                Ok(i)
+            }
+        }
+    }
+
+    trait Bishift: ShiftDbIndices {
+        fn bishift(self, len: usize, pivot: DbIndex, registry: &mut NodeRegistry) -> Self::Output
+        where
+            Self: Sized,
+        {
+            self.try_shift_with_cutoff(BishiftFn { len, pivot }, 0, registry)
+                .unwrap_or_else(|err| panic!("Bishift failed: {:?}", err))
+        }
+    }
+
+    impl<T> Bishift for T where T: ShiftDbIndices {}
+
     let min_db_index = min_free_db_index_in_expression(state.registry, substitution.0.from);
 
     let context = {

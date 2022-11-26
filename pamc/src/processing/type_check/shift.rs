@@ -14,7 +14,7 @@ pub trait ShiftDbIndices {
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Upshift(amount), 0, registry)
+        self.try_shift_with_cutoff(UpshiftFn(amount), 0, registry)
             .safe_unwrap()
     }
 
@@ -27,7 +27,7 @@ pub trait ShiftDbIndices {
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Upshift(amount), cutoff, registry)
+        self.try_shift_with_cutoff(UpshiftFn(amount), cutoff, registry)
             .safe_unwrap()
     }
 
@@ -72,27 +72,7 @@ pub trait ShiftDbIndices {
     where
         Self: Sized,
     {
-        self.try_shift_with_cutoff(Downshift(amount), cutoff, registry)
-    }
-
-    fn bishift(self, len: usize, pivot: DbIndex, registry: &mut NodeRegistry) -> Self::Output
-    where
-        Self: Sized,
-    {
-        self.try_bishift(len, pivot, registry)
-            .unwrap_or_else(|err| panic!("Bishift failed: {:?}", err))
-    }
-
-    fn try_bishift(
-        self,
-        len: usize,
-        pivot: DbIndex,
-        registry: &mut NodeRegistry,
-    ) -> Result<Self::Output, DbIndexTooSmallForDownshiftError>
-    where
-        Self: Sized,
-    {
-        self.try_shift_with_cutoff(Bishift { len, pivot }, 0, registry)
+        self.try_shift_with_cutoff(DownshiftFn(amount), cutoff, registry)
     }
 }
 
@@ -102,9 +82,9 @@ pub trait ShiftFn: Copy {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Upshift(pub usize);
+pub struct UpshiftFn(pub usize);
 
-impl ShiftFn for Upshift {
+impl ShiftFn for UpshiftFn {
     type ShiftError = Infallible;
     fn try_apply(&self, i: DbIndex, cutoff: usize) -> Result<DbIndex, Infallible> {
         if i.0 < cutoff {
@@ -116,9 +96,9 @@ impl ShiftFn for Upshift {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Downshift(pub usize);
+pub struct DownshiftFn(pub usize);
 
-impl ShiftFn for Downshift {
+impl ShiftFn for DownshiftFn {
     type ShiftError = DbIndexTooSmallForDownshiftError;
     fn try_apply(
         &self,
@@ -134,38 +114,6 @@ impl ShiftFn for Downshift {
             })
         } else {
             Ok(DbIndex(i.0 - self.0))
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Bishift {
-    len: usize,
-    pivot: DbIndex,
-}
-
-impl Bishift {
-    fn distance(self) -> usize {
-        self.pivot.0 - self.len
-    }
-}
-
-impl ShiftFn for Bishift {
-    type ShiftError = DbIndexTooSmallForDownshiftError;
-    fn try_apply(
-        &self,
-        i: DbIndex,
-        cutoff: usize,
-    ) -> Result<DbIndex, DbIndexTooSmallForDownshiftError> {
-        if (0..cutoff).contains(&i.0) {
-            Ok(i)
-        } else if (cutoff..cutoff + self.len).contains(&i.0) {
-            Ok(Upshift(self.distance()).try_apply(i, cutoff).safe_unwrap())
-        } else if (cutoff + self.len..cutoff + self.pivot.0).contains(&i.0) {
-            Downshift(self.len).try_apply(i, cutoff)
-        } else {
-            // Indices equal to or greater than the pivot are left as-is.
-            Ok(i)
         }
     }
 }
