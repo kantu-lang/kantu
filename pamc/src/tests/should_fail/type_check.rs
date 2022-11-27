@@ -314,6 +314,19 @@ mod type_mismatch {
             include_str!("../sample_code/should_fail/type_check/type_mismatch/type_not_a_type.ph");
         expect_type_mismatch_error(src, "Type", "Type", "Type1");
     }
+
+    #[test]
+    fn ill_typed_param_type() {
+        let src = include_str!(
+            "../sample_code/should_fail/type_check/type_mismatch/ill_typed_param_type.ph"
+        );
+        expect_type_mismatch_error(
+            src,
+            "Eq.Refl(Nat, x',)",
+            "Eq(Nat, x, Nat.S(x',),)",
+            "Eq(Nat, x', x',)",
+        );
+    }
 }
 
 mod non_adt_matchee {
