@@ -559,18 +559,17 @@ fn get_type_of_match_case_dirty(
 
     let (
         coercion_target_id,
-        (case_output_id,),
         (matchee_type_id,),
         (parameterized_matchee_type_id,),
     ) = evaluate_well_typed_expressions(
         state,
         (
             coercion_target_id,
-            (case_output_id,),
             (matchee_type_id,),
             (parameterized_matchee_type_id,),
         ),
     );
+    let case_output_id = evaluate_possibly_ill_typed_expression(state, case_output_id).map(NormalFormId::raw).unwrap_or(case_output_id);
 
     let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
     if type_fusion.has_exploded {
@@ -585,7 +584,7 @@ fn get_type_of_match_case_dirty(
             type_fusion.substitutions,
             (
                 coercion_target_id.map(NormalFormId::raw),
-                (case_output_id.raw(),),
+                (case_output_id,),
             ),
         );
 

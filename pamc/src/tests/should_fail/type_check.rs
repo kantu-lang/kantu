@@ -323,7 +323,7 @@ mod type_mismatch {
         expect_type_mismatch_error(
             src,
             "Eq.Refl(Nat, x',)",
-            "Eq(Nat, x, Nat.S(x',),)",
+            "Eq(Nat, Nat.S(x',), Nat.S(x',),)",
             "Eq(Nat, x', x',)",
         );
     }
