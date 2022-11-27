@@ -191,14 +191,25 @@ fn evaluate_possibly_ill_typed_fun(
     state: &mut State,
     fun_id: NodeId<Fun>,
 ) -> Result<NormalFormId, EvalError> {
+    let original_len = state.context.len();
+    evaluate_possibly_ill_typed_fun_dirty(state, fun_id).untaint_err(state.context, original_len)
+}
+
+fn evaluate_possibly_ill_typed_fun_dirty(
+    state: &mut State,
+    fun_id: NodeId<Fun>,
+) -> Result<NormalFormId, Tainted<EvalError>> {
     let fun = state.registry.fun(fun_id).clone();
     let normalized_param_list_id =
         match normalize_params_and_leave_params_in_context(state, fun.param_list_id) {
-            Ok((warning, id)) => id,
-            Err(err) => return Err(EvalError::IllTypedParams(fun.param_list_id, err)),
+            Ok((warning, id)) => {
+                warning.drop_since_its_inside_tainted_fn();
+                id
+            }
+            Err(err) => return Err(EvalError::IllTypedParams(fun.param_list_id, err)).taint_err(),
         };
     let normalized_return_type_id =
-        evaluate_possibly_ill_typed_expression(state, fun.return_type_id)?;
+        evaluate_possibly_ill_typed_expression(state, fun.return_type_id).taint_err()?;
     state.context.pop_n(fun.param_list_id.len);
 
     Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
@@ -301,13 +312,28 @@ fn evaluate_possibly_ill_typed_forall(
     state: &mut State,
     forall_id: NodeId<Forall>,
 ) -> Result<NormalFormId, EvalError> {
+    let original_len = state.context.len();
+    evaluate_possibly_ill_typed_forall_dirty(state, forall_id)
+        .untaint_err(state.context, original_len)
+}
+
+fn evaluate_possibly_ill_typed_forall_dirty(
+    state: &mut State,
+    forall_id: NodeId<Forall>,
+) -> Result<NormalFormId, Tainted<EvalError>> {
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id =
         match normalize_params_and_leave_params_in_context(state, forall.param_list_id) {
-            Ok((warning, id)) => id,
-            Err(err) => return Err(EvalError::IllTypedParams(forall.param_list_id, err)),
+            Ok((warning, id)) => {
+                warning.drop_since_its_inside_tainted_fn();
+                id
+            }
+            Err(err) => {
+                return Err(EvalError::IllTypedParams(forall.param_list_id, err)).taint_err()
+            }
         };
-    let normalized_output_id = evaluate_possibly_ill_typed_expression(state, forall.output_id)?;
+    let normalized_output_id =
+        evaluate_possibly_ill_typed_expression(state, forall.output_id).taint_err()?;
     state.context.pop_n(forall.param_list_id.len);
 
     Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
