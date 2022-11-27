@@ -114,6 +114,7 @@ impl Context {
 }
 
 impl Context {
+    // TODO: Deprecate
     /// Panics if `n > self.len()`.
     pub fn pop_n(&mut self, n: usize) {
         if n > self.len() {
@@ -126,14 +127,30 @@ impl Context {
         self.local_type_stack.truncate(self.len() - n);
     }
 
-    pub fn push(&mut self, entry: ContextEntry) {
+    pub fn truncate(&mut self, new_len: usize) {
+        if new_len > self.len() {
+            panic!(
+                "Tried to truncate a context with only {} elements to {} elements",
+                self.len(),
+                new_len
+            );
+        }
+        self.local_type_stack.truncate(new_len);
+    }
+
+    pub fn push(&mut self, entry: ContextEntry) -> PushWarning {
         self.local_type_stack.push(entry);
+        PushWarning
     }
 
     pub fn len(&self) -> usize {
         self.local_type_stack.len()
     }
 }
+
+#[must_use]
+#[derive(Clone, Copy, Debug)]
+pub struct PushWarning;
 
 impl Context {
     /// Returns the De Bruijn index of the `Type0` expression.

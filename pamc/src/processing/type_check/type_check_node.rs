@@ -18,13 +18,18 @@ pub fn type_check_files(
 }
 
 fn type_check_file(state: &mut State, file_id: NodeId<File>) -> Result<(), TypeCheckError> {
+    let original_len = state.context.len();
+    type_check_file_dirty(state, file_id).untaint(state.context, original_len)
+}
+
+fn type_check_file_dirty(state: &mut State, file_id: NodeId<File>) -> TaintedResult<(), TypeCheckError> {
     let file = state.registry.file(file_id);
     let items = state.registry.file_item_list(file.item_list_id).to_vec();
     for &item_id in &items {
-        type_check_file_item(state, item_id)?;
+        type_check_file_item(state, item_id).map_err(Taint::taint)?;
     }
     state.context.pop_n(items.len());
-    Ok(())
+    Ok(().taint())
 }
 
 fn type_check_file_item(state: &mut State, item: FileItemNodeId) -> Result<(), TypeCheckError> {
@@ -720,3 +725,51 @@ fn get_type_of_forall(
 
     Ok(type0_expression(state))
 }
+
+impl PushWarning {
+    /// This method should only be called inside
+    /// functions that return a `TaintedResult`.
+    fn i_know_what_im_doing_so_dismiss(self) {}
+}
+
+type TaintedResult<T, E> = Result<Tainted<T>, Tainted<E>>;
+
+#[derive(Clone, Debug)]
+struct Tainted<T> {
+    raw: T,
+}
+
+trait Taint {
+    type Output;
+    fn taint(self) -> Self::Output;
+}
+
+impl<T> Taint for T {
+    type Output = Tainted<T>;
+    fn taint(self) -> Self::Output {
+        Tainted { raw: self }
+    }
+}
+
+trait Untaint {
+    type Output;
+    fn untaint(self, context: &mut Context, new_len: usize) -> Self::Output;
+}
+
+impl<T, E> Untaint for TaintedResult<T, E> {
+    type Output = Result<T, E>;
+
+    fn untaint(self, context: &mut Context, new_len: usize) -> Self::Output {
+        context.truncate(new_len);
+        match self {
+            Ok(t) => Ok(t.raw),
+            Err(e) => Err(e.raw),
+        }
+    }
+}
+
+/// Whatever you do, do **NOT** make this a struct!
+/// If you do, this will suppress the
+/// `must_use` warning attached to the `PushWarning`
+/// struct.
+type WithWarning<T> = (PushWarning, T);
