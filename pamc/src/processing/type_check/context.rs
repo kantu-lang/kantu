@@ -126,12 +126,69 @@ impl Context {
         self.local_type_stack.truncate(self.len() - n);
     }
 
-    pub fn push(&mut self, entry: ContextEntry) {
+    pub fn push(&mut self, entry: ContextEntry) -> PushWarning {
         self.local_type_stack.push(entry);
+        PushWarning
     }
 
     pub fn len(&self) -> usize {
         self.local_type_stack.len()
+    }
+}
+
+#[must_use]
+#[derive(Clone, Debug)]
+pub struct PushWarning;
+
+impl PushWarning {
+    pub fn drop_since_its_inside_tainted_fn(self) {}
+}
+
+#[derive(Clone, Debug)]
+pub struct Tainted<T> {
+    raw: T,
+}
+
+pub trait TaintErr {
+    type Output;
+    fn taint_err(self) -> Self::Output;
+}
+
+impl<T, E> TaintErr for Result<T, E> {
+    type Output = Result<T, Tainted<E>>;
+    fn taint_err(self) -> Self::Output {
+        self.map_err(|e| Tainted { raw: e })
+    }
+}
+
+pub trait UntaintErr {
+    type Output;
+    fn untaint_err(self, context: &mut Context, new_len: usize) -> Self::Output;
+}
+
+impl<T, E> UntaintErr for Result<T, Tainted<E>> {
+    type Output = Result<T, E>;
+    fn untaint_err(self, context: &mut Context, new_len: usize) -> Self::Output {
+        match self {
+            Ok(t) => Ok(t),
+            Err(Tainted { raw }) => {
+                context.truncate(new_len);
+                Err(raw)
+            }
+        }
+    }
+}
+
+impl Context {
+    fn truncate(&mut self, new_len: usize) {
+        if new_len > self.len() {
+            panic!(
+                "Tried to truncate a context with {} elements to {} elements",
+                self.len(),
+                new_len
+            );
+        }
+        self.local_type_stack.truncate(new_len);
     }
 }
 

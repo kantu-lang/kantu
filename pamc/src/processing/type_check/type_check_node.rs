@@ -1,5 +1,8 @@
 use super::*;
 
+#[derive(Clone, Debug)]
+struct ContextPush(ContextEntry);
+
 pub fn type_check_files(
     registry: &mut NodeRegistry,
     file_ids: &[NodeId<File>],
@@ -18,16 +21,21 @@ pub fn type_check_files(
 }
 
 fn type_check_file(state: &mut State, file_id: NodeId<File>) -> Result<(), TypeCheckError> {
+    let original_len = state.context.len();
+    type_check_file_dirty(state, file_id).untaint_err(state.context, original_len)
+}
+
+fn type_check_file_dirty(state: &mut State, file_id: NodeId<File>) -> Result<(), Tainted<TypeCheckError>> {
     let file = state.registry.file(file_id);
     let items = state.registry.file_item_list(file.item_list_id).to_vec();
     for &item_id in &items {
-        type_check_file_item(state, item_id)?;
+        type_check_file_item(state, item_id).taint_err()?.drop_since_its_inside_tainted_fn();
     }
     state.context.pop_n(items.len());
     Ok(())
 }
 
-fn type_check_file_item(state: &mut State, item: FileItemNodeId) -> Result<(), TypeCheckError> {
+fn type_check_file_item(state: &mut State, item: FileItemNodeId) -> Result<PushWarning, TypeCheckError> {
     match item {
         FileItemNodeId::Type(type_statement) => type_check_type_statement(state, type_statement),
         FileItemNodeId::Let(let_statement) => type_check_let_statement(state, let_statement),
@@ -37,8 +45,16 @@ fn type_check_file_item(state: &mut State, item: FileItemNodeId) -> Result<(), T
 fn type_check_type_statement(
     state: &mut State,
     type_statement_id: NodeId<TypeStatement>,
-) -> Result<(), TypeCheckError> {
-    type_check_type_constructor(state, type_statement_id)?;
+) -> Result<PushWarning, TypeCheckError> {
+    let original_len = state.context.len();
+    type_check_type_statement_dirty(state, type_statement_id).untaint_err(state.context, original_len)
+}
+
+fn type_check_type_statement_dirty(
+    state: &mut State,
+    type_statement_id: NodeId<TypeStatement>,
+) -> Result<PushWarning, Tainted<TypeCheckError>> {
+    type_check_type_constructor(state, type_statement_id).taint_err()?.drop_since_its_inside_tainted_fn();
 
     let type_statement = state.registry.type_statement(type_statement_id);
     let variant_ids = state
@@ -46,20 +62,30 @@ fn type_check_type_statement(
         .variant_list(type_statement.variant_list_id)
         .to_vec();
     for variant_id in variant_ids {
-        type_check_type_variant(state, variant_id)?;
+        type_check_type_variant(state, variant_id).taint_err()?.drop_since_its_inside_tainted_fn();
     }
 
-    Ok(())
+    Ok(PushWarning)
 }
 
 fn type_check_type_constructor(
     state: &mut State,
     type_statement_id: NodeId<TypeStatement>,
-) -> Result<(), TypeCheckError> {
+) -> Result<PushWarning, TypeCheckError> {
+    let original_len = state.context.len();
+    let push = type_check_type_constructor_dirty(state, type_statement_id).untaint_err(state.context, original_len)?;
+    Ok(state.context.push(push.0))
+}
+
+fn type_check_type_constructor_dirty(
+    state: &mut State,
+    type_statement_id: NodeId<TypeStatement>,
+) -> Result<ContextPush, Tainted<TypeCheckError>> {
     let type_statement = state.registry.type_statement(type_statement_id).clone();
     let arity = type_statement.param_list_id.len;
-    let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, type_statement.param_list_id)?;
+    let (warning, normalized_param_list_id) =
+        normalize_params_and_leave_params_in_context(state, type_statement.param_list_id).taint_err()?;
+    warning.drop_since_its_inside_tainted_fn();
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
@@ -78,19 +104,18 @@ fn type_check_type_constructor(
             .collect();
         state.registry.add_identifier_list(variant_name_ids)
     };
-    state.context.push(ContextEntry {
+    Ok(ContextPush(ContextEntry {
         type_id: type_constructor_type_id,
         definition: ContextEntryDefinition::Adt {
             variant_name_list_id,
         },
-    });
-    Ok(())
+    }))
 }
 
 pub(super) fn type_check_param(
     state: &mut State,
     param_id: NodeId<Param>,
-) -> Result<(), TypeCheckError> {
+) -> Result<PushWarning, TypeCheckError> {
     let param = state.registry.param(param_id).clone();
     let param_type_type_id = get_type_of_expression(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
@@ -98,22 +123,31 @@ pub(super) fn type_check_param(
     }
 
     let normalized_type_id = evaluate_well_typed_expression(state, param.type_id);
-    state.context.push(ContextEntry {
+    Ok(state.context.push(ContextEntry {
         type_id: normalized_type_id,
         definition: ContextEntryDefinition::Uninterpreted,
-    });
-    Ok(())
+    }))
 }
 
 fn type_check_type_variant(
     state: &mut State,
     variant_id: NodeId<Variant>,
-) -> Result<(), TypeCheckError> {
+) -> Result<PushWarning, TypeCheckError> {
+    let original_len = state.context.len();
+    let push = type_check_type_variant_dirty(state, variant_id).untaint_err(state.context, original_len)?;
+    Ok(state.context.push(push.0))
+}
+
+fn type_check_type_variant_dirty(
+    state: &mut State,
+    variant_id: NodeId<Variant>,
+) -> Result<ContextPush, Tainted<TypeCheckError>> {
     let variant = state.registry.variant(variant_id).clone();
     let arity = variant.param_list_id.len;
-    let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, variant.param_list_id)?;
-    type_check_expression(state, None, variant.return_type_id)?;
+    let (warning, normalized_param_list_id) =
+        normalize_params_and_leave_params_in_context(state, variant.param_list_id).taint_err()?;
+    warning.drop_since_its_inside_tainted_fn();
+    type_check_expression(state, None, variant.return_type_id).taint_err()?;
     let return_type_id = evaluate_well_typed_expression(state, variant.return_type_id);
     let type_id = NormalFormId::unchecked_new(
         Forall {
@@ -124,29 +158,27 @@ fn type_check_type_variant(
         .collapse_if_nullary(state.registry),
     );
     state.context.pop_n(arity);
-    state.context.push(ContextEntry {
+    Ok(ContextPush(ContextEntry {
         type_id,
         definition: ContextEntryDefinition::Variant {
             name_id: variant.name_id,
         },
-    });
-    Ok(())
+    }))
 }
 
 fn type_check_let_statement(
     state: &mut State,
     let_statement_id: NodeId<LetStatement>,
-) -> Result<(), TypeCheckError> {
+) -> Result<PushWarning, TypeCheckError> {
     let let_statement = state.registry.let_statement(let_statement_id).clone();
     let type_id = get_type_of_expression(state, None, let_statement.value_id)?;
     let normalized_value_id = evaluate_well_typed_expression(state, let_statement.value_id);
-    state.context.push(ContextEntry {
+    Ok(state.context.push(ContextEntry {
         type_id,
         definition: ContextEntryDefinition::Alias {
             value_id: normalized_value_id,
         },
-    });
-    Ok(())
+    }))
 }
 
 fn type_check_expression(
@@ -295,6 +327,11 @@ fn get_type_of_call(
 }
 
 fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, TypeCheckError> {
+    let original_len = state.context.len();
+    get_type_of_fun_dirty(state, fun_id).untaint_err(state.context, original_len)
+}
+
+fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let fun = state.registry.fun(fun_id).clone();
     // We call this "param arity" instead of simply "arity"
     // to convey the fact that it does **not** include the recursive
@@ -303,12 +340,13 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
     // even though `f` is also added to the context as a third entry
     // (to enable recursion).
     let param_arity = fun.param_list_id.len;
-    let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context(state, fun.param_list_id)?;
+    let (warning, normalized_param_list_id) =
+        normalize_params_and_leave_params_in_context(state, fun.param_list_id).taint_err()?;
+    warning.drop_since_its_inside_tainted_fn();
     {
-        let return_type_type_id = get_type_of_expression(state, None, fun.return_type_id)?;
+        let return_type_type_id = get_type_of_expression(state, None, fun.return_type_id).taint_err()?;
         if !is_term_equal_to_type0_or_type1(state, return_type_type_id) {
-            return Err(TypeCheckError::IllegalTypeExpression(fun.return_type_id));
+            return Err(TypeCheckError::IllegalTypeExpression(fun.return_type_id)).taint_err();
         }
     }
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
@@ -336,7 +374,7 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
             definition: ContextEntryDefinition::Alias {
                 value_id: normalized_fun_id,
             },
-        });
+        }).drop_since_its_inside_tainted_fn();
     }
 
     // We need to upshift the return type by one level before comparing it
@@ -355,7 +393,7 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
             state,
             Some(normalized_return_type_id_relative_to_body),
             fun.body_id,
-        )?;
+        ).taint_err()?;
         if !is_left_type_assignable_to_right_type(
             state,
             normalized_body_type_id,
@@ -365,7 +403,7 @@ fn get_type_of_fun(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormI
                 expression_id: fun.body_id,
                 expected_type_id: normalized_return_type_id_relative_to_body,
                 actual_type_id: normalized_body_type_id,
-            });
+            }).taint_err();
         }
     }
 
@@ -439,14 +477,34 @@ fn get_type_of_match_case(
     matchee_type_id: NormalFormId,
     matchee_type: AdtExpression,
 ) -> Result<NormalFormId, TypeCheckError> {
+    let original_len = state.context.len();
+    get_type_of_match_case_dirty(
+        state,
+        coercion_target_id,
+        case_id,
+        normalized_matchee_id,
+        matchee_type_id,
+        matchee_type,
+    ).untaint_err(state.context, original_len)
+}
+
+fn get_type_of_match_case_dirty(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    case_id: NodeId<MatchCase>,
+    normalized_matchee_id: NormalFormId,
+    matchee_type_id: NormalFormId,
+    matchee_type: AdtExpression,
+) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
-    let (original_parameterized_matchee_id, original_parameterized_matchee_type_id) =
+    let (warning, (original_parameterized_matchee_id, original_parameterized_matchee_type_id)) =
         add_case_params_to_context_and_get_constructed_matchee_and_type(
             state,
             case_id,
             matchee_type,
-        )?;
+        ).taint_err()?;
+    warning.drop_since_its_inside_tainted_fn();
 
     let original_coercion_target_id = coercion_target_id;
     let coercion_target_id =
@@ -546,7 +604,7 @@ fn get_type_of_match_case(
 
     let coercion_target_id = coercion_target_id
         .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
-    let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id)?;
+    let output_type_id = get_type_of_expression(state, coercion_target_id, case_output_id).taint_err()?;
 
     if let Some(coercion_target_id) = coercion_target_id {
         let can_be_coerced = is_left_type_assignable_to_right_type(
@@ -565,7 +623,7 @@ fn get_type_of_match_case(
                 // In the future, we'll include this in substitution
                 // tracking (if we implement it).
                 expected_type_id: coercion_target_id,
-            })
+            }).taint_err()
         }
     }
 
@@ -574,7 +632,7 @@ fn get_type_of_match_case(
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
         Err(_) => {
-            Err(TypeCheckError::AmbiguousOutputType { case_id })
+            Err(TypeCheckError::AmbiguousOutputType { case_id }).taint_err()
         }
     }
 }
@@ -583,7 +641,20 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
     state: &mut State,
     case_id: NodeId<MatchCase>,
     matchee_type: AdtExpression,
-) -> Result<(NormalFormId, NormalFormId), TypeCheckError> {
+) -> Result<(PushWarning, (NormalFormId, NormalFormId)), TypeCheckError> {
+    let original_len = state.context.len();
+    add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
+        state,
+        case_id,
+        matchee_type,
+    ).untaint_err(state.context, original_len)
+}
+
+fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    matchee_type: AdtExpression,
+) -> Result<(PushWarning, (NormalFormId, NormalFormId)), Tainted<TypeCheckError>> {
     let case = state.registry.match_case(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
@@ -608,7 +679,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     case_id,
                     expected: expected_case_param_arity,
                     actual: case.param_list_id.len,
-                });
+                }).taint_err();
             }
 
             let normalized_param_ids = state
@@ -621,7 +692,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                 state.context.push(ContextEntry {
                     type_id: param_type_id,
                     definition: ContextEntryDefinition::Uninterpreted,
-                });
+                }).drop_since_its_inside_tainted_fn();
             }
 
             let (parameterized_matchee_id, parameterized_matchee_type_id) = {
@@ -677,7 +748,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                 (parameterized_matchee_id, parameterized_matchee_type_id)
             };
             
-            Ok((parameterized_matchee_id, parameterized_matchee_type_id))
+            Ok((PushWarning, (parameterized_matchee_id, parameterized_matchee_type_id)))
         }
         ExpressionId::Name(_) => {
             // In this case, the variant type is nullary.
@@ -688,7 +759,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     case_id,
                     expected: expected_case_param_arity,
                     actual: case.param_list_id.len,
-                });
+                }).taint_err();
             }
             // Since the case is nullary, we shift by zero.
             let shifted_variant_dbi = variant_dbi;
@@ -698,7 +769,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 )));
-            Ok((parameterized_matchee_id, variant_type_id))
+            Ok((PushWarning, (parameterized_matchee_id, variant_type_id)))
         }
         other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
     }
@@ -708,12 +779,21 @@ fn get_type_of_forall(
     state: &mut State,
     forall_id: NodeId<Forall>,
 ) -> Result<NormalFormId, TypeCheckError> {
-    let forall = state.registry.forall(forall_id).clone();
-    normalize_params_and_leave_params_in_context(state, forall.param_list_id)?;
+    let original_len = state.context.len();
+    get_type_of_forall_dirty(state, forall_id).untaint_err(state.context, original_len)
+}
 
-    let output_type_id = get_type_of_expression(state, None, forall.output_id)?;
+fn get_type_of_forall_dirty(
+    state: &mut State,
+    forall_id: NodeId<Forall>,
+) -> Result<NormalFormId, Tainted<TypeCheckError>> {
+    let forall = state.registry.forall(forall_id).clone();
+    let (warning, _param_list_id) = normalize_params_and_leave_params_in_context(state, forall.param_list_id).taint_err()?;
+    warning.drop_since_its_inside_tainted_fn();
+
+    let output_type_id = get_type_of_expression(state, None, forall.output_id).taint_err()?;
     if !is_term_equal_to_type0_or_type1(state, output_type_id) {
-        return Err(TypeCheckError::IllegalTypeExpression(forall.output_id));
+        return Err(TypeCheckError::IllegalTypeExpression(forall.output_id)).taint_err();
     }
 
     state.context.pop_n(forall.param_list_id.len);

@@ -194,7 +194,7 @@ fn evaluate_possibly_ill_typed_fun(
     let fun = state.registry.fun(fun_id).clone();
     let normalized_param_list_id =
         match normalize_params_and_leave_params_in_context(state, fun.param_list_id) {
-            Ok(id) => id,
+            Ok((warning, id)) => id,
             Err(err) => return Err(EvalError::IllTypedParams(fun.param_list_id, err)),
         };
     let normalized_return_type_id =
@@ -304,7 +304,7 @@ fn evaluate_possibly_ill_typed_forall(
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id =
         match normalize_params_and_leave_params_in_context(state, forall.param_list_id) {
-            Ok(id) => id,
+            Ok((warning, id)) => id,
             Err(err) => return Err(EvalError::IllTypedParams(forall.param_list_id, err)),
         };
     let normalized_output_id = evaluate_possibly_ill_typed_expression(state, forall.output_id)?;
