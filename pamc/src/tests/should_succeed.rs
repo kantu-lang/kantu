@@ -43,6 +43,12 @@ fn coercionless_match() {
     expect_success(src);
 }
 
+#[test]
+fn ill_typed_until_substituted() {
+    let src = include_str!("sample_code/should_succeed/ill_typed_until_substituted.ph");
+    expect_success(src);
+}
+
 fn expect_success(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
