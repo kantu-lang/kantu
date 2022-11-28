@@ -1,6 +1,6 @@
 mod ast_simplification;
-mod empty_params;
 mod fun_recursion;
+mod parse;
 mod scope;
 mod type_check;
 mod variant_return_type;
