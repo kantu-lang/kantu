@@ -36,18 +36,6 @@ pub enum FinishedStackItem {
         Expression,
         ExpressionEndDelimiter,
     ),
-    DelimitedExpressionOrGoal(
-        /// First token (".")
-        Token,
-        GoalOrExpression,
-        ExpressionEndDelimiter,
-    ),
-    DelimitedExpressionOrQuestionMark(
-        /// First token (".")
-        Token,
-        QuestionMarkOrExpression,
-        ExpressionEndDelimiter,
-    ),
     UndelimitedExpression(
         /// First token (".")
         Token,
@@ -75,8 +63,6 @@ impl FinishedStackItem {
             FinishedStackItem::Param(token, _, _) => &token,
             FinishedStackItem::Variant(token, _, _) => &token,
             FinishedStackItem::DelimitedExpression(token, _, _) => &token,
-            FinishedStackItem::DelimitedExpressionOrGoal(token, _, _) => &token,
-            FinishedStackItem::DelimitedExpressionOrQuestionMark(token, _, _) => &token,
             FinishedStackItem::UndelimitedExpression(token, _) => &token,
             FinishedStackItem::MatchCase(token, _, _) => &token,
         }

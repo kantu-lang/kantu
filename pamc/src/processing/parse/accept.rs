@@ -30,12 +30,6 @@ impl Accept for UnfinishedStackItem {
             UnfinishedStackItem::UnfinishedDelimitedExpression(expression) => {
                 expression.accept(item, file_id)
             }
-            UnfinishedStackItem::UnfinishedDelimitedExpressionOrGoal(expression) => {
-                expression.accept(item, file_id)
-            }
-            UnfinishedStackItem::UnfinishedDelimitedExpressionOrQuestionMark(expression) => {
-                expression.accept(item, file_id)
-            }
             UnfinishedStackItem::Fun(fun) => fun.accept(item, file_id),
             UnfinishedStackItem::Match(match_) => match_.accept(item, file_id),
             UnfinishedStackItem::Forall(forall) => forall.accept(item, file_id),
@@ -455,12 +449,9 @@ impl Accept for UnfinishedDelimitedExpression {
                     TokenKind::Forall => AcceptResult::Push(UnfinishedStackItem::Forall(
                         UnfinishedForall::Keyword(token),
                     )),
-                    TokenKind::Check => AcceptResult::Push2(
-                        UnfinishedStackItem::Check(UnfinishedCheck::Keyword(token)),
-                        UnfinishedStackItem::UnfinishedDelimitedExpressionOrGoal(
-                            UnfinishedDelimitedExpressionOrGoal::Empty,
-                        ),
-                    ),
+                    TokenKind::Check => AcceptResult::Push(UnfinishedStackItem::Check(
+                        UnfinishedCheck::Keyword(token),
+                    )),
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
@@ -524,193 +515,6 @@ impl Accept for UnfinishedDelimitedExpression {
                     other_item => unexpected_finished_item(&other_item),
                 }
             }
-        }
-    }
-}
-
-impl Accept for UnfinishedDelimitedExpressionOrGoal {
-    fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
-        match self {
-            UnfinishedDelimitedExpressionOrGoal::Empty => {
-                match &item {
-                    FinishedStackItem::Token(token) if token.kind == TokenKind::Goal => {
-                        *self = UnfinishedDelimitedExpressionOrGoal::WaitingForEndDelimiter(
-                            token.clone(),
-                            GoalOrExpression::Goal {
-                                start: TextPosition {
-                                    file_id,
-                                    index: token.start_index,
-                                },
-                            },
-                        );
-                        return AcceptResult::ContinueToNextToken;
-                    }
-                    _ => {}
-                }
-                let mut delimited_expression = UnfinishedDelimitedExpression::Empty;
-                match delimited_expression.accept(item, file_id) {
-                    AcceptResult::Error(error) => AcceptResult::Error(error),
-                    non_error_accept_result => {
-                        if let UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            first_token,
-                            expression,
-                        ) = delimited_expression
-                        {
-                            *self = UnfinishedDelimitedExpressionOrGoal::WaitingForEndDelimiter(
-                                first_token,
-                                GoalOrExpression::Expression(expression),
-                            );
-                        }
-                        non_error_accept_result
-                    }
-                }
-            }
-            UnfinishedDelimitedExpressionOrGoal::WaitingForEndDelimiter(
-                first_token,
-                expression,
-            ) => match item {
-                FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Comma
-                    | TokenKind::Semicolon
-                    | TokenKind::Colon
-                    | TokenKind::Equal
-                    | TokenKind::LCurly
-                    | TokenKind::RCurly
-                    | TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::DelimitedExpressionOrGoal(
-                            first_token.clone(),
-                            expression.clone(),
-                            ExpressionEndDelimiter(token),
-                        ),
-                    ),
-                    TokenKind::Dot => {
-                        if let GoalOrExpression::Expression(expression) = expression {
-                            let unfinished = UnfinishedStackItem::Dot(UnfinishedDot {
-                                first_token: first_token.clone(),
-                                left: expression.clone(),
-                            });
-                            *self = UnfinishedDelimitedExpressionOrGoal::Empty;
-                            AcceptResult::Push(unfinished)
-                        } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        }
-                    }
-                    TokenKind::LParen => {
-                        if let GoalOrExpression::Expression(expression) = expression {
-                            let unfinished = UnfinishedStackItem::Call(UnfinishedCall {
-                                first_token: first_token.clone(),
-                                callee: expression.clone(),
-                                args: vec![],
-                            });
-                            *self = UnfinishedDelimitedExpressionOrGoal::Empty;
-                            AcceptResult::Push2(
-                                unfinished,
-                                UnfinishedStackItem::UnfinishedDelimitedExpression(
-                                    UnfinishedDelimitedExpression::Empty,
-                                ),
-                            )
-                        } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        }
-                    }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
-                },
-                other_item => unexpected_finished_item(&other_item),
-            },
-        }
-    }
-}
-
-impl Accept for UnfinishedDelimitedExpressionOrQuestionMark {
-    fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
-        match self {
-            UnfinishedDelimitedExpressionOrQuestionMark::Empty => {
-                match &item {
-                    FinishedStackItem::Token(token) if token.kind == TokenKind::QuestionMark => {
-                        *self = UnfinishedDelimitedExpressionOrQuestionMark::WaitingForEndDelimiter(
-                            token.clone(),
-                            QuestionMarkOrExpression::QuestionMark {
-                                start: TextPosition {
-                                    file_id,
-                                    index: token.start_index,
-                                },
-                            },
-                        );
-                        return AcceptResult::ContinueToNextToken;
-                    }
-                    _ => {}
-                }
-                let mut delimited_expression = UnfinishedDelimitedExpression::Empty;
-                match delimited_expression.accept(item, file_id) {
-                    AcceptResult::Error(error) => AcceptResult::Error(error),
-                    non_error_accept_result => {
-                        if let UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            first_token,
-                            expression,
-                        ) = delimited_expression
-                        {
-                            *self =
-                                UnfinishedDelimitedExpressionOrQuestionMark::WaitingForEndDelimiter(
-                                    first_token,
-                                    QuestionMarkOrExpression::Expression(expression),
-                                );
-                        }
-                        non_error_accept_result
-                    }
-                }
-            }
-            UnfinishedDelimitedExpressionOrQuestionMark::WaitingForEndDelimiter(
-                first_token,
-                expression,
-            ) => match item {
-                FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Comma
-                    | TokenKind::Semicolon
-                    | TokenKind::Colon
-                    | TokenKind::Equal
-                    | TokenKind::LCurly
-                    | TokenKind::RCurly
-                    | TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::DelimitedExpressionOrQuestionMark(
-                            first_token.clone(),
-                            expression.clone(),
-                            ExpressionEndDelimiter(token),
-                        ),
-                    ),
-                    TokenKind::Dot => {
-                        if let QuestionMarkOrExpression::Expression(expression) = expression {
-                            let unfinished = UnfinishedStackItem::Dot(UnfinishedDot {
-                                first_token: first_token.clone(),
-                                left: expression.clone(),
-                            });
-                            *self = UnfinishedDelimitedExpressionOrQuestionMark::Empty;
-                            AcceptResult::Push(unfinished)
-                        } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        }
-                    }
-                    TokenKind::LParen => {
-                        if let QuestionMarkOrExpression::Expression(expression) = expression {
-                            let unfinished = UnfinishedStackItem::Call(UnfinishedCall {
-                                first_token: first_token.clone(),
-                                callee: expression.clone(),
-                                args: vec![],
-                            });
-                            *self = UnfinishedDelimitedExpressionOrQuestionMark::Empty;
-                            AcceptResult::Push2(
-                                unfinished,
-                                UnfinishedStackItem::UnfinishedDelimitedExpression(
-                                    UnfinishedDelimitedExpression::Empty,
-                                ),
-                            )
-                        } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        }
-                    }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
-                },
-                other_item => unexpected_finished_item(&other_item),
-            },
         }
     }
 }
@@ -928,85 +732,122 @@ impl Accept for UnfinishedForall {
 }
 
 impl Accept for UnfinishedCheck {
-    fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
+    fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedCheck::Keyword(match_kw) => {
-                match item {
-                    FinishedStackItem::DelimitedExpressionOrGoal(_, checkee, end_delimiter) => {
-                        match end_delimiter.0.kind {
-                            TokenKind::Colon => {
-                                *self = UnfinishedCheck::Checkee(match_kw.clone(), checkee);
-                                AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpressionOrQuestionMark(
-                                UnfinishedDelimitedExpressionOrQuestionMark::Empty,
-                            ))
-                            }
-                            _other_end_delimiter => {
-                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                            }
-                        }
-                    }
-                    other_item => unexpected_finished_item(&other_item),
-                }
-            }
-            UnfinishedCheck::Checkee(match_kw, checkee) => match item {
-                FinishedStackItem::DelimitedExpressionOrQuestionMark(
-                    _,
-                    checkee_type,
-                    end_delimiter,
-                ) => match end_delimiter.0.kind {
-                    TokenKind::Equal => {
-                        *self = UnfinishedCheck::AwaitingCheckeeValue(
-                            match_kw.clone(),
-                            checkee.clone(),
-                            checkee_type,
+            UnfinishedCheck::Keyword(check_kw) => match item {
+                FinishedStackItem::Token(token) => {
+                    if token.kind == TokenKind::Goal {
+                        *self = UnfinishedCheck::GoalCheckeeAwaitingColon(
+                            check_kw.clone(),
+                            token.clone(),
                         );
-                        AcceptResult::Push(
-                            UnfinishedStackItem::UnfinishedDelimitedExpressionOrQuestionMark(
-                                UnfinishedDelimitedExpressionOrQuestionMark::Empty,
+                        AcceptResult::ContinueToNextToken
+                    } else {
+                        AcceptResult::PushAndContinueReducingWithNewTop(
+                            UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
                             ),
+                            FinishedStackItem::Token(token),
                         )
                     }
-                    TokenKind::LCurly => {
-                        *self = UnfinishedCheck::CheckeeValue(
-                            match_kw.clone(),
-                            checkee.clone(),
-                            checkee_type,
-                            None,
-                        );
-                        AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
-                            UnfinishedDelimitedExpression::Empty,
-                        ))
+                }
+
+                FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                    match end_delimiter.0.kind {
+                        TokenKind::Colon => {
+                            *self = UnfinishedCheck::ExpressionCheckee(
+                                check_kw.clone(),
+                                expression.clone(),
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
                     }
-                    _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                    }
-                },
+                }
+
                 other_item => unexpected_finished_item(&other_item),
             },
-            UnfinishedCheck::AwaitingCheckeeValue(match_kw, checkee, checkee_type) => match item {
-                FinishedStackItem::DelimitedExpressionOrQuestionMark(
-                    _,
-                    checkee_value,
-                    end_delimiter,
-                ) => match end_delimiter.0.kind {
+            UnfinishedCheck::GoalCheckeeAwaitingColon(check_kw, goal_kw) => match item {
+                FinishedStackItem::Token(token) if token.kind == TokenKind::Colon => {
+                    *self = UnfinishedCheck::GoalCheckeeReceivedColon(
+                        check_kw.clone(),
+                        goal_kw.clone(),
+                    );
+                    AcceptResult::ContinueToNextToken
+                }
+
+                other_item => unexpected_finished_item(&other_item),
+            },
+            UnfinishedCheck::GoalCheckeeReceivedColon(check_kw, goal_kw) => match item {
+                FinishedStackItem::Token(token) => {
+                    if token.kind == TokenKind::QuestionMark {
+                        *self = UnfinishedCheck::GoalCheckeeQuestionTypeAwaitingCurly(
+                            check_kw.clone(),
+                            goal_kw.clone(),
+                            TextPosition {
+                                index: token.start_index,
+                                file_id,
+                            },
+                        );
+                        AcceptResult::ContinueToNextToken
+                    } else {
+                        AcceptResult::PushAndContinueReducingWithNewTop(
+                            UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ),
+                            FinishedStackItem::Token(token),
+                        )
+                    }
+                }
+
+                FinishedStackItem::DelimitedExpression(_, checkee_type, end_delimiter) => {
+                    match end_delimiter.0.kind {
+                        TokenKind::LCurly => {
+                            *self = UnfinishedCheck::GoalCheckeeTypeReceivedCurly(
+                                check_kw.clone(),
+                                goal_kw.clone(),
+                                QuestionMarkOrExpression::Expression(checkee_type),
+                            );
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    }
+                }
+
+                other_item => unexpected_finished_item(&other_item),
+            },
+            UnfinishedCheck::GoalCheckeeQuestionTypeAwaitingCurly(
+                check_kw,
+                goal_kw,
+                question_mark_position,
+            ) => match item {
+                FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::LCurly => {
-                        *self = UnfinishedCheck::CheckeeValue(
-                            match_kw.clone(),
-                            checkee.clone(),
-                            checkee_type.clone(),
-                            Some(checkee_value),
+                        *self = UnfinishedCheck::GoalCheckeeTypeReceivedCurly(
+                            check_kw.clone(),
+                            goal_kw.clone(),
+                            QuestionMarkOrExpression::QuestionMark {
+                                start: question_mark_position.clone(),
+                            },
                         );
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
                     _other_token_kind => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        return AcceptResult::Error(ParseError::UnexpectedToken(token));
                     }
                 },
+
                 other_item => unexpected_finished_item(&other_item),
             },
-            UnfinishedCheck::CheckeeValue(check_kw, checkee, checkee_type, checkee_value) => {
+            UnfinishedCheck::GoalCheckeeTypeReceivedCurly(check_kw, goal_kw, checkee_type) => {
                 match item {
                     FinishedStackItem::DelimitedExpression(_, output, end_delimiter) => {
                         match end_delimiter.0.kind {
@@ -1014,21 +855,216 @@ impl Accept for UnfinishedCheck {
                                 FinishedStackItem::UndelimitedExpression(
                                     check_kw.clone(),
                                     Expression::Check(Box::new(Check {
-                                        checkee: checkee.clone(),
-                                        checkee_type: checkee_type.clone(),
-                                        checkee_value: checkee_value.clone(),
+                                        annotation: CheckeeAnnotation::Goal(GoalCheckAnnotation {
+                                            goal_kw_position: TextPosition {
+                                                file_id,
+                                                index: goal_kw.start_index,
+                                            },
+                                            checkee_type: checkee_type.clone(),
+                                        }),
                                         output,
                                     })),
                                 ),
                             ),
-                            _other_token_kind => {
+                            _other_end_delimiter => {
                                 AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
                             }
                         }
                     }
+
                     other_item => unexpected_finished_item(&other_item),
                 }
             }
+
+            UnfinishedCheck::ExpressionCheckee(check_kw, checkee) => match item {
+                FinishedStackItem::Token(token) => {
+                    if token.kind == TokenKind::QuestionMark {
+                        *self = UnfinishedCheck::ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(
+                            check_kw.clone(),
+                            checkee.clone(),
+                            TextPosition {
+                                index: token.start_index,
+                                file_id,
+                            },
+                        );
+                        AcceptResult::ContinueToNextToken
+                    } else {
+                        AcceptResult::PushAndContinueReducingWithNewTop(
+                            UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ),
+                            FinishedStackItem::Token(token),
+                        )
+                    }
+                }
+
+                FinishedStackItem::DelimitedExpression(_, checkee_type, end_delimiter) => {
+                    match end_delimiter.0.kind {
+                        TokenKind::Equal => {
+                            *self = UnfinishedCheck::ExpressionCheckeeTypeReceivedEqualOrCurly(
+                                check_kw.clone(),
+                                checkee.clone(),
+                                QuestionMarkOrExpression::Expression(checkee_type),
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
+                        TokenKind::LCurly => {
+                            *self = UnfinishedCheck::ExpressionCheckeeValueReceivedCurly(
+                                check_kw.clone(),
+                                checkee.clone(),
+                                QuestionMarkOrExpression::Expression(checkee_type),
+                                None,
+                            );
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    }
+                }
+
+                other_item => unexpected_finished_item(&other_item),
+            },
+            UnfinishedCheck::ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(
+                check_kw,
+                checkee,
+                question_mark_position,
+            ) => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Equal => {
+                        *self = UnfinishedCheck::ExpressionCheckeeTypeReceivedEqualOrCurly(
+                            check_kw.clone(),
+                            checkee.clone(),
+                            QuestionMarkOrExpression::QuestionMark {
+                                start: question_mark_position.clone(),
+                            },
+                        );
+                        AcceptResult::ContinueToNextToken
+                    }
+                    TokenKind::LCurly => {
+                        *self = UnfinishedCheck::ExpressionCheckeeValueReceivedCurly(
+                            check_kw.clone(),
+                            checkee.clone(),
+                            QuestionMarkOrExpression::QuestionMark {
+                                start: question_mark_position.clone(),
+                            },
+                            None,
+                        );
+                        AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                            UnfinishedDelimitedExpression::Empty,
+                        ))
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                },
+
+                other_item => unexpected_finished_item(&other_item),
+            },
+            UnfinishedCheck::ExpressionCheckeeTypeReceivedEqualOrCurly(
+                check_kw,
+                checkee,
+                checkee_type,
+            ) => match item {
+                FinishedStackItem::Token(token) => {
+                    if token.kind == TokenKind::QuestionMark {
+                        *self = UnfinishedCheck::ExpressionCheckeeQuestionValueAwaitingCurly(
+                            check_kw.clone(),
+                            checkee.clone(),
+                            checkee_type.clone(),
+                            TextPosition {
+                                index: token.start_index,
+                                file_id,
+                            },
+                        );
+                        AcceptResult::ContinueToNextToken
+                    } else {
+                        AcceptResult::PushAndContinueReducingWithNewTop(
+                            UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ),
+                            FinishedStackItem::Token(token),
+                        )
+                    }
+                }
+
+                FinishedStackItem::DelimitedExpression(_, checkee_value, end_delimiter) => {
+                    match end_delimiter.0.kind {
+                        TokenKind::LCurly => {
+                            *self = UnfinishedCheck::ExpressionCheckeeValueReceivedCurly(
+                                check_kw.clone(),
+                                checkee.clone(),
+                                checkee_type.clone(),
+                                Some(QuestionMarkOrExpression::Expression(checkee_value)),
+                            );
+                            AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                UnfinishedDelimitedExpression::Empty,
+                            ))
+                        }
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    }
+                }
+
+                other_item => unexpected_finished_item(&other_item),
+            },
+            UnfinishedCheck::ExpressionCheckeeQuestionValueAwaitingCurly(
+                check_kw,
+                checkee,
+                checkee_type,
+                question_mark_position,
+            ) => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::LCurly => {
+                        *self = UnfinishedCheck::ExpressionCheckeeValueReceivedCurly(
+                            check_kw.clone(),
+                            checkee.clone(),
+                            checkee_type.clone(),
+                            Some(QuestionMarkOrExpression::QuestionMark {
+                                start: question_mark_position.clone(),
+                            }),
+                        );
+                        AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
+                            UnfinishedDelimitedExpression::Empty,
+                        ))
+                    }
+                    _other_token_kind => {
+                        return AcceptResult::Error(ParseError::UnexpectedToken(token))
+                    }
+                },
+
+                other_item => unexpected_finished_item(&other_item),
+            },
+            UnfinishedCheck::ExpressionCheckeeValueReceivedCurly(
+                check_kw,
+                checkee,
+                checkee_type,
+                checkee_value,
+            ) => match item {
+                FinishedStackItem::DelimitedExpression(_, output, end_delimiter) => {
+                    match end_delimiter.0.kind {
+                        TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
+                            FinishedStackItem::UndelimitedExpression(
+                                check_kw.clone(),
+                                Expression::Check(Box::new(Check {
+                                    annotation: CheckeeAnnotation::Expression(
+                                        ExpressionCheckAnnotation {
+                                            checkee: checkee.clone(),
+                                            checkee_type: checkee_type.clone(),
+                                            checkee_value: checkee_value.clone(),
+                                        },
+                                    ),
+                                    output,
+                                })),
+                            ),
+                        ),
+                        _other_end_delimiter => {
+                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        }
+                    }
+                }
+
+                other_item => unexpected_finished_item(&other_item),
+            },
         }
     }
 }

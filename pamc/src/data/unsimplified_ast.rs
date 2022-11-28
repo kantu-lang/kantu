@@ -109,16 +109,27 @@ pub struct Forall {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Check {
-    pub checkee: GoalOrExpression,
-    pub checkee_type: QuestionMarkOrExpression,
-    pub checkee_value: Option<QuestionMarkOrExpression>,
+    pub annotation: CheckeeAnnotation,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GoalOrExpression {
-    Goal { start: TextPosition },
-    Expression(Expression),
+pub enum CheckeeAnnotation {
+    Goal(GoalCheckAnnotation),
+    Expression(ExpressionCheckAnnotation),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GoalCheckAnnotation {
+    pub goal_kw_position: TextPosition,
+    pub checkee_type: QuestionMarkOrExpression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExpressionCheckAnnotation {
+    pub checkee: Expression,
+    pub checkee_type: QuestionMarkOrExpression,
+    pub checkee_value: Option<QuestionMarkOrExpression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -9,8 +9,6 @@ pub enum UnfinishedStackItem {
     Param(UnfinishedParam),
     Variant(UnfinishedVariant),
     UnfinishedDelimitedExpression(UnfinishedDelimitedExpression),
-    UnfinishedDelimitedExpressionOrGoal(UnfinishedDelimitedExpressionOrGoal),
-    UnfinishedDelimitedExpressionOrQuestionMark(UnfinishedDelimitedExpressionOrQuestionMark),
     Fun(UnfinishedFun),
     Match(UnfinishedMatch),
     Forall(UnfinishedForall),
@@ -67,18 +65,6 @@ pub enum UnfinishedDelimitedExpression {
 }
 
 #[derive(Clone, Debug)]
-pub enum UnfinishedDelimitedExpressionOrGoal {
-    Empty,
-    WaitingForEndDelimiter(Token, GoalOrExpression),
-}
-
-#[derive(Clone, Debug)]
-pub enum UnfinishedDelimitedExpressionOrQuestionMark {
-    Empty,
-    WaitingForEndDelimiter(Token, QuestionMarkOrExpression),
-}
-
-#[derive(Clone, Debug)]
 pub enum UnfinishedFun {
     Keyword(Token),
     Name(Token, Identifier),
@@ -101,11 +87,22 @@ pub enum UnfinishedForall {
 #[derive(Clone, Debug)]
 pub enum UnfinishedCheck {
     Keyword(Token),
-    Checkee(Token, GoalOrExpression),
-    AwaitingCheckeeValue(Token, GoalOrExpression, QuestionMarkOrExpression),
-    CheckeeValue(
+    GoalCheckeeAwaitingColon(Token, Token),
+    GoalCheckeeReceivedColon(Token, Token),
+    GoalCheckeeQuestionTypeAwaitingCurly(Token, Token, TextPosition),
+    GoalCheckeeTypeReceivedCurly(Token, Token, QuestionMarkOrExpression),
+    ExpressionCheckee(Token, Expression),
+    ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(Token, Expression, TextPosition),
+    ExpressionCheckeeTypeReceivedEqualOrCurly(Token, Expression, QuestionMarkOrExpression),
+    ExpressionCheckeeQuestionValueAwaitingCurly(
         Token,
-        GoalOrExpression,
+        Expression,
+        QuestionMarkOrExpression,
+        TextPosition,
+    ),
+    ExpressionCheckeeValueReceivedCurly(
+        Token,
+        Expression,
         QuestionMarkOrExpression,
         Option<QuestionMarkOrExpression>,
     ),
