@@ -1,3 +1,7 @@
+// This grammar specification is just for my personal reference.
+// It is not part of the official documentation.
+// It is also not used by any part of the code (e.g., by an automatic parser generator).
+
 file :=
     | file_item*
 ;
@@ -59,6 +63,22 @@ expression :=
     | "fun" IDENTIFIER params ":" expression "{" expression "}"
     | "match" expression "{" case*_comma_separated "}"
     | "forall" params "{" expression "}"
+    | "check" goal_or_expression ":" expression_or_question check_equal_clause? "{" expression "}"
+;
+
+goal_or_expression :=
+    | "goal"
+    | expression
+;
+
+expression_or_question :=
+    | "?"
+    | expression
+;
+
+check_equal_clause? :=
+    | EPSILON
+    | "=" expression_or_question
 ;
 
 args :=
