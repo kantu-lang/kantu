@@ -30,34 +30,7 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
         }))];
 
     for token in tokens.into_iter().filter(is_not_whitespace) {
-        let mut finished = FinishedStackItem::Token(token);
-        while stack.len() >= 1 {
-            let top_unfinished = stack.last_mut().unwrap();
-            let accept_result = top_unfinished.accept(finished, file_id);
-            match accept_result {
-                AcceptResult::ContinueToNextToken => break,
-                AcceptResult::PopAndContinueReducing(new_finished) => {
-                    stack.pop();
-                    finished = new_finished;
-                    continue;
-                }
-                AcceptResult::Push(item) => {
-                    stack.push(item);
-                    break;
-                }
-                AcceptResult::Push2(item1, item2) => {
-                    stack.push(item1);
-                    stack.push(item2);
-                    break;
-                }
-                AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
-                    stack.push(item);
-                    finished = new_finished;
-                    continue;
-                }
-                AcceptResult::Error(err) => return Err(err),
-            }
-        }
+        handle_token(token, &mut stack, file_id)?;
     }
 
     if stack.len() != 1 {
@@ -80,6 +53,42 @@ fn is_not_whitespace(token: &Token) -> bool {
 
 fn is_not_whitespace_ref(token: &&Token) -> bool {
     token.kind != TokenKind::Whitespace
+}
+
+fn handle_token(
+    token: Token,
+    stack: &mut Vec<UnfinishedStackItem>,
+    file_id: FileId,
+) -> Result<(), ParseError> {
+    let mut finished = FinishedStackItem::Token(token);
+    while stack.len() >= 1 {
+        let top_unfinished = stack.last_mut().unwrap();
+        let accept_result = top_unfinished.accept(finished, file_id);
+        match accept_result {
+            AcceptResult::ContinueToNextToken => break,
+            AcceptResult::PopAndContinueReducing(new_finished) => {
+                stack.pop();
+                finished = new_finished;
+                continue;
+            }
+            AcceptResult::Push(item) => {
+                stack.push(item);
+                break;
+            }
+            AcceptResult::Push2(item1, item2) => {
+                stack.push(item1);
+                stack.push(item2);
+                break;
+            }
+            AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
+                stack.push(item);
+                finished = new_finished;
+                continue;
+            }
+            AcceptResult::Error(err) => return Err(err),
+        }
+    }
+    Ok(())
 }
 
 use unfinished::*;
