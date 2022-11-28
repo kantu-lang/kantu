@@ -197,6 +197,10 @@ impl Context {
             return Ok(());
         }
 
+        // Observe that we check for the name clash
+        // _after_ we check the underscore case.
+        // This is important because otherwise,
+        // underscores would cause name clash errors.
         self.check_for_name_clash(std::iter::once(&identifier.name), identifier)?;
 
         self.push_unrestricted(ContextEntry {
@@ -241,8 +245,8 @@ impl Context {
         {
             let mut name_components = name_components.clone().into_iter();
             match (name_components.next(), name_components.next()) {
+                // Detect if `name_components` is a singleton underscore.
                 (Some(IdentifierName::Reserved(ReservedIdentifierName::Underscore)), None) => {
-                    // This is a singleton underscore.
                     self.push_permanently_restricted(ContextEntry {
                         name_components: name_components.cloned().collect(),
                         source: OwnedSymbolSource::Identifier(source.clone()),
@@ -253,6 +257,10 @@ impl Context {
             }
         }
 
+        // Observe that we check for the name clash
+        // _after_ we check the singleton underscore case.
+        // This is important because otherwise,
+        // singleton underscores would cause name clash errors.
         self.check_for_name_clash(name_components.clone(), source)?;
 
         self.push_temporarily_restricted(ContextEntry {
