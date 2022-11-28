@@ -110,19 +110,19 @@ pub struct Forall {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Check {
     pub checkee: GoalOrExpression,
-    pub type_: QuestionMarkOrExpression,
+    pub checkee_type: QuestionMarkOrExpression,
     pub checkee_value: Option<QuestionMarkOrExpression>,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum GoalOrExpression {
-    Goal(Identifier),
+    Goal { start: TextPosition },
     Expression(Expression),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QuestionMarkOrExpression {
-    QuestionMark(Identifier),
+    QuestionMark { start: TextPosition },
     Expression(Expression),
 }

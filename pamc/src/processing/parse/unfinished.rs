@@ -9,9 +9,12 @@ pub enum UnfinishedStackItem {
     Param(UnfinishedParam),
     Variant(UnfinishedVariant),
     UnfinishedDelimitedExpression(UnfinishedDelimitedExpression),
+    UnfinishedDelimitedExpressionOrGoal(UnfinishedDelimitedExpressionOrGoal),
+    UnfinishedDelimitedExpressionOrQuestionMark(UnfinishedDelimitedExpressionOrQuestionMark),
     Fun(UnfinishedFun),
     Match(UnfinishedMatch),
     Forall(UnfinishedForall),
+    Check(UnfinishedCheck),
     Dot(UnfinishedDot),
     Call(UnfinishedCall),
     MatchCase(UnfinishedMatchCase),
@@ -64,6 +67,18 @@ pub enum UnfinishedDelimitedExpression {
 }
 
 #[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedExpressionOrGoal {
+    Empty,
+    WaitingForEndDelimiter(Token, GoalOrExpression),
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedExpressionOrQuestionMark {
+    Empty,
+    WaitingForEndDelimiter(Token, QuestionMarkOrExpression),
+}
+
+#[derive(Clone, Debug)]
 pub enum UnfinishedFun {
     Keyword(Token),
     Name(Token, Identifier),
@@ -81,6 +96,19 @@ pub enum UnfinishedMatch {
 pub enum UnfinishedForall {
     Keyword(Token),
     Params(Token, Vec<Param>),
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedCheck {
+    Keyword(Token),
+    Checkee(Token, GoalOrExpression),
+    AwaitingCheckeeValue(Token, GoalOrExpression, QuestionMarkOrExpression),
+    CheckeeValue(
+        Token,
+        GoalOrExpression,
+        QuestionMarkOrExpression,
+        Option<QuestionMarkOrExpression>,
+    ),
 }
 
 #[derive(Clone, Debug)]
