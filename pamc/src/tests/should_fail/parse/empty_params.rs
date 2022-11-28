@@ -1,4 +1,4 @@
-use super::super::*;
+use super::*;
 
 fn expect_rparen_parse_error(src: &str) {
     let file_id = FileId(0);
