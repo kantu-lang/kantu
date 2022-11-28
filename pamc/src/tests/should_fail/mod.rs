@@ -1,5 +1,6 @@
 mod ast_simplification;
 mod fun_recursion;
+mod lex;
 mod parse;
 mod scope;
 mod type_check;
@@ -15,7 +16,7 @@ use crate::{
     processing::{
         bind_type_independent::{bind_files, BindError, OwnedSymbolSource},
         check_variant_return_types::check_variant_return_types_for_file,
-        lex::lex,
+        lex::{lex, LexError},
         lighten_ast::lighten_file,
         parse::{parse_file, ParseError},
         simplify_ast::{simplify_file, SimplifyAstError},
