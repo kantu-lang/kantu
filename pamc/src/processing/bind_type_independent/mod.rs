@@ -118,7 +118,7 @@ fn bind_variant_and_add_restricted_dot_target(
     let unbound_name = variant.name;
     let name = create_name_without_adding_to_scope(context, unbound_name.clone());
 
-    context.add_restricted_name_to_scope_unless_singleton_underscore(
+    context.add_temporarily_restricted_name_to_scope_unless_singleton_underscore(
         [type_name, &unbound_name.name].iter().copied(),
         &unbound_name,
     )?;

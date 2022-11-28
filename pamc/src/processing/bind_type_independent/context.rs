@@ -7,42 +7,54 @@ pub struct Context {
 
 #[derive(Clone, Copy, Debug)]
 enum PossiblyRestricted<T> {
-    Restricted(T),
+    PermanentlyRestricted(T),
+    TemporarilyRestricted(T),
     Unrestricted(T),
 }
 
 impl<T> PossiblyRestricted<T> {
     fn map<U>(self, f: impl FnOnce(T) -> U) -> PossiblyRestricted<U> {
         match self {
-            Self::Restricted(t) => PossiblyRestricted::Restricted(f(t)),
+            PossiblyRestricted::PermanentlyRestricted(t) => {
+                PossiblyRestricted::PermanentlyRestricted(f(t))
+            }
+            Self::TemporarilyRestricted(t) => PossiblyRestricted::TemporarilyRestricted(f(t)),
             Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(f(t)),
         }
     }
 
     fn as_ref(&self) -> PossiblyRestricted<&T> {
         match self {
-            Self::Restricted(t) => PossiblyRestricted::Restricted(&t),
+            PossiblyRestricted::PermanentlyRestricted(t) => {
+                PossiblyRestricted::PermanentlyRestricted(t)
+            }
+            Self::TemporarilyRestricted(t) => PossiblyRestricted::TemporarilyRestricted(&t),
             Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(&t),
         }
     }
 
     fn as_mut(&mut self) -> PossiblyRestricted<&mut T> {
         match self {
-            Self::Restricted(t) => PossiblyRestricted::Restricted(t),
+            PossiblyRestricted::PermanentlyRestricted(t) => {
+                PossiblyRestricted::PermanentlyRestricted(t)
+            }
+            Self::TemporarilyRestricted(t) => PossiblyRestricted::TemporarilyRestricted(t),
             Self::Unrestricted(t) => PossiblyRestricted::Unrestricted(t),
         }
     }
 
-    fn restricted(self) -> Option<T> {
+    fn temporarily_restricted(self) -> Option<T> {
         match self {
-            Self::Restricted(t) => Some(t),
+            PossiblyRestricted::PermanentlyRestricted(_) => None,
+            Self::TemporarilyRestricted(t) => Some(t),
             Self::Unrestricted(_) => None,
         }
     }
 
     fn ignore_status(self) -> T {
         match self {
-            Self::Restricted(t) => t,
+            PossiblyRestricted::PermanentlyRestricted(t) => t,
+            Self::TemporarilyRestricted(t) => t,
             Self::Unrestricted(t) => t,
         }
     }
@@ -51,7 +63,10 @@ impl<T> PossiblyRestricted<T> {
 impl<T> PossiblyRestricted<Option<T>> {
     fn transpose(self) -> Option<PossiblyRestricted<T>> {
         match self {
-            Self::Restricted(t) => t.map(PossiblyRestricted::Restricted),
+            PossiblyRestricted::PermanentlyRestricted(t) => {
+                t.map(PossiblyRestricted::PermanentlyRestricted)
+            }
+            Self::TemporarilyRestricted(t) => t.map(PossiblyRestricted::TemporarilyRestricted),
             Self::Unrestricted(t) => t.map(PossiblyRestricted::Unrestricted),
         }
     }
@@ -92,8 +107,14 @@ impl Context {
         self.stack.push(PossiblyRestricted::Unrestricted(entry));
     }
 
-    fn push_restricted(&mut self, entry: ContextEntry) {
-        self.stack.push(PossiblyRestricted::Restricted(entry));
+    fn push_temporarily_restricted(&mut self, entry: ContextEntry) {
+        self.stack
+            .push(PossiblyRestricted::TemporarilyRestricted(entry));
+    }
+
+    fn push_permanently_restricted(&mut self, entry: ContextEntry) {
+        self.stack
+            .push(PossiblyRestricted::PermanentlyRestricted(entry));
     }
 
     /// Panics if `n > self.len()`.
@@ -169,6 +190,10 @@ impl Context {
         identifier: &ub::Identifier,
     ) -> Result<(), NameClashError> {
         if let IdentifierName::Reserved(ReservedIdentifierName::Underscore) = identifier.name {
+            self.push_permanently_restricted(ContextEntry {
+                name_components: vec![identifier.name.clone()],
+                source: OwnedSymbolSource::Identifier(identifier.clone()),
+            });
             return Ok(());
         }
 
@@ -205,7 +230,7 @@ impl Context {
 }
 
 impl Context {
-    pub fn add_restricted_name_to_scope_unless_singleton_underscore<'a, N>(
+    pub fn add_temporarily_restricted_name_to_scope_unless_singleton_underscore<'a, N>(
         &mut self,
         name_components: N,
         source: &ub::Identifier,
@@ -217,7 +242,11 @@ impl Context {
             let mut name_components = name_components.clone().into_iter();
             match (name_components.next(), name_components.next()) {
                 (Some(IdentifierName::Reserved(ReservedIdentifierName::Underscore)), None) => {
-                    // Skip because this is a singleton underscore.
+                    // This is a singleton underscore.
+                    self.push_permanently_restricted(ContextEntry {
+                        name_components: name_components.cloned().collect(),
+                        source: OwnedSymbolSource::Identifier(source.clone()),
+                    });
                     return Ok(());
                 }
                 _ => {}
@@ -226,7 +255,7 @@ impl Context {
 
         self.check_for_name_clash(name_components.clone(), source)?;
 
-        self.push_restricted(ContextEntry {
+        self.push_temporarily_restricted(ContextEntry {
             name_components: name_components.into_iter().cloned().collect(),
             source: OwnedSymbolSource::Identifier(source.clone()),
         });
@@ -242,7 +271,7 @@ impl Context {
         *wrapped_entry = PossiblyRestricted::Unrestricted(
             wrapped_entry
                 .as_mut()
-                .restricted()
+                .temporarily_restricted()
                 .take()
                 .expect("Tried to lift restriction on an unrestricted entry.")
                 .clone(),
