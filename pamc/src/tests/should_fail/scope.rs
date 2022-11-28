@@ -149,7 +149,13 @@ fn duplicate_match_case_params() {
 }
 
 #[test]
-fn underscore_cannot_be_referenced() {
-    let src = include_str!("../sample_code/should_fail/scope/underscore_cannot_be_referenced.ph");
+fn ref_underscore_param() {
+    let src = include_str!("../sample_code/should_fail/scope/ref_underscore_param.ph");
+    expect_underscore_not_found_error(src);
+}
+
+#[test]
+fn ref_underscore_fun() {
+    let src = include_str!("../sample_code/should_fail/scope/ref_underscore_fun.ph");
     expect_underscore_not_found_error(src);
 }
