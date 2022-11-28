@@ -136,6 +136,13 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     kind: TokenKind::Dash,
                 });
                 None
+            } else if c == '?' {
+                state.tokens.push(Token {
+                    start_index: i,
+                    content: c.into(),
+                    kind: TokenKind::Question,
+                });
+                None
             } else if c == '(' {
                 state.tokens.push(Token {
                     start_index: i,
@@ -276,6 +283,18 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                             content: pending_token.content.clone(),
                             kind: TokenKind::Exists,
                         }
+                    } else if pending_token.content == "check" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Check,
+                        }
+                    } else if pending_token.content == "goal" {
+                        Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::Goal,
+                        }
                     } else if pending_token.content == "_" {
                         Token {
                             start_index: pending_token.start_index,
@@ -302,6 +321,7 @@ fn is_valid_non_initial_identifier_character(c: char) -> bool {
         && c != '@'
         && c != '='
         && c != '-'
+        && c != '?'
         && c != '('
         && c != ')'
         && c != '['

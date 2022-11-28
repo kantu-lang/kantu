@@ -17,6 +17,7 @@ pub enum TokenKind {
     At,
     Equal,
     Dash,
+    Question,
     LParen,
     RParen,
     LSquare,
@@ -36,4 +37,6 @@ pub enum TokenKind {
     Forall,
     Exists,
     Underscore,
+    Check,
+    Goal,
 }
