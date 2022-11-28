@@ -131,3 +131,9 @@ fn duplicate_match_case_params() {
     let src = include_str!("../sample_code/should_fail/scope/duplicate_match_case_params.ph");
     expect_name_clash_error(src, "x");
 }
+
+#[test]
+fn underscore_cannot_be_referenced() {
+    let src = include_str!("../sample_code/should_fail/scope/underscore_cannot_be_referenced.ph");
+    expect_name_not_found_error(src, ["_"]);
+}
