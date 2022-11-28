@@ -47,6 +47,7 @@ pub enum Expression {
     Fun(Box<Fun>),
     Match(Box<Match>),
     Forall(Box<Forall>),
+    Check(Box<Check>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -104,4 +105,24 @@ pub struct MatchCase {
 pub struct Forall {
     pub params: Vec<Param>,
     pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Check {
+    pub checkee: GoalOrExpression,
+    pub type_: QuestionMarkOrExpression,
+    pub checkee_value: Option<QuestionMarkOrExpression>,
+    pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GoalOrExpression {
+    Goal(Identifier),
+    Expression(Expression),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum QuestionMarkOrExpression {
+    QuestionMark(Identifier),
+    Expression(Expression),
 }

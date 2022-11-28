@@ -80,6 +80,7 @@ fn simplify_expression(unsimplified: ust::Expression) -> Result<Expression, Simp
         ust::Expression::Fun(unsimplified) => simplify_fun(*unsimplified)?,
         ust::Expression::Match(unsimplified) => simplify_match(*unsimplified)?,
         ust::Expression::Forall(unsimplified) => simplify_forall(*unsimplified)?,
+        ust::Expression::Check(unsimplified) => simplify_check(*unsimplified)?,
     })
 }
 
@@ -149,4 +150,9 @@ fn simplify_forall(unsimplified: ust::Forall) -> Result<Expression, SimplifyAstE
         params: vec_result_map(unsimplified.params, simplify_param)?,
         output: simplify_expression(unsimplified.output)?,
     })))
+}
+
+fn simplify_check(unsimplified: ust::Check) -> Result<Expression, SimplifyAstError> {
+    // TODO: Convert to actual check expression
+    simplify_expression(unsimplified.output)
 }
