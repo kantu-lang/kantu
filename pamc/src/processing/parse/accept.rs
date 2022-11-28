@@ -240,6 +240,20 @@ impl Accept for UnfinishedParams {
                         token, is_dashed, name,
                     )))
                 }
+                TokenKind::Underscore => {
+                    let name = Identifier {
+                        start: TextPosition {
+                            file_id,
+                            index: token.start_index,
+                        },
+                        name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+                    };
+                    let is_dashed = self.pending_dash.is_some();
+                    self.pending_dash = None;
+                    AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
+                        token, is_dashed, name,
+                    )))
+                }
                 TokenKind::RParen => {
                     if self.params.is_empty() || self.pending_dash.is_some() {
                         AcceptResult::Error(ParseError::UnexpectedToken(token))
@@ -511,6 +525,17 @@ impl Accept for UnfinishedFun {
                                 index: token.start_index,
                             },
                             name: IdentifierName::Standard(token.content.clone()),
+                        };
+                        *self = UnfinishedFun::Name(fun_kw.clone(), name);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    TokenKind::Underscore => {
+                        let name = Identifier {
+                            start: TextPosition {
+                                file_id,
+                                index: token.start_index,
+                            },
+                            name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
                         AcceptResult::ContinueToNextToken
@@ -838,6 +863,24 @@ impl Accept for UnfinishedMatchCase {
                                     index: token.start_index,
                                 },
                                 name: IdentifierName::Standard(token.content.clone()),
+                            };
+                            params.push(name);
+                            currently_has_ending_comma.0 = false;
+                            AcceptResult::ContinueToNextToken
+                        } else {
+                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        }
+                    }
+                    TokenKind::Underscore => {
+                        let can_accept_identifier =
+                            params.is_empty() || currently_has_ending_comma.0;
+                        if can_accept_identifier {
+                            let name = Identifier {
+                                start: TextPosition {
+                                    file_id,
+                                    index: token.start_index,
+                                },
+                                name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                             };
                             params.push(name);
                             currently_has_ending_comma.0 = false;

@@ -164,10 +164,14 @@ impl Context {
         )
     }
 
-    pub fn add_unrestricted_unqualified_name_to_scope(
+    pub fn add_unrestricted_unqualified_name_to_scope_unless_underscore(
         &mut self,
         identifier: &ub::Identifier,
     ) -> Result<(), NameClashError> {
+        if let IdentifierName::Reserved(ReservedIdentifierName::Underscore) = identifier.name {
+            return Ok(());
+        }
+
         self.check_for_name_clash(std::iter::once(&identifier.name), identifier)?;
 
         self.push_unrestricted(ContextEntry {
@@ -201,7 +205,7 @@ impl Context {
 }
 
 impl Context {
-    pub fn add_restricted_name_to_scope<'a, N>(
+    pub fn add_restricted_name_to_scope_unless_singleton_underscore<'a, N>(
         &mut self,
         name_components: N,
         source: &ub::Identifier,
@@ -209,6 +213,17 @@ impl Context {
     where
         N: Clone + IntoIterator<Item = &'a IdentifierName>,
     {
+        {
+            let mut name_components = name_components.clone().into_iter();
+            match (name_components.next(), name_components.next()) {
+                (Some(IdentifierName::Reserved(ReservedIdentifierName::Underscore)), None) => {
+                    // Skip because this is a singleton underscore.
+                    return Ok(());
+                }
+                _ => {}
+            }
+        }
+
         self.check_for_name_clash(name_components.clone(), source)?;
 
         self.push_restricted(ContextEntry {

@@ -22,6 +22,22 @@ where
     });
 }
 
+fn expect_underscore_not_found_error(src: &str) {
+    expect_bind_error(src, |err| match err {
+        BindError::NameNotFound(err) => {
+            assert_eq!(
+                err.name_components
+                    .iter()
+                    .map(|identifier| identifier.name.clone())
+                    .collect::<Vec<_>>(),
+                vec![IdentifierName::Reserved(ReservedIdentifierName::Underscore)],
+                "Unexpected param name"
+            );
+        }
+        _ => panic!("Unexpected error: {:#?}", err),
+    });
+}
+
 #[test]
 fn reference_let_in_body() {
     let src = include_str!("../sample_code/should_fail/scope/ref_let_in_body.ph");
@@ -135,5 +151,5 @@ fn duplicate_match_case_params() {
 #[test]
 fn underscore_cannot_be_referenced() {
     let src = include_str!("../sample_code/should_fail/scope/underscore_cannot_be_referenced.ph");
-    expect_name_not_found_error(src, ["_"]);
+    expect_underscore_not_found_error(src);
 }
