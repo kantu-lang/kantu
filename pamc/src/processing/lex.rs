@@ -20,38 +20,13 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
 
     if let Some(pending_token) = state.pending_token {
         match pending_token.kind {
-            TokenKind::Whitespace
-            | TokenKind::LParen
-            | TokenKind::RParen
-            | TokenKind::LSquare
-            | TokenKind::RSquare
-            | TokenKind::LCurly
-            | TokenKind::RCurly
-            | TokenKind::LAngle
-            | TokenKind::RAngle
-            | TokenKind::Semicolon
-            | TokenKind::Colon
-            | TokenKind::Comma
-            | TokenKind::Dot
-            | TokenKind::At
-            | TokenKind::Dash
-            | TokenKind::FatArrow
-            | TokenKind::TypeLowerCase
-            | TokenKind::TypeTitleCase
-            | TokenKind::Let
-            | TokenKind::Fun
-            | TokenKind::Match
-            | TokenKind::Forall
-            | TokenKind::Exists
-            | TokenKind::Underscore => unreachable!(),
-
-            TokenKind::Equal => {
-                state.tokens.push(pending_token);
+            PendingTokenKind::Equal => {
+                state.tokens.push(pending_token.into());
                 state.pending_token = None;
             }
 
-            TokenKind::StandardIdentifier => {
-                state.tokens.push(pending_token);
+            PendingTokenKind::StandardIdentifier => {
+                state.tokens.push(pending_token.into());
                 state.pending_token = None;
             }
         }
@@ -63,7 +38,50 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
 #[derive(Clone, Debug)]
 struct LexState {
     tokens: Vec<Token>,
-    pending_token: Option<Token>,
+    pending_token: Option<PendingToken>,
+}
+
+/// Pending tokens can only have a limited
+/// subset of the possible token kinds.
+/// Thus, we create a separate `PendingToken` struct
+/// (and accompanying `PendingTokenKind` enum)
+/// to represent this constraint.
+#[derive(Clone, Debug)]
+struct PendingToken {
+    pub start_index: usize,
+    pub content: String,
+    pub kind: PendingTokenKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PendingTokenKind {
+    Equal,
+    StandardIdentifier,
+}
+
+impl From<PendingToken> for Token {
+    fn from(pending_token: PendingToken) -> Self {
+        let PendingToken {
+            start_index,
+            content,
+            kind,
+        } = pending_token;
+        let kind = kind.into();
+        Token {
+            start_index,
+            content,
+            kind,
+        }
+    }
+}
+
+impl From<PendingTokenKind> for TokenKind {
+    fn from(pending_token_kind: PendingTokenKind) -> Self {
+        match pending_token_kind {
+            PendingTokenKind::Equal => TokenKind::Equal,
+            PendingTokenKind::StandardIdentifier => TokenKind::StandardIdentifier,
+        }
+    }
 }
 
 fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
@@ -105,10 +123,10 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                 });
                 None
             } else if c == '=' {
-                state.pending_token = Some(Token {
+                state.pending_token = Some(PendingToken {
                     start_index: i,
                     content: c.into(),
-                    kind: TokenKind::Equal,
+                    kind: PendingTokenKind::Equal,
                 });
                 None
             } else if c == '-' {
@@ -184,10 +202,10 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             } else if c.is_ascii_digit() {
                 Some(LexError::UnexpectedAsciiDigit)
             } else if does_character_category_permit_it_to_be_used_in_identifier_name(c) {
-                state.pending_token = Some(Token {
+                state.pending_token = Some(PendingToken {
                     start_index: i,
                     content: c.into(),
-                    kind: TokenKind::StandardIdentifier,
+                    kind: PendingTokenKind::StandardIdentifier,
                 });
                 None
             } else {
@@ -195,32 +213,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             }
         }
         Some(pending_token) => match pending_token.kind {
-            TokenKind::Whitespace
-            | TokenKind::LParen
-            | TokenKind::RParen
-            | TokenKind::LSquare
-            | TokenKind::RSquare
-            | TokenKind::LCurly
-            | TokenKind::RCurly
-            | TokenKind::LAngle
-            | TokenKind::RAngle
-            | TokenKind::Semicolon
-            | TokenKind::Colon
-            | TokenKind::Comma
-            | TokenKind::Dot
-            | TokenKind::At
-            | TokenKind::Dash
-            | TokenKind::FatArrow
-            | TokenKind::TypeLowerCase
-            | TokenKind::TypeTitleCase
-            | TokenKind::Let
-            | TokenKind::Fun
-            | TokenKind::Match
-            | TokenKind::Forall
-            | TokenKind::Exists
-            | TokenKind::Underscore => unreachable!(),
-
-            TokenKind::Equal => {
+            PendingTokenKind::Equal => {
                 if c == '>' {
                     state.tokens.push(Token {
                         start_index: pending_token.start_index,
@@ -230,13 +223,13 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     state.pending_token = None;
                     None
                 } else {
-                    state.tokens.push(pending_token.clone());
+                    state.tokens.push(pending_token.clone().into());
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
             }
 
-            TokenKind::StandardIdentifier => {
+            PendingTokenKind::StandardIdentifier => {
                 if is_valid_non_initial_identifier_character(c) {
                     pending_token.content.push(c);
                     None
@@ -290,7 +283,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                             kind: TokenKind::Underscore,
                         }
                     } else {
-                        pending_token.clone()
+                        pending_token.clone().into()
                     });
                     state.pending_token = None;
                     handle_char(state, c, i)
