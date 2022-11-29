@@ -123,6 +123,18 @@ impl Context {
         self.stack.truncate(self.len() - n);
     }
 
+    /// Panics if `new_len > self.len()`.
+    pub fn truncate(&mut self, new_len: usize) {
+        if new_len > self.len() {
+            panic!(
+                "Tried to truncate a context with only {} elements to {} elements",
+                self.len(),
+                new_len
+            );
+        }
+        self.stack.truncate(new_len);
+    }
+
     pub fn len(&self) -> usize {
         self.stack.len()
     }
