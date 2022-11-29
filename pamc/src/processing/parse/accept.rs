@@ -855,13 +855,15 @@ impl Accept for UnfinishedCheck {
                                 FinishedStackItem::UndelimitedExpression(
                                     check_kw.clone(),
                                     Expression::Check(Box::new(Check {
-                                        annotation: CheckeeAnnotation::Goal(GoalCheckAnnotation {
-                                            goal_kw_position: TextPosition {
-                                                file_id,
-                                                index: goal_kw.start_index,
+                                        annotation: CheckeeAnnotation::Goal(
+                                            GoalCheckeeAnnotation {
+                                                goal_kw_position: TextPosition {
+                                                    file_id,
+                                                    index: goal_kw.start_index,
+                                                },
+                                                checkee_type: checkee_type.clone(),
                                             },
-                                            checkee_type: checkee_type.clone(),
-                                        }),
+                                        ),
                                         output,
                                     })),
                                 ),
@@ -1047,7 +1049,7 @@ impl Accept for UnfinishedCheck {
                                 check_kw.clone(),
                                 Expression::Check(Box::new(Check {
                                     annotation: CheckeeAnnotation::Expression(
-                                        ExpressionCheckAnnotation {
+                                        ExpressionCheckeeAnnotation {
                                             checkee: checkee.clone(),
                                             checkee_type: checkee_type.clone(),
                                             checkee_value: checkee_value.clone(),
