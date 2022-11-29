@@ -141,6 +141,10 @@ pub fn register_expression(
             let id = register_forall(registry, *unregistered);
             ExpressionId::Forall(id)
         }
+        heavy::Expression::Check(unregistered) => {
+            // TODO: Properly register the check expression.
+            register_expression(registry, unregistered.output)
+        }
     }
 }
 

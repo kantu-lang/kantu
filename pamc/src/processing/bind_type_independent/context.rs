@@ -78,12 +78,6 @@ pub struct ContextEntry {
     source: OwnedSymbolSource,
 }
 
-#[derive(Clone, Debug)]
-pub enum OwnedSymbolSource {
-    Identifier(ub::Identifier),
-    Builtin,
-}
-
 impl Context {
     pub fn with_builtins() -> Self {
         let type1_entry = PossiblyRestricted::Unrestricted(ContextEntry {

@@ -1,15 +1,14 @@
 use crate::data::{
+    bind_error::*,
     bound_ast::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
-    FileId,
 };
+
+pub use crate::data::bind_error::*;
 
 use context::*;
 mod context;
-
-pub use error::*;
-mod error;
 
 /// The returned `Vec<File>` is not guaranteed to be in any particular order.
 pub fn bind_files(files: Vec<ub::File>) -> Result<Vec<File>, BindError> {

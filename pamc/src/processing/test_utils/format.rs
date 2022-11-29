@@ -36,6 +36,7 @@ pub fn format_expression(
         Expression::Fun(fun) => format_fun(fun, indent_level, options),
         Expression::Match(match_) => format_match(match_, indent_level, options),
         Expression::Forall(forall) => format_forall(forall, indent_level, options),
+        Expression::Check(check) => format_check(check, indent_level, options),
     }
 }
 
@@ -207,4 +208,8 @@ pub fn format_forall(forall: &Forall, indent_level: usize, options: &FormatOptio
         "forall (\n{}\n{}) {{\n{}{}\n{}}}",
         params, &i0, &i1, output, &i0
     )
+}
+
+pub fn format_check(_check: &Check, _indent_level: usize, _options: &FormatOptions) -> String {
+    unimplemented!()
 }

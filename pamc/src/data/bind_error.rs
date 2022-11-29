@@ -1,4 +1,4 @@
-use super::*;
+use crate::data::{simplified_ast as unbound, FileId};
 
 #[derive(Clone, Debug)]
 pub enum BindError {
@@ -28,11 +28,15 @@ impl From<NameClashError> for BindError {
     }
 }
 
-pub use super::context::OwnedSymbolSource;
+#[derive(Clone, Debug)]
+pub enum OwnedSymbolSource {
+    Identifier(unbound::Identifier),
+    Builtin,
+}
 
 #[derive(Clone, Debug)]
 pub struct NameNotFoundError {
-    pub name_components: Vec<ub::Identifier>,
+    pub name_components: Vec<unbound::Identifier>,
 }
 impl From<NameNotFoundError> for BindError {
     fn from(error: NameNotFoundError) -> Self {
