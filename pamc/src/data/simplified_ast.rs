@@ -1,4 +1,4 @@
-use crate::data::FileId;
+use crate::data::{FileId, TextPosition};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
@@ -46,6 +46,7 @@ pub enum Expression {
     Fun(Box<Fun>),
     Match(Box<Match>),
     Forall(Box<Forall>),
+    Check(Box<Check>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -90,4 +91,35 @@ pub struct MatchCase {
 pub struct Forall {
     pub params: Vec<Param>,
     pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Check {
+    pub checkee_annotation: CheckeeAnnotation,
+    pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CheckeeAnnotation {
+    Goal(GoalCheckeeAnnotation),
+    Expression(ExpressionCheckeeAnnotation),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GoalCheckeeAnnotation {
+    pub goal_kw_position: TextPosition,
+    pub checkee_type: QuestionMarkOrExpression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExpressionCheckeeAnnotation {
+    pub checkee: Expression,
+    pub checkee_type: QuestionMarkOrExpression,
+    pub checkee_value: Option<QuestionMarkOrExpression>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum QuestionMarkOrExpression {
+    QuestionMark { start: TextPosition },
+    Expression(Expression),
 }

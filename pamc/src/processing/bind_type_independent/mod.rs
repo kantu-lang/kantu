@@ -149,6 +149,7 @@ fn bind_expression(
         ub::Expression::Fun(fun) => bind_fun(context, *fun),
         ub::Expression::Match(match_) => bind_match(context, *match_),
         ub::Expression::Forall(forall) => bind_forall(context, *forall),
+        ub::Expression::Check(check) => bind_check(context, *check),
     }
 }
 
@@ -237,6 +238,11 @@ fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, 
 
     context.pop_n(arity);
     Ok(forall)
+}
+
+fn bind_check(context: &mut Context, check: ub::Check) -> Result<Expression, BindError> {
+    // TODO: Actually bind the check.
+    bind_expression(context, check.output)
 }
 
 fn create_name_without_adding_to_scope(

@@ -855,7 +855,7 @@ impl Accept for UnfinishedCheck {
                                 FinishedStackItem::UndelimitedExpression(
                                     check_kw.clone(),
                                     Expression::Check(Box::new(Check {
-                                        annotation: CheckeeAnnotation::Goal(
+                                        checkee_annotation: CheckeeAnnotation::Goal(
                                             GoalCheckeeAnnotation {
                                                 goal_kw_position: TextPosition {
                                                     file_id,
@@ -1048,7 +1048,7 @@ impl Accept for UnfinishedCheck {
                             FinishedStackItem::UndelimitedExpression(
                                 check_kw.clone(),
                                 Expression::Check(Box::new(Check {
-                                    annotation: CheckeeAnnotation::Expression(
+                                    checkee_annotation: CheckeeAnnotation::Expression(
                                         ExpressionCheckeeAnnotation {
                                             checkee: checkee.clone(),
                                             checkee_type: checkee_type.clone(),

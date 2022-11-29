@@ -109,7 +109,7 @@ pub struct Forall {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Check {
-    pub annotation: CheckeeAnnotation,
+    pub checkee_annotation: CheckeeAnnotation,
     pub output: Expression,
 }
 
