@@ -240,8 +240,73 @@ fn bind_forall(context: &mut Context, forall: ub::Forall) -> Result<Expression, 
 }
 
 fn bind_check(context: &mut Context, check: ub::Check) -> Result<Expression, BindError> {
-    // TODO: Actually bind the check.
-    bind_expression(context, check.output)
+    let checkee_annotation = bind_checkee_annotation(context, check.checkee_annotation)?;
+    let output = bind_expression(context, check.output)?;
+    let check = Expression::Check(Box::new(Check {
+        checkee_annotation,
+        output,
+    }));
+    Ok(check)
+}
+
+fn bind_checkee_annotation(
+    context: &mut Context,
+    checkee_annotation: ub::CheckeeAnnotation,
+) -> Result<CheckeeAnnotation, BindError> {
+    match checkee_annotation {
+        ub::CheckeeAnnotation::Goal(annotation) => Ok(CheckeeAnnotation::Goal(
+            bind_goal_checkee_annotation(context, annotation)?,
+        )),
+        ub::CheckeeAnnotation::Expression(annotation) => Ok(CheckeeAnnotation::Expression(
+            bind_expression_checkee_annotation(context, annotation)?,
+        )),
+    }
+}
+
+fn bind_goal_checkee_annotation(
+    context: &mut Context,
+    annotation: ub::GoalCheckeeAnnotation,
+) -> Result<GoalCheckeeAnnotation, BindError> {
+    let checkee_type =
+        bind_question_mark_or_possibly_invalid_expression(context, annotation.checkee_type);
+    Ok(GoalCheckeeAnnotation {
+        goal_kw_position: annotation.goal_kw_position,
+        checkee_type,
+    })
+}
+
+fn bind_expression_checkee_annotation(
+    context: &mut Context,
+    annotation: ub::ExpressionCheckeeAnnotation,
+) -> Result<ExpressionCheckeeAnnotation, BindError> {
+    Ok(ExpressionCheckeeAnnotation {
+        checkee: bind_expression(context, annotation.checkee)?,
+        checkee_type: bind_question_mark_or_possibly_invalid_expression(
+            context,
+            annotation.checkee_type,
+        ),
+        checkee_value: annotation.checkee_value.map(|checkee_value| {
+            bind_question_mark_or_possibly_invalid_expression(context, checkee_value)
+        }),
+    })
+}
+
+fn bind_question_mark_or_possibly_invalid_expression(
+    context: &mut Context,
+    expression: ub::QuestionMarkOrExpression,
+) -> QuestionMarkOrPossiblyInvalidExpression {
+    match expression {
+        ub::QuestionMarkOrExpression::QuestionMark { start } => {
+            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start }
+        }
+        ub::QuestionMarkOrExpression::Expression(expression) => {
+            let possibly_invalid_expression = match bind_expression(context, expression.clone()) {
+                Ok(bound) => PossiblyInvalidExpression::Valid(bound),
+                Err(error) => PossiblyInvalidExpression::Invalid(expression, error),
+            };
+            QuestionMarkOrPossiblyInvalidExpression::Expression(possibly_invalid_expression)
+        }
+    }
 }
 
 fn create_name_without_adding_to_scope(
