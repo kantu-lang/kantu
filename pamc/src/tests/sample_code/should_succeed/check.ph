@@ -55,3 +55,36 @@ let goal_checkee = fun _(n: Nat): Nat {
         },
     }
 };
+
+let invalid_annotations1 = fun _(n: Nat): Nat {
+    match Nat.O {
+        .O => check goal: this_symbol_doesnt_exist {
+            Nat.O
+        },
+        .S(n') => check goal: fun _(n: name_clash_with_n_Nat): Type { Nat }(n) {
+            Nat.O
+        },
+    }
+};
+
+let invalid_annotations2 = fun _(n: Nat): Nat {
+    match n {
+        .O => check n: this_symbol_doesnt_exist = neither_does_this_one {
+            Nat.O
+        },
+        .S(n') => check goal: fun _(m: Nat, error: NonexistentFoo): Type { Nat }(n, n) {
+            Nat.O
+        },
+    }
+};
+
+let invalid_annotations3 = fun _(n: Nat): Nat {
+    match Nat.O {
+        .O => check goal: fun _(p: Nat, q: Nat): Type { not_defined }(n, n) {
+            Nat.O
+        },
+        .S(n') => check goal: fun _(n: name_clash_with_n_Nat): Type { Nat }(n) {
+            Nat.O
+        },
+    }
+};
