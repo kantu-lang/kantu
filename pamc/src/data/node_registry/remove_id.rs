@@ -1,8 +1,12 @@
 use crate::data::{
+    bind_error::BindError,
     light_ast as with_id,
-    node_registry::{ListId, NodeId},
-    FileId, TextPosition,
+    node_registry::{ListId, NodeId, QuestionMarkOrPossiblyInvalidExpressionId},
+    simplified_ast as unbound, FileId, TextPosition,
 };
+
+// TODO: Force developer to implement reverse conversion
+// to ensure correctness.
 
 pub trait RemoveId {
     type Output: Eq + std::hash::Hash;
@@ -213,6 +217,68 @@ impl RemoveId for with_id::Forall {
         Forall {
             param_list_id: self.param_list_id,
             output_id: self.output_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Check {
+    pub checkee_annotation_id: with_id::CheckeeAnnotationId,
+    pub output_id: ExpressionId,
+}
+impl RemoveId for with_id::Check {
+    type Output = Check;
+    fn remove_id(&self) -> Self::Output {
+        Check {
+            checkee_annotation_id: self.checkee_annotation_id,
+            output_id: self.output_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct GoalCheckeeAnnotation {
+    pub goal_kw_position: TextPosition,
+    pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
+}
+impl RemoveId for with_id::GoalCheckeeAnnotation {
+    type Output = GoalCheckeeAnnotation;
+    fn remove_id(&self) -> Self::Output {
+        GoalCheckeeAnnotation {
+            goal_kw_position: self.goal_kw_position,
+            checkee_type_id: self.checkee_type_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ExpressionCheckeeAnnotation {
+    pub checkee_id: ExpressionId,
+    pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
+    pub checkee_value_id: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
+}
+impl RemoveId for with_id::ExpressionCheckeeAnnotation {
+    type Output = ExpressionCheckeeAnnotation;
+    fn remove_id(&self) -> Self::Output {
+        ExpressionCheckeeAnnotation {
+            checkee_id: self.checkee_id,
+            checkee_type_id: self.checkee_type_id,
+            checkee_value_id: self.checkee_value_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct InvalidExpression {
+    pub expression: unbound::Expression,
+    pub error: BindError,
+}
+impl RemoveId for with_id::InvalidExpression {
+    type Output = InvalidExpression;
+    fn remove_id(&self) -> Self::Output {
+        InvalidExpression {
+            expression: self.expression.clone(),
+            error: self.error.clone(),
         }
     }
 }

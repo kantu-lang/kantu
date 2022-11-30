@@ -3,6 +3,9 @@ use crate::data::{
     node_registry::{ListId, NodeId, NodeRegistry},
 };
 
+// TODO: Handle check expressions with invalid fun recursion.
+// This will probably require serious redesign.
+
 #[derive(Clone, Debug)]
 pub enum IllegalFunRecursionError {
     RecursiveReferenceWasNotDirectCall {
@@ -100,6 +103,7 @@ fn validate_fun_recursion_in_expression(
         ExpressionId::Fun(id) => validate_fun_recursion_in_fun(context, registry, id),
         ExpressionId::Match(id) => validate_fun_recursion_in_match(context, registry, id),
         ExpressionId::Forall(id) => validate_fun_recursion_in_forall(context, registry, id),
+        ExpressionId::Check(id) => validate_fun_recursion_in_check(context, registry, id),
     }
 }
 
@@ -296,6 +300,94 @@ fn validate_fun_recursion_in_forall(
     context.pop_n(arity);
 
     Ok(())
+}
+
+fn validate_fun_recursion_in_check(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    check_id: NodeId<Check>,
+) -> Result<(), IllegalFunRecursionError> {
+    let check = registry.check(check_id);
+    validate_fun_recursion_in_checkee_annotation(context, registry, check.checkee_annotation_id)?;
+    validate_fun_recursion_in_expression(context, registry, check.output_id)?;
+    Ok(())
+}
+
+fn validate_fun_recursion_in_checkee_annotation(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    id: CheckeeAnnotationId,
+) -> Result<(), IllegalFunRecursionError> {
+    match id {
+        CheckeeAnnotationId::Goal(id) => {
+            validate_fun_recursion_in_goal_checkee_annotation(context, registry, id)
+        }
+        CheckeeAnnotationId::Expression(id) => {
+            validate_fun_recursion_in_expression_checkee_annotation(context, registry, id)
+        }
+    }
+}
+
+fn validate_fun_recursion_in_goal_checkee_annotation(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    id: NodeId<GoalCheckeeAnnotation>,
+) -> Result<(), IllegalFunRecursionError> {
+    let annotation = registry.goal_checkee_annotation(id);
+    validate_fun_recursion_in_question_mark_or_possibly_invalid_expression(
+        context,
+        registry,
+        annotation.checkee_type_id,
+    )?;
+    Ok(())
+}
+
+fn validate_fun_recursion_in_expression_checkee_annotation(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    id: NodeId<ExpressionCheckeeAnnotation>,
+) -> Result<(), IllegalFunRecursionError> {
+    let annotation = registry.expression_checkee_annotation(id);
+    validate_fun_recursion_in_expression(context, registry, annotation.checkee_id)?;
+    validate_fun_recursion_in_question_mark_or_possibly_invalid_expression(
+        context,
+        registry,
+        annotation.checkee_type_id,
+    )?;
+    if let Some(checkee_value_id) = annotation.checkee_value_id {
+        validate_fun_recursion_in_question_mark_or_possibly_invalid_expression(
+            context,
+            registry,
+            checkee_value_id,
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_fun_recursion_in_question_mark_or_possibly_invalid_expression(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    id: QuestionMarkOrPossiblyInvalidExpressionId,
+) -> Result<(), IllegalFunRecursionError> {
+    match id {
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: _ } => Ok(()),
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
+            validate_fun_recursion_in_possibly_invalid_expression(context, registry, id)
+        }
+    }
+}
+
+fn validate_fun_recursion_in_possibly_invalid_expression(
+    context: &mut Context,
+    registry: &NodeRegistry,
+    id: PossiblyInvalidExpressionId,
+) -> Result<(), IllegalFunRecursionError> {
+    match id {
+        PossiblyInvalidExpressionId::Invalid(_) => Ok(()),
+        PossiblyInvalidExpressionId::Valid(id) => {
+            validate_fun_recursion_in_expression(context, registry, id)
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

@@ -481,6 +481,62 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
+        ExpressionId::Check(right_id) => {
+            let right = state.registry.check(right_id).clone();
+
+            if let CheckeeAnnotationId::Goal(right_annotation_id) = right.checkee_annotation_id {
+                let right_annotation = state
+                    .registry
+                    .goal_checkee_annotation(right_annotation_id)
+                    .clone();
+
+                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+                    PossiblyInvalidExpressionId::Valid(right_checkee_type_id),
+                ) = right_annotation.checkee_type_id
+                {
+                    if is_left_inclusive_subterm_of_right(state, left, right_checkee_type_id) {
+                        return true;
+                    }
+                }
+            }
+
+            if let CheckeeAnnotationId::Expression(right_annotation_id) =
+                right.checkee_annotation_id
+            {
+                let right_annotation = state
+                    .registry
+                    .expression_checkee_annotation(right_annotation_id)
+                    .clone();
+
+                if is_left_inclusive_subterm_of_right(state, left, right_annotation.checkee_id) {
+                    return true;
+                }
+
+                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+                    PossiblyInvalidExpressionId::Valid(right_checkee_type_id),
+                ) = right_annotation.checkee_type_id
+                {
+                    if is_left_inclusive_subterm_of_right(state, left, right_checkee_type_id) {
+                        return true;
+                    }
+                }
+
+                if let Some(QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+                    PossiblyInvalidExpressionId::Valid(right_checkee_value_id),
+                )) = right_annotation.checkee_value_id
+                {
+                    if is_left_inclusive_subterm_of_right(state, left, right_checkee_value_id) {
+                        return true;
+                    }
+                }
+            }
+
+            if is_left_inclusive_subterm_of_right(state, left, right.output_id) {
+                return true;
+            }
+
+            false
+        }
     }
 }
 
@@ -735,6 +791,7 @@ fn min_db_index_in_expression_relative_to_cutoff(
         ExpressionId::Fun(id) => min_db_index_in_fun_relative_to_cutoff(registry, id, cutoff),
         ExpressionId::Match(id) => min_db_index_in_match_relative_to_cutoff(registry, id, cutoff),
         ExpressionId::Forall(id) => min_db_index_in_forall_relative_to_cutoff(registry, id, cutoff),
+        ExpressionId::Check(id) => min_db_index_in_check_relative_to_cutoff(registry, id, cutoff),
     }
 }
 
@@ -848,6 +905,101 @@ fn min_db_index_in_forall_relative_to_cutoff(
         cutoff + param_ids.len(),
     );
     min_or_first(output_min, param_types_min)
+}
+
+fn min_db_index_in_check_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<Check>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let check = registry.check(id).clone();
+    let annotation_min = min_db_index_in_checkee_annotation_relative_to_cutoff(
+        registry,
+        check.checkee_annotation_id,
+        cutoff,
+    );
+    let output_min =
+        min_db_index_in_expression_relative_to_cutoff(registry, check.output_id, cutoff);
+    annotation_min.min(output_min)
+}
+
+fn min_db_index_in_checkee_annotation_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: CheckeeAnnotationId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match id {
+        CheckeeAnnotationId::Goal(id) => {
+            min_db_index_in_goal_checkee_annotation_relative_to_cutoff(registry, id, cutoff)
+        }
+        CheckeeAnnotationId::Expression(id) => {
+            min_db_index_in_expression_checkee_annotation_relative_to_cutoff(registry, id, cutoff)
+        }
+    }
+}
+
+fn min_db_index_in_goal_checkee_annotation_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<GoalCheckeeAnnotation>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let annotation = registry.goal_checkee_annotation(id);
+    min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
+        registry,
+        annotation.checkee_type_id,
+        cutoff,
+    )
+}
+
+fn min_db_index_in_expression_checkee_annotation_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<ExpressionCheckeeAnnotation>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let annotation = registry.expression_checkee_annotation(id);
+    let checkee_min =
+        min_db_index_in_expression_relative_to_cutoff(registry, annotation.checkee_id, cutoff);
+    let type_min = min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
+        registry,
+        annotation.checkee_type_id,
+        cutoff,
+    );
+    let value_min = if let Some(value_id) = annotation.checkee_value_id {
+        min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
+            registry, value_id, cutoff,
+        )
+    } else {
+        MinDbIndex::Infinity
+    };
+    checkee_min.min(type_min).min(value_min)
+}
+
+fn min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: QuestionMarkOrPossiblyInvalidExpressionId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match id {
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: _ } => {
+            MinDbIndex::Infinity
+        }
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
+            min_db_index_in_possibly_invalid_expression_relative_to_cutoff(registry, id, cutoff)
+        }
+    }
+}
+
+fn min_db_index_in_possibly_invalid_expression_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: PossiblyInvalidExpressionId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match id {
+        PossiblyInvalidExpressionId::Invalid(_) => MinDbIndex::Infinity,
+        PossiblyInvalidExpressionId::Valid(id) => {
+            min_db_index_in_expression_relative_to_cutoff(registry, id, cutoff)
+        }
+    }
 }
 
 fn min_or_first<T: Ord>(first: T, second: Option<T>) -> T {

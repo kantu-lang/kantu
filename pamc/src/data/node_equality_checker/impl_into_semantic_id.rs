@@ -53,6 +53,12 @@ impl IntoSemanticId for ExpressionId {
             ExpressionId::Forall(id) => {
                 ExpressionSemanticId::Forall(id.into_semantic_id(registry, sreg))
             }
+            ExpressionId::Check(id) => {
+                // Since check annotations carry no semantic meaning,
+                // we can look exclusively at the `output`.
+                let check = registry.check(id);
+                check.output_id.into_semantic_id(registry, sreg)
+            }
         }
     }
 }

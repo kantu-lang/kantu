@@ -23,6 +23,7 @@ pub(super) fn evaluate_possibly_ill_typed_expression(
         ExpressionId::Fun(fun_id) => evaluate_possibly_ill_typed_fun(state, fun_id),
         ExpressionId::Match(match_id) => evaluate_possibly_ill_typed_match(state, match_id),
         ExpressionId::Forall(forall_id) => evaluate_possibly_ill_typed_forall(state, forall_id),
+        ExpressionId::Check(check_id) => evaluate_possibly_ill_typed_check(state, check_id),
     };
     out
 }
@@ -149,6 +150,9 @@ fn evaluate_possibly_ill_typed_call(
             )
         }
         ExpressionId::Forall(_) => Err(EvalError::BadCallee(normalized_callee_id)),
+        ExpressionId::Check(_) => {
+            panic!("By definition, a check expression can never be a normal form.")
+        }
     }
 }
 
@@ -343,4 +347,12 @@ fn evaluate_possibly_ill_typed_forall_dirty(
             output_id: normalized_output_id.raw(),
         }),
     )))
+}
+
+fn evaluate_possibly_ill_typed_check(
+    state: &mut State,
+    check_id: NodeId<Check>,
+) -> Result<NormalFormId, EvalError> {
+    let check = state.registry.check(check_id);
+    evaluate_possibly_ill_typed_expression(state, check.output_id)
 }

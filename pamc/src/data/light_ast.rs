@@ -1,6 +1,7 @@
 use crate::data::{
+    bind_error::BindError,
     node_registry::{ListId, NodeId},
-    FileId, TextPosition,
+    simplified_ast as unbound, FileId, TextPosition,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -10,7 +11,7 @@ pub struct File {
     pub item_list_id: ListId<FileItemNodeId>,
 }
 
-pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
+pub use crate::data::node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
@@ -112,39 +113,35 @@ pub struct Forall {
 
 #[derive(Clone, Debug)]
 pub struct Check {
+    pub id: NodeId<Self>,
     pub checkee_annotation_id: CheckeeAnnotationId,
     pub output_id: ExpressionId,
 }
 
-#[derive(Clone, Debug)]
-pub enum CheckeeAnnotationId {
-    Goal(NodeId<GoalCheckeeAnnotation>),
-    Expression(NodeId<ExpressionCheckeeAnnotation>),
-}
+pub use crate::data::node_registry::CheckeeAnnotationId;
 
 #[derive(Clone, Debug)]
 pub struct GoalCheckeeAnnotation {
+    pub id: NodeId<Self>,
     pub goal_kw_position: TextPosition,
-    pub checkee_type: QuestionMarkOrPossiblyInvalidExpressionId,
+    pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
 
 #[derive(Clone, Debug)]
 pub struct ExpressionCheckeeAnnotation {
-    pub checkee: ExpressionId,
-    pub checkee_type: QuestionMarkOrPossiblyInvalidExpressionId,
-    pub checkee_value: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
+    pub id: NodeId<Self>,
+    pub checkee_id: ExpressionId,
+    pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
+    pub checkee_value_id: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
 }
+
+pub use crate::data::node_registry::{
+    PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
+};
 
 #[derive(Clone, Debug)]
-pub enum QuestionMarkOrPossiblyInvalidExpressionId {
-    QuestionMark { start: TextPosition },
-    Expression(PossiblyInvalidExpressionId),
+pub struct InvalidExpression {
+    pub id: NodeId<Self>,
+    pub expression: unbound::Expression,
+    pub error: BindError,
 }
-
-#[derive(Clone, Debug)]
-pub enum PossiblyInvalidExpressionId {
-    Valid(ExpressionId),
-    Invalid(NodeId<InvalidExpression>),
-}
-
-pub use crate::data::bound_ast::InvalidExpression;

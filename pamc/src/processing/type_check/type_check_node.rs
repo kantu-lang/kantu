@@ -205,6 +205,7 @@ fn get_type_of_expression(
         ExpressionId::Fun(fun) => get_type_of_fun(state, fun),
         ExpressionId::Match(match_) => get_type_of_match(state, coercion_target_id, match_),
         ExpressionId::Forall(forall) => get_type_of_forall(state, forall),
+        ExpressionId::Check(check) => get_type_of_check(state, coercion_target_id, check),
     };
     out
 }
@@ -798,4 +799,14 @@ fn get_type_of_forall_dirty(
     state.context.pop_n(forall.param_list_id.len);
 
     Ok(type0_expression(state))
+}
+
+
+fn get_type_of_check(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    check_id: NodeId<Check>,
+) -> Result<NormalFormId, TypeCheckError> {
+    let check = state.registry.check(check_id).clone();
+    get_type_of_expression(state, coercion_target_id, check.output_id)
 }

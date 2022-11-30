@@ -1,4 +1,4 @@
-use crate::data::light_ast::*;
+use crate::data::{light_ast::*, TextPosition};
 
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
@@ -6,50 +6,11 @@ use std::fmt::Debug;
 use remove_id::RemoveId;
 mod remove_id;
 
-pub struct NodeId<T> {
-    pub raw: usize,
-    _phantom: std::marker::PhantomData<T>,
-}
+pub use node_id::*;
+mod node_id;
 
-impl<T> NodeId<T> {
-    pub fn new(raw: usize) -> Self {
-        Self {
-            raw,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T> Clone for NodeId<T> {
-    fn clone(&self) -> NodeId<T> {
-        NodeId {
-            raw: self.raw,
-            _phantom: self._phantom,
-        }
-    }
-}
-
-impl<T> Copy for NodeId<T> {}
-
-impl<T> std::hash::Hash for NodeId<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.raw.hash(state);
-    }
-}
-
-impl<T> std::fmt::Debug for NodeId<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NodeId({})", self.raw)
-    }
-}
-
-impl<T> PartialEq<NodeId<T>> for NodeId<T> {
-    fn eq(&self, other: &NodeId<T>) -> bool {
-        self.raw == other.raw
-    }
-}
-
-impl<T> Eq for NodeId<T> {}
+pub use list_id::*;
+mod list_id;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum FileItemNodeId {
@@ -64,60 +25,35 @@ pub enum ExpressionId {
     Fun(NodeId<Fun>),
     Match(NodeId<Match>),
     Forall(NodeId<Forall>),
+    Check(NodeId<Check>),
 }
 
-pub struct ListId<T> {
-    pub start: usize,
-    pub len: usize,
-    _phantom: std::marker::PhantomData<T>,
-}
-
-impl<T> ListId<T> {
-    pub fn new(start: usize, len: usize) -> Self {
-        Self {
-            start,
-            len,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T> Clone for ListId<T> {
-    fn clone(&self) -> ListId<T> {
-        Self::new(self.start, self.len)
-    }
-}
-
-impl<T> Copy for ListId<T> {}
-
-impl<T> std::hash::Hash for ListId<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.start.hash(state);
-        self.len.hash(state);
-    }
-}
-
-impl<T> std::fmt::Debug for ListId<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ListId {{ start: {}, len: {} }}", self.start, self.len)
-    }
-}
-
-impl<T> PartialEq<ListId<T>> for ListId<T> {
-    fn eq(&self, other: &ListId<T>) -> bool {
-        self.start == other.start && self.len == other.len
-    }
-}
-
-impl<T> Eq for ListId<T> {}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug)]
 pub enum ExpressionRef<'a> {
     Name(&'a NameExpression),
     Call(&'a Call),
     Fun(&'a Fun),
     Match(&'a Match),
     Forall(&'a Forall),
+    Check(&'a Check),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CheckeeAnnotationId {
+    Goal(NodeId<GoalCheckeeAnnotation>),
+    Expression(NodeId<ExpressionCheckeeAnnotation>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum QuestionMarkOrPossiblyInvalidExpressionId {
+    QuestionMark { start: TextPosition },
+    Expression(PossiblyInvalidExpressionId),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum PossiblyInvalidExpressionId {
+    Valid(ExpressionId),
+    Invalid(NodeId<InvalidExpression>),
 }
 
 /// For any type `T`, if `T` implements `RemoveId`, then the
@@ -137,6 +73,10 @@ pub struct NodeRegistry {
     matches: Subregistry<Match>,
     match_cases: Subregistry<MatchCase>,
     foralls: Subregistry<Forall>,
+    checks: Subregistry<Check>,
+    goal_checkee_annotations: Subregistry<GoalCheckeeAnnotation>,
+    expression_checkee_annotations: Subregistry<ExpressionCheckeeAnnotation>,
+    invalid_expressions: Subregistry<InvalidExpression>,
     identifiers: Subregistry<Identifier>,
 
     file_item_lists: ListSubregistry<FileItemNodeId>,
@@ -161,6 +101,10 @@ impl NodeRegistry {
             matches: Subregistry::new(),
             match_cases: Subregistry::new(),
             foralls: Subregistry::new(),
+            checks: Subregistry::new(),
+            goal_checkee_annotations: Subregistry::new(),
+            expression_checkee_annotations: Subregistry::new(),
+            invalid_expressions: Subregistry::new(),
             identifiers: Subregistry::new(),
 
             file_item_lists: ListSubregistry::new(),
@@ -235,6 +179,34 @@ impl NodeRegistry {
         self.foralls.add_and_overwrite_id(forall)
     }
 
+    pub fn add_check_and_overwrite_its_id(&mut self, check: Check) -> NodeId<Check> {
+        self.checks.add_and_overwrite_id(check)
+    }
+
+    pub fn add_goal_checkee_annotation_and_overwrite_its_id(
+        &mut self,
+        goal_checkee_annotation: GoalCheckeeAnnotation,
+    ) -> NodeId<GoalCheckeeAnnotation> {
+        self.goal_checkee_annotations
+            .add_and_overwrite_id(goal_checkee_annotation)
+    }
+
+    pub fn add_expression_checkee_annotation_and_overwrite_its_id(
+        &mut self,
+        expression_checkee_annotation: ExpressionCheckeeAnnotation,
+    ) -> NodeId<ExpressionCheckeeAnnotation> {
+        self.expression_checkee_annotations
+            .add_and_overwrite_id(expression_checkee_annotation)
+    }
+
+    pub fn add_invalid_expression_and_overwrite_its_id(
+        &mut self,
+        invalid_expression: InvalidExpression,
+    ) -> NodeId<InvalidExpression> {
+        self.invalid_expressions
+            .add_and_overwrite_id(invalid_expression)
+    }
+
     pub fn add_identifier_and_overwrite_its_id(
         &mut self,
         identifier: Identifier,
@@ -286,6 +258,28 @@ impl NodeRegistry {
 
     pub fn forall(&self, id: NodeId<Forall>) -> &Forall {
         self.foralls.get(id)
+    }
+
+    pub fn check(&self, id: NodeId<Check>) -> &Check {
+        self.checks.get(id)
+    }
+
+    pub fn goal_checkee_annotation(
+        &self,
+        id: NodeId<GoalCheckeeAnnotation>,
+    ) -> &GoalCheckeeAnnotation {
+        self.goal_checkee_annotations.get(id)
+    }
+
+    pub fn expression_checkee_annotation(
+        &self,
+        id: NodeId<ExpressionCheckeeAnnotation>,
+    ) -> &ExpressionCheckeeAnnotation {
+        self.expression_checkee_annotations.get(id)
+    }
+
+    pub fn invalid_expression(&self, id: NodeId<InvalidExpression>) -> &InvalidExpression {
+        self.invalid_expressions.get(id)
     }
 
     pub fn identifier(&self, id: NodeId<Identifier>) -> &Identifier {
@@ -359,6 +353,7 @@ impl NodeRegistry {
             ExpressionId::Fun(id) => ExpressionRef::Fun(self.fun(id)),
             ExpressionId::Match(id) => ExpressionRef::Match(self.match_(id)),
             ExpressionId::Forall(id) => ExpressionRef::Forall(self.forall(id)),
+            ExpressionId::Check(id) => ExpressionRef::Check(self.check(id)),
         }
     }
 }
@@ -548,6 +543,30 @@ mod set_id {
     }
 
     impl SetId for Forall {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for Check {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for GoalCheckeeAnnotation {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for ExpressionCheckeeAnnotation {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for InvalidExpression {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }

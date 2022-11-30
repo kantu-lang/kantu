@@ -33,6 +33,7 @@ impl Substitute for ExpressionId {
             ExpressionId::Fun(fun_id) => fun_id.subst(substitution, state),
             ExpressionId::Match(match_id) => match_id.subst(substitution, state),
             ExpressionId::Forall(forall_id) => forall_id.subst(substitution, state),
+            ExpressionId::Check(check_id) => check_id.subst(substitution, state),
         }
     }
 }
@@ -239,5 +240,107 @@ impl Substitute for NodeId<Forall> {
             param_list_id: substituted_param_list_id,
             output_id: substituted_output_id,
         }))
+    }
+}
+
+impl Substitute for NodeId<Check> {
+    type Output = ExpressionId;
+
+    fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
+        let top_level =
+            subst_if_equal_and_get_status(ExpressionId::Check(self), substitution, state);
+        if let WasSyntacticNoOp(false) = top_level.1 {
+            return top_level.0;
+        }
+
+        let check = state.registry.check(self).clone();
+        let substituted_annotation_id = check.checkee_annotation_id.subst(substitution, state);
+        let substituted_output_id = check.output_id.subst(substitution, state);
+
+        ExpressionId::Check(state.registry.add_check_and_overwrite_its_id(Check {
+            id: dummy_id(),
+            checkee_annotation_id: substituted_annotation_id,
+            output_id: substituted_output_id,
+        }))
+    }
+}
+
+impl Substitute for CheckeeAnnotationId {
+    type Output = Self;
+
+    fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
+        match self {
+            CheckeeAnnotationId::Goal(id) => {
+                CheckeeAnnotationId::Goal(id.subst(substitution, state))
+            }
+            CheckeeAnnotationId::Expression(id) => {
+                CheckeeAnnotationId::Expression(id.subst(substitution, state))
+            }
+        }
+    }
+}
+
+impl Substitute for NodeId<GoalCheckeeAnnotation> {
+    type Output = Self;
+
+    fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
+        let original = state.registry.goal_checkee_annotation(self).clone();
+        let substituted_checkee_type_id = original.checkee_type_id.subst(substitution, state);
+        state
+            .registry
+            .add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+                id: dummy_id(),
+                goal_kw_position: original.goal_kw_position,
+                checkee_type_id: substituted_checkee_type_id,
+            })
+    }
+}
+
+impl Substitute for NodeId<ExpressionCheckeeAnnotation> {
+    type Output = Self;
+
+    fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
+        let original = state.registry.expression_checkee_annotation(self).clone();
+        let substituted_checkee_id = original.checkee_id.subst(substitution, state);
+        let substituted_checkee_type_id = original.checkee_type_id.subst(substitution, state);
+        let substituted_checkee_value_id = original
+            .checkee_value_id
+            .map(|value_id| value_id.subst(substitution, state));
+        state
+            .registry
+            .add_expression_checkee_annotation_and_overwrite_its_id(ExpressionCheckeeAnnotation {
+                id: dummy_id(),
+                checkee_id: substituted_checkee_id,
+                checkee_type_id: substituted_checkee_type_id,
+                checkee_value_id: substituted_checkee_value_id,
+            })
+    }
+}
+
+impl Substitute for QuestionMarkOrPossiblyInvalidExpressionId {
+    type Output = Self;
+
+    fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
+        match self {
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
+                QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+            }
+            QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
+                QuestionMarkOrPossiblyInvalidExpressionId::Expression(id.subst(substitution, state))
+            }
+        }
+    }
+}
+
+impl Substitute for PossiblyInvalidExpressionId {
+    type Output = Self;
+
+    fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
+        match self {
+            PossiblyInvalidExpressionId::Valid(id) => {
+                PossiblyInvalidExpressionId::Valid(id.subst(substitution, state))
+            }
+            PossiblyInvalidExpressionId::Invalid(id) => PossiblyInvalidExpressionId::Invalid(id),
+        }
     }
 }

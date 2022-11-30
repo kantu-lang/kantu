@@ -291,6 +291,9 @@ fn generate_code_for_expression(
         ExpressionRef::Fun(fun) => generate_code_for_fun(registry, context, fun),
         ExpressionRef::Match(match_) => generate_code_for_match(registry, context, match_),
         ExpressionRef::Forall(forall) => generate_code_for_forall(registry, context, forall),
+        ExpressionRef::Check(check) => {
+            generate_code_for_expression(registry, context, check.output_id)
+        }
     }
 }
 

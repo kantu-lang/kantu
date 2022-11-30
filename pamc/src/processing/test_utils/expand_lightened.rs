@@ -1,7 +1,10 @@
 use crate::data::{
     bound_ast::*,
     light_ast as light,
-    node_registry::{FileItemNodeId, ListId, NodeId, NodeRegistry},
+    node_registry::{
+        CheckeeAnnotationId, FileItemNodeId, ListId, NodeId, NodeRegistry,
+        PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
+    },
 };
 
 pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
@@ -112,6 +115,7 @@ pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionId) -> Ex
         light::ExpressionId::Forall(id) => {
             Expression::Forall(Box::new(expand_forall(registry, id)))
         }
+        light::ExpressionId::Check(id) => Expression::Check(Box::new(expand_check(registry, id))),
     }
 }
 
@@ -207,4 +211,100 @@ pub fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Fora
     let params = expand_param_list(registry, light.param_list_id);
     let output = expand_expression(registry, light.output_id);
     Forall { params, output }
+}
+
+pub fn expand_check(registry: &NodeRegistry, id: NodeId<light::Check>) -> Check {
+    let light = registry.check(id);
+    let checkee_annotation = expand_checkee_annotation(registry, light.checkee_annotation_id);
+    let output = expand_expression(registry, light.output_id);
+    Check {
+        checkee_annotation,
+        output,
+    }
+}
+
+pub fn expand_checkee_annotation(
+    registry: &NodeRegistry,
+    id: CheckeeAnnotationId,
+) -> CheckeeAnnotation {
+    match id {
+        CheckeeAnnotationId::Goal(id) => {
+            CheckeeAnnotation::Goal(expand_goal_checkee_annotation(registry, id))
+        }
+        CheckeeAnnotationId::Expression(id) => {
+            CheckeeAnnotation::Expression(expand_expression_checkee_annotation(registry, id))
+        }
+    }
+}
+
+pub fn expand_goal_checkee_annotation(
+    registry: &NodeRegistry,
+    id: NodeId<light::GoalCheckeeAnnotation>,
+) -> GoalCheckeeAnnotation {
+    let light = registry.goal_checkee_annotation(id);
+    let goal_kw_position = light.goal_kw_position;
+    let checkee_type =
+        expand_question_mark_or_possibly_invalid_expression(registry, light.checkee_type_id);
+    GoalCheckeeAnnotation {
+        goal_kw_position,
+        checkee_type,
+    }
+}
+
+pub fn expand_expression_checkee_annotation(
+    registry: &NodeRegistry,
+    id: NodeId<light::ExpressionCheckeeAnnotation>,
+) -> ExpressionCheckeeAnnotation {
+    let light = registry.expression_checkee_annotation(id);
+    let checkee = expand_expression(registry, light.checkee_id);
+    let checkee_type =
+        expand_question_mark_or_possibly_invalid_expression(registry, light.checkee_type_id);
+    let checkee_value = light
+        .checkee_value_id
+        .map(|id| expand_question_mark_or_possibly_invalid_expression(registry, id));
+    ExpressionCheckeeAnnotation {
+        checkee,
+        checkee_type,
+        checkee_value,
+    }
+}
+
+pub fn expand_question_mark_or_possibly_invalid_expression(
+    registry: &NodeRegistry,
+    id: QuestionMarkOrPossiblyInvalidExpressionId,
+) -> QuestionMarkOrPossiblyInvalidExpression {
+    match id {
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
+            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start }
+        }
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
+            QuestionMarkOrPossiblyInvalidExpression::Expression(expand_possibly_invalid_expression(
+                registry, id,
+            ))
+        }
+    }
+}
+
+pub fn expand_possibly_invalid_expression(
+    registry: &NodeRegistry,
+    id: PossiblyInvalidExpressionId,
+) -> PossiblyInvalidExpression {
+    match id {
+        PossiblyInvalidExpressionId::Valid(id) => {
+            PossiblyInvalidExpression::Valid(expand_expression(registry, id))
+        }
+        PossiblyInvalidExpressionId::Invalid(id) => {
+            PossiblyInvalidExpression::Invalid(expand_invalid_expression(registry, id))
+        }
+    }
+}
+
+pub fn expand_invalid_expression(
+    registry: &NodeRegistry,
+    id: NodeId<light::InvalidExpression>,
+) -> InvalidExpression {
+    let light = registry.invalid_expression(id);
+    let expression = light.expression.clone();
+    let error = light.error.clone();
+    InvalidExpression { expression, error }
 }

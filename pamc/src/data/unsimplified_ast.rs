@@ -50,7 +50,7 @@ pub enum Expression {
     Check(Box<Check>),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Identifier {
     pub start: TextPosition,
     pub name: IdentifierName,

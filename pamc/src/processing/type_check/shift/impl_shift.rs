@@ -94,6 +94,9 @@ impl ShiftDbIndices for ExpressionId {
             ExpressionId::Forall(forall_id) => {
                 ExpressionId::Forall(forall_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
+            ExpressionId::Check(check_id) => {
+                ExpressionId::Check(check_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            }
         })
     }
 }
@@ -318,5 +321,147 @@ impl ShiftDbIndices for NodeId<Forall> {
             param_list_id: shifted_param_list_id,
             output_id: shifted_output_id,
         }))
+    }
+}
+
+impl ShiftDbIndices for NodeId<Check> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let check = registry.check(self).clone();
+        let shifted_checkee_annotation_id = check
+            .checkee_annotation_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        let shifted_output_id = check.output_id.try_shift_with_cutoff(f, cutoff, registry)?;
+        Ok(registry.add_check_and_overwrite_its_id(Check {
+            id: dummy_id(),
+            checkee_annotation_id: shifted_checkee_annotation_id,
+            output_id: shifted_output_id,
+        }))
+    }
+}
+
+impl ShiftDbIndices for CheckeeAnnotationId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        Ok(match self {
+            CheckeeAnnotationId::Goal(id) => {
+                CheckeeAnnotationId::Goal(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            }
+            CheckeeAnnotationId::Expression(id) => {
+                CheckeeAnnotationId::Expression(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            }
+        })
+    }
+}
+
+impl ShiftDbIndices for NodeId<GoalCheckeeAnnotation> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let annotation = registry.goal_checkee_annotation(self).clone();
+        let shifted_checkee_type_id = annotation
+            .checkee_type_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        Ok(
+            registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+                id: dummy_id(),
+                goal_kw_position: annotation.goal_kw_position,
+                checkee_type_id: shifted_checkee_type_id,
+            }),
+        )
+    }
+}
+
+impl ShiftDbIndices for NodeId<ExpressionCheckeeAnnotation> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let annotation = registry.expression_checkee_annotation(self).clone();
+        let shifted_checkee_id = annotation
+            .checkee_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        let shifted_checkee_type_id = annotation
+            .checkee_type_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        let shifted_checkee_value_id = annotation
+            .checkee_value_id
+            .map(|id| id.try_shift_with_cutoff(f, cutoff, registry))
+            .transpose()?;
+        Ok(
+            registry.add_expression_checkee_annotation_and_overwrite_its_id(
+                ExpressionCheckeeAnnotation {
+                    id: dummy_id(),
+                    checkee_id: shifted_checkee_id,
+                    checkee_type_id: shifted_checkee_type_id,
+                    checkee_value_id: shifted_checkee_value_id,
+                },
+            ),
+        )
+    }
+}
+
+impl ShiftDbIndices for QuestionMarkOrPossiblyInvalidExpressionId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        Ok(match self {
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
+                QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+            }
+            QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
+                QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+                    id.try_shift_with_cutoff(f, cutoff, registry)?.into(),
+                )
+            }
+        })
+    }
+}
+
+impl ShiftDbIndices for PossiblyInvalidExpressionId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        Ok(match self {
+            PossiblyInvalidExpressionId::Valid(id) => {
+                PossiblyInvalidExpressionId::Valid(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            }
+            PossiblyInvalidExpressionId::Invalid(original_invalid) => {
+                // We can return the original as-is since it's not bound in
+                // the first place (so there's nothing to shift).
+                PossiblyInvalidExpressionId::Invalid(original_invalid)
+            }
+        })
     }
 }
