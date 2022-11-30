@@ -210,6 +210,109 @@ pub fn format_forall(forall: &Forall, indent_level: usize, options: &FormatOptio
     )
 }
 
-pub fn format_check(_check: &Check, _indent_level: usize, _options: &FormatOptions) -> String {
-    unimplemented!()
+pub fn format_check(check: &Check, indent_level: usize, options: &FormatOptions) -> String {
+    let i0 = indent(indent_level, options);
+    let i1 = indent(indent_level + 1, options);
+    let annotation =
+        format_checkee_annotation(&check.checkee_annotation, indent_level + 1, options);
+    let output = format_expression(&check.output, indent_level + 1, options);
+    format!(
+        "case {} {{\n{}{}\n{}}}",
+        try_oneline_with_multi_parens(&annotation, indent_level, options),
+        &i1,
+        output,
+        &i0,
+    )
+}
+
+pub fn format_checkee_annotation(
+    annotation: &CheckeeAnnotation,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    match annotation {
+        CheckeeAnnotation::Goal(annotation) => {
+            format_goal_checkee_annotation(annotation, indent_level, options)
+        }
+        CheckeeAnnotation::Expression(annotation) => {
+            format_expression_checkee_annotation(annotation, indent_level, options)
+        }
+    }
+}
+
+pub fn format_goal_checkee_annotation(
+    annotation: &GoalCheckeeAnnotation,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    let i1 = indent(indent_level + 1, options);
+    let checkee_type = format_question_mark_or_possibly_invalid_expression(
+        &annotation.checkee_type,
+        indent_level + 2,
+        options,
+    );
+    if checkee_type.contains('\n') {
+        format!("goal:\n{}{}", &i1, checkee_type)
+    } else {
+        format!("goal: {}", checkee_type)
+    }
+}
+
+pub fn format_expression_checkee_annotation(
+    annotation: &ExpressionCheckeeAnnotation,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    let i1 = indent(indent_level + 1, options);
+    let checkee = format_expression(&annotation.checkee, indent_level + 1, options);
+    let checkee_type = format_question_mark_or_possibly_invalid_expression(
+        &annotation.checkee_type,
+        indent_level + 2,
+        options,
+    );
+    let checkee_value = if let Some(value) = &annotation.checkee_value {
+        format!(
+            " = {}",
+            format_question_mark_or_possibly_invalid_expression(value, indent_level + 2, options)
+        )
+    } else {
+        "".to_string()
+    };
+    let attempted_oneliner = format!("{}: {}{}", checkee, checkee_type, checkee_value);
+    if attempted_oneliner.contains('\n') {
+        let checkee_value = if checkee_value == "" {
+            checkee_value
+        } else {
+            format!("\n{}{}", &i1, checkee_value)
+        };
+        format!("{}:\n{}{}{}", checkee, &i1, checkee_type, checkee_value)
+    } else {
+        attempted_oneliner
+    }
+}
+
+pub fn format_question_mark_or_possibly_invalid_expression(
+    expression: &QuestionMarkOrPossiblyInvalidExpression,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    match expression {
+        QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start: _ } => "?".to_string(),
+        QuestionMarkOrPossiblyInvalidExpression::Expression(expression) => {
+            format_possibly_invalid_expression(expression, indent_level, options)
+        }
+    }
+}
+
+pub fn format_possibly_invalid_expression(
+    expression: &PossiblyInvalidExpression,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    match expression {
+        PossiblyInvalidExpression::Valid(expression) => {
+            format_expression(expression, indent_level, options)
+        }
+        PossiblyInvalidExpression::Invalid(_) => "<INVALID>".to_string(),
+    }
 }
