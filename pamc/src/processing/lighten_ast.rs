@@ -142,8 +142,8 @@ pub fn register_expression(
             ExpressionId::Forall(id)
         }
         heavy::Expression::Check(unregistered) => {
-            // TODO: Properly register the check expression.
-            register_expression(registry, unregistered.output)
+            let id = register_check(registry, *unregistered);
+            ExpressionId::Check(id)
         }
     }
 }
@@ -229,6 +229,100 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall)
         param_list_id,
         output_id,
     })
+}
+
+pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -> NodeId<Check> {
+    let checkee_annotation_id =
+        register_checkee_annotation(registry, unregistered.checkee_annotation);
+    let output_id = register_expression(registry, unregistered.output);
+    registry.add_check_and_overwrite_its_id(Check {
+        id: dummy_id(),
+        checkee_annotation_id,
+        output_id,
+    })
+}
+
+pub fn register_checkee_annotation(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::CheckeeAnnotation,
+) -> CheckeeAnnotationId {
+    match unregistered {
+        heavy::CheckeeAnnotation::Goal(unregistered) => {
+            let id = register_goal_checkee_annotation(registry, unregistered);
+            CheckeeAnnotationId::Goal(id)
+        }
+        heavy::CheckeeAnnotation::Expression(unregistered) => {
+            let id = register_expression_checkee_annotation(registry, unregistered);
+            CheckeeAnnotationId::Expression(id)
+        }
+    }
+}
+
+pub fn register_goal_checkee_annotation(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::GoalCheckeeAnnotation,
+) -> NodeId<GoalCheckeeAnnotation> {
+    let goal_kw_position = unregistered.goal_kw_position;
+    let checkee_type_id =
+        register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
+    registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+        id: dummy_id(),
+        goal_kw_position,
+        checkee_type_id,
+    })
+}
+
+pub fn register_expression_checkee_annotation(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::ExpressionCheckeeAnnotation,
+) -> NodeId<ExpressionCheckeeAnnotation> {
+    let checkee_id = register_expression(registry, unregistered.checkee);
+    let checkee_type_id =
+        register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
+    let checkee_value_id = unregistered
+        .checkee_value
+        .map(|value_id| register_question_mark_or_possibly_invalid_expression(registry, value_id));
+    registry.add_expression_checkee_annotation_and_overwrite_its_id(ExpressionCheckeeAnnotation {
+        id: dummy_id(),
+        checkee_id,
+        checkee_type_id,
+        checkee_value_id,
+    })
+}
+
+pub fn register_question_mark_or_possibly_invalid_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::QuestionMarkOrPossiblyInvalidExpression,
+) -> QuestionMarkOrPossiblyInvalidExpressionId {
+    match unregistered {
+        heavy::QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start } => {
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+        }
+        heavy::QuestionMarkOrPossiblyInvalidExpression::Expression(unregistered) => {
+            let id = register_possibly_invalid_expression(registry, unregistered);
+            QuestionMarkOrPossiblyInvalidExpressionId::Expression(id)
+        }
+    }
+}
+
+pub fn register_possibly_invalid_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::PossiblyInvalidExpression,
+) -> PossiblyInvalidExpressionId {
+    match unregistered {
+        heavy::PossiblyInvalidExpression::Valid(unregistered) => {
+            let id = register_expression(registry, unregistered);
+            PossiblyInvalidExpressionId::Valid(id)
+        }
+        heavy::PossiblyInvalidExpression::Invalid(invalid) => {
+            let id = registry.add_invalid_expression_and_overwrite_its_id(InvalidExpression {
+                id: dummy_id(),
+                expression: invalid.expression,
+                error: invalid.error,
+            });
+            PossiblyInvalidExpressionId::Invalid(id)
+        }
+    }
 }
 
 pub fn register_match_case(
