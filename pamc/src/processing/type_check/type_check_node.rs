@@ -807,6 +807,7 @@ fn get_type_of_check(
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
 ) -> Result<NormalFormId, TypeCheckError> {
+    // TODO: Generate warnings for incorrect/questioned annotations.
     let check = state.registry.check(check_id).clone();
     get_type_of_expression(state, coercion_target_id, check.output_id)
 }
