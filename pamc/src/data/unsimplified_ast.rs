@@ -132,6 +132,13 @@ pub struct ExpressionCheckeeAnnotation {
     pub checkee_value: Option<QuestionMarkOrExpression>,
 }
 
+// TODO: Choose a better name for "question mark".
+// This name is currently a leaky abstraction,
+// since we don't want to depend on the fact that
+// we use question marks to represent "holes" in the AST.
+// We should probably use a different name, like the
+// aforementioned "hole", or "query", or something like that.
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QuestionMarkOrExpression {
     QuestionMark { start: TextPosition },
