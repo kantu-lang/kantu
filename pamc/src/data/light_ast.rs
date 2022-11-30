@@ -109,3 +109,42 @@ pub struct Forall {
     pub param_list_id: ListId<NodeId<Param>>,
     pub output_id: ExpressionId,
 }
+
+#[derive(Clone, Debug)]
+pub struct Check {
+    pub checkee_annotation_id: CheckeeAnnotationId,
+    pub output_id: ExpressionId,
+}
+
+#[derive(Clone, Debug)]
+pub enum CheckeeAnnotationId {
+    Goal(NodeId<GoalCheckeeAnnotation>),
+    Expression(NodeId<ExpressionCheckeeAnnotation>),
+}
+
+#[derive(Clone, Debug)]
+pub struct GoalCheckeeAnnotation {
+    pub goal_kw_position: TextPosition,
+    pub checkee_type: QuestionMarkOrPossiblyInvalidExpressionId,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExpressionCheckeeAnnotation {
+    pub checkee: ExpressionId,
+    pub checkee_type: QuestionMarkOrPossiblyInvalidExpressionId,
+    pub checkee_value: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
+}
+
+#[derive(Clone, Debug)]
+pub enum QuestionMarkOrPossiblyInvalidExpressionId {
+    QuestionMark { start: TextPosition },
+    Expression(PossiblyInvalidExpressionId),
+}
+
+#[derive(Clone, Debug)]
+pub enum PossiblyInvalidExpressionId {
+    Valid(ExpressionId),
+    Invalid(NodeId<InvalidExpression>),
+}
+
+pub use crate::data::bound_ast::InvalidExpression;

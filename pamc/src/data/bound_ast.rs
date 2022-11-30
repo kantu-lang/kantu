@@ -156,5 +156,11 @@ pub enum QuestionMarkOrPossiblyInvalidExpression {
 #[derive(Clone, Debug)]
 pub enum PossiblyInvalidExpression {
     Valid(Expression),
-    Invalid(unbound::Expression, BindError),
+    Invalid(InvalidExpression),
+}
+
+#[derive(Clone, Debug)]
+pub struct InvalidExpression {
+    pub expression: unbound::Expression,
+    pub error: BindError,
 }
