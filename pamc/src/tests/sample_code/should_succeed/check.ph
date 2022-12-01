@@ -88,3 +88,62 @@ let unbindable_annotations3 = fun _(n: Nat): Nat {
         },
     }
 };
+
+let illegal_fun_rec_annotations1 = fun _(n: Nat): Nat {
+    match Nat.O {
+        .O =>
+        check
+            goal:
+                fun infinite_loop(-decreasing: Nat): Nat {
+                    infinite_loop(decreasing)
+                }(n)
+        {
+            Nat.O
+        },
+        .S(n') =>
+        check
+            goal:
+                fun infinite_loop(not_decreasing: Nat): Nat {
+                    infinite_loop(not_decreasing)
+                }(n)
+        {
+            Nat.O
+        },
+    }
+};
+
+let illegal_fun_rec_annotations2 = fun recursive_identity(-n: Nat): Nat {
+    match n {
+        .O =>
+        check
+            goal:
+                fun _(
+                    z: Nat,
+                    y:
+                        fun infinite_loop(-decreasing: Nat): Type {
+                            infinite_loop(decreasing)
+                        }(z),
+                ): Type {
+                    y
+                }(n, Nat)
+        {
+            Nat.O
+        },
+        
+        .S(n') =>
+        check
+            goal:
+                fun _(
+                    z: Nat,
+                    y:
+                        fun infinite_loop(-decreasing: Nat): Type {
+                            infinite_loop(decreasing)
+                        }(z),
+                ): Type {
+                    y
+                }(n, Nat)
+        {
+            recursive_identity(n')
+        },
+    }
+};
