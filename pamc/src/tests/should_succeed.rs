@@ -94,7 +94,8 @@ fn expect_success(src: &str) {
     let file = registry.file(file_id);
     check_variant_return_types_for_file(&registry, file)
         .expect("Variant return type validation failed");
-    validate_fun_recursion_in_file(&registry, file).expect("Fun recursion validation failed");
+    validate_fun_recursion_in_file(&mut registry, file_id)
+        .expect("Fun recursion validation failed");
     type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
     let _js_ast = JavaScript::generate_code(&registry, &[file_id]).expect("Code generation failed");
 }

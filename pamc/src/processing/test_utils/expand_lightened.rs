@@ -328,7 +328,7 @@ pub fn expand_illegal_fun_recursion_expression(
     id: NodeId<light::IllegalFunRecursionExpression>,
 ) -> IllegalFunRecursionExpression {
     let light = registry.illegal_fun_recursion_expression(id);
-    let expression = light.expression.clone();
+    let expression = expand_expression(registry, light.expression_id);
     let error = light.error.clone();
     IllegalFunRecursionExpression { expression, error }
 }

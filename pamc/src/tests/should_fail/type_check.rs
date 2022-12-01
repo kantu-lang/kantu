@@ -18,7 +18,8 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
 
     check_variant_return_types_for_file(&registry, file)
         .expect("Variant return type validation failed");
-    validate_fun_recursion_in_file(&registry, file).expect("Fun recursion validation failed");
+    validate_fun_recursion_in_file(&mut registry, file_id)
+        .expect("Fun recursion validation failed");
     let err = type_check_files(&mut registry, &[file_id])
         .expect_err("Type checking unexpected succeeded");
     panicker(&registry, err);

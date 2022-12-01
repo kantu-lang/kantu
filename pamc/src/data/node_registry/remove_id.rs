@@ -1,6 +1,5 @@
 use crate::data::{
     bind_error::BindError,
-    bound_ast as heavy,
     illegal_fun_recursion_error::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{ListId, NodeId, QuestionMarkOrPossiblyInvalidExpressionId},
@@ -287,14 +286,14 @@ impl RemoveId for with_id::UnbindableExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
-    pub expression: heavy::Expression,
+    pub expression_id: with_id::ExpressionId,
     pub error: IllegalFunRecursionError,
 }
 impl RemoveId for with_id::IllegalFunRecursionExpression {
     type Output = IllegalFunRecursionExpression;
     fn remove_id(&self) -> Self::Output {
         IllegalFunRecursionExpression {
-            expression: self.expression.clone(),
+            expression_id: self.expression_id.clone(),
             error: self.error.clone(),
         }
     }

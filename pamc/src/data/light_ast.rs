@@ -1,6 +1,5 @@
 use crate::data::{
     bind_error::BindError,
-    bound_ast as bound,
     illegal_fun_recursion_error::IllegalFunRecursionError,
     node_registry::{ListId, NodeId},
     simplified_ast as unbound, FileId, TextPosition,
@@ -151,6 +150,6 @@ pub struct UnbindableExpression {
 #[derive(Clone, Debug)]
 pub struct IllegalFunRecursionExpression {
     pub id: NodeId<Self>,
-    pub expression: bound::Expression,
+    pub expression_id: ExpressionId,
     pub error: IllegalFunRecursionError,
 }

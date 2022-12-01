@@ -352,10 +352,11 @@ pub fn register_illegal_fun_recursion_expression(
     registry: &mut NodeRegistry,
     unregistered: heavy::IllegalFunRecursionExpression,
 ) -> NodeId<IllegalFunRecursionExpression> {
+    let expression_id = register_expression(registry, unregistered.expression);
     registry.add_illegal_fun_recursion_expression_and_overwrite_its_id(
         IllegalFunRecursionExpression {
             id: dummy_id(),
-            expression: unregistered.expression,
+            expression_id,
             error: unregistered.error,
         },
     )
