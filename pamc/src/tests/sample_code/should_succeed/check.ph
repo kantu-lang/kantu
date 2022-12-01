@@ -56,7 +56,7 @@ let goal_checkee = fun _(n: Nat): Nat {
     }
 };
 
-let invalid_annotations1 = fun _(n: Nat): Nat {
+let unbindable_annotations1 = fun _(n: Nat): Nat {
     match Nat.O {
         .O => check goal: this_symbol_doesnt_exist {
             Nat.O
@@ -67,7 +67,7 @@ let invalid_annotations1 = fun _(n: Nat): Nat {
     }
 };
 
-let invalid_annotations2 = fun _(n: Nat): Nat {
+let unbindable_annotations2 = fun _(n: Nat): Nat {
     match n {
         .O => check n: this_symbol_doesnt_exist = neither_does_this_one {
             Nat.O
@@ -78,7 +78,7 @@ let invalid_annotations2 = fun _(n: Nat): Nat {
     }
 };
 
-let invalid_annotations3 = fun _(n: Nat): Nat {
+let unbindable_annotations3 = fun _(n: Nat): Nat {
     match Nat.O {
         .O => check goal: fun _(p: Nat, q: Nat): Type { not_defined }(n, n) {
             Nat.O
