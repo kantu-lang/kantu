@@ -354,9 +354,9 @@ fn bind_question_mark_or_possibly_invalid_expression(
             let bind_result = bind_expression(context, expression.clone());
             let possibly_invalid_expression = match bind_result {
                 Ok(bound) => PossiblyInvalidExpression::Valid(bound),
-                Err(error) => {
-                    PossiblyInvalidExpression::Invalid(InvalidExpression { expression, error })
-                }
+                Err(error) => PossiblyInvalidExpression::Invalid(InvalidExpression::Unbindable(
+                    UnbindableExpression { expression, error },
+                )),
             };
             QuestionMarkOrPossiblyInvalidExpression::Expression(possibly_invalid_expression)
         }

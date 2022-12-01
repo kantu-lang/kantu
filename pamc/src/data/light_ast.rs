@@ -1,5 +1,7 @@
 use crate::data::{
     bind_error::BindError,
+    bound_ast as bound,
+    illegal_fun_recursion_error::IllegalFunRecursionError,
     node_registry::{ListId, NodeId},
     simplified_ast as unbound, FileId, TextPosition,
 };
@@ -136,12 +138,19 @@ pub struct ExpressionCheckeeAnnotation {
 }
 
 pub use crate::data::node_registry::{
-    PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
+    InvalidExpressionId, PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
 };
 
 #[derive(Clone, Debug)]
-pub struct InvalidExpression {
+pub struct UnbindableExpression {
     pub id: NodeId<Self>,
     pub expression: unbound::Expression,
     pub error: BindError,
+}
+
+#[derive(Clone, Debug)]
+pub struct IllegalFunRecursionExpression {
+    pub id: NodeId<Self>,
+    pub expression: bound::Expression,
+    pub error: IllegalFunRecursionError,
 }

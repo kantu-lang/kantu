@@ -1,5 +1,7 @@
 use crate::data::{
     bind_error::BindError,
+    bound_ast as heavy,
+    illegal_fun_recursion_error::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{ListId, NodeId, QuestionMarkOrPossiblyInvalidExpressionId},
     simplified_ast as unbound, FileId, TextPosition,
@@ -269,14 +271,29 @@ impl RemoveId for with_id::ExpressionCheckeeAnnotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct InvalidExpression {
+pub struct UnbindableExpression {
     pub expression: unbound::Expression,
     pub error: BindError,
 }
-impl RemoveId for with_id::InvalidExpression {
-    type Output = InvalidExpression;
+impl RemoveId for with_id::UnbindableExpression {
+    type Output = UnbindableExpression;
     fn remove_id(&self) -> Self::Output {
-        InvalidExpression {
+        UnbindableExpression {
+            expression: self.expression.clone(),
+            error: self.error.clone(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct IllegalFunRecursionExpression {
+    pub expression: heavy::Expression,
+    pub error: IllegalFunRecursionError,
+}
+impl RemoveId for with_id::IllegalFunRecursionExpression {
+    type Output = IllegalFunRecursionExpression;
+    fn remove_id(&self) -> Self::Output {
+        IllegalFunRecursionExpression {
             expression: self.expression.clone(),
             error: self.error.clone(),
         }

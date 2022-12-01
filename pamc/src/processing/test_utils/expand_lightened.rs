@@ -2,7 +2,7 @@ use crate::data::{
     bound_ast::*,
     light_ast as light,
     node_registry::{
-        CheckeeAnnotationId, FileItemNodeId, ListId, NodeId, NodeRegistry,
+        CheckeeAnnotationId, FileItemNodeId, InvalidExpressionId, ListId, NodeId, NodeRegistry,
         PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
 };
@@ -301,10 +301,34 @@ pub fn expand_possibly_invalid_expression(
 
 pub fn expand_invalid_expression(
     registry: &NodeRegistry,
-    id: NodeId<light::InvalidExpression>,
+    id: InvalidExpressionId,
 ) -> InvalidExpression {
-    let light = registry.invalid_expression(id);
+    match id {
+        InvalidExpressionId::Unbindable(id) => {
+            InvalidExpression::Unbindable(expand_unbindable_expression(registry, id))
+        }
+        InvalidExpressionId::IllegalFunRecursion(id) => InvalidExpression::IllegalFunRecursion(
+            expand_illegal_fun_recursion_expression(registry, id),
+        ),
+    }
+}
+
+pub fn expand_unbindable_expression(
+    registry: &NodeRegistry,
+    id: NodeId<light::UnbindableExpression>,
+) -> UnbindableExpression {
+    let light = registry.unbindable_expression(id);
     let expression = light.expression.clone();
     let error = light.error.clone();
-    InvalidExpression { expression, error }
+    UnbindableExpression { expression, error }
+}
+
+pub fn expand_illegal_fun_recursion_expression(
+    registry: &NodeRegistry,
+    id: NodeId<light::IllegalFunRecursionExpression>,
+) -> IllegalFunRecursionExpression {
+    let light = registry.illegal_fun_recursion_expression(id);
+    let expression = light.expression.clone();
+    let error = light.error.clone();
+    IllegalFunRecursionExpression { expression, error }
 }

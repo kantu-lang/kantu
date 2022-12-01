@@ -315,14 +315,50 @@ pub fn register_possibly_invalid_expression(
             PossiblyInvalidExpressionId::Valid(id)
         }
         heavy::PossiblyInvalidExpression::Invalid(invalid) => {
-            let id = registry.add_invalid_expression_and_overwrite_its_id(InvalidExpression {
-                id: dummy_id(),
-                expression: invalid.expression,
-                error: invalid.error,
-            });
+            let id = register_invalid_expression(registry, invalid);
             PossiblyInvalidExpressionId::Invalid(id)
         }
     }
+}
+
+pub fn register_invalid_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::InvalidExpression,
+) -> InvalidExpressionId {
+    match unregistered {
+        heavy::InvalidExpression::Unbindable(id) => {
+            let id = register_unbindable_expression(registry, id);
+            InvalidExpressionId::Unbindable(id)
+        }
+        heavy::InvalidExpression::IllegalFunRecursion(id) => {
+            let id = register_illegal_fun_recursion_expression(registry, id);
+            InvalidExpressionId::IllegalFunRecursion(id)
+        }
+    }
+}
+
+pub fn register_unbindable_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::UnbindableExpression,
+) -> NodeId<UnbindableExpression> {
+    registry.add_unbindable_expression_and_overwrite_its_id(UnbindableExpression {
+        id: dummy_id(),
+        expression: unregistered.expression,
+        error: unregistered.error,
+    })
+}
+
+pub fn register_illegal_fun_recursion_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::IllegalFunRecursionExpression,
+) -> NodeId<IllegalFunRecursionExpression> {
+    registry.add_illegal_fun_recursion_expression_and_overwrite_its_id(
+        IllegalFunRecursionExpression {
+            id: dummy_id(),
+            expression: unregistered.expression,
+            error: unregistered.error,
+        },
+    )
 }
 
 pub fn register_match_case(

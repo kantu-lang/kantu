@@ -8,6 +8,7 @@ mod variant_return_type;
 
 use crate::{
     data::{
+        illegal_fun_recursion_error::IllegalFunRecursionError,
         light_ast::*,
         node_registry::{ExpressionRef, NodeId, NodeRegistry},
         token::TokenKind,
@@ -25,7 +26,7 @@ use crate::{
             format::{format_expression, format_match_case, FormatOptions},
         },
         type_check::{type_check_files, TypeCheckError},
-        validate_fun_recursion::{validate_fun_recursion_in_file, IllegalFunRecursionError},
+        validate_fun_recursion::validate_fun_recursion_in_file,
     },
 };
 

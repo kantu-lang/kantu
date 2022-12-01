@@ -1,24 +1,11 @@
 use crate::data::{
+    illegal_fun_recursion_error::*,
     light_ast::*,
     node_registry::{ListId, NodeId, NodeRegistry},
 };
 
 // TODO: Handle check expressions with invalid fun recursion.
 // This will probably require serious redesign.
-
-#[derive(Clone, Debug)]
-pub enum IllegalFunRecursionError {
-    RecursiveReferenceWasNotDirectCall {
-        reference: NodeId<NameExpression>,
-    },
-    NonSubstructPassedToDecreasingParam {
-        callee: NodeId<NameExpression>,
-        arg: ExpressionId,
-    },
-    RecursivelyCalledFunctionWithoutDecreasingParam {
-        callee: NodeId<NameExpression>,
-    },
-}
 
 pub fn validate_fun_recursion_in_file(
     registry: &NodeRegistry,
