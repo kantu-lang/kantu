@@ -2,7 +2,6 @@ use crate::{
     data::{node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
-        check_variant_return_types::check_variant_return_types_for_file,
         generate_code::{targets::javascript::JavaScript, CompileTarget},
         lex::lex,
         lighten_ast::lighten_file,
@@ -10,6 +9,7 @@ use crate::{
         simplify_ast::simplify_file,
         type_check::type_check_files,
         validate_fun_recursion::validate_fun_recursion_in_file,
+        validate_variant_return_types::validate_variant_return_types_in_file,
     },
 };
 
@@ -92,7 +92,7 @@ fn expect_success(src: &str) {
     let mut registry = NodeRegistry::empty();
     let file_id = lighten_file(&mut registry, file);
     let file = registry.file(file_id);
-    check_variant_return_types_for_file(&registry, file)
+    validate_variant_return_types_in_file(&registry, file)
         .expect("Variant return type validation failed");
     validate_fun_recursion_in_file(&mut registry, file_id)
         .expect("Fun recursion validation failed");

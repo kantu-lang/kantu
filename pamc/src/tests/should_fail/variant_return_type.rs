@@ -15,8 +15,8 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
     let mut registry = NodeRegistry::empty();
     let file_id = lighten_file(&mut registry, file);
     let file = registry.file(file_id);
-    let err = check_variant_return_types_for_file(&registry, file)
-        .expect_err("Type arg extraction unexpectedly succeeded");
+    let err = validate_variant_return_types_in_file(&registry, file)
+        .expect_err("Variant return type validation unexpectedly succeeded");
     let illegal_variant_return_type = registry.expression_ref(err.0);
     panicker(illegal_variant_return_type, &registry);
 }

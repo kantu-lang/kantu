@@ -16,7 +16,6 @@ use crate::{
     },
     processing::{
         bind_type_independent::{bind_files, BindError, OwnedSymbolSource},
-        check_variant_return_types::check_variant_return_types_for_file,
         lex::{lex, LexError},
         lighten_ast::lighten_file,
         parse::{parse_file, ParseError},
@@ -27,6 +26,7 @@ use crate::{
         },
         type_check::{type_check_files, TypeCheckError},
         validate_fun_recursion::validate_fun_recursion_in_file,
+        validate_variant_return_types::validate_variant_return_types_in_file,
     },
 };
 

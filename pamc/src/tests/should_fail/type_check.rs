@@ -16,7 +16,7 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
     let file_id = lighten_file(&mut registry, file);
     let file = registry.file(file_id);
 
-    check_variant_return_types_for_file(&registry, file)
+    validate_variant_return_types_in_file(&registry, file)
         .expect("Variant return type validation failed");
     validate_fun_recursion_in_file(&mut registry, file_id)
         .expect("Fun recursion validation failed");
