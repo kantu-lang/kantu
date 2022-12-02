@@ -4,10 +4,19 @@ use crate::data::{
     node_registry::{ListId, NodeId, NodeRegistry},
 };
 
+use std::convert::Infallible;
+
 use context::*;
 mod context;
 
 type TaintedIllegalFunRecursionError = Tainted<IllegalFunRecursionError>;
+
+impl From<Tainted<Infallible>> for TaintedIllegalFunRecursionError {
+    fn from(impossible: Tainted<Infallible>) -> Self {
+        #[allow(unreachable_code)]
+        match Infallible::from(impossible) {}
+    }
+}
 
 pub fn validate_fun_recursion_in_file(
     registry: &mut NodeRegistry,
@@ -70,7 +79,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
     )?;
     context.pop_n(type_statement.param_list_id.len);
 
-    context.push(ContextEntry::NoInformation);
+    context.push(ContextEntry::NoInformation)?;
 
     let variant_ids = registry
         .variant_list(type_statement.variant_list_id)
@@ -106,7 +115,7 @@ fn validate_fun_recursion_in_variant_dirty(
         validate_fun_recursion_in_expression_dirty(context, registry, variant.return_type_id)?;
     context.pop_n(arity);
 
-    context.push(ContextEntry::NoInformation);
+    context.push(ContextEntry::NoInformation)?;
 
     Ok(registry.add_variant_and_overwrite_its_id(Variant {
         id: dummy_id(),
@@ -137,7 +146,7 @@ fn validate_fun_recursion_in_let_statement_dirty(
     let let_statement = registry.let_statement(let_statement_id).clone();
     let value_id =
         validate_fun_recursion_in_expression_dirty(context, registry, let_statement.value_id)?;
-    context.push(ContextEntry::NoInformation);
+    context.push(ContextEntry::NoInformation)?;
     Ok(
         registry.add_let_statement_and_overwrite_its_id(LetStatement {
             id: dummy_id(),
@@ -327,7 +336,7 @@ fn validate_fun_recursion_in_fun_dirty(
         }
     };
 
-    context.push(ContextEntry::Fun(reference_restriction));
+    context.push(ContextEntry::Fun(reference_restriction))?;
     let body_id = validate_fun_recursion_in_expression_dirty(context, registry, fun.body_id)?;
     context.pop_n(param_list_id.len + 1);
 
@@ -350,11 +359,11 @@ fn validate_fun_recursion_in_params_and_leave_in_context_dirty(
         .param_list(param_list_id)
         .to_vec()
         .into_iter()
-        .map(|param_id| {
+        .map(|param_id| -> Result<_, TaintedIllegalFunRecursionError> {
             let param = registry.param(param_id).clone();
             let type_id =
                 validate_fun_recursion_in_expression_dirty(context, registry, param.type_id)?;
-            context.push(ContextEntry::NoInformation);
+            context.push(ContextEntry::NoInformation)?;
             Ok(registry.add_param_and_overwrite_its_id(Param {
                 id: dummy_id(),
                 name_id: param.name_id,
@@ -414,11 +423,11 @@ fn validate_fun_recursion_in_match_case_dirty(
         for _ in 0..case_arity {
             context.push(ContextEntry::Substruct {
                 superstruct_db_level: matchee_db_level,
-            });
+            })?;
         }
     } else {
         for _ in 0..case_arity {
-            context.push(ContextEntry::NoInformation);
+            context.push(ContextEntry::NoInformation)?;
         }
     }
 

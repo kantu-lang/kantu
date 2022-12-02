@@ -64,8 +64,11 @@ impl Context {
         self.stack.truncate(new_len);
     }
 
-    pub fn push(&mut self, entry: ContextEntry) {
+    /// We effectively return `()`, but the reason we use the `Result` type we is to
+    /// encourage the caller to only use `push` inside a function that returns `Result<_, Tainted<_>>`.
+    pub fn push(&mut self, entry: ContextEntry) -> Result<(), Tainted<Infallible>> {
         self.stack.push(entry);
+        Ok(())
     }
 }
 
@@ -112,6 +115,12 @@ pub struct Tainted<T>(T);
 impl<T> Tainted<T> {
     pub fn new(value: T) -> Self {
         Self(value)
+    }
+}
+
+impl From<Tainted<Infallible>> for Infallible {
+    fn from(impossible: Tainted<Infallible>) -> Infallible {
+        impossible.0
     }
 }
 
