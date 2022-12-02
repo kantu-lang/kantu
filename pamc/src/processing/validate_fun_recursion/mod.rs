@@ -4,6 +4,9 @@ use crate::data::{
     node_registry::{ListId, NodeId, NodeRegistry},
 };
 
+use context::*;
+mod context;
+
 pub fn validate_fun_recursion_in_file(
     registry: &mut NodeRegistry,
     file_id: NodeId<File>,
@@ -618,112 +621,6 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
                         ),
                     ),
                 )),
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Context {
-    stack: Vec<ContextEntry>,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum ContextEntry {
-    Substruct { superstruct_db_level: DbLevel },
-    Fun(ReferenceRestriction),
-    NoInformation,
-}
-
-#[derive(Clone, Copy, Debug)]
-enum ReferenceRestriction {
-    MustCallWithSubstruct {
-        superstruct_db_level: DbLevel,
-        arg_position: usize,
-    },
-    CannotCall,
-}
-
-impl Context {
-    fn new() -> Self {
-        Self {
-            stack: vec![ContextEntry::NoInformation, ContextEntry::NoInformation],
-        }
-    }
-}
-
-impl Context {
-    fn len(&self) -> usize {
-        self.stack.len()
-    }
-
-    fn index_to_level(&self, index: DbIndex) -> DbLevel {
-        DbLevel(self.len() - index.0 - 1)
-    }
-}
-
-impl Context {
-    /// Panics if `n > self.len()`.
-    fn pop_n(&mut self, n: usize) {
-        if n > self.len() {
-            panic!(
-                "Tried to pop {} elements from a context with only {} elements",
-                n,
-                self.len()
-            );
-        }
-        self.stack.truncate(self.len() - n);
-    }
-
-    /// Panics if `new_len > self.len()`.
-    pub fn truncate(&mut self, new_len: usize) {
-        if new_len > self.len() {
-            panic!(
-                "Tried to truncate a context with only {} elements to {} elements",
-                self.len(),
-                new_len
-            );
-        }
-        self.stack.truncate(new_len);
-    }
-
-    fn push(&mut self, entry: ContextEntry) {
-        self.stack.push(entry);
-    }
-}
-
-impl Context {
-    fn reference_restriction(&self, index: DbIndex) -> Option<ReferenceRestriction> {
-        let level = self.index_to_level(index);
-        let entry = self.stack[level.0];
-        match entry {
-            ContextEntry::Substruct { .. } => None,
-            ContextEntry::Fun(restriction) => Some(restriction),
-            ContextEntry::NoInformation => None,
-        }
-    }
-
-    fn is_left_strict_substruct_of_right(&self, left: DbLevel, right: DbLevel) -> bool {
-        left != right && self.is_left_inclusive_substruct_of_right(left, right)
-    }
-
-    fn is_left_inclusive_substruct_of_right(&self, left: DbLevel, right: DbLevel) -> bool {
-        let mut current = left;
-        loop {
-            if current == right {
-                return true;
-            }
-            let entry = self.stack[current.0];
-            match entry {
-                ContextEntry::Substruct {
-                    superstruct_db_level,
-                } => {
-                    current = superstruct_db_level;
-                    continue;
-                }
-                ContextEntry::Fun(_) | ContextEntry::NoInformation => {
-                    return false;
-                }
             }
         }
     }
