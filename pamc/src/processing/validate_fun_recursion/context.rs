@@ -105,3 +105,32 @@ impl Context {
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Tainted<T>(T);
+
+impl<T> Tainted<T> {
+    pub fn new(value: T) -> Self {
+        Self(value)
+    }
+}
+
+pub fn untaint_err<In, Out, Err, F>(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    input: In,
+    f: F,
+) -> Result<Out, Err>
+where
+    F: FnOnce(&mut Context, &mut NodeRegistry, In) -> Result<Out, Tainted<Err>>,
+{
+    let original_len = context.len();
+    let result = f(context, registry, input);
+    match result {
+        Ok(ok) => Ok(ok),
+        Err(err) => {
+            context.truncate(original_len);
+            Err(err.0)
+        }
+    }
+}

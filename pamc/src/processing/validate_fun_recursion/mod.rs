@@ -7,6 +7,8 @@ use crate::data::{
 use context::*;
 mod context;
 
+type TaintedIllegalFunRecursionError = Tainted<IllegalFunRecursionError>;
+
 pub fn validate_fun_recursion_in_file(
     registry: &mut NodeRegistry,
     file_id: NodeId<File>,
@@ -28,19 +30,6 @@ pub fn validate_fun_recursion_in_file(
 }
 
 fn validate_fun_recursion_in_file_item(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    item_id: FileItemNodeId,
-) -> Result<FileItemNodeId, IllegalFunRecursionError> {
-    untaint_err(
-        context,
-        registry,
-        item_id,
-        validate_fun_recursion_in_file_item_dirty,
-    )
-}
-
-fn validate_fun_recursion_in_file_item_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     item_id: FileItemNodeId,
@@ -72,7 +61,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     type_statement_id: NodeId<TypeStatement>,
-) -> Result<NodeId<TypeStatement>, IllegalFunRecursionError> {
+) -> Result<NodeId<TypeStatement>, TaintedIllegalFunRecursionError> {
     let type_statement = registry.type_statement(type_statement_id).clone();
     let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
         context,
@@ -87,7 +76,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
         .variant_list(type_statement.variant_list_id)
         .to_vec()
         .into_iter()
-        .map(|variant_id| validate_fun_recursion_in_variant(context, registry, variant_id))
+        .map(|variant_id| validate_fun_recursion_in_variant_dirty(context, registry, variant_id))
         .collect::<Result<Vec<_>, _>>()?;
     let variant_list_id = registry.add_variant_list(variant_ids);
 
@@ -101,24 +90,11 @@ fn validate_fun_recursion_in_type_statement_dirty(
     )
 }
 
-fn validate_fun_recursion_in_variant(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    variant_id: NodeId<Variant>,
-) -> Result<NodeId<Variant>, IllegalFunRecursionError> {
-    untaint_err(
-        context,
-        registry,
-        variant_id,
-        validate_fun_recursion_in_variant_dirty,
-    )
-}
-
 fn validate_fun_recursion_in_variant_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     variant_id: NodeId<Variant>,
-) -> Result<NodeId<Variant>, IllegalFunRecursionError> {
+) -> Result<NodeId<Variant>, TaintedIllegalFunRecursionError> {
     let variant = registry.variant(variant_id).clone();
     let arity = variant.param_list_id.len;
     let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
@@ -127,7 +103,7 @@ fn validate_fun_recursion_in_variant_dirty(
         variant.param_list_id,
     )?;
     let return_type_id =
-        validate_fun_recursion_in_expression(context, registry, variant.return_type_id)?;
+        validate_fun_recursion_in_expression_dirty(context, registry, variant.return_type_id)?;
     context.pop_n(arity);
 
     context.push(ContextEntry::NoInformation);
@@ -157,9 +133,10 @@ fn validate_fun_recursion_in_let_statement_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     let_statement_id: NodeId<LetStatement>,
-) -> Result<NodeId<LetStatement>, IllegalFunRecursionError> {
+) -> Result<NodeId<LetStatement>, TaintedIllegalFunRecursionError> {
     let let_statement = registry.let_statement(let_statement_id).clone();
-    let value_id = validate_fun_recursion_in_expression(context, registry, let_statement.value_id)?;
+    let value_id =
+        validate_fun_recursion_in_expression_dirty(context, registry, let_statement.value_id)?;
     context.push(ContextEntry::NoInformation);
     Ok(
         registry.add_let_statement_and_overwrite_its_id(LetStatement {
@@ -187,7 +164,7 @@ fn validate_fun_recursion_in_expression_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     expression_id: ExpressionId,
-) -> Result<ExpressionId, IllegalFunRecursionError> {
+) -> Result<ExpressionId, TaintedIllegalFunRecursionError> {
     Ok(match expression_id {
         ExpressionId::Name(id) => {
             validate_fun_recursion_in_name_dirty(context, registry, id).map(ExpressionId::Name)?
@@ -213,12 +190,12 @@ fn validate_fun_recursion_in_name_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     name_id: NodeId<NameExpression>,
-) -> Result<NodeId<NameExpression>, IllegalFunRecursionError> {
+) -> Result<NodeId<NameExpression>, TaintedIllegalFunRecursionError> {
     let name = registry.name_expression(name_id);
     if context.reference_restriction(name.db_index).is_some() {
-        return Err(
+        return Err(Tainted::new(
             IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall { reference: name_id },
-        );
+        ));
     }
     Ok(name_id)
 }
@@ -227,7 +204,7 @@ fn validate_fun_recursion_in_call_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     call_id: NodeId<Call>,
-) -> Result<NodeId<Call>, IllegalFunRecursionError> {
+) -> Result<NodeId<Call>, TaintedIllegalFunRecursionError> {
     let call = registry.call(call_id).clone();
 
     let is_restricted = is_call_restricted(context, registry, call_id)?;
@@ -264,7 +241,7 @@ fn is_call_restricted(
     context: &Context,
     registry: &NodeRegistry,
     call_id: NodeId<Call>,
-) -> Result<bool, IllegalFunRecursionError> {
+) -> Result<bool, TaintedIllegalFunRecursionError> {
     let call = registry.call(call_id).clone();
     match call.callee_id {
         ExpressionId::Name(callee_name_id) => {
@@ -279,12 +256,12 @@ fn is_call_restricted(
                         let arg_ids = registry.expression_list(call.arg_list_id);
                         if arg_position < arg_ids.len() {
                             let expected_substruct_id = arg_ids[arg_position];
-                            let err = Err(
+                            let err = Err(Tainted::new(
                                 IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
                                     callee: callee_name_id,
                                     arg: expected_substruct_id,
                                 },
-                            );
+                            ));
                             match expected_substruct_id {
                                 ExpressionId::Name(expected_substruct_name_id) => {
                                     let expected_substruct =
@@ -302,11 +279,11 @@ fn is_call_restricted(
                             }
                         }
                     }
-                    ReferenceRestriction::CannotCall { .. } => return Err(
+                    ReferenceRestriction::CannotCall { .. } => return Err(Tainted::new(
                         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
                             callee: callee_name.id,
                         },
-                    ),
+                    )),
                 }
                 Ok(true)
             } else {
@@ -321,7 +298,7 @@ fn validate_fun_recursion_in_fun_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     fun_id: NodeId<Fun>,
-) -> Result<NodeId<Fun>, IllegalFunRecursionError> {
+) -> Result<NodeId<Fun>, TaintedIllegalFunRecursionError> {
     let fun = registry.fun(fun_id).clone();
     let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
         context,
@@ -368,7 +345,7 @@ fn validate_fun_recursion_in_params_and_leave_in_context_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     param_list_id: ListId<NodeId<Param>>,
-) -> Result<ListId<NodeId<Param>>, IllegalFunRecursionError> {
+) -> Result<ListId<NodeId<Param>>, TaintedIllegalFunRecursionError> {
     let param_ids = registry
         .param_list(param_list_id)
         .to_vec()
@@ -394,7 +371,7 @@ fn validate_fun_recursion_in_match_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     match_id: NodeId<Match>,
-) -> Result<NodeId<Match>, IllegalFunRecursionError> {
+) -> Result<NodeId<Match>, TaintedIllegalFunRecursionError> {
     let match_ = registry.match_(match_id).clone();
     let matchee_id =
         validate_fun_recursion_in_expression_dirty(context, registry, match_.matchee_id)?;
@@ -428,7 +405,7 @@ fn validate_fun_recursion_in_match_case_dirty(
     registry: &mut NodeRegistry,
     case_id: NodeId<MatchCase>,
     matchee_db_index: Option<DbIndex>,
-) -> Result<NodeId<MatchCase>, IllegalFunRecursionError> {
+) -> Result<NodeId<MatchCase>, TaintedIllegalFunRecursionError> {
     let case = registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
 
@@ -464,7 +441,7 @@ fn validate_fun_recursion_in_forall_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     forall_id: NodeId<Forall>,
-) -> Result<NodeId<Forall>, IllegalFunRecursionError> {
+) -> Result<NodeId<Forall>, TaintedIllegalFunRecursionError> {
     let forall = registry.forall(forall_id).clone();
     let arity = forall.param_list_id.len;
 
@@ -488,7 +465,7 @@ fn validate_fun_recursion_in_check_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     check_id: NodeId<Check>,
-) -> Result<NodeId<Check>, IllegalFunRecursionError> {
+) -> Result<NodeId<Check>, TaintedIllegalFunRecursionError> {
     let check = registry.check(check_id).clone();
     let checkee_annotation_id = validate_fun_recursion_in_checkee_annotation_dirty(
         context,
@@ -507,7 +484,7 @@ fn validate_fun_recursion_in_checkee_annotation_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     id: CheckeeAnnotationId,
-) -> Result<CheckeeAnnotationId, IllegalFunRecursionError> {
+) -> Result<CheckeeAnnotationId, TaintedIllegalFunRecursionError> {
     Ok(match id {
         CheckeeAnnotationId::Goal(id) => CheckeeAnnotationId::Goal(
             validate_fun_recursion_in_goal_checkee_annotation_dirty(context, registry, id)?,
@@ -522,7 +499,7 @@ fn validate_fun_recursion_in_goal_checkee_annotation_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     id: NodeId<GoalCheckeeAnnotation>,
-) -> Result<NodeId<GoalCheckeeAnnotation>, IllegalFunRecursionError> {
+) -> Result<NodeId<GoalCheckeeAnnotation>, TaintedIllegalFunRecursionError> {
     let annotation = registry.goal_checkee_annotation(id).clone();
     let checkee_type_id =
         validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
@@ -543,10 +520,10 @@ fn validate_fun_recursion_in_expression_checkee_annotation_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     id: NodeId<ExpressionCheckeeAnnotation>,
-) -> Result<NodeId<ExpressionCheckeeAnnotation>, IllegalFunRecursionError> {
+) -> Result<NodeId<ExpressionCheckeeAnnotation>, TaintedIllegalFunRecursionError> {
     let annotation = registry.expression_checkee_annotation(id).clone();
     let checkee_id =
-        validate_fun_recursion_in_expression(context, registry, annotation.checkee_id)?;
+        validate_fun_recursion_in_expression_dirty(context, registry, annotation.checkee_id)?;
     let checkee_type_id =
         validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
             context,
@@ -578,14 +555,14 @@ fn validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     id: QuestionMarkOrPossiblyInvalidExpressionId,
-) -> Result<QuestionMarkOrPossiblyInvalidExpressionId, IllegalFunRecursionError> {
+) -> Result<QuestionMarkOrPossiblyInvalidExpressionId, TaintedIllegalFunRecursionError> {
     Ok(match id {
         QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
             QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
         }
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
             QuestionMarkOrPossiblyInvalidExpressionId::Expression(
-                validate_fun_recursion_in_possibly_invalid_expression_dirty(context, registry, id)?,
+                validate_fun_recursion_in_possibly_invalid_expression_dirty(context, registry, id),
             )
         }
     })
@@ -595,10 +572,10 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
     original_id: PossiblyInvalidExpressionId,
-) -> Result<PossiblyInvalidExpressionId, IllegalFunRecursionError> {
+) -> PossiblyInvalidExpressionId {
     match original_id {
         PossiblyInvalidExpressionId::Invalid(original_id) => {
-            Ok(PossiblyInvalidExpressionId::Invalid(original_id))
+            PossiblyInvalidExpressionId::Invalid(original_id)
         }
         PossiblyInvalidExpressionId::Valid(original_id) => {
             // We have to use `validate_fun_recursion_in_expression`
@@ -609,9 +586,9 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
             let validation_result =
                 validate_fun_recursion_in_expression(context, registry, original_id);
             match validation_result {
-                Ok(validated_id) => Ok(PossiblyInvalidExpressionId::Valid(validated_id)),
-                Err(err) => Ok(PossiblyInvalidExpressionId::Invalid(
-                    InvalidExpressionId::IllegalFunRecursion(
+                Ok(validated_id) => PossiblyInvalidExpressionId::Valid(validated_id),
+                Err(err) => {
+                    PossiblyInvalidExpressionId::Invalid(InvalidExpressionId::IllegalFunRecursion(
                         registry.add_illegal_fun_recursion_expression_and_overwrite_its_id(
                             IllegalFunRecursionExpression {
                                 id: dummy_id(),
@@ -619,8 +596,8 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
                                 error: err,
                             },
                         ),
-                    ),
-                )),
+                    ))
+                }
             }
         }
     }
@@ -628,24 +605,4 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
 
 fn dummy_id<T>() -> NodeId<T> {
     NodeId::new(0)
-}
-
-fn untaint_err<In, Out, Err, F>(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    input: In,
-    f: F,
-) -> Result<Out, Err>
-where
-    F: FnOnce(&mut Context, &mut NodeRegistry, In) -> Result<Out, Err>,
-{
-    let original_len = context.len();
-    let result = f(context, registry, input);
-    match result {
-        Ok(ok) => Ok(ok),
-        Err(err) => {
-            context.truncate(original_len);
-            Err(err)
-        }
-    }
 }
