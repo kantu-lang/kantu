@@ -61,11 +61,15 @@ pub enum TypeCheckError {
     },
 }
 
+#[derive(Clone, Debug)]
+pub enum TypeCheckWarning {}
+
 #[derive(Debug)]
 struct State<'a> {
     context: &'a mut Context,
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
+    warnings: &'a mut Vec<TypeCheckWarning>,
 }
 
 impl<'a> State<'_> {
@@ -73,6 +77,7 @@ impl<'a> State<'_> {
         ContextlessState {
             registry: self.registry,
             equality_checker: self.equality_checker,
+            warnings: self.warnings,
         }
     }
 }
@@ -81,4 +86,5 @@ impl<'a> State<'_> {
 struct ContextlessState<'a> {
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
+    warnings: &'a mut Vec<TypeCheckWarning>,
 }

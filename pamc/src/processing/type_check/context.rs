@@ -288,6 +288,7 @@ impl Context {
                     context: &mut context,
                     registry: state.registry,
                     equality_checker: state.equality_checker,
+                    warnings: state.warnings,
                 },
                 substituted_type_id,
             )
@@ -321,6 +322,7 @@ impl Context {
                                 context: &mut context,
                                 registry: state.registry,
                                 equality_checker: state.equality_checker,
+                                warnings: state.warnings,
                             },
                             substituted,
                         ),

@@ -9,10 +9,12 @@ pub fn type_check_files(
 ) -> Result<(), TypeCheckError> {
     let mut context = Context::with_builtins(registry);
     let mut equality_checker = NodeEqualityChecker::new();
+    let mut warnings = vec![];
     let mut state = State {
         context: &mut context,
         registry,
         equality_checker: &mut equality_checker,
+        warnings: &mut warnings,
     };
     for &id in file_ids {
         type_check_file(&mut state, id)?;
@@ -548,11 +550,13 @@ fn get_type_of_match_case_dirty(
         context: original_context,
         registry,
         equality_checker,
+        warnings
     } = state;
     let mut state = State {
         registry,
         context: &mut context,
         equality_checker,
+        warnings
     };
     let state = &mut state;
 
@@ -599,6 +603,7 @@ fn get_type_of_match_case_dirty(
         context: &mut context,
         registry: state.registry,
         equality_checker: state.equality_checker,
+        warnings: state.warnings
     };
     let state = &mut state;
 

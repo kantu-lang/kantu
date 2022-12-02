@@ -655,6 +655,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
         context: &mut context,
         registry: original_state.registry,
         equality_checker: original_state.equality_checker,
+        warnings: original_state.warnings,
     };
     let mut expressions_to_substitute = expressions_to_substitute;
     let mut has_exploded = HasExploded(false);
@@ -689,6 +690,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
                 &mut ContextlessState {
                     registry: state.registry,
                     equality_checker: state.equality_checker,
+                    warnings: state.warnings,
                 },
             );
 
