@@ -6,6 +6,36 @@ use crate::data::{
 #[derive(Clone, Debug)]
 pub struct IllegalVariantReturnTypeError(pub ExpressionId);
 
+/// For a given type `T` with type parameters `A_1, ..., A_n`,
+/// every one of its variant's return type must be `T(x_1, ..., x_n)` for
+/// some expressions `x_1, ..., x_n`.
+/// A return type that is not of this form is considered _invalid_.
+/// This function returns `Err` iff any variant's return type is invalid.
+///
+/// ### Return type validity examples:
+///
+/// **Invalid:**
+///
+/// ```pamlihu
+/// type Bool {
+///    .True: Nat,
+///    .False: Nat,
+/// }
+/// ```
+/// Since `Bool.True` and `Bool.False`
+/// are variants of `Bool`, they can only return a `Bool`.
+/// Since they return a `Nat` here, this example is invalid.
+///
+/// **Valid:**
+///
+/// ```pamlihu
+/// type Bool {
+///   .True: Bool,
+///   .False: Bool,
+/// }
+/// ```
+/// This is valid because since `Bool.True` and `Bool.False` both
+/// return a `Bool`, which is the type they are variants of.
 pub fn validate_variant_return_types_in_file(
     registry: &NodeRegistry,
     file: &File,
