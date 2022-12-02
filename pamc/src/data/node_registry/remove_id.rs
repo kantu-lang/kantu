@@ -6,6 +6,10 @@ use crate::data::{
     simplified_ast as unbound, FileId, TextPosition,
 };
 
+// TODO: We could probably greatly simplify this by just making a
+// generic `WithNormalizedId<T: SetId>` struct, and then
+// set the id to zero (or some other constant) in `WithNormalizedId::new()`.
+
 pub trait RemoveId {
     type Output: Eq + std::hash::Hash + AddId<Output = Self>;
     fn remove_id(&self) -> Self::Output;
