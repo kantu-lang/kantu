@@ -95,7 +95,12 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             best_attempt_id: callee_best_attempt_id,
             normal_form_id: Err(err),
         } => {
-            let best_attempt_id = todo();
+            let best_attempt_id =
+                ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
+                    id: dummy_id(),
+                    callee_id: callee_best_attempt_id,
+                    arg_list_id: call.arg_list_id,
+                }));
             return EvalResult {
                 best_attempt_id,
                 normal_form_id: Err(err),
@@ -105,15 +110,17 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
 
     let normalized_arg_ids: Vec<NormalFormId> = {
         let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
-        let args_eval_result = eval_all(
-            arg_ids
-                .into_iter()
-                .map(|arg_id| evaluate_possibly_ill_typed_expression(state, arg_id)),
-        );
+        let args_eval_result = eval_all(state, &arg_ids);
         match args_eval_result {
             Ok(normalized_arg_ids) => normalized_arg_ids,
-            Err(err) => {
-                let best_attempt_id = todo();
+            Err((arg_ids_best_attempt, err)) => {
+                let arg_ids_best_attempt = state.registry.add_expression_list(arg_ids_best_attempt);
+                let best_attempt_id =
+                    ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
+                        id: dummy_id(),
+                        callee_id: normalized_callee_id.raw(),
+                        arg_list_id: arg_ids_best_attempt,
+                    }));
                 return EvalResult {
                     best_attempt_id,
                     normal_form_id: Err(err),
@@ -188,7 +195,18 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             )
         }
         ExpressionId::Forall(_) => {
-            let best_attempt_id = todo();
+            let normalized_arg_list_id = state.registry.add_expression_list(
+                normalized_arg_ids
+                    .into_iter()
+                    .map(NormalFormId::raw)
+                    .collect(),
+            );
+            let best_attempt_id =
+                ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
+                    id: dummy_id(),
+                    callee_id: normalized_callee_id.raw(),
+                    arg_list_id: normalized_arg_list_id,
+                }));
             EvalResult {
                 best_attempt_id,
                 normal_form_id: Err(EvalError::BadCallee(normalized_callee_id)),
@@ -252,7 +270,20 @@ fn evaluate_possibly_ill_typed_fun_dirty(
                 id
             }
             Err(err) => {
-                let best_attempt_id = todo();
+                let param_list_best_attempt =
+                    normalize_params_as_much_as_possible_without_adding_to_context(
+                        state,
+                        fun.param_list_id,
+                    );
+                let best_attempt_id =
+                    ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
+                        id: dummy_id(),
+                        name_id: fun.name_id,
+                        param_list_id: param_list_best_attempt,
+                        return_type_id: fun.return_type_id,
+                        body_id: fun.body_id,
+                        skip_type_checking_body: fun.skip_type_checking_body,
+                    }));
                 return Tainted::new(EvalResult {
                     best_attempt_id,
                     normal_form_id: Err(EvalError::IllTypedParams(fun.param_list_id, err)),
@@ -269,7 +300,15 @@ fn evaluate_possibly_ill_typed_fun_dirty(
                 best_attempt_id: return_type_best_attempt_id,
                 normal_form_id: Err(err),
             } => {
-                let best_attempt_id = todo();
+                let best_attempt_id =
+                    ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
+                        id: dummy_id(),
+                        name_id: fun.name_id,
+                        param_list_id: normalized_param_list_id,
+                        return_type_id: return_type_best_attempt_id,
+                        body_id: fun.body_id,
+                        skip_type_checking_body: fun.skip_type_checking_body,
+                    }));
                 return Tainted::new(EvalResult {
                     best_attempt_id,
                     normal_form_id: Err(err),
@@ -290,6 +329,51 @@ fn evaluate_possibly_ill_typed_fun_dirty(
     )))
 }
 
+fn normalize_params_as_much_as_possible_without_adding_to_context(
+    state: &mut State,
+    param_list_id: ListId<NodeId<Param>>,
+) -> ListId<NodeId<Param>> {
+    let original_len = state.context.len();
+    normalize_params_as_much_as_possible_without_adding_to_context_dirty(state, param_list_id)
+        .untaint(state.context, original_len)
+}
+
+fn normalize_params_as_much_as_possible_without_adding_to_context_dirty(
+    state: &mut State,
+    param_list_id: ListId<NodeId<Param>>,
+) -> Tainted<ListId<NodeId<Param>>> {
+    let mut normalized_param_ids = Vec::with_capacity(param_list_id.len);
+    let param_ids = state.registry.param_list(param_list_id).to_vec();
+    for (index, param_id) in param_ids.iter().copied().enumerate() {
+        let param = state.registry.param(param_id).clone();
+        let param_type_eval_res = evaluate_possibly_ill_typed_expression(state, param.type_id);
+
+        normalized_param_ids.push(state.registry.add_param_and_overwrite_its_id(Param {
+            id: dummy_id(),
+            is_dashed: param.is_dashed,
+            name_id: param.name_id,
+            type_id: param_type_eval_res.best_attempt_id,
+        }));
+
+        match param_type_eval_res.normal_form_id {
+            Ok(normalized_type_id) => {
+                state
+                    .context
+                    .push(ContextEntry {
+                        type_id: normalized_type_id,
+                        definition: ContextEntryDefinition::Uninterpreted,
+                    })
+                    .drop_since_its_inside_tainted_fn();
+            }
+            Err(_) => {
+                normalized_param_ids.extend(param_ids[index + 1..].iter().copied());
+                return Tainted::new(state.registry.add_param_list(normalized_param_ids));
+            }
+        }
+    }
+    Tainted::new(state.registry.add_param_list(normalized_param_ids))
+}
+
 fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>) -> EvalResult {
     let match_ = state.registry.match_(match_id).clone();
     let normalized_matchee_id =
@@ -302,7 +386,12 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
                 best_attempt_id: matchee_best_attempt_id,
                 normal_form_id: Err(err),
             } => {
-                let best_attempt_id = todo();
+                let best_attempt_id =
+                    ExpressionId::Match(state.registry.add_match_and_overwrite_its_id(Match {
+                        id: dummy_id(),
+                        matchee_id: matchee_best_attempt_id,
+                        case_list_id: match_.case_list_id,
+                    }));
                 return EvalResult {
                     best_attempt_id,
                     normal_form_id: Err(err),
@@ -343,7 +432,12 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
     let case_id = match case_id {
         Some(id) => id,
         None => {
-            let best_attempt_id = todo();
+            let best_attempt_id =
+                ExpressionId::Match(state.registry.add_match_and_overwrite_its_id(Match {
+                    id: dummy_id(),
+                    matchee_id: normalized_matchee_id.raw(),
+                    case_list_id: match_.case_list_id,
+                }));
             return EvalResult {
                 best_attempt_id,
                 normal_form_id: Err(EvalError::NoMatchingCase(match_id)),
@@ -404,13 +498,25 @@ fn evaluate_possibly_ill_typed_forall_dirty(
 ) -> Tainted<EvalResult> {
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id =
+
+        // TODO Don't use `normalize_params_and_leave_params_in_context`
         match normalize_params_and_leave_params_in_context(state, forall.param_list_id) {
             Ok((warning, id)) => {
                 warning.drop_since_its_inside_tainted_fn();
                 id
             }
             Err(err) => {
-                let best_attempt_id = todo();
+                let param_list_best_attempt =
+                    normalize_params_as_much_as_possible_without_adding_to_context(
+                        state,
+                        forall.param_list_id,
+                    );
+                let best_attempt_id =
+                    ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
+                        id: dummy_id(),
+                        param_list_id: param_list_best_attempt,
+                        output_id: forall.output_id,
+                    }));
                 return Tainted::new(EvalResult {
                     best_attempt_id,
                     normal_form_id: Err(EvalError::IllTypedParams(forall.param_list_id, err)),
@@ -427,7 +533,12 @@ fn evaluate_possibly_ill_typed_forall_dirty(
             best_attempt_id: output_best_attempt_id,
             normal_form_id: Err(err),
         } => {
-            let best_attempt_id = todo();
+            let best_attempt_id =
+                ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
+                    id: dummy_id(),
+                    param_list_id: normalized_param_list_id,
+                    output_id: output_best_attempt_id,
+                }));
             return Tainted::new(EvalResult {
                 best_attempt_id: best_attempt_id,
                 normal_form_id: Err(err),
@@ -451,11 +562,25 @@ fn evaluate_possibly_ill_typed_check(state: &mut State, check_id: NodeId<Check>)
 }
 
 fn eval_all(
-    eval_results: impl IntoIterator<Item = EvalResult>,
-) -> Result<Vec<NormalFormId>, EvalError> {
+    state: &mut State,
+    ids: &[ExpressionId],
+) -> Result<Vec<NormalFormId>, (Vec<ExpressionId>, EvalError)> {
     let mut nfids = Vec::new();
-    for res in eval_results {
-        nfids.push(res.normal_form_id?);
+    for (index, id) in ids.iter().copied().enumerate() {
+        let eval_res = evaluate_possibly_ill_typed_expression(state, id);
+        let nfid = match eval_res.normal_form_id {
+            Ok(nfid) => nfid,
+            Err(err) => {
+                let best_attempt: Vec<ExpressionId> = nfids
+                    .into_iter()
+                    .map(NormalFormId::raw)
+                    .chain(std::iter::once(eval_res.best_attempt_id))
+                    .chain(ids[index + 1..].iter().copied())
+                    .collect();
+                return Err((best_attempt, err));
+            }
+        };
+        nfids.push(nfid);
     }
     Ok(nfids)
 }
@@ -465,14 +590,10 @@ trait Untaint {
     fn untaint(self, context: &mut Context, original_len: usize) -> Self::Output;
 }
 
-impl Untaint for Tainted<EvalResult> {
-    type Output = EvalResult;
+impl<T> Untaint for Tainted<T> {
+    type Output = T;
     fn untaint(self, context: &mut Context, original_len: usize) -> Self::Output {
         context.truncate(original_len);
         self.unchecked_raw()
     }
-}
-
-fn todo<T>() -> T {
-    unimplemented!()
 }
