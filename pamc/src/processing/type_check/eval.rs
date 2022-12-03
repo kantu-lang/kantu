@@ -3,7 +3,6 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum EvalError {
     BadCallee(NormalFormId),
-    IllTypedParams(ListId<NodeId<Param>>, TypeCheckError),
     NoMatchingCase(NodeId<Match>),
 }
 
@@ -264,32 +263,25 @@ fn evaluate_possibly_ill_typed_fun_dirty(
 ) -> Tainted<EvalResult> {
     let fun = state.registry.fun(fun_id).clone();
     let normalized_param_list_id =
-        match normalize_params_and_leave_params_in_context(state, fun.param_list_id) {
-            Ok((warning, id)) => {
-                warning.drop_since_its_inside_tainted_fn();
-                id
-            }
-            Err(err) => {
-                let param_list_best_attempt =
-                    normalize_params_as_much_as_possible_without_adding_to_context(
-                        state,
-                        fun.param_list_id,
-                    );
+        match normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id) {
+            Ok(id) => id.unchecked_raw(),
+            Err((err, param_list_best_attempt)) => {
                 let best_attempt_id =
                     ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
                         id: dummy_id(),
                         name_id: fun.name_id,
-                        param_list_id: param_list_best_attempt,
+                        param_list_id: param_list_best_attempt.unchecked_raw(),
                         return_type_id: fun.return_type_id,
                         body_id: fun.body_id,
                         skip_type_checking_body: fun.skip_type_checking_body,
                     }));
                 return Tainted::new(EvalResult {
                     best_attempt_id,
-                    normal_form_id: Err(EvalError::IllTypedParams(fun.param_list_id, err)),
+                    normal_form_id: Err(err),
                 });
             }
         };
+
     let normalized_return_type_id =
         match evaluate_possibly_ill_typed_expression(state, fun.return_type_id) {
             EvalResult {
@@ -329,19 +321,10 @@ fn evaluate_possibly_ill_typed_fun_dirty(
     )))
 }
 
-fn normalize_params_as_much_as_possible_without_adding_to_context(
+fn normalize_params_as_much_as_possible_and_leave_in_context(
     state: &mut State,
     param_list_id: ListId<NodeId<Param>>,
-) -> ListId<NodeId<Param>> {
-    let original_len = state.context.len();
-    normalize_params_as_much_as_possible_without_adding_to_context_dirty(state, param_list_id)
-        .untaint(state.context, original_len)
-}
-
-fn normalize_params_as_much_as_possible_without_adding_to_context_dirty(
-    state: &mut State,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Tainted<ListId<NodeId<Param>>> {
+) -> Result<Tainted<ListId<NodeId<Param>>>, (EvalError, Tainted<ListId<NodeId<Param>>>)> {
     let mut normalized_param_ids = Vec::with_capacity(param_list_id.len);
     let param_ids = state.registry.param_list(param_list_id).to_vec();
     for (index, param_id) in param_ids.iter().copied().enumerate() {
@@ -365,13 +348,18 @@ fn normalize_params_as_much_as_possible_without_adding_to_context_dirty(
                     })
                     .drop_since_its_inside_tainted_fn();
             }
-            Err(_) => {
+            Err(err) => {
                 normalized_param_ids.extend(param_ids[index + 1..].iter().copied());
-                return Tainted::new(state.registry.add_param_list(normalized_param_ids));
+                return Err((
+                    err,
+                    Tainted::new(state.registry.add_param_list(normalized_param_ids)),
+                ));
             }
         }
     }
-    Tainted::new(state.registry.add_param_list(normalized_param_ids))
+    Ok(Tainted::new(
+        state.registry.add_param_list(normalized_param_ids),
+    ))
 }
 
 fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>) -> EvalResult {
@@ -497,32 +485,24 @@ fn evaluate_possibly_ill_typed_forall_dirty(
     forall_id: NodeId<Forall>,
 ) -> Tainted<EvalResult> {
     let forall = state.registry.forall(forall_id).clone();
-    let normalized_param_list_id =
-
-        // TODO Don't use `normalize_params_and_leave_params_in_context`
-        match normalize_params_and_leave_params_in_context(state, forall.param_list_id) {
-            Ok((warning, id)) => {
-                warning.drop_since_its_inside_tainted_fn();
-                id
-            }
-            Err(err) => {
-                let param_list_best_attempt =
-                    normalize_params_as_much_as_possible_without_adding_to_context(
-                        state,
-                        forall.param_list_id,
-                    );
-                let best_attempt_id =
-                    ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
-                        id: dummy_id(),
-                        param_list_id: param_list_best_attempt,
-                        output_id: forall.output_id,
-                    }));
-                return Tainted::new(EvalResult {
-                    best_attempt_id,
-                    normal_form_id: Err(EvalError::IllTypedParams(forall.param_list_id, err)),
-                });
-            }
-        };
+    let normalized_param_list_id = match normalize_params_as_much_as_possible_and_leave_in_context(
+        state,
+        forall.param_list_id,
+    ) {
+        Ok(id) => id.unchecked_raw(),
+        Err((err, param_list_best_attempt)) => {
+            let best_attempt_id =
+                ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
+                    id: dummy_id(),
+                    param_list_id: param_list_best_attempt.unchecked_raw(),
+                    output_id: forall.output_id,
+                }));
+            return Tainted::new(EvalResult {
+                best_attempt_id,
+                normal_form_id: Err(err),
+            });
+        }
+    };
     let normalized_output_id = match evaluate_possibly_ill_typed_expression(state, forall.output_id)
     {
         EvalResult {
