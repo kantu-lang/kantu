@@ -149,6 +149,16 @@ pub struct Tainted<T> {
     raw: T,
 }
 
+impl<T> Tainted<T> {
+    pub fn new(raw: T) -> Self {
+        Self { raw }
+    }
+
+    pub fn unchecked_raw(self) -> T {
+        self.raw
+    }
+}
+
 pub trait TaintErr {
     type Output;
     fn taint_err(self) -> Self::Output;
@@ -180,7 +190,8 @@ impl<T, E> UntaintErr for Result<T, Tainted<E>> {
 }
 
 impl Context {
-    fn truncate(&mut self, new_len: usize) {
+    // TODO: Make private after redesign taint system.
+    pub fn truncate(&mut self, new_len: usize) {
         if new_len > self.len() {
             panic!(
                 "Tried to truncate a context with {} elements to {} elements",

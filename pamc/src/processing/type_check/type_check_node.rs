@@ -517,7 +517,7 @@ fn get_type_of_match_case_dirty(
 
     let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
-    let case_output_id = evaluate_possibly_ill_typed_expression(state, case.output_id).map(NormalFormId::raw).unwrap_or(case.output_id);
+    let case_output_id = evaluate_possibly_ill_typed_expression(state, case.output_id).best_attempt_id;
 
     let (
         mut context,
@@ -574,7 +574,7 @@ fn get_type_of_match_case_dirty(
             (parameterized_matchee_type_id,),
         ),
     );
-    let case_output_id = evaluate_possibly_ill_typed_expression(state, case_output_id).map(NormalFormId::raw).unwrap_or(case_output_id);
+    let case_output_id = evaluate_possibly_ill_typed_expression(state, case_output_id).best_attempt_id;
 
     let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
     if type_fusion.has_exploded {
