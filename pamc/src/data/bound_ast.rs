@@ -164,12 +164,12 @@ pub enum PossiblyInvalidExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InvalidExpression {
-    Unbindable(UnbindableExpression),
+    SymbolicallyInvalid(SymbolicallyInvalidExpression),
     IllegalFunRecursion(IllegalFunRecursionExpression),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct UnbindableExpression {
+pub struct SymbolicallyInvalidExpression {
     pub expression: unbound::Expression,
     pub error: BindError,
 }

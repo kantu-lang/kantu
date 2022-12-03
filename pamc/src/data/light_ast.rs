@@ -141,7 +141,7 @@ pub use crate::data::node_registry::{
 };
 
 #[derive(Clone, Debug)]
-pub struct UnbindableExpression {
+pub struct SymbolicallyInvalidExpression {
     pub id: NodeId<Self>,
     pub expression: unbound::Expression,
     pub error: BindError,

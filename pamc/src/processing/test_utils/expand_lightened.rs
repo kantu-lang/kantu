@@ -304,23 +304,23 @@ pub fn expand_invalid_expression(
     id: InvalidExpressionId,
 ) -> InvalidExpression {
     match id {
-        InvalidExpressionId::Unbindable(id) => {
-            InvalidExpression::Unbindable(expand_unbindable_expression(registry, id))
-        }
+        InvalidExpressionId::SymbolicallyInvalid(id) => InvalidExpression::SymbolicallyInvalid(
+            expand_symbolically_invalid_expression(registry, id),
+        ),
         InvalidExpressionId::IllegalFunRecursion(id) => InvalidExpression::IllegalFunRecursion(
             expand_illegal_fun_recursion_expression(registry, id),
         ),
     }
 }
 
-pub fn expand_unbindable_expression(
+pub fn expand_symbolically_invalid_expression(
     registry: &NodeRegistry,
-    id: NodeId<light::UnbindableExpression>,
-) -> UnbindableExpression {
-    let light = registry.unbindable_expression(id);
+    id: NodeId<light::SymbolicallyInvalidExpression>,
+) -> SymbolicallyInvalidExpression {
+    let light = registry.symbolically_invalid_expression(id);
     let expression = light.expression.clone();
     let error = light.error.clone();
-    UnbindableExpression { expression, error }
+    SymbolicallyInvalidExpression { expression, error }
 }
 
 pub fn expand_illegal_fun_recursion_expression(

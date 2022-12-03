@@ -58,7 +58,7 @@ pub enum PossiblyInvalidExpressionId {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum InvalidExpressionId {
-    Unbindable(NodeId<UnbindableExpression>),
+    SymbolicallyInvalid(NodeId<SymbolicallyInvalidExpression>),
     IllegalFunRecursion(NodeId<IllegalFunRecursionExpression>),
 }
 
@@ -82,7 +82,7 @@ pub struct NodeRegistry {
     checks: Subregistry<Check>,
     goal_checkee_annotations: Subregistry<GoalCheckeeAnnotation>,
     expression_checkee_annotations: Subregistry<ExpressionCheckeeAnnotation>,
-    unbindable_expressions: Subregistry<UnbindableExpression>,
+    symbolically_invalid_expressions: Subregistry<SymbolicallyInvalidExpression>,
     illegal_fun_recursion_expressions: Subregistry<IllegalFunRecursionExpression>,
     identifiers: Subregistry<Identifier>,
 
@@ -111,7 +111,7 @@ impl NodeRegistry {
             checks: Subregistry::new(),
             goal_checkee_annotations: Subregistry::new(),
             expression_checkee_annotations: Subregistry::new(),
-            unbindable_expressions: Subregistry::new(),
+            symbolically_invalid_expressions: Subregistry::new(),
             illegal_fun_recursion_expressions: Subregistry::new(),
             identifiers: Subregistry::new(),
 
@@ -207,12 +207,12 @@ impl NodeRegistry {
             .add_and_overwrite_id(expression_checkee_annotation)
     }
 
-    pub fn add_unbindable_expression_and_overwrite_its_id(
+    pub fn add_symbolically_invalid_expression_and_overwrite_its_id(
         &mut self,
-        unbindable_expression: UnbindableExpression,
-    ) -> NodeId<UnbindableExpression> {
-        self.unbindable_expressions
-            .add_and_overwrite_id(unbindable_expression)
+        symbolically_invalid_expression: SymbolicallyInvalidExpression,
+    ) -> NodeId<SymbolicallyInvalidExpression> {
+        self.symbolically_invalid_expressions
+            .add_and_overwrite_id(symbolically_invalid_expression)
     }
 
     pub fn add_illegal_fun_recursion_expression_and_overwrite_its_id(
@@ -294,8 +294,11 @@ impl NodeRegistry {
         self.expression_checkee_annotations.get(id)
     }
 
-    pub fn unbindable_expression(&self, id: NodeId<UnbindableExpression>) -> &UnbindableExpression {
-        self.unbindable_expressions.get(id)
+    pub fn symbolically_invalid_expression(
+        &self,
+        id: NodeId<SymbolicallyInvalidExpression>,
+    ) -> &SymbolicallyInvalidExpression {
+        self.symbolically_invalid_expressions.get(id)
     }
 
     pub fn illegal_fun_recursion_expression(
@@ -589,7 +592,7 @@ mod set_id {
         }
     }
 
-    impl SetId for UnbindableExpression {
+    impl SetId for SymbolicallyInvalidExpression {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }

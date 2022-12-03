@@ -439,23 +439,23 @@ impl AddId for ExpressionCheckeeAnnotation {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct UnbindableExpression {
+pub struct SymbolicallyInvalidExpression {
     pub expression: unbound::Expression,
     pub error: BindError,
 }
-impl RemoveId for with_id::UnbindableExpression {
-    type Output = UnbindableExpression;
+impl RemoveId for with_id::SymbolicallyInvalidExpression {
+    type Output = SymbolicallyInvalidExpression;
     fn remove_id(&self) -> Self::Output {
-        UnbindableExpression {
+        SymbolicallyInvalidExpression {
             expression: self.expression.clone(),
             error: self.error.clone(),
         }
     }
 }
-impl AddId for UnbindableExpression {
-    type Output = with_id::UnbindableExpression;
+impl AddId for SymbolicallyInvalidExpression {
+    type Output = with_id::SymbolicallyInvalidExpression;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::UnbindableExpression {
+        with_id::SymbolicallyInvalidExpression {
             id,
             expression: self.expression.clone(),
             error: self.error.clone(),

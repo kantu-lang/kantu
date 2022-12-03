@@ -326,9 +326,9 @@ pub fn register_invalid_expression(
     unregistered: heavy::InvalidExpression,
 ) -> InvalidExpressionId {
     match unregistered {
-        heavy::InvalidExpression::Unbindable(id) => {
-            let id = register_unbindable_expression(registry, id);
-            InvalidExpressionId::Unbindable(id)
+        heavy::InvalidExpression::SymbolicallyInvalid(id) => {
+            let id = register_symbolically_invalid_expression(registry, id);
+            InvalidExpressionId::SymbolicallyInvalid(id)
         }
         heavy::InvalidExpression::IllegalFunRecursion(id) => {
             let id = register_illegal_fun_recursion_expression(registry, id);
@@ -337,15 +337,17 @@ pub fn register_invalid_expression(
     }
 }
 
-pub fn register_unbindable_expression(
+pub fn register_symbolically_invalid_expression(
     registry: &mut NodeRegistry,
-    unregistered: heavy::UnbindableExpression,
-) -> NodeId<UnbindableExpression> {
-    registry.add_unbindable_expression_and_overwrite_its_id(UnbindableExpression {
-        id: dummy_id(),
-        expression: unregistered.expression,
-        error: unregistered.error,
-    })
+    unregistered: heavy::SymbolicallyInvalidExpression,
+) -> NodeId<SymbolicallyInvalidExpression> {
+    registry.add_symbolically_invalid_expression_and_overwrite_its_id(
+        SymbolicallyInvalidExpression {
+            id: dummy_id(),
+            expression: unregistered.expression,
+            error: unregistered.error,
+        },
+    )
 }
 
 pub fn register_illegal_fun_recursion_expression(
