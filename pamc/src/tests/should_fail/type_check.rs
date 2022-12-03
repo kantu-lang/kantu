@@ -328,6 +328,14 @@ mod type_mismatch {
             "Eq(Nat, x', x',)",
         );
     }
+
+    #[test]
+    fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
+        let src = include_str!(
+            "../sample_code/should_fail/type_check/type_mismatch/ill_typed_match_case_output_evaluates_to_well_typed_term.ph"
+        );
+        expect_type_mismatch_error(src, "Nat.O", "Bool", "Nat");
+    }
 }
 
 mod non_adt_matchee {
