@@ -2,6 +2,7 @@ use crate::data::{
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{ListId, NodeId, NodeRegistry},
+    TextPosition,
 };
 
 use eval::*;
@@ -62,7 +63,21 @@ pub enum TypeCheckError {
 }
 
 #[derive(Clone, Debug)]
-pub enum TypeCheckWarning {}
+pub enum TypeCheckWarning {
+    NoGoal {
+        goal_kw_start: TextPosition,
+    },
+    MissingCheckeeType {
+        question_mark_start: TextPosition,
+    },
+    UntypecheckableExpression(InvalidExpressionId),
+    IllTypedCheckeeType(ExpressionId, TypeCheckError),
+    IncorrectCheckeeType {
+        checkee_type_id: ExpressionId,
+        expected_id: NormalFormId,
+        actual_id: NormalFormId,
+    },
+}
 
 #[derive(Debug)]
 struct State<'a> {
