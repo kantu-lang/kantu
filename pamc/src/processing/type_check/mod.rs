@@ -105,5 +105,3 @@ struct ContextlessState<'a> {
 }
 
 // TODO: Extract Err(Tainted::new(...)) into a function.
-
-// TODO: Replace Ok(Ok(...)) with Ok(push_warning(...)).

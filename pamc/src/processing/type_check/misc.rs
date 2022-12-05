@@ -150,7 +150,9 @@ pub(super) fn normalize_params_and_leave_params_in_context_dirty(
             },
         )
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(Ok(state.registry.add_param_list(normalized_ids)))
+    Ok(with_push_warning(
+        state.registry.add_param_list(normalized_ids),
+    ))
 }
 
 pub fn verify_variant_to_case_bijection(

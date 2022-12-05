@@ -55,7 +55,7 @@ fn type_check_type_statement_dirty(
         type_check_type_variant_dirty(state, variant_id)??;
     }
 
-    Ok(Ok(()))
+    Ok(with_push_warning(()))
 }
 
 fn type_check_type_constructor_dirty(
@@ -711,7 +711,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                 (parameterized_matchee_id, parameterized_matchee_type_id)
             };
             
-            Ok(Ok((parameterized_matchee_id, parameterized_matchee_type_id)))
+            Ok(with_push_warning((parameterized_matchee_id, parameterized_matchee_type_id)))
         }
         ExpressionId::Name(_) => {
             // In this case, the variant type is nullary.
@@ -732,7 +732,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 )));
-            Ok(Ok((parameterized_matchee_id, variant_type_id)))
+            Ok(with_push_warning((parameterized_matchee_id, variant_type_id)))
         }
         other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
     }

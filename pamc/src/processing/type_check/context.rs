@@ -187,6 +187,10 @@ where
 pub type WithPushWarning<T> = Result<T, Tainted<Infallible>>;
 pub type PushWarning = WithPushWarning<()>;
 
+pub fn with_push_warning<T>(value: T) -> WithPushWarning<T> {
+    Ok(value)
+}
+
 impl Context {
     // TODO: Make private after redesign taint system.
     pub fn truncate(&mut self, new_len: usize) {
