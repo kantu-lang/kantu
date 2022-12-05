@@ -96,8 +96,26 @@ pub(super) fn is_left_type_assignable_to_right_type(
             Ok(x) => x,
             Err(Exploded) => return true,
         };
-    state.equality_checker.eq(left, right, state.registry)
-        || is_well_typed_term_equal_to_a_trivially_empty_type(state, left)
+    let return_ = state.equality_checker.eq(left, right, state.registry)
+        || is_well_typed_term_equal_to_a_trivially_empty_type(state, left);
+    if !return_ {
+        println!(
+            "is_left_type_assignable_to_right_type:\nleft = {}\nright = {}",
+            crate::processing::test_utils::format::format_expression_with_default_options(
+                &crate::processing::test_utils::expand_lightened::expand_expression(
+                    state.registry,
+                    left
+                )
+            ),
+            crate::processing::test_utils::format::format_expression_with_default_options(
+                &crate::processing::test_utils::expand_lightened::expand_expression(
+                    state.registry,
+                    right
+                )
+            ),
+        );
+    }
+    return_
 }
 
 fn is_well_typed_term_equal_to_a_trivially_empty_type(
