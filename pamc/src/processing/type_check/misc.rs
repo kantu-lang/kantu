@@ -645,6 +645,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
     let mut context = original_state.context.clone();
     let mut state = State {
         context: &mut context,
+        substitution_context: original_state.substitution_context,
         registry: original_state.registry,
         equality_checker: original_state.equality_checker,
         warnings: original_state.warnings,
@@ -680,6 +681,7 @@ pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, 
             was_no_op &= state.context.subst_in_place_and_get_status(
                 substitution,
                 &mut ContextlessState {
+                    substitution_context: state.substitution_context,
                     registry: state.registry,
                     equality_checker: state.equality_checker,
                     warnings: state.warnings,

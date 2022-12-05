@@ -303,6 +303,7 @@ impl Context {
             evaluate_well_typed_expression(
                 &mut State {
                     context: &mut context,
+                    substitution_context: state.substitution_context,
                     registry: state.registry,
                     equality_checker: state.equality_checker,
                     warnings: state.warnings,
@@ -337,6 +338,7 @@ impl Context {
                         value_id: evaluate_well_typed_expression(
                             &mut State {
                                 context: &mut context,
+                                substitution_context: state.substitution_context,
                                 registry: state.registry,
                                 equality_checker: state.equality_checker,
                                 warnings: state.warnings,

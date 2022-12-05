@@ -20,6 +20,9 @@ mod shift;
 use substitute::*;
 mod substitute;
 
+use substitution_context::*;
+mod substitution_context;
+
 pub use type_check_node::type_check_files;
 use type_check_node::*;
 mod type_check_node;
@@ -82,6 +85,7 @@ pub enum TypeCheckWarning {
 #[derive(Debug)]
 struct State<'a> {
     context: &'a mut Context,
+    substitution_context: &'a mut SubstitutionContext,
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
     warnings: &'a mut Vec<TypeCheckWarning>,
@@ -90,6 +94,7 @@ struct State<'a> {
 impl<'a> State<'_> {
     fn without_context(&'a mut self) -> ContextlessState<'a> {
         ContextlessState {
+            substitution_context: self.substitution_context,
             registry: self.registry,
             equality_checker: self.equality_checker,
             warnings: self.warnings,
@@ -97,8 +102,11 @@ impl<'a> State<'_> {
     }
 }
 
+// TODO: Delete
+
 #[derive(Debug)]
 struct ContextlessState<'a> {
+    substitution_context: &'a mut SubstitutionContext,
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
     warnings: &'a mut Vec<TypeCheckWarning>,
