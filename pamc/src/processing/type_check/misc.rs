@@ -95,28 +95,10 @@ pub(super) fn is_left_type_assignable_to_right_type(
             Ok(x) => x,
             Err(Exploded) => return true,
         };
-    let return_ = state
+    state
         .equality_checker
         .eq(left.raw(), right.raw(), state.registry)
-        || is_term_equal_to_a_trivially_empty_type(state, left);
-    if !return_ {
-        println!(
-            "is_left_type_assignable_to_right_type:\nleft = {}\nright = {}",
-            crate::processing::test_utils::format::format_expression_with_default_options(
-                &crate::processing::test_utils::expand_lightened::expand_expression(
-                    state.registry,
-                    left.raw(),
-                )
-            ),
-            crate::processing::test_utils::format::format_expression_with_default_options(
-                &crate::processing::test_utils::expand_lightened::expand_expression(
-                    state.registry,
-                    right.raw(),
-                )
-            ),
-        );
-    }
-    return_
+        || is_term_equal_to_a_trivially_empty_type(state, left)
 }
 
 fn is_term_equal_to_a_trivially_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
