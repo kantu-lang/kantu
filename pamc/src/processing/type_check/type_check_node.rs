@@ -718,24 +718,33 @@ fn get_goal_check_expression_warnings(
     let Some(coercion_target_id) = coercion_target_id else {
         return vec![TypeCheckWarning::NoGoal { goal_kw_start: annotation.goal_kw_position }];
     };
-    let checkee_type_id = match annotation.checkee_type_id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: question_mark_start } => return vec![TypeCheckWarning::MissingCheckeeType { question_mark_start }],
-        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return vec![TypeCheckWarning::UntypecheckableExpression(checkee_type_id)],
+    get_checkee_type_id_warning(state, coercion_target_id, annotation.checkee_type_id).into_iter().collect()
+}
+
+fn get_checkee_type_id_warning(
+    state: &mut State,
+    actual_type_id: NormalFormId,
+    annotated_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
+) -> Option<TypeCheckWarning> {
+    let annotated_type_id = match annotated_type_id {
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeType { question_mark_start }),
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
 
     };
-    if let Err(err) = type_check_expression(state, Some(coercion_target_id), checkee_type_id) {
-        return vec![TypeCheckWarning::IllTypedCheckeeType(checkee_type_id, err)];
+    if let Err(err) = type_check_expression(state, Some(actual_type_id), annotated_type_id) {
+        return Some(TypeCheckWarning::IllTypedCheckeeType(annotated_type_id, err));
     }
-    let normalized_checkee_type_id = evaluate_well_typed_expression(state, checkee_type_id);
-    if state.equality_checker.eq(coercion_target_id.raw(), normalized_checkee_type_id.raw(), state.registry) {
-        vec![]
+    let normalized_annotated_type_id = evaluate_well_typed_expression(state, annotated_type_id);
+    // TODO: Consider context substitutions
+    if state.equality_checker.eq(actual_type_id.raw(), normalized_annotated_type_id.raw(), state.registry) {
+        None
     } else {
-        vec![TypeCheckWarning::IncorrectCheckeeType {
-            checkee_type_id,
-            expected_id: coercion_target_id,
-            actual_id: normalized_checkee_type_id,
-        }]
+        Some(TypeCheckWarning::IncorrectCheckeeType {
+            checkee_type_id: annotated_type_id,
+            expected_id: actual_type_id,
+            actual_id: normalized_annotated_type_id,
+        })
     }
 }
 
