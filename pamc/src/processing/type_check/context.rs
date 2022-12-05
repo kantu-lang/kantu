@@ -126,9 +126,11 @@ impl Context {
         self.local_type_stack.truncate(self.len() - n);
     }
 
+    /// We effectively return `()`, but the reason we use the `Result` type we is to
+    /// encourage the caller to only use `push` inside a function that returns `Result<_, Tainted<_>>`.
     pub fn push(&mut self, entry: ContextEntry) -> PushWarning {
         self.local_type_stack.push(entry);
-        PushWarning
+        Ok(())
     }
 
     pub fn len(&self) -> usize {
@@ -136,58 +138,54 @@ impl Context {
     }
 }
 
-#[must_use]
-#[derive(Clone, Debug)]
-pub struct PushWarning;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Tainted<T>(T);
 
-impl PushWarning {
-    pub fn drop_since_its_inside_tainted_fn(self) {}
-}
-
-#[derive(Clone, Debug)]
-pub struct Tainted<T> {
-    raw: T,
+impl<T> Tainted<T> {
+    pub fn new(value: T) -> Self {
+        Self(value)
+    }
 }
 
 impl<T> Tainted<T> {
-    pub fn new(raw: T) -> Self {
-        Self { raw }
-    }
-
-    pub fn unchecked_raw(self) -> T {
-        self.raw
-    }
-}
-
-pub trait TaintErr {
-    type Output;
-    fn taint_err(self) -> Self::Output;
-}
-
-impl<T, E> TaintErr for Result<T, E> {
-    type Output = Result<T, Tainted<E>>;
-    fn taint_err(self) -> Self::Output {
-        self.map_err(|e| Tainted { raw: e })
+    pub fn map<U, F>(self, f: F) -> Tainted<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        Tainted(f(self.0))
     }
 }
 
-pub trait UntaintErr {
-    type Output;
-    fn untaint_err(self, context: &mut Context, new_len: usize) -> Self::Output;
+impl From<Tainted<Infallible>> for Infallible {
+    fn from(impossible: Tainted<Infallible>) -> Infallible {
+        impossible.0
+    }
 }
 
-impl<T, E> UntaintErr for Result<T, Tainted<E>> {
-    type Output = Result<T, E>;
-    fn untaint_err(self, context: &mut Context, new_len: usize) -> Self::Output {
-        match self {
-            Ok(t) => Ok(t),
-            Err(Tainted { raw }) => {
-                context.truncate(new_len);
-                Err(raw)
-            }
+impl From<Tainted<Infallible>> for Tainted<TypeCheckError> {
+    fn from(impossible: Tainted<Infallible>) -> Self {
+        #[allow(unreachable_code)]
+        match Infallible::from(impossible) {}
+    }
+}
+
+pub(super) fn untaint_err<In, Out, Err, F>(state: &mut State, input: In, f: F) -> Result<Out, Err>
+where
+    F: FnOnce(&mut State, In) -> Result<Out, Tainted<Err>>,
+{
+    let original_len = state.context.len();
+    let result = f(state, input);
+    match result {
+        Ok(ok) => Ok(ok),
+        Err(err) => {
+            state.context.truncate(original_len);
+            Err(err.0)
         }
     }
 }
+
+pub type WithPushWarning<T> = Result<T, Tainted<Infallible>>;
+pub type PushWarning = WithPushWarning<()>;
 
 impl Context {
     // TODO: Make private after redesign taint system.

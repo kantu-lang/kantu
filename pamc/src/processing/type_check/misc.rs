@@ -120,47 +120,37 @@ impl<T> SafeUnwrap<T> for Result<T, Infallible> {
     }
 }
 
-pub(super) fn normalize_params_and_leave_params_in_context(
-    state: &mut State,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Result<(PushWarning, ListId<NodeId<Param>>), TypeCheckError> {
-    let original_len = state.context.len();
-    let ok = normalize_params_and_leave_params_in_context_dirty(state, param_list_id)
-        .untaint_err(state.context, original_len)?;
-    Ok(ok)
-}
-
 pub(super) fn normalize_params_and_leave_params_in_context_dirty(
     state: &mut State,
     param_list_id: ListId<NodeId<Param>>,
-) -> Result<(PushWarning, ListId<NodeId<Param>>), Tainted<TypeCheckError>> {
+) -> Result<WithPushWarning<ListId<NodeId<Param>>>, Tainted<TypeCheckError>> {
     let param_ids = state.registry.param_list(param_list_id).to_vec();
     let normalized_ids = param_ids
         .iter()
         .copied()
-        .map(|param_id| {
-            type_check_param(state, param_id)
-                .taint_err()?
-                .drop_since_its_inside_tainted_fn();
-            let type_id: ExpressionId = state
-                .context
-                .get_type(DbIndex(0), state.registry)
-                .downshift(1, state.registry)
-                .raw();
-            let old_param = state.registry.param(param_id);
-            let normalized_param_with_dummy_id = Param {
-                id: dummy_id(),
-                is_dashed: old_param.is_dashed,
-                name_id: old_param.name_id,
-                type_id,
-            };
-            let normalized_id = state
-                .registry
-                .add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
-            Ok(normalized_id)
-        })
+        .map(
+            |param_id| -> Result<NodeId<Param>, Tainted<TypeCheckError>> {
+                type_check_param_dirty(state, param_id)??;
+                let type_id: ExpressionId = state
+                    .context
+                    .get_type(DbIndex(0), state.registry)
+                    .downshift(1, state.registry)
+                    .raw();
+                let old_param = state.registry.param(param_id);
+                let normalized_param_with_dummy_id = Param {
+                    id: dummy_id(),
+                    is_dashed: old_param.is_dashed,
+                    name_id: old_param.name_id,
+                    type_id,
+                };
+                let normalized_id = state
+                    .registry
+                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
+                Ok(normalized_id)
+            },
+        )
         .collect::<Result<Vec<_>, _>>()?;
-    Ok((PushWarning, state.registry.add_param_list(normalized_ids)))
+    Ok(Ok(state.registry.add_param_list(normalized_ids)))
 }
 
 pub fn verify_variant_to_case_bijection(

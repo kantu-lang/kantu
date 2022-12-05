@@ -103,3 +103,7 @@ struct ContextlessState<'a> {
     equality_checker: &'a mut NodeEqualityChecker,
     warnings: &'a mut Vec<TypeCheckWarning>,
 }
+
+// TODO: Extract Err(Tainted::new(...)) into a function.
+
+// TODO: Replace Ok(Ok(...)) with Ok(push_warning(...)).

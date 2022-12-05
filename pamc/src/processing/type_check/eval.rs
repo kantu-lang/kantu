@@ -6,24 +6,26 @@ pub enum EvalError {
     NoMatchingCase(NodeId<Match>),
 }
 
-#[derive(Clone, Debug)]
-pub struct EvalResult {
-    pub best_attempt_id: ExpressionId,
-    pub normal_form_id: Result<NormalFormId, EvalError>,
+pub type EvalResult = Result<NormalFormId, (ExpressionId, EvalError)>;
+
+pub trait BestEvalAttempt {
+    fn best_eval_attempt(self) -> ExpressionId;
 }
 
-impl EvalResult {
-    fn ok(id: NormalFormId) -> Self {
-        Self {
-            best_attempt_id: id.raw(),
-            normal_form_id: Ok(id),
+impl BestEvalAttempt for EvalResult {
+    fn best_eval_attempt(self: EvalResult) -> ExpressionId {
+        match self {
+            Ok(nfid) => nfid.raw(),
+            Err((best_attempt, _err)) => best_attempt,
         }
     }
 }
 
+type TaintedEvalResult = Result<NormalFormId, Tainted<(ExpressionId, EvalError)>>;
+
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
-    evaluate_possibly_ill_typed_expression(state, id).normal_form_id.expect(
-        "evaluate_possibly_ill_typed_expression should return EvalResult::ok() if the expression is well-typed",
+    evaluate_possibly_ill_typed_expression(state, id).expect(
+        "evaluate_possibly_ill_typed_expression should return Ok() if the expression is well-typed",
     )
 }
 
@@ -49,14 +51,14 @@ fn evaluate_possibly_ill_typed_name_expression(
     let name = state.registry.name_expression(name_id);
     let definition = state.context.get_definition(name.db_index, state.registry);
     match definition {
-        ContextEntryDefinition::Alias { value_id } => EvalResult::ok(value_id),
+        ContextEntryDefinition::Alias { value_id } => Ok(value_id),
 
         ContextEntryDefinition::Adt {
             variant_name_list_id: _,
         }
         | ContextEntryDefinition::Variant { name_id: _ }
         | ContextEntryDefinition::Uninterpreted => {
-            EvalResult::ok(NormalFormId::unchecked_new(ExpressionId::Name(name_id)))
+            Ok(NormalFormId::unchecked_new(ExpressionId::Name(name_id)))
         }
     }
 }
@@ -78,7 +80,7 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             callee_id: normalized_callee_id.raw(),
             arg_list_id: normalized_arg_list_id,
         });
-        EvalResult::ok(NormalFormId::unchecked_new(ExpressionId::Call(
+        Ok(NormalFormId::unchecked_new(ExpressionId::Call(
             normalized_call_id,
         )))
     }
@@ -86,24 +88,15 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
     let call = state.registry.call(call_id).clone();
 
     let normalized_callee_id = match evaluate_possibly_ill_typed_expression(state, call.callee_id) {
-        EvalResult {
-            best_attempt_id: _,
-            normal_form_id: Ok(nfid),
-        } => nfid,
-        EvalResult {
-            best_attempt_id: callee_best_attempt_id,
-            normal_form_id: Err(err),
-        } => {
+        Ok(nfid) => nfid,
+        Err((callee_best_attempt_id, err)) => {
             let best_attempt_id =
                 ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
                     id: dummy_id(),
                     callee_id: callee_best_attempt_id,
                     arg_list_id: call.arg_list_id,
                 }));
-            return EvalResult {
-                best_attempt_id,
-                normal_form_id: Err(err),
-            };
+            return Err((best_attempt_id, err));
         }
     };
 
@@ -120,10 +113,7 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
                         callee_id: normalized_callee_id.raw(),
                         arg_list_id: arg_ids_best_attempt,
                     }));
-                return EvalResult {
-                    best_attempt_id,
-                    normal_form_id: Err(err),
-                };
+                return Err((best_attempt_id, err));
             }
         }
     };
@@ -206,10 +196,7 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
                     callee_id: normalized_callee_id.raw(),
                     arg_list_id: normalized_arg_list_id,
                 }));
-            EvalResult {
-                best_attempt_id,
-                normal_form_id: Err(EvalError::BadCallee(normalized_callee_id)),
-            }
+            Err((best_attempt_id, EvalError::BadCallee(normalized_callee_id)))
         }
         ExpressionId::Check(_) => {
             panic!("By definition, a check expression can never be a normal form.")
@@ -253,45 +240,37 @@ fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool
 }
 
 fn evaluate_possibly_ill_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> EvalResult {
-    let original_len = state.context.len();
-    evaluate_possibly_ill_typed_fun_dirty(state, fun_id).untaint(state.context, original_len)
+    untaint_err(state, fun_id, evaluate_possibly_ill_typed_fun_dirty)
 }
 
 fn evaluate_possibly_ill_typed_fun_dirty(
     state: &mut State,
     fun_id: NodeId<Fun>,
-) -> Tainted<EvalResult> {
+) -> TaintedEvalResult {
     let fun = state.registry.fun(fun_id).clone();
     let normalized_param_list_id =
         match normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id) {
-            Ok(id) => id.unchecked_raw(),
-            Err((err, param_list_best_attempt)) => {
-                let best_attempt_id =
-                    ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
-                        id: dummy_id(),
-                        name_id: fun.name_id,
-                        param_list_id: param_list_best_attempt.unchecked_raw(),
-                        return_type_id: fun.return_type_id,
-                        body_id: fun.body_id,
-                        skip_type_checking_body: fun.skip_type_checking_body,
-                    }));
-                return Tainted::new(EvalResult {
-                    best_attempt_id,
-                    normal_form_id: Err(err),
-                });
+            Ok(id) => id,
+            Err(tainted) => {
+                return Err(tainted.map(|(param_list_best_attempt, err)| {
+                    let best_attempt_id =
+                        ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
+                            id: dummy_id(),
+                            name_id: fun.name_id,
+                            param_list_id: param_list_best_attempt,
+                            return_type_id: fun.return_type_id,
+                            body_id: fun.body_id,
+                            skip_type_checking_body: fun.skip_type_checking_body,
+                        }));
+                    (best_attempt_id, err)
+                }))
             }
         };
 
     let normalized_return_type_id =
         match evaluate_possibly_ill_typed_expression(state, fun.return_type_id) {
-            EvalResult {
-                best_attempt_id: _,
-                normal_form_id: Ok(nfid),
-            } => nfid,
-            EvalResult {
-                best_attempt_id: return_type_best_attempt_id,
-                normal_form_id: Err(err),
-            } => {
+            Ok(nfid) => nfid,
+            Err((return_type_best_attempt_id, err)) => {
                 let best_attempt_id =
                     ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
                         id: dummy_id(),
@@ -301,89 +280,84 @@ fn evaluate_possibly_ill_typed_fun_dirty(
                         body_id: fun.body_id,
                         skip_type_checking_body: fun.skip_type_checking_body,
                     }));
-                return Tainted::new(EvalResult {
-                    best_attempt_id,
-                    normal_form_id: Err(err),
-                });
+                return Err(Tainted::new((best_attempt_id, err)));
             }
         };
     state.context.pop_n(fun.param_list_id.len);
 
-    Tainted::new(EvalResult::ok(NormalFormId::unchecked_new(
-        ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
+    Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
+        state.registry.add_fun_and_overwrite_its_id(Fun {
             id: dummy_id(),
             name_id: fun.name_id,
             param_list_id: normalized_param_list_id,
             return_type_id: normalized_return_type_id.raw(),
             body_id: fun.body_id,
             skip_type_checking_body: fun.skip_type_checking_body,
-        })),
+        }),
     )))
+}
+
+impl From<Tainted<Infallible>> for Tainted<(ListId<NodeId<Param>>, EvalError)> {
+    fn from(impossible: Tainted<Infallible>) -> Self {
+        #[allow(unreachable_code)]
+        match Infallible::from(impossible) {}
+    }
 }
 
 fn normalize_params_as_much_as_possible_and_leave_in_context(
     state: &mut State,
     param_list_id: ListId<NodeId<Param>>,
-) -> Result<Tainted<ListId<NodeId<Param>>>, (EvalError, Tainted<ListId<NodeId<Param>>>)> {
+) -> Result<ListId<NodeId<Param>>, Tainted<(ListId<NodeId<Param>>, EvalError)>> {
     let mut normalized_param_ids = Vec::with_capacity(param_list_id.len);
     let param_ids = state.registry.param_list(param_list_id).to_vec();
     for (index, param_id) in param_ids.iter().copied().enumerate() {
         let param = state.registry.param(param_id).clone();
         let param_type_eval_res = evaluate_possibly_ill_typed_expression(state, param.type_id);
 
-        normalized_param_ids.push(state.registry.add_param_and_overwrite_its_id(Param {
-            id: dummy_id(),
-            is_dashed: param.is_dashed,
-            name_id: param.name_id,
-            type_id: param_type_eval_res.best_attempt_id,
-        }));
-
-        match param_type_eval_res.normal_form_id {
-            Ok(normalized_type_id) => {
-                state
-                    .context
-                    .push(ContextEntry {
-                        type_id: normalized_type_id,
-                        definition: ContextEntryDefinition::Uninterpreted,
-                    })
-                    .drop_since_its_inside_tainted_fn();
+        match param_type_eval_res {
+            Ok(normalized_param_type_id) => {
+                normalized_param_ids.push(state.registry.add_param_and_overwrite_its_id(Param {
+                    id: dummy_id(),
+                    is_dashed: param.is_dashed,
+                    name_id: param.name_id,
+                    type_id: normalized_param_type_id.raw(),
+                }));
+                state.context.push(ContextEntry {
+                    type_id: normalized_param_type_id,
+                    definition: ContextEntryDefinition::Uninterpreted,
+                })?;
             }
-            Err(err) => {
+            Err((param_type_best_attempt, err)) => {
+                normalized_param_ids.push(state.registry.add_param_and_overwrite_its_id(Param {
+                    id: dummy_id(),
+                    is_dashed: param.is_dashed,
+                    name_id: param.name_id,
+                    type_id: param_type_best_attempt,
+                }));
                 normalized_param_ids.extend(param_ids[index + 1..].iter().copied());
-                return Err((
+                return Err(Tainted::new((
+                    state.registry.add_param_list(normalized_param_ids),
                     err,
-                    Tainted::new(state.registry.add_param_list(normalized_param_ids)),
-                ));
+                )));
             }
         }
     }
-    Ok(Tainted::new(
-        state.registry.add_param_list(normalized_param_ids),
-    ))
+    Ok(state.registry.add_param_list(normalized_param_ids))
 }
 
 fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>) -> EvalResult {
     let match_ = state.registry.match_(match_id).clone();
     let normalized_matchee_id =
         match evaluate_possibly_ill_typed_expression(state, match_.matchee_id) {
-            EvalResult {
-                best_attempt_id: _,
-                normal_form_id: Ok(nfid),
-            } => nfid,
-            EvalResult {
-                best_attempt_id: matchee_best_attempt_id,
-                normal_form_id: Err(err),
-            } => {
+            Ok(nfid) => nfid,
+            Err((matchee_best_attempt_id, err)) => {
                 let best_attempt_id =
                     ExpressionId::Match(state.registry.add_match_and_overwrite_its_id(Match {
                         id: dummy_id(),
                         matchee_id: matchee_best_attempt_id,
                         case_list_id: match_.case_list_id,
                     }));
-                return EvalResult {
-                    best_attempt_id,
-                    normal_form_id: Err(err),
-                };
+                return Err((best_attempt_id, err));
             }
         };
 
@@ -393,7 +367,7 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
         {
             (variant_name_id, arg_list_id)
         } else {
-            return EvalResult::ok(NormalFormId::unchecked_new(ExpressionId::Match(
+            return Ok(NormalFormId::unchecked_new(ExpressionId::Match(
                 state.registry.add_match_and_overwrite_its_id(Match {
                     id: dummy_id(),
                     matchee_id: normalized_matchee_id.raw(),
@@ -426,10 +400,7 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
                     matchee_id: normalized_matchee_id.raw(),
                     case_list_id: match_.case_list_id,
                 }));
-            return EvalResult {
-                best_attempt_id,
-                normal_form_id: Err(EvalError::NoMatchingCase(match_id)),
-            };
+            return Err((best_attempt_id, EvalError::NoMatchingCase(match_id)));
         }
     };
 
@@ -476,63 +447,52 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
 }
 
 fn evaluate_possibly_ill_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> EvalResult {
-    let original_len = state.context.len();
-    evaluate_possibly_ill_typed_forall_dirty(state, forall_id).untaint(state.context, original_len)
+    untaint_err(state, forall_id, evaluate_possibly_ill_typed_forall_dirty)
 }
 
 fn evaluate_possibly_ill_typed_forall_dirty(
     state: &mut State,
     forall_id: NodeId<Forall>,
-) -> Tainted<EvalResult> {
+) -> TaintedEvalResult {
     let forall = state.registry.forall(forall_id).clone();
     let normalized_param_list_id = match normalize_params_as_much_as_possible_and_leave_in_context(
         state,
         forall.param_list_id,
     ) {
-        Ok(id) => id.unchecked_raw(),
-        Err((err, param_list_best_attempt)) => {
-            let best_attempt_id =
-                ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
-                    id: dummy_id(),
-                    param_list_id: param_list_best_attempt.unchecked_raw(),
-                    output_id: forall.output_id,
-                }));
-            return Tainted::new(EvalResult {
-                best_attempt_id,
-                normal_form_id: Err(err),
-            });
+        Ok(id) => id,
+        Err(tainted) => {
+            return Err(tainted.map(|(param_list_best_attempt, err)| {
+                let best_attempt_id =
+                    ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
+                        id: dummy_id(),
+                        param_list_id: param_list_best_attempt,
+                        output_id: forall.output_id,
+                    }));
+                (best_attempt_id, err)
+            }))
         }
     };
     let normalized_output_id = match evaluate_possibly_ill_typed_expression(state, forall.output_id)
     {
-        EvalResult {
-            best_attempt_id: _,
-            normal_form_id: Ok(nfid),
-        } => nfid,
-        EvalResult {
-            best_attempt_id: output_best_attempt_id,
-            normal_form_id: Err(err),
-        } => {
+        Ok(nfid) => nfid,
+        Err((output_best_attempt_id, err)) => {
             let best_attempt_id =
                 ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
                     id: dummy_id(),
                     param_list_id: normalized_param_list_id,
                     output_id: output_best_attempt_id,
                 }));
-            return Tainted::new(EvalResult {
-                best_attempt_id: best_attempt_id,
-                normal_form_id: Err(err),
-            });
+            return Err(Tainted::new((best_attempt_id, err)));
         }
     };
     state.context.pop_n(forall.param_list_id.len);
 
-    Tainted::new(EvalResult::ok(NormalFormId::unchecked_new(
-        ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
+    Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
+        state.registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
             param_list_id: normalized_param_list_id,
             output_id: normalized_output_id.raw(),
-        })),
+        }),
     )))
 }
 
@@ -548,13 +508,13 @@ fn eval_all(
     let mut nfids = Vec::new();
     for (index, id) in ids.iter().copied().enumerate() {
         let eval_res = evaluate_possibly_ill_typed_expression(state, id);
-        let nfid = match eval_res.normal_form_id {
+        let nfid = match eval_res {
             Ok(nfid) => nfid,
-            Err(err) => {
+            Err((best_attempt_id, err)) => {
                 let best_attempt: Vec<ExpressionId> = nfids
                     .into_iter()
                     .map(NormalFormId::raw)
-                    .chain(std::iter::once(eval_res.best_attempt_id))
+                    .chain(std::iter::once(best_attempt_id))
                     .chain(ids[index + 1..].iter().copied())
                     .collect();
                 return Err((best_attempt, err));
@@ -563,17 +523,4 @@ fn eval_all(
         nfids.push(nfid);
     }
     Ok(nfids)
-}
-
-trait Untaint {
-    type Output;
-    fn untaint(self, context: &mut Context, original_len: usize) -> Self::Output;
-}
-
-impl<T> Untaint for Tainted<T> {
-    type Output = T;
-    fn untaint(self, context: &mut Context, original_len: usize) -> Self::Output {
-        context.truncate(original_len);
-        self.unchecked_raw()
-    }
 }
