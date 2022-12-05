@@ -1,6 +1,6 @@
 use super::*;
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, ops::Sub};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NormalFormId(ExpressionId);
@@ -90,13 +90,21 @@ pub(super) fn is_left_type_assignable_to_right_type(
     left: NormalFormId,
     right: NormalFormId,
 ) -> bool {
-    is_term_equal_to_a_trivially_empty_type(state, left)
-        || state
-            .equality_checker
-            .eq(left.raw(), right.raw(), state.registry)
+    let ((left,), (right,)) =
+        match apply_substitutions_from_substitution_context(state, ((left.raw(),), (right.raw(),)))
+        {
+            Ok(x) => x,
+            Err(Exploded) => return true,
+        };
+    state.equality_checker.eq(left, right, state.registry)
+        || is_well_typed_term_equal_to_a_trivially_empty_type(state, left)
 }
 
-fn is_term_equal_to_a_trivially_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
+fn is_well_typed_term_equal_to_a_trivially_empty_type(
+    state: &mut State,
+    term_id: ExpressionId,
+) -> bool {
+    let term_id = evaluate_well_typed_expression(state, term_id);
     if let Some(adt) = try_as_adt_expression(state, term_id) {
         adt.variant_name_list_id.len == 0
     } else {
@@ -631,74 +639,211 @@ pub(super) fn try_as_variant_expression(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct HasExploded(pub bool);
+pub struct Exploded;
 
-pub(super) fn apply_dynamic_substitutions_with_compounding<E: Map<ExpressionId, Output = E>>(
-    state: &mut State,
-    substitutions: Vec<DynamicSubstitution>,
-    expressions_to_substitute: E,
-) -> (HasExploded, Context, E) {
-    let original_state = state;
-    let n = substitutions.len();
+#[derive(Clone, Copy, Debug)]
+struct TaggedDynamicSubstitution {
+    substitution: DynamicSubstitution,
+    applied: bool,
+}
 
-    let mut substitutions = substitutions;
-    let mut context = original_state.context.clone();
-    let mut state = State {
-        context: &mut context,
-        substitution_context: original_state.substitution_context,
-        registry: original_state.registry,
-        equality_checker: original_state.equality_checker,
-        warnings: original_state.warnings,
-    };
-    let mut expressions_to_substitute = expressions_to_substitute;
-    let mut has_exploded = HasExploded(false);
-
-    for i in 0..n {
-        let dynamic_substitution = substitutions[i];
-
-        let causes_explosion =
-            backfuse(&mut state, dynamic_substitution.0, dynamic_substitution.1).has_exploded;
-        has_exploded.0 |= causes_explosion;
-
-        let substitution = if let Some(substitution) =
-            get_concrete_substitution(&mut state, dynamic_substitution)
-        {
-            substitution
-        } else {
-            continue;
-        };
-
-        let remaining_substitutions = &mut substitutions[i + 1..];
-        loop {
-            let mut was_no_op = WasSyntacticNoOp(true);
-
-            expressions_to_substitute = expressions_to_substitute.map(|mut id| {
-                was_no_op &=
-                    id.subst_in_place_and_get_status(substitution, &mut state.without_context());
-                id
-            });
-
-            was_no_op &= state.context.subst_in_place_and_get_status(
-                substitution,
-                &mut ContextlessState {
-                    substitution_context: state.substitution_context,
-                    registry: state.registry,
-                    equality_checker: state.equality_checker,
-                    warnings: state.warnings,
-                },
-            );
-
-            for remaining in remaining_substitutions.iter_mut() {
-                was_no_op &= remaining.subst_in_place_and_get_status(substitution, &mut state);
-            }
-
-            if was_no_op.0 {
-                break;
-            }
+impl TaggedDynamicSubstitution {
+    fn unapplied(substitution: DynamicSubstitution) -> Self {
+        Self {
+            substitution,
+            applied: false,
         }
     }
+}
 
-    (has_exploded, context, expressions_to_substitute)
+pub(super) fn apply_substitutions_from_substitution_context<E: Map<ExpressionId, Output = E>>(
+    state: &mut State,
+    expressions_to_substitute: E,
+) -> Result<E, Exploded> {
+    let mut substitutions: Vec<TaggedDynamicSubstitution> = state
+        .substitution_context
+        .get_adjusted_substitutions(state.registry, state.context.len())
+        .expect("SubstitutionContext and Context should be in-sync.")
+        .into_iter()
+        .map(TaggedDynamicSubstitution::unapplied)
+        .collect();
+    let mut expressions_to_substitute = expressions_to_substitute;
+
+    loop {
+        let Some(tagged_sub_index) = substitutions.iter().position(|substitution| !substitution.applied) else {
+            return Ok(expressions_to_substitute);
+        };
+        let tagged_sub = substitutions[tagged_sub_index];
+        match expand_dynamic_substitution(state, tagged_sub.substitution) {
+            DynamicSubstitutionExpansionResult::Exploded => {
+                return Err(Exploded);
+            }
+            DynamicSubstitutionExpansionResult::Replace(replacements) => {
+                substitutions.remove(tagged_sub_index);
+                mark_all_as_unapplied(&mut substitutions);
+                substitutions.extend(
+                    replacements
+                        .into_iter()
+                        .map(TaggedDynamicSubstitution::unapplied),
+                );
+                continue;
+            }
+            DynamicSubstitutionExpansionResult::ApplyConcrete(concrete_sub) => {
+                loop {
+                    let (was_no_op, new_expressions_to_substitute) = apply_concrete_substitution(
+                        state,
+                        &mut substitutions,
+                        tagged_sub_index,
+                        expressions_to_substitute,
+                        concrete_sub,
+                    );
+                    expressions_to_substitute = new_expressions_to_substitute;
+                    if was_no_op.0 {
+                        break;
+                    } else {
+                        mark_all_as_unapplied(&mut substitutions);
+                    }
+                }
+                substitutions[tagged_sub_index].applied = true;
+            }
+        }
+
+        // TODO
+    }
+
+    // TODO: Delete
+
+    // for i in 0..n {
+    //     let dynamic_substitution = substitutions[i];
+
+    //     let causes_explosion =
+    //         backfuse(&mut state, dynamic_substitution.0, dynamic_substitution.1).has_exploded;
+    //     has_exploded.0 |= causes_explosion;
+
+    //     let substitution = if let Some(substitution) =
+    //         get_concrete_substitution(&mut state, dynamic_substitution)
+    //     {
+    //         substitution
+    //     } else {
+    //         continue;
+    //     };
+
+    //     let remaining_substitutions = &mut substitutions[i + 1..];
+    //     loop {
+    //         let mut was_no_op = WasSyntacticNoOp(true);
+
+    //         expressions_to_substitute = expressions_to_substitute.map(|mut id| {
+    //             was_no_op &=
+    //                 id.subst_in_place_and_get_status(substitution, &mut state.without_context());
+    //             id
+    //         });
+
+    //         was_no_op &= state.context.subst_in_place_and_get_status(
+    //             substitution,
+    //             &mut ContextlessState {
+    //                 substitution_context: state.substitution_context,
+    //                 registry: state.registry,
+    //                 equality_checker: state.equality_checker,
+    //                 warnings: state.warnings,
+    //             },
+    //         );
+
+    //         for remaining in remaining_substitutions.iter_mut() {
+    //             was_no_op &= remaining.subst_in_place_and_get_status(substitution, &mut state);
+    //         }
+
+    //         if was_no_op.0 {
+    //             break;
+    //         }
+    //     }
+    // }
+
+    // (has_exploded, context, expressions_to_substitute)
+}
+
+fn mark_all_as_unapplied(substitutions: &mut [TaggedDynamicSubstitution]) {
+    for substitution in substitutions {
+        substitution.applied = false;
+    }
+}
+
+fn apply_concrete_substitution<E>(
+    state: &mut State,
+    substitutions: &mut [TaggedDynamicSubstitution],
+    substitution_index: usize,
+    mut expressions_to_substitute: E,
+    concrete_sub: Substitution,
+) -> (WasSyntacticNoOp, E)
+where
+    E: Map<ExpressionId, Output = E>,
+{
+    let mut was_no_op = WasSyntacticNoOp(true);
+
+    expressions_to_substitute = expressions_to_substitute.map(|mut id| {
+        was_no_op &= id.subst_in_place_and_get_status(concrete_sub, &mut state.without_context());
+        id
+    });
+
+    for (i, remaining) in substitutions.iter_mut().enumerate() {
+        if i == substitution_index {
+            continue;
+        }
+        was_no_op &= remaining
+            .substitution
+            .subst_in_place_and_get_status(concrete_sub, state);
+    }
+
+    (was_no_op, expressions_to_substitute)
+}
+
+#[derive(Clone, Debug)]
+enum DynamicSubstitutionExpansionResult {
+    ApplyConcrete(Substitution),
+    /// If the original substitution was a no-op, the
+    /// expansion will be `DynamicSubstitutionExpansionResult::Replace(vec![])`.
+    Replace(Vec<DynamicSubstitution>),
+    Exploded,
+}
+
+fn expand_dynamic_substitution(
+    state: &mut State,
+    d: DynamicSubstitution,
+) -> DynamicSubstitutionExpansionResult {
+    if let (Some(left), Some(right)) = (
+        try_as_adt_expression(state, d.0),
+        try_as_adt_expression(state, d.1),
+    ) {
+        expand_dynamic_adt_substitution(state, left, right)
+    } else if let (Some(left), Some(right)) = (
+        try_as_variant_expression(state, d.0.raw()),
+        try_as_variant_expression(state, d.1.raw()),
+    ) {
+        expand_dynamic_variant_substitution(state, left, right)
+    }
+    // TODO: Add else-ifs to handle cases Fun, Forall, etc.
+    else {
+        // TODO: Refactor
+        match get_concrete_substitution(state, d) {
+            Some(conc_sub) => DynamicSubstitutionExpansionResult::ApplyConcrete(conc_sub),
+            None => DynamicSubstitutionExpansionResult::Replace(vec![]),
+        }
+    }
+}
+
+fn expand_dynamic_adt_substitution(
+    state: &mut State,
+    left: AdtExpression,
+    right: AdtExpression,
+) -> DynamicSubstitutionExpansionResult {
+    unimplemented!()
+}
+
+fn expand_dynamic_variant_substitution(
+    state: &mut State,
+    left: (NodeId<Identifier>, PossibleArgListId),
+    right: (NodeId<Identifier>, PossibleArgListId),
+) -> DynamicSubstitutionExpansionResult {
+    unimplemented!()
 }
 
 /// Returns `None` if the dynamic substitution is a no-op.
