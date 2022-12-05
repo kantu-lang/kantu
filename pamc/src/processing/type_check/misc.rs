@@ -600,7 +600,7 @@ pub(super) fn try_as_normal_form_adt_expression(
 }
 
 /// If the provided expression is has a variant at
-/// the top level,this returns IDs for the variant name
+/// the top level, this returns IDs for the variant name
 /// and the variant's argument list.
 /// Otherwise, returns `None`.
 pub(super) fn try_as_variant_expression(
@@ -638,6 +638,11 @@ pub(super) fn try_as_variant_expression(
     }
 }
 
+/// If the provided expression is has a variant at
+/// the top level,this returns true.
+pub(super) fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool {
+    try_as_variant_expression(state, expression_id.raw()).is_some()
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Exploded;
 
@@ -918,6 +923,19 @@ fn get_concrete_substitution(state: &mut State, d: DynamicSubstitution) -> Optio
         });
     }
     if is_left_inclusive_subterm_of_right(state, d.1.raw(), d.0.raw()) {
+        return Some(Substitution {
+            from: d.0.raw(),
+            to: d.1.raw(),
+        });
+    }
+
+    if is_variant_expression(state, d.0) {
+        return Some(Substitution {
+            from: d.1.raw(),
+            to: d.0.raw(),
+        });
+    }
+    if is_variant_expression(state, d.1) {
         return Some(Substitution {
             from: d.0.raw(),
             to: d.1.raw(),
