@@ -16,27 +16,8 @@ let eq_comm = fun _(T: Type, a: T, b: T, H: Eq(T, a, b)): Eq(T, b, a) {
     }
 };
 
-let foo = fun _(n: Nat): Nat {
-    match n {
-        .O => check n: Nat = Nat.O {
-            Nat.O
-        },
-        .S(n') => check n: Nat = Nat.S(n') {
-            Nat.O
-        },
-    }
-};
-
 let m = Nat.O;
-let expression_checkee_matrix = match m {
-    .O => check m: ? = ? {
-        Nat.O
-    },
-    .S(n') => check m: Nat = ? {
-        Nat.O
-    },
-};
-let expression_checkee_matrix2 = match m {
+let expression_checkee_matrix2_TODO_INCOMPLETE = match m {
     .O => check m: ? = Nat.O {
         Nat.O
     },

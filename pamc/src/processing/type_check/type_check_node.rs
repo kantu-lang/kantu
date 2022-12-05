@@ -684,9 +684,6 @@ fn get_type_of_check_expression(
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
 ) -> Result<NormalFormId, TypeCheckError> {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-    let x = COUNTER.fetch_add(1, Ordering::Relaxed);
     println!(
         "(state.warning.len: {}) check={}",
         state.warnings.len(),
@@ -697,9 +694,7 @@ fn get_type_of_check_expression(
             ),
         ),
     );
-    if x > 15 {
-        panic!("terminating before stack overflow");
-    }
+    
     add_check_expression_warnings(state, coercion_target_id, check_id)?;
     let check = state.registry.check(check_id).clone();
     get_type_of_expression(state, coercion_target_id, check.output_id)
@@ -765,7 +760,6 @@ fn get_checkee_type_warning(
         QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeType { question_mark_start }),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
-
     };
     if let Err(err) = type_check_expression(state, Some(actual_type_id), annotated_type_id) {
         return Some(TypeCheckWarning::IllTypedCheckeeType(annotated_type_id, err));
