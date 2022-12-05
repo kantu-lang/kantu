@@ -683,7 +683,7 @@ fn get_type_of_check_expression(
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
 ) -> Result<NormalFormId, TypeCheckError> {
-    add_check_expression_warnings(state, coercion_target_id, check_id);
+    add_check_expression_warnings(state, coercion_target_id, check_id)?;
     let check = state.registry.check(check_id).clone();
     get_type_of_expression(state, coercion_target_id, check.output_id)
 }
@@ -692,19 +692,20 @@ fn add_check_expression_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
-) {
-    let warnings = get_check_expression_warnings(state, coercion_target_id, check_id);
+) -> Result<(), TypeCheckError> {
+    let warnings = get_check_expression_warnings(state, coercion_target_id, check_id)?;
     state.warnings.extend(warnings);
+    Ok(())
 }
 
 fn get_check_expression_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
-) -> Vec<TypeCheckWarning> {
+) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
     let check = state.registry.check(check_id).clone();
     match check.checkee_annotation_id {
-        CheckeeAnnotationId::Goal(annotation_id) => get_goal_check_expression_warnings(state, coercion_target_id, annotation_id),
+        CheckeeAnnotationId::Goal(annotation_id) => Ok(get_goal_check_expression_warnings(state, coercion_target_id, annotation_id)),
         CheckeeAnnotationId::Expression(annotation_id) => get_expression_check_expression_warnings(state, coercion_target_id, annotation_id),
     }
 }
@@ -718,10 +719,27 @@ fn get_goal_check_expression_warnings(
     let Some(coercion_target_id) = coercion_target_id else {
         return vec![TypeCheckWarning::NoGoal { goal_kw_start: annotation.goal_kw_position }];
     };
-    get_checkee_type_id_warning(state, coercion_target_id, annotation.checkee_type_id).into_iter().collect()
+    get_checkee_type_warning(state, coercion_target_id, annotation.checkee_type_id).into_iter().collect()
 }
 
-fn get_checkee_type_id_warning(
+fn get_expression_check_expression_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    annotation_id: NodeId<ExpressionCheckeeAnnotation>,
+) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
+    let mut warnings = vec![];
+    let annotation = state.registry.expression_checkee_annotation(annotation_id).clone();
+
+    let actual_checkee_type = get_type_of_expression(state, coercion_target_id, annotation.checkee_id)?;
+    let normalized_checkee_id = evaluate_well_typed_expression(state, annotation.checkee_id);
+
+    warnings.extend(get_checkee_type_warning(state, actual_checkee_type, annotation.checkee_type_id));
+    warnings.extend(get_checkee_value_warning(state, normalized_checkee_id, annotation.checkee_value_id));
+    
+    Ok(warnings)
+}
+
+fn get_checkee_type_warning(
     state: &mut State,
     actual_type_id: NormalFormId,
     annotated_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
@@ -748,10 +766,30 @@ fn get_checkee_type_id_warning(
     }
 }
 
-fn get_expression_check_expression_warnings(
-    _state: &mut State,
-    _coercion_target_id: Option<NormalFormId>,
-    _annotation_id: NodeId<ExpressionCheckeeAnnotation>,
-) -> Vec<TypeCheckWarning> {
-    unimplemented!()
+fn get_checkee_value_warning(
+    state: &mut State,
+    actual_value_id: NormalFormId,
+    annotated_value_id: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
+) -> Option<TypeCheckWarning> {
+    let annotated_value_id = annotated_value_id?;
+    let annotated_value_id = match annotated_value_id {
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeValue { question_mark_start }),
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
+
+    };
+    if let Err(err) = type_check_expression(state, Some(actual_value_id), annotated_value_id) {
+        return Some(TypeCheckWarning::IllTypedCheckeeValue(annotated_value_id, err));
+    }
+    let normalized_annotated_value_id = evaluate_well_typed_expression(state, annotated_value_id);
+    // TODO: Consider context substitutions
+    if state.equality_checker.eq(actual_value_id.raw(), normalized_annotated_value_id.raw(), state.registry) {
+        None
+    } else {
+        Some(TypeCheckWarning::IncorrectCheckeeValue {
+            checkee_type_id: annotated_value_id,
+            expected_id: actual_value_id,
+            actual_id: normalized_annotated_value_id,
+        })
+    }
 }

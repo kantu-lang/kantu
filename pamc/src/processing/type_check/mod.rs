@@ -70,12 +70,22 @@ pub enum TypeCheckWarning {
     NoGoal {
         goal_kw_start: TextPosition,
     },
+    // TODO: Rename "missing" to "incomplete"?
     MissingCheckeeType {
         question_mark_start: TextPosition,
     },
     UntypecheckableExpression(InvalidExpressionId),
     IllTypedCheckeeType(ExpressionId, TypeCheckError),
     IncorrectCheckeeType {
+        checkee_type_id: ExpressionId,
+        expected_id: NormalFormId,
+        actual_id: NormalFormId,
+    },
+    MissingCheckeeValue {
+        question_mark_start: TextPosition,
+    },
+    IllTypedCheckeeValue(ExpressionId, TypeCheckError),
+    IncorrectCheckeeValue {
         checkee_type_id: ExpressionId,
         expected_id: NormalFormId,
         actual_id: NormalFormId,
