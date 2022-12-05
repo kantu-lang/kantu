@@ -678,11 +678,28 @@ fn get_type_of_forall_dirty(
 }
 
 
+
 fn get_type_of_check_expression(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
 ) -> Result<NormalFormId, TypeCheckError> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static COUNTER: AtomicUsize = AtomicUsize::new(0);
+    let x = COUNTER.fetch_add(1, Ordering::Relaxed);
+    println!(
+        "(state.warning.len: {}) check={}",
+        state.warnings.len(),
+        crate::processing::test_utils::format::format_expression_with_default_options(
+            &crate::processing::test_utils::expand_lightened::expand_expression(
+                state.registry,
+                ExpressionId::Check(check_id),
+            ),
+        ),
+    );
+    if x > 15 {
+        panic!("terminating before stack overflow");
+    }
     add_check_expression_warnings(state, coercion_target_id, check_id)?;
     let check = state.registry.check(check_id).clone();
     get_type_of_expression(state, coercion_target_id, check.output_id)
