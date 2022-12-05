@@ -1,8 +1,9 @@
+
 use super::*;
 
 pub fn type_check_files(
     registry: &mut NodeRegistry,
-    file_ids: &[NodeId<File>],
+    file_ids: &[FunRecursionValidated<NodeId<File>>],
 ) -> Result<(), TypeCheckError> {
     let mut context = Context::with_builtins(registry);
     let mut substitution_context = SubstitutionContext::empty();
@@ -16,7 +17,7 @@ pub fn type_check_files(
         warnings: &mut warnings,
     };
     for &id in file_ids {
-        type_check_file(&mut state, id)?;
+        type_check_file(&mut state, id.raw())?;
     }
     Ok(())
 }

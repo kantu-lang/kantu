@@ -1,6 +1,6 @@
 use crate::data::{
     bind_error::BindError,
-    illegal_fun_recursion_error::IllegalFunRecursionError,
+    fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{ListId, NodeId, QuestionMarkOrPossiblyInvalidExpressionId},
     simplified_ast as unbound, FileId, TextPosition,

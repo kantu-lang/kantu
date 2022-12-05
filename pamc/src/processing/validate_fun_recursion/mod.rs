@@ -1,7 +1,8 @@
 use crate::data::{
-    illegal_fun_recursion_error::*,
+    fun_recursion_validation_result::*,
     light_ast::*,
     node_registry::{ListId, NodeId, NodeRegistry},
+    variant_return_type_validation_result::VariantReturnTypesValidated,
 };
 
 use std::convert::Infallible;
@@ -20,8 +21,9 @@ impl From<Tainted<Infallible>> for TaintedIllegalFunRecursionError {
 
 pub fn validate_fun_recursion_in_file(
     registry: &mut NodeRegistry,
-    file_id: NodeId<File>,
-) -> Result<NodeId<File>, IllegalFunRecursionError> {
+    file_id: VariantReturnTypesValidated<NodeId<File>>,
+) -> Result<FunRecursionValidated<NodeId<File>>, IllegalFunRecursionError> {
+    let file_id = file_id.raw();
     let file = registry.file(file_id).clone();
     let mut context = Context::new();
     let item_ids = registry
@@ -31,11 +33,13 @@ pub fn validate_fun_recursion_in_file(
         .map(|item_id| validate_fun_recursion_in_file_item(&mut context, registry, item_id))
         .collect::<Result<Vec<_>, _>>()?;
     let item_list_id = registry.add_file_item_list(item_ids);
-    Ok(registry.add_file_and_overwrite_its_id(File {
-        id: dummy_id(),
-        file_id: file.file_id,
-        item_list_id,
-    }))
+    Ok(FunRecursionValidated::unchecked_new(
+        registry.add_file_and_overwrite_its_id(File {
+            id: dummy_id(),
+            file_id: file.file_id,
+            item_list_id,
+        }),
+    ))
 }
 
 fn validate_fun_recursion_in_file_item(

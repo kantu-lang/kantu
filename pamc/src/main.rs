@@ -1,3 +1,24 @@
+use pamc::{
+    data::{node_registry::NodeRegistry, FileId},
+    processing::{
+        bind_type_independent::bind_files,
+        generate_code::{
+            targets::javascript::{
+                format::{format_file, FormatOptions},
+                JavaScript,
+            },
+            CompileTarget,
+        },
+        lex::lex,
+        lighten_ast::lighten_file,
+        parse::parse_file,
+        simplify_ast::simplify_file,
+        type_check::type_check_files,
+        validate_fun_recursion::validate_fun_recursion_in_file,
+        validate_variant_return_types::validate_variant_return_types_in_file,
+    },
+};
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let in_flag_index = if let Some(i) = args.iter().position(|arg| arg == "--in") {
@@ -17,180 +38,28 @@ fn main() {
             in_file_path
         );
     };
-    let lex_result = pamc::processing::lex::lex(&file_content);
-    match lex_result {
-        Ok(tokens) => {
-            println!("Lex success!");
-            for t in tokens
-                .iter()
-                .filter(|t| t.kind != pamc::data::token::TokenKind::Whitespace)
-            {
-                println!("{}        ({:?})", t.content, t.kind);
-            }
-            print_separator();
 
-            let parse_result = pamc::processing::parse::parse_file(tokens, pamc::data::FileId(0));
-            match parse_result {
-                Ok(file) => {
-                    println!("Parse success!");
-                    println!("{:#?}", file);
-                    print_separator();
-
-                    let simplification_result = pamc::processing::simplify_ast::simplify_file(file);
-                    match simplification_result {
-                        Ok(file) => {
-                            println!("Simplification success!");
-                            println!("{:#?}", file);
-                            print_separator();
-
-                            let bind_result =
-                                pamc::processing::bind_type_independent::bind_files(vec![file]);
-                            match bind_result {
-                                Ok(files) => {
-                                    println!("Bind success!");
-                                    println!("{:#?}", &files[0]);
-
-                                    let mut registry =
-                                        pamc::data::node_registry::NodeRegistry::empty();
-                                    let lightened_file =
-                                        pamc::processing::lighten_ast::lighten_file(
-                                            &mut registry,
-                                            files[0].clone(),
-                                        );
-                                    println!("Lightened file!");
-                                    print_separator();
-
-                                    use pamc::processing::{
-                                        generate_code::{
-                                            targets::javascript::format::FormatOptions,
-                                            CompileTarget,
-                                        },
-                                        test_utils::{
-                                            expand_lightened::expand_expression,
-                                            format::format_expression_with_default_options,
-                                        },
-                                        type_check::*,
-                                    };
-
-                                    let type_check_result =
-                                        type_check_files(&mut registry, &[lightened_file]);
-                                    match type_check_result {
-                                        Ok(_) => {
-                                            println!("Type check success!");
-                                            println!();
-                                            let code_gen_result = pamc::processing::generate_code::targets::javascript::JavaScript::generate_code(&registry, &[lightened_file]);
-                                            match code_gen_result {
-                                                Ok(js_ast) => {
-                                                    println!("Code generation success!");
-                                                    print_separator();
-                                                    println!("{}", pamc::processing::generate_code::targets::javascript::format::format_file(&js_ast[0], &FormatOptions {indentation:4}));
-                                                }
-                                                Err(err) => {
-                                                    println!("Code generation failed!");
-                                                    println!("{:#?}", err);
-                                                }
-                                            }
-                                        }
-                                        Err(err) => {
-                                            println!("Type check error: {:?}", err);
-                                            if let TypeCheckError::IllegalTypeExpression(
-                                                expression_id,
-                                            ) = &err
-                                            {
-                                                println!(
-                                                    "Illegal type expression: {:#?}",
-                                                    expand_expression(&registry, *expression_id,)
-                                                );
-                                            }
-                                            if let TypeCheckError::TypeMismatch {
-                                                expression_id,
-                                                expected_type_id,
-                                                actual_type_id,
-                                            } = &err
-                                            {
-                                                println!(
-                                                    "TYPE_MISMATCH.expression: \n{}",
-                                                    format_expression_with_default_options(
-                                                        &expand_expression(
-                                                            &registry,
-                                                            *expression_id
-                                                        ),
-                                                    )
-                                                );
-                                                println!(
-                                                    "TYPE_MISMATCH.expected_type: \n{}",
-                                                    format_expression_with_default_options(
-                                                        &expand_expression(
-                                                            &registry,
-                                                            expected_type_id.raw()
-                                                        ),
-                                                    )
-                                                );
-                                                println!(
-                                                    "TYPE_MISMATCH.actual_type: \n{}",
-                                                    format_expression_with_default_options(
-                                                        &expand_expression(
-                                                            &registry,
-                                                            actual_type_id.raw()
-                                                        ),
-                                                    )
-                                                );
-                                            }
-                                            if let TypeCheckError::WrongNumberOfArguments {
-                                                call_id,
-                                                expected,
-                                                actual,
-                                            } = &err
-                                            {
-                                                println!(
-                                                    "WRONG_NUM_OF_ARGS.call: {:#?}",
-                                                    &expand_expression(
-                                                        &registry,
-                                                        pamc::data::light_ast::ExpressionId::Call(
-                                                            *call_id
-                                                        ),
-                                                    ),
-                                                );
-                                                println!(
-                                                    "WRONG_NUM_OF_ARGS.expected_arity: {}",
-                                                    expected
-                                                );
-                                                println!(
-                                                    "WRONG_NUM_OF_ARGS.actual_arity: {}",
-                                                    actual
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                                Err(err) => {
-                                    println!("Bind error: {:?}", err);
-                                }
-                            }
-                        }
-                        Err(err) => {
-                            println!("Simplification error: {:#?}", err);
-                        }
-                    }
-                }
-                Err(err) => {
-                    println!("Parse error: {:?}", err);
-                }
-            }
-        }
-        Err(err) => {
-            println!("Error: {:?}", err);
-        }
-    }
-}
-
-fn print_separator() {
-    println!("\n\n\n\n\n\n\n\n");
-    for _ in 0..64 {
-        for _ in 0..64 {
-            print!("*");
-        }
-        println!();
-    }
-    println!("\n\n\n\n\n\n\n\n");
+    let file_id = FileId(0);
+    let tokens = lex(&file_content).expect("Lexing failed");
+    let file = parse_file(tokens, file_id).expect("Parsing failed");
+    let file = simplify_file(file).expect("AST Simplification failed");
+    let file = bind_files(vec![file])
+        .expect("Binding failed")
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut registry = NodeRegistry::empty();
+    let file_id = lighten_file(&mut registry, file);
+    let file = registry.file(file_id);
+    let file_id = validate_variant_return_types_in_file(&registry, file)
+        .expect("Variant return type validation failed");
+    let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
+        .expect("Fun recursion validation failed");
+    type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
+    let js_ast =
+        JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
+    println!(
+        "Compilation pipeline completed successfully!\n\n{}",
+        format_file(&js_ast[0], &FormatOptions { indentation: 4 })
+    );
 }

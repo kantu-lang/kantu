@@ -1,5 +1,5 @@
 use crate::data::{
-    bind_error::BindError, illegal_fun_recursion_error::IllegalFunRecursionError,
+    bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
     simplified_ast as unbound, FileId, TextPosition,
 };
 

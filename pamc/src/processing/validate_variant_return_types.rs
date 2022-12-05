@@ -1,10 +1,8 @@
 use crate::data::{
     light_ast::*,
     node_registry::{NodeId, NodeRegistry},
+    variant_return_type_validation_result::*,
 };
-
-#[derive(Clone, Debug)]
-pub struct IllegalVariantReturnTypeError(pub ExpressionId);
 
 /// For a given type `T` with type parameters `A_1, ..., A_n`,
 /// every one of its variant's return type must be `T(x_1, ..., x_n)` for
@@ -39,7 +37,7 @@ pub struct IllegalVariantReturnTypeError(pub ExpressionId);
 pub fn validate_variant_return_types_in_file(
     registry: &NodeRegistry,
     file: &File,
-) -> Result<(), IllegalVariantReturnTypeError> {
+) -> Result<VariantReturnTypesValidated<NodeId<File>>, IllegalVariantReturnTypeError> {
     let item_ids = registry.file_item_list(file.item_list_id);
     for item_id in item_ids {
         if let FileItemNodeId::Type(type_id) = item_id {
@@ -47,7 +45,7 @@ pub fn validate_variant_return_types_in_file(
             validate_variant_return_types_in_type_statement(registry, type_statement)?;
         }
     }
-    Ok(())
+    Ok(VariantReturnTypesValidated::unchecked_new(file.id))
 }
 
 fn validate_variant_return_types_in_type_statement(

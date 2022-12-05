@@ -16,7 +16,8 @@ fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFun
     let file_id = lighten_file(&mut registry, file);
     let file = registry.file(file_id);
 
-    let _variant_return_type_map = validate_variant_return_types_in_file(&registry, file);
+    let file_id = validate_variant_return_types_in_file(&registry, file)
+        .expect("Variant return type validation failed");
     let err = validate_fun_recursion_in_file(&mut registry, file_id)
         .expect_err("Fun recursion validation unexpectedly succeeded");
     panicker(&registry, err);
