@@ -581,42 +581,54 @@ pub(super) fn apply_substitutions_from_substitution_context<E: Map<ExpressionId,
         let Some(tagged_sub_index) = substitutions.iter().position(|substitution| !substitution.applied) else {
             return Ok(expressions_to_substitute);
         };
-        let tagged_sub = substitutions[tagged_sub_index];
-        match expand_dynamic_substitution_shallow(state, tagged_sub.substitution) {
-            DynamicSubstitutionExpansionResult::Exploded => {
-                return Err(Exploded);
-            }
-            DynamicSubstitutionExpansionResult::Replace(replacements) => {
-                substitutions.remove(tagged_sub_index);
-                mark_all_as_unapplied(&mut substitutions);
-                substitutions.extend(
-                    replacements
-                        .into_iter()
-                        .map(TaggedDynamicSubstitution::unapplied),
-                );
-                continue;
-            }
-            DynamicSubstitutionExpansionResult::ApplyConcrete(concrete_sub) => {
-                loop {
-                    let (was_no_op, new_expressions_to_substitute) = apply_concrete_substitution(
-                        state,
-                        &mut substitutions,
-                        tagged_sub_index,
-                        expressions_to_substitute,
-                        concrete_sub,
-                    );
-                    expressions_to_substitute = new_expressions_to_substitute;
-                    if was_no_op.0 {
-                        break;
-                    } else {
-                        mark_all_as_unapplied(&mut substitutions);
-                    }
-                }
-                substitutions[tagged_sub_index].applied = true;
-            }
-        }
+        let tagged_sub = substitutions.remove(tagged_sub_index);
+        expressions_to_substitute = apply_tagged_substitution(
+            state,
+            &mut substitutions,
+            expressions_to_substitute,
+            tagged_sub,
+        )?;
+    }
+}
 
-        // TODO
+fn apply_tagged_substitution<E: Map<ExpressionId, Output = E>>(
+    state: &mut State,
+    substitutions: &mut Vec<TaggedDynamicSubstitution>,
+    mut expressions_to_substitute: E,
+    tagged_sub: TaggedDynamicSubstitution,
+) -> Result<E, Exploded> {
+    match expand_dynamic_substitution_shallow(state, tagged_sub.substitution) {
+        DynamicSubstitutionExpansionResult::Exploded => Err(Exploded),
+        DynamicSubstitutionExpansionResult::Replace(replacements) => {
+            mark_all_as_unapplied(substitutions);
+            substitutions.extend(
+                replacements
+                    .into_iter()
+                    .map(TaggedDynamicSubstitution::unapplied),
+            );
+            Ok(expressions_to_substitute)
+        }
+        DynamicSubstitutionExpansionResult::ApplyConcrete(concrete_sub) => {
+            loop {
+                let (was_no_op, new_expressions_to_substitute) = apply_concrete_substitution(
+                    state,
+                    substitutions,
+                    expressions_to_substitute,
+                    concrete_sub,
+                );
+                expressions_to_substitute = new_expressions_to_substitute;
+                if was_no_op.0 {
+                    break;
+                } else {
+                    mark_all_as_unapplied(substitutions);
+                }
+            }
+            substitutions.push(TaggedDynamicSubstitution {
+                substitution: tagged_sub.substitution,
+                applied: true,
+            });
+            Ok(expressions_to_substitute)
+        }
     }
 }
 
@@ -629,7 +641,6 @@ fn mark_all_as_unapplied(substitutions: &mut [TaggedDynamicSubstitution]) {
 fn apply_concrete_substitution<E>(
     state: &mut State,
     substitutions: &mut [TaggedDynamicSubstitution],
-    substitution_index: usize,
     mut expressions_to_substitute: E,
     concrete_sub: Substitution,
 ) -> (WasSyntacticNoOp, E)
@@ -643,10 +654,7 @@ where
         id
     });
 
-    for (i, remaining) in substitutions.iter_mut().enumerate() {
-        if i == substitution_index {
-            continue;
-        }
+    for remaining in substitutions.iter_mut() {
         was_no_op &= remaining
             .substitution
             .subst_in_place_and_get_status(concrete_sub, state);
