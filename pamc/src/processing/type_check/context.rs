@@ -147,6 +147,10 @@ impl<T> Tainted<T> {
     }
 }
 
+pub fn tainted_err<T, E>(err: E) -> Result<T, Tainted<E>> {
+    Err(Tainted::new(err))
+}
+
 impl<T> Tainted<T> {
     pub fn map<U, F>(self, f: F) -> Tainted<U>
     where

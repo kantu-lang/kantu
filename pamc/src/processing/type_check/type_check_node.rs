@@ -99,7 +99,7 @@ pub(super) fn type_check_param_dirty(
     let param = state.registry.param(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
-        return Err(Tainted::new(TypeCheckError::IllegalTypeExpression(param.type_id)));
+        return tainted_err(TypeCheckError::IllegalTypeExpression(param.type_id));
     }
 
     let normalized_type_id = evaluate_well_typed_expression(state, param.type_id);
@@ -223,7 +223,7 @@ fn get_type_of_call_dirty(
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
     } else {
-        return Err(Tainted::new(TypeCheckError::IllegalCallee(call.callee_id)));
+        return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
     };
     let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
     let normalized_arg_ids: Vec<NormalFormId> = arg_ids
@@ -244,11 +244,11 @@ fn get_type_of_call_dirty(
         let expected_arity = callee_type_param_ids.len();
         let actual_arity = arg_ids.len();
         if callee_type_param_ids.len() != arg_ids.len() {
-            return Err(Tainted::new(TypeCheckError::WrongNumberOfArguments {
+            return tainted_err(TypeCheckError::WrongNumberOfArguments {
                 call_id: call_id,
                 expected: expected_arity,
                 actual: actual_arity,
-            }));
+            });
         }
     }
     for (i, callee_type_param_id) in callee_type_param_ids
@@ -289,11 +289,11 @@ fn get_type_of_call_dirty(
         let arg_type_id = get_type_of_expression_dirty(state, Some(substituted_param_type_id), arg_ids[i])?;
 
         if !is_left_type_assignable_to_right_type(state, arg_type_id, substituted_param_type_id) {
-            return Err(Tainted::new(TypeCheckError::TypeMismatch {
+            return tainted_err(TypeCheckError::TypeMismatch {
                 expression_id: arg_ids[i],
                 expected_type_id: substituted_param_type_id,
                 actual_type_id: arg_type_id,
-            }));
+            });
         }
     }
 
@@ -340,7 +340,7 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     {
         let return_type_type_id = get_type_of_expression_dirty(state, None, fun.return_type_id)?;
         if !is_term_equal_to_type0_or_type1(state, return_type_type_id) {
-            return Err(Tainted::new(TypeCheckError::IllegalTypeExpression(fun.return_type_id)));
+            return tainted_err(TypeCheckError::IllegalTypeExpression(fun.return_type_id));
         }
     }
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
@@ -393,11 +393,11 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
             normalized_body_type_id,
             normalized_return_type_id_relative_to_body,
         ) {
-            return Err(Tainted::new(TypeCheckError::TypeMismatch {
+            return tainted_err(TypeCheckError::TypeMismatch {
                 expression_id: fun.body_id,
                 expected_type_id: normalized_return_type_id_relative_to_body,
                 actual_type_id: normalized_body_type_id,
-            }));
+            });
         }
     }
 
@@ -415,10 +415,10 @@ fn get_type_of_match_dirty(
     let matchee_type = if let Some(t) = try_as_adt_expression(state, matchee_type_id) {
         t
     } else {
-        return Err(Tainted::new(TypeCheckError::NonAdtMatchee {
+        return tainted_err(TypeCheckError::NonAdtMatchee {
             matchee_id: match_.matchee_id,
             type_id: matchee_type_id,
-        }));
+        });
     };
     let normalized_matchee_id = evaluate_well_typed_expression(state, match_.matchee_id);
 
@@ -442,11 +442,11 @@ fn get_type_of_match_dirty(
         if let Some(first_case_type_id) = first_case_type_id {
             if !is_left_type_assignable_to_right_type(state, case_type_id, first_case_type_id) {
                 let case = state.registry.match_case(case_id);
-                return Err(Tainted::new(TypeCheckError::TypeMismatch {
+                return tainted_err(TypeCheckError::TypeMismatch {
                     expression_id: case.output_id,
                     expected_type_id: first_case_type_id,
                     actual_type_id: case_type_id,
-                }));
+                });
             }
         } else {
             first_case_type_id = Some(case_type_id);
@@ -591,7 +591,7 @@ fn get_type_of_match_case_dirty(
         return if can_be_coerced {
             Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
         } else {
-            Err(Tainted::new(TypeCheckError::TypeMismatch {
+            tainted_err(TypeCheckError::TypeMismatch {
                 expression_id: case.output_id,
                 actual_type_id: output_type_id,
                 // TODO: This might be confusing to the user since it's
@@ -599,7 +599,7 @@ fn get_type_of_match_case_dirty(
                 // In the future, we'll include this in substitution
                 // tracking (if we implement it).
                 expected_type_id: coercion_target_id,
-            }))
+            })
         }
     }
 
@@ -608,7 +608,7 @@ fn get_type_of_match_case_dirty(
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
         Err(_) => {
-            Err(Tainted::new(TypeCheckError::AmbiguousOutputType { case_id }))
+            tainted_err(TypeCheckError::AmbiguousOutputType { case_id })
         }
     }
 }
@@ -638,11 +638,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
             let normalized_forall = state.registry.forall(normalized_forall_id).clone();
             let expected_case_param_arity = normalized_forall.param_list_id.len;
             if case.param_list_id.len != expected_case_param_arity {
-                return Err(Tainted::new(TypeCheckError::WrongNumberOfCaseParams {
+                return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
                     case_id,
                     expected: expected_case_param_arity,
                     actual: case.param_list_id.len,
-                }));
+                });
             }
 
             let normalized_param_ids = state
@@ -718,11 +718,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
 
             let expected_case_param_arity = 0;
             if case.param_list_id.len != expected_case_param_arity {
-                return Err(Tainted::new(TypeCheckError::WrongNumberOfCaseParams {
+                return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
                     case_id,
                     expected: expected_case_param_arity,
                     actual: case.param_list_id.len,
-                }));
+                });
             }
             // Since the case is nullary, we shift by zero.
             let shifted_variant_dbi = variant_dbi;
@@ -747,7 +747,7 @@ fn get_type_of_forall_dirty(
 
     let output_type_id = get_type_of_expression_dirty(state, None, forall.output_id)?;
     if !is_term_equal_to_type0_or_type1(state, output_type_id) {
-        return Err(Tainted::new(TypeCheckError::IllegalTypeExpression(forall.output_id)));
+        return tainted_err(TypeCheckError::IllegalTypeExpression(forall.output_id));
     }
 
     state.context.pop_n(forall.param_list_id.len);

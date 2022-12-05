@@ -280,7 +280,7 @@ fn evaluate_possibly_ill_typed_fun_dirty(
                         body_id: fun.body_id,
                         skip_type_checking_body: fun.skip_type_checking_body,
                     }));
-                return Err(Tainted::new((best_attempt_id, err)));
+                return tainted_err((best_attempt_id, err));
             }
         };
     state.context.pop_n(fun.param_list_id.len);
@@ -335,10 +335,7 @@ fn normalize_params_as_much_as_possible_and_leave_in_context(
                     type_id: param_type_best_attempt,
                 }));
                 normalized_param_ids.extend(param_ids[index + 1..].iter().copied());
-                return Err(Tainted::new((
-                    state.registry.add_param_list(normalized_param_ids),
-                    err,
-                )));
+                return tainted_err((state.registry.add_param_list(normalized_param_ids), err));
             }
         }
     }
@@ -482,7 +479,7 @@ fn evaluate_possibly_ill_typed_forall_dirty(
                     param_list_id: normalized_param_list_id,
                     output_id: output_best_attempt_id,
                 }));
-            return Err(Tainted::new((best_attempt_id, err)));
+            return tainted_err((best_attempt_id, err));
         }
     };
     state.context.pop_n(forall.param_list_id.len);
