@@ -414,7 +414,7 @@ fn get_type_of_match_dirty(
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let match_ = state.registry.match_(match_id).clone();
     let matchee_type_id = get_type_of_expression_dirty(state, None, match_.matchee_id)?;
-    let matchee_type = if let Some(t) = try_as_adt_expression(state, matchee_type_id) {
+    let matchee_type = if let Some(t) = try_as_normal_form_adt_expression(state, matchee_type_id) {
         t
     } else {
         return tainted_err(TypeCheckError::NonAdtMatchee {
@@ -471,7 +471,7 @@ fn get_type_of_match_case_dirty(
     case_id: NodeId<MatchCase>,
     normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
-    matchee_type: AdtExpression,
+    matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
@@ -538,7 +538,7 @@ fn get_type_of_match_case_dirty(
 fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
     state: &mut State,
     case_id: NodeId<MatchCase>,
-    matchee_type: AdtExpression,
+    matchee_type: NormalFormAdtExpression,
 ) -> Result<WithPushWarning<(NormalFormId, NormalFormId)>, Tainted<TypeCheckError>> {
     let case = state.registry.match_case(case_id).clone();
     let variant_dbi =

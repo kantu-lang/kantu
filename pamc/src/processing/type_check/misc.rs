@@ -105,7 +105,7 @@ fn is_well_typed_term_equal_to_a_trivially_empty_type(
     term_id: ExpressionId,
 ) -> bool {
     let term_id = evaluate_well_typed_expression(state, term_id);
-    if let Some(adt) = try_as_adt_expression(state, term_id) {
+    if let Some(adt) = try_as_normal_form_adt_expression(state, term_id) {
         adt.variant_name_list_id.len == 0
     } else {
         false
@@ -252,7 +252,7 @@ fn verify_that_every_case_has_a_variant(
 
 pub(super) fn get_db_index_for_adt_variant_of_name(
     state: &mut State,
-    adt_expression: AdtExpression,
+    adt_expression: NormalFormAdtExpression,
     target_variant_name_id: NodeId<Identifier>,
 ) -> DbIndex {
     let type_dbi = state
@@ -315,8 +315,8 @@ pub(super) fn backfuse(
             }
         }
     } else if let (Some(left_ae), Some(right_ae)) = (
-        try_as_adt_expression(state, left),
-        try_as_adt_expression(state, right),
+        try_as_normal_form_adt_expression(state, left),
+        try_as_normal_form_adt_expression(state, right),
     ) {
         let left_type_db_index = state
             .registry
@@ -547,7 +547,7 @@ pub enum PossibleArgListId {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct AdtExpression {
+pub struct NormalFormAdtExpression {
     pub type_name_id: NodeId<NameExpression>,
     pub variant_name_list_id: ListId<NodeId<Identifier>>,
     pub arg_list_id: PossibleArgListId,
@@ -556,10 +556,10 @@ pub struct AdtExpression {
 /// If the provided expression is has an ADT constructor at
 /// the top level, this returns the appropriate `AdtExpression`.
 /// Otherwise, returns `None`.
-pub(super) fn try_as_adt_expression(
+pub(super) fn try_as_normal_form_adt_expression(
     state: &mut State,
     expression_id: NormalFormId,
-) -> Option<AdtExpression> {
+) -> Option<NormalFormAdtExpression> {
     match expression_id.raw() {
         ExpressionId::Name(name_id) => {
             let db_index = state.registry.name_expression(name_id).db_index;
@@ -567,7 +567,7 @@ pub(super) fn try_as_adt_expression(
             match definition {
                 ContextEntryDefinition::Adt {
                     variant_name_list_id,
-                } => Some(AdtExpression {
+                } => Some(NormalFormAdtExpression {
                     type_name_id: name_id,
                     variant_name_list_id,
                     arg_list_id: PossibleArgListId::Nullary,
@@ -584,7 +584,7 @@ pub(super) fn try_as_adt_expression(
                     match definition {
                         ContextEntryDefinition::Adt {
                             variant_name_list_id,
-                        } => Some(AdtExpression {
+                        } => Some(NormalFormAdtExpression {
                             type_name_id: name_id,
                             variant_name_list_id: variant_name_list_id,
                             arg_list_id: PossibleArgListId::Some(call.arg_list_id),
@@ -674,7 +674,7 @@ pub(super) fn apply_substitutions_from_substitution_context<E: Map<ExpressionId,
             return Ok(expressions_to_substitute);
         };
         let tagged_sub = substitutions[tagged_sub_index];
-        match expand_dynamic_substitution(state, tagged_sub.substitution) {
+        match expand_dynamic_substitution_shallow(state, tagged_sub.substitution) {
             DynamicSubstitutionExpansionResult::Exploded => {
                 return Err(Exploded);
             }
@@ -805,20 +805,20 @@ enum DynamicSubstitutionExpansionResult {
     Exploded,
 }
 
-fn expand_dynamic_substitution(
+fn expand_dynamic_substitution_shallow(
     state: &mut State,
     d: DynamicSubstitution,
 ) -> DynamicSubstitutionExpansionResult {
     if let (Some(left), Some(right)) = (
-        try_as_adt_expression(state, d.0),
-        try_as_adt_expression(state, d.1),
+        try_as_normal_form_adt_expression(state, d.0),
+        try_as_normal_form_adt_expression(state, d.1),
     ) {
-        expand_dynamic_adt_substitution(state, left, right)
+        expand_dynamic_adt_substitution_shallow(state, left, right)
     } else if let (Some(left), Some(right)) = (
         try_as_variant_expression(state, d.0.raw()),
         try_as_variant_expression(state, d.1.raw()),
     ) {
-        expand_dynamic_variant_substitution(state, left, right)
+        expand_dynamic_variant_substitution_shallow(state, left, right)
     }
     // TODO: Add else-ifs to handle cases Fun, Forall, etc.
     else {
@@ -830,20 +830,80 @@ fn expand_dynamic_substitution(
     }
 }
 
-fn expand_dynamic_adt_substitution(
+fn expand_dynamic_adt_substitution_shallow(
     state: &mut State,
-    left: AdtExpression,
-    right: AdtExpression,
+    left: NormalFormAdtExpression,
+    right: NormalFormAdtExpression,
 ) -> DynamicSubstitutionExpansionResult {
-    unimplemented!()
+    let left_db_index = state.registry.name_expression(left.type_name_id).db_index;
+    let right_db_index = state.registry.name_expression(right.type_name_id).db_index;
+    if left_db_index != right_db_index {
+        return DynamicSubstitutionExpansionResult::Exploded;
+    }
+
+    let left_args = match left.arg_list_id {
+        PossibleArgListId::Some(id) => state.registry.expression_list(id),
+        PossibleArgListId::Nullary => &[],
+    };
+    let right_args = match right.arg_list_id {
+        PossibleArgListId::Some(id) => state.registry.expression_list(id),
+        PossibleArgListId::Nullary => &[],
+    };
+    assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
+    let arg_substitutions = left_args
+        .iter()
+        .copied()
+        .zip(right_args.iter().copied())
+        .map(|(left_arg_id, right_arg_id)| {
+            DynamicSubstitution(
+                // This is safe because the argument of a normal
+                // form Call expression is always itself a normal form.
+                NormalFormId::unchecked_new(left_arg_id),
+                NormalFormId::unchecked_new(right_arg_id),
+            )
+        })
+        .collect();
+    DynamicSubstitutionExpansionResult::Replace(arg_substitutions)
 }
 
-fn expand_dynamic_variant_substitution(
+fn expand_dynamic_variant_substitution_shallow(
     state: &mut State,
     left: (NodeId<Identifier>, PossibleArgListId),
     right: (NodeId<Identifier>, PossibleArgListId),
 ) -> DynamicSubstitutionExpansionResult {
-    unimplemented!()
+    // We only need to compare name (rather than DB index) because
+    // `left` and `right` are assumed to have the same type, and
+    // every type can only have at most one variant associated with
+    // a given name.
+    let left_name = &state.registry.identifier(left.0).name;
+    let right_name = &state.registry.identifier(right.0).name;
+    if left_name != right_name {
+        return DynamicSubstitutionExpansionResult::Exploded;
+    }
+
+    let left_args = match left.1 {
+        PossibleArgListId::Some(id) => state.registry.expression_list(id),
+        PossibleArgListId::Nullary => &[],
+    };
+    let right_args = match right.1 {
+        PossibleArgListId::Some(id) => state.registry.expression_list(id),
+        PossibleArgListId::Nullary => &[],
+    };
+    assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
+    let arg_substitutions = left_args
+        .iter()
+        .copied()
+        .zip(right_args.iter().copied())
+        .map(|(left_arg_id, right_arg_id)| {
+            DynamicSubstitution(
+                // This is safe because the argument of a normal
+                // form Call expression is always itself a normal form.
+                NormalFormId::unchecked_new(left_arg_id),
+                NormalFormId::unchecked_new(right_arg_id),
+            )
+        })
+        .collect();
+    DynamicSubstitutionExpansionResult::Replace(arg_substitutions)
 }
 
 /// Returns `None` if the dynamic substitution is a no-op.
