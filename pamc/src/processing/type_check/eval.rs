@@ -231,14 +231,6 @@ fn can_fun_be_applied(
     is_variant_expression(state, decreasing_arg_id)
 }
 
-/// If the provided expression is has a variant at
-/// the top level,this returns IDs for the variant name
-/// and the variant's argument list.
-/// Otherwise, returns `None`.
-fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool {
-    try_as_variant_expression(state, expression_id.raw()).is_some()
-}
-
 fn evaluate_possibly_ill_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> EvalResult {
     untaint_err(state, fun_id, evaluate_possibly_ill_typed_fun_dirty)
 }

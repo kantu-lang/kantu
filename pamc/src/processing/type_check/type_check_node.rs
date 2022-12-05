@@ -5,10 +5,12 @@ pub fn type_check_files(
     file_ids: &[NodeId<File>],
 ) -> Result<(), TypeCheckError> {
     let mut context = Context::with_builtins(registry);
+    let mut substitution_context = SubstitutionContext::empty();
     let mut equality_checker = NodeEqualityChecker::new();
     let mut warnings = vec![];
     let mut state = State {
         context: &mut context,
+        substitution_context: &mut substitution_context,
         registry,
         equality_checker: &mut equality_checker,
         warnings: &mut warnings,
@@ -412,7 +414,7 @@ fn get_type_of_match_dirty(
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let match_ = state.registry.match_(match_id).clone();
     let matchee_type_id = get_type_of_expression_dirty(state, None, match_.matchee_id)?;
-    let matchee_type = if let Some(t) = try_as_adt_expression(state, matchee_type_id) {
+    let matchee_type = if let Some(t) = try_as_normal_form_adt_expression(state, matchee_type_id) {
         t
     } else {
         return tainted_err(TypeCheckError::NonAdtMatchee {
@@ -469,11 +471,11 @@ fn get_type_of_match_case_dirty(
     case_id: NodeId<MatchCase>,
     normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
-    matchee_type: AdtExpression,
+    matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let case = state.registry.match_case(case_id).clone();
     let case_arity = case.param_list_id.len;
-    let (original_parameterized_matchee_id, original_parameterized_matchee_type_id) =
+    let (parameterized_matchee_id, parameterized_matchee_type_id) =
         add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
             state,
             case_id,
@@ -485,102 +487,17 @@ fn get_type_of_match_case_dirty(
         coercion_target_id.map(|target_id| target_id.upshift(case_arity, state.registry));
 
     let normalized_matchee_id = normalized_matchee_id.upshift(case_arity, state.registry);
-
     let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
 
-    let case_output_id = evaluate_possibly_ill_typed_expression(state, case.output_id).best_eval_attempt();
+    state.substitution_context.push(SubstitutionContextEntry {
+        context_len: state.context.len(),
+        unadjusted_substitutions: vec![
+            DynamicSubstitution(normalized_matchee_id, parameterized_matchee_id),
+            DynamicSubstitution(matchee_type_id, parameterized_matchee_type_id),
+        ],
+    });
 
-    let (
-        mut context,
-        bishift,
-        (
-            coercion_target_id,
-            (case_output_id,),
-            (matchee_type_id,),
-            (parameterized_matchee_type_id,),
-        ),
-    ) = {
-        let matchee_substitution = ForwardReferencingSubstitution(Substitution {
-            from: normalized_matchee_id.raw(),
-            to: original_parameterized_matchee_id.raw(),
-        });
-        apply_forward_referencing_substitution(
-            state,
-            matchee_substitution,
-            case_arity,
-            (
-                coercion_target_id.map(NormalFormId::raw),
-                (case_output_id,),
-                (matchee_type_id.raw(),),
-                (original_parameterized_matchee_type_id.raw(),),
-            ),
-        )
-    };
-
-    let State {
-        context: original_context,
-        registry,
-        equality_checker,
-        warnings
-    } = state;
-    let mut state = State {
-        registry,
-        context: &mut context,
-        equality_checker,
-        warnings
-    };
-    let state = &mut state;
-
-    original_context.pop_n(case_arity);
-
-    let (
-        coercion_target_id,
-        (matchee_type_id,),
-        (parameterized_matchee_type_id,),
-    ) = evaluate_well_typed_expressions(
-        state,
-        (
-            coercion_target_id,
-            (matchee_type_id,),
-            (parameterized_matchee_type_id,),
-        ),
-    );
-    let case_output_id = evaluate_possibly_ill_typed_expression(state, case_output_id).best_eval_attempt();
-
-    let type_fusion = backfuse(state, matchee_type_id, parameterized_matchee_type_id);
-    if type_fusion.has_exploded {
-        if let Some(original_coercion_target_id) = original_coercion_target_id {
-            return Ok(original_coercion_target_id);
-        }
-    }
-
-    let (has_exploded, mut context, (coercion_target_id, (case_output_id,))) =
-        apply_dynamic_substitutions_with_compounding(
-            state,
-            type_fusion.substitutions,
-            (
-                coercion_target_id.map(NormalFormId::raw),
-                (case_output_id,),
-            ),
-        );
-
-    if has_exploded.0 {
-        if let Some(original_coercion_target_id) = original_coercion_target_id {
-            return Ok(original_coercion_target_id);
-        }
-    }
-
-    let mut state = State {
-        context: &mut context,
-        registry: state.registry,
-        equality_checker: state.equality_checker,
-        warnings: state.warnings
-    };
-    let state = &mut state;
-
-    let coercion_target_id = coercion_target_id
-        .map(|coercion_target_id| evaluate_well_typed_expression(state, coercion_target_id));
-    let output_type_id = get_type_of_expression_dirty(state, coercion_target_id, case_output_id)?;
+    let output_type_id = get_type_of_expression_dirty(state, coercion_target_id, case.output_id)?;
 
     if let Some(coercion_target_id) = coercion_target_id {
         let can_be_coerced = is_left_type_assignable_to_right_type(
@@ -588,6 +505,10 @@ fn get_type_of_match_case_dirty(
             output_type_id,
             coercion_target_id,
         );
+
+        state.context.pop_n(case_arity);
+        state.substitution_context.pop();
+
         return if can_be_coerced {
             Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
         } else {
@@ -603,7 +524,8 @@ fn get_type_of_match_case_dirty(
         }
     }
 
-    let output_type_id = output_type_id.try_shift_with_cutoff(bishift.inverse(), 0, state.registry).expect("Should be able to bishift back");
+    state.context.pop_n(case_arity);
+    state.substitution_context.pop();
 
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
@@ -616,7 +538,7 @@ fn get_type_of_match_case_dirty(
 fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
     state: &mut State,
     case_id: NodeId<MatchCase>,
-    matchee_type: AdtExpression,
+    matchee_type: NormalFormAdtExpression,
 ) -> Result<WithPushWarning<(NormalFormId, NormalFormId)>, Tainted<TypeCheckError>> {
     let case = state.registry.match_case(case_id).clone();
     let variant_dbi =

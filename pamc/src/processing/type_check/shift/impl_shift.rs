@@ -39,6 +39,21 @@ impl ShiftDbIndices for ContextEntryDefinition {
     }
 }
 
+impl ShiftDbIndices for DynamicSubstitution {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let _0 = self.0.try_shift_with_cutoff(f, cutoff, registry)?;
+        let _1 = self.1.try_shift_with_cutoff(f, cutoff, registry)?;
+        Ok(DynamicSubstitution(_0, _1))
+    }
+}
+
 impl ShiftDbIndices for Substitution {
     type Output = Self;
 

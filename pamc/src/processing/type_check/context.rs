@@ -177,12 +177,14 @@ pub(super) fn untaint_err<In, Out, Err, F>(state: &mut State, input: In, f: F) -
 where
     F: FnOnce(&mut State, In) -> Result<Out, Tainted<Err>>,
 {
-    let original_len = state.context.len();
+    let original_context_len = state.context.len();
+    let original_scontext_len = state.substitution_context.len();
     let result = f(state, input);
     match result {
         Ok(ok) => Ok(ok),
         Err(err) => {
-            state.context.truncate(original_len);
+            state.context.truncate(original_context_len);
+            state.substitution_context.truncate(original_scontext_len);
             Err(err.0)
         }
     }
@@ -303,6 +305,7 @@ impl Context {
             evaluate_well_typed_expression(
                 &mut State {
                     context: &mut context,
+                    substitution_context: state.substitution_context,
                     registry: state.registry,
                     equality_checker: state.equality_checker,
                     warnings: state.warnings,
@@ -337,6 +340,7 @@ impl Context {
                         value_id: evaluate_well_typed_expression(
                             &mut State {
                                 context: &mut context,
+                                substitution_context: state.substitution_context,
                                 registry: state.registry,
                                 equality_checker: state.equality_checker,
                                 warnings: state.warnings,
@@ -364,40 +368,5 @@ impl Context {
         Context {
             local_type_stack: self.local_type_stack[0..excl_upper_bound.0].to_vec(),
         }
-    }
-}
-
-impl Context {
-    pub(super) fn push_top_n_down(
-        &mut self,
-        n: usize,
-        pivot: DbIndex,
-        state: &mut ContextlessState,
-    ) {
-        let distance = pivot.0 - n;
-        let pushees = self.local_type_stack.split_off(self.len() - n);
-        let liftees = self.local_type_stack.split_off(self.len() - distance);
-
-        let pushees = pushees
-            .into_iter()
-            .enumerate()
-            .map(|(entry_index, pushee)| {
-                let entry_dbi = DbIndex(n - entry_index - 1);
-                let relative_len = n - entry_dbi.0 - 1;
-                pushee.downshift_with_cutoff(distance, relative_len, state.registry)
-            })
-            .collect::<Vec<_>>();
-        let liftees = liftees
-            .into_iter()
-            .enumerate()
-            .map(|(entry_index, liftee)| {
-                let entry_dbi = DbIndex(n + distance - entry_index - 1);
-                let relative_pivot = DbIndex(pivot.0 - entry_dbi.0 - 1);
-                liftee.upshift_with_cutoff(n, relative_pivot.0, state.registry)
-            })
-            .collect::<Vec<_>>();
-
-        self.local_type_stack.extend(pushees);
-        self.local_type_stack.extend(liftees);
     }
 }
