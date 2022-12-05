@@ -91,26 +91,27 @@ pub(super) fn is_left_type_assignable_to_right_type(
     right: NormalFormId,
 ) -> bool {
     let ((left,), (right,)) =
-        match apply_substitutions_from_substitution_context(state, ((left.raw(),), (right.raw(),)))
-        {
+        match apply_substitutions_from_substitution_context(state, ((left,), (right,))) {
             Ok(x) => x,
             Err(Exploded) => return true,
         };
-    let return_ = state.equality_checker.eq(left, right, state.registry)
-        || is_well_typed_term_equal_to_a_trivially_empty_type(state, left);
+    let return_ = state
+        .equality_checker
+        .eq(left.raw(), right.raw(), state.registry)
+        || is_term_equal_to_a_trivially_empty_type(state, left);
     if !return_ {
         println!(
             "is_left_type_assignable_to_right_type:\nleft = {}\nright = {}",
             crate::processing::test_utils::format::format_expression_with_default_options(
                 &crate::processing::test_utils::expand_lightened::expand_expression(
                     state.registry,
-                    left
+                    left.raw(),
                 )
             ),
             crate::processing::test_utils::format::format_expression_with_default_options(
                 &crate::processing::test_utils::expand_lightened::expand_expression(
                     state.registry,
-                    right
+                    right.raw(),
                 )
             ),
         );
@@ -118,11 +119,7 @@ pub(super) fn is_left_type_assignable_to_right_type(
     return_
 }
 
-fn is_well_typed_term_equal_to_a_trivially_empty_type(
-    state: &mut State,
-    term_id: ExpressionId,
-) -> bool {
-    let term_id = evaluate_well_typed_expression(state, term_id);
+fn is_term_equal_to_a_trivially_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
     if let Some(adt) = try_as_normal_form_adt_expression(state, term_id) {
         adt.variant_name_list_id.len == 0
     } else {
@@ -583,7 +580,7 @@ impl TaggedDynamicSubstitution {
 }
 
 pub(super) fn apply_substitutions_from_substitution_context<
-    E: Copy + Map<ExpressionId, Output = E>,
+    E: Copy + Map<NormalFormId, Output = E>,
 >(
     state: &mut State,
     expressions_to_substitute: E,
@@ -611,7 +608,7 @@ pub(super) fn apply_substitutions_from_substitution_context<
     }
 }
 
-fn apply_tagged_substitution<E: MapInPlace<ExpressionId, Output = E>>(
+fn apply_tagged_substitution<E: MapInPlace<NormalFormId, Output = E>>(
     state: &mut State,
     substitutions: &mut Vec<TaggedDynamicSubstitution>,
     expressions_to_substitute: &mut E,
@@ -664,13 +661,14 @@ fn apply_concrete_substitution<E>(
     concrete_sub: Substitution,
 ) -> WasSyntacticNoOp
 where
-    E: MapInPlace<ExpressionId, Output = E>,
+    E: MapInPlace<NormalFormId, Output = E>,
 {
     let mut was_no_op = WasSyntacticNoOp(true);
 
-    expressions_to_substitute.map_in_place(|mut id| {
-        was_no_op &= id.subst_in_place_and_get_status(concrete_sub, &mut state.without_context());
-        id
+    expressions_to_substitute.map_in_place(|id| {
+        let mut raw = id.raw();
+        was_no_op &= raw.subst_in_place_and_get_status(concrete_sub, &mut state.without_context());
+        evaluate_well_typed_expression(state, raw)
     });
 
     for remaining in substitutions.iter_mut() {
