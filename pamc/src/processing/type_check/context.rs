@@ -370,38 +370,3 @@ impl Context {
         }
     }
 }
-
-impl Context {
-    pub(super) fn push_top_n_down(
-        &mut self,
-        n: usize,
-        pivot: DbIndex,
-        state: &mut ContextlessState,
-    ) {
-        let distance = pivot.0 - n;
-        let pushees = self.local_type_stack.split_off(self.len() - n);
-        let liftees = self.local_type_stack.split_off(self.len() - distance);
-
-        let pushees = pushees
-            .into_iter()
-            .enumerate()
-            .map(|(entry_index, pushee)| {
-                let entry_dbi = DbIndex(n - entry_index - 1);
-                let relative_len = n - entry_dbi.0 - 1;
-                pushee.downshift_with_cutoff(distance, relative_len, state.registry)
-            })
-            .collect::<Vec<_>>();
-        let liftees = liftees
-            .into_iter()
-            .enumerate()
-            .map(|(entry_index, liftee)| {
-                let entry_dbi = DbIndex(n + distance - entry_index - 1);
-                let relative_pivot = DbIndex(pivot.0 - entry_dbi.0 - 1);
-                liftee.upshift_with_cutoff(n, relative_pivot.0, state.registry)
-            })
-            .collect::<Vec<_>>();
-
-        self.local_type_stack.extend(pushees);
-        self.local_type_stack.extend(liftees);
-    }
-}
