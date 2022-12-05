@@ -329,8 +329,6 @@ mod type_mismatch {
         );
     }
 
-    // TODO: Fix
-    #[ignore]
     #[test]
     fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
         let src = include_str!(
