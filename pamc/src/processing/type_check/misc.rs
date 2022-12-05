@@ -564,7 +564,9 @@ impl TaggedDynamicSubstitution {
     }
 }
 
-pub(super) fn apply_substitutions_from_substitution_context<E: Map<ExpressionId, Output = E>>(
+pub(super) fn apply_substitutions_from_substitution_context<
+    E: Copy + Map<ExpressionId, Output = E>,
+>(
     state: &mut State,
     expressions_to_substitute: E,
 ) -> Result<E, Exploded> {
@@ -582,21 +584,21 @@ pub(super) fn apply_substitutions_from_substitution_context<E: Map<ExpressionId,
             return Ok(expressions_to_substitute);
         };
         let tagged_sub = substitutions.remove(tagged_sub_index);
-        expressions_to_substitute = apply_tagged_substitution(
+        apply_tagged_substitution(
             state,
             &mut substitutions,
-            expressions_to_substitute,
+            &mut expressions_to_substitute,
             tagged_sub,
         )?;
     }
 }
 
-fn apply_tagged_substitution<E: Map<ExpressionId, Output = E>>(
+fn apply_tagged_substitution<E: MapInPlace<ExpressionId, Output = E>>(
     state: &mut State,
     substitutions: &mut Vec<TaggedDynamicSubstitution>,
-    mut expressions_to_substitute: E,
+    expressions_to_substitute: &mut E,
     tagged_sub: TaggedDynamicSubstitution,
-) -> Result<E, Exploded> {
+) -> Result<(), Exploded> {
     match expand_dynamic_substitution_shallow(state, tagged_sub.substitution) {
         DynamicSubstitutionExpansionResult::Exploded => Err(Exploded),
         DynamicSubstitutionExpansionResult::Replace(replacements) => {
@@ -606,17 +608,16 @@ fn apply_tagged_substitution<E: Map<ExpressionId, Output = E>>(
                     .into_iter()
                     .map(TaggedDynamicSubstitution::unapplied),
             );
-            Ok(expressions_to_substitute)
+            Ok(())
         }
         DynamicSubstitutionExpansionResult::ApplyConcrete(concrete_sub) => {
             loop {
-                let (was_no_op, new_expressions_to_substitute) = apply_concrete_substitution(
+                let was_no_op = apply_concrete_substitution(
                     state,
                     substitutions,
                     expressions_to_substitute,
                     concrete_sub,
                 );
-                expressions_to_substitute = new_expressions_to_substitute;
                 if was_no_op.0 {
                     break;
                 } else {
@@ -627,7 +628,7 @@ fn apply_tagged_substitution<E: Map<ExpressionId, Output = E>>(
                 substitution: tagged_sub.substitution,
                 applied: true,
             });
-            Ok(expressions_to_substitute)
+            Ok(())
         }
     }
 }
@@ -641,15 +642,15 @@ fn mark_all_as_unapplied(substitutions: &mut [TaggedDynamicSubstitution]) {
 fn apply_concrete_substitution<E>(
     state: &mut State,
     substitutions: &mut [TaggedDynamicSubstitution],
-    mut expressions_to_substitute: E,
+    expressions_to_substitute: &mut E,
     concrete_sub: Substitution,
-) -> (WasSyntacticNoOp, E)
+) -> WasSyntacticNoOp
 where
-    E: Map<ExpressionId, Output = E>,
+    E: MapInPlace<ExpressionId, Output = E>,
 {
     let mut was_no_op = WasSyntacticNoOp(true);
 
-    expressions_to_substitute = expressions_to_substitute.map(|mut id| {
+    expressions_to_substitute.map_in_place(|mut id| {
         was_no_op &= id.subst_in_place_and_get_status(concrete_sub, &mut state.without_context());
         id
     });
@@ -660,7 +661,7 @@ where
             .subst_in_place_and_get_status(concrete_sub, state);
     }
 
-    (was_no_op, expressions_to_substitute)
+    was_no_op
 }
 
 #[derive(Clone, Debug)]
@@ -1359,5 +1360,23 @@ where
             self.6.map(&mut f),
             self.7.map(&mut f),
         )
+    }
+}
+
+pub trait MapInPlace<I, O = I> {
+    type Output;
+
+    fn map_in_place(&mut self, f: impl FnMut(I) -> O) -> Self::Output;
+}
+
+impl<I, O, T> MapInPlace<I, O> for T
+where
+    T: Copy + Map<I, O, Output = T>,
+{
+    type Output = T::Output;
+
+    fn map_in_place(&mut self, f: impl FnMut(I) -> O) -> Self::Output {
+        *self = self.map(f);
+        *self
     }
 }
