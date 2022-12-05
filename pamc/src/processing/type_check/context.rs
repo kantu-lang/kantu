@@ -177,12 +177,14 @@ pub(super) fn untaint_err<In, Out, Err, F>(state: &mut State, input: In, f: F) -
 where
     F: FnOnce(&mut State, In) -> Result<Out, Tainted<Err>>,
 {
-    let original_len = state.context.len();
+    let original_context_len = state.context.len();
+    let original_scontext_len = state.substitution_context.len();
     let result = f(state, input);
     match result {
         Ok(ok) => Ok(ok),
         Err(err) => {
-            state.context.truncate(original_len);
+            state.context.truncate(original_context_len);
+            state.substitution_context.truncate(original_scontext_len);
             Err(err.0)
         }
     }
