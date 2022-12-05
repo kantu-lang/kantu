@@ -704,7 +704,7 @@ fn expand_dynamic_substitution_shallow(
         try_as_variant_expression(state, d.0.raw()),
         try_as_variant_expression(state, d.1.raw()),
     ) {
-        expand_dynamic_variant_substitution_shallow(state, left, right)
+        expand_dynamic_normal_form_variant_substitution_shallow(state, left, right)
     }
     // TODO: Add else-ifs to handle cases Fun, Forall, etc.
     else {
@@ -752,7 +752,7 @@ fn expand_dynamic_adt_substitution_shallow(
     DynamicSubstitutionExpansionResult::Replace(arg_substitutions)
 }
 
-fn expand_dynamic_variant_substitution_shallow(
+fn expand_dynamic_normal_form_variant_substitution_shallow(
     state: &mut State,
     left: (NodeId<Identifier>, PossibleArgListId),
     right: (NodeId<Identifier>, PossibleArgListId),
