@@ -4,7 +4,7 @@ use super::*;
 pub fn type_check_files(
     registry: &mut NodeRegistry,
     file_ids: &[FunRecursionValidated<NodeId<File>>],
-) -> Result<(), TypeCheckError> {
+) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
     let mut context = Context::with_builtins(registry);
     let mut substitution_context = SubstitutionContext::empty();
     let mut equality_checker = NodeEqualityChecker::new();
@@ -19,7 +19,7 @@ pub fn type_check_files(
     for &id in file_ids {
         type_check_file(&mut state, id.raw())?;
     }
-    Ok(())
+    Ok(warnings)
 }
 
 fn type_check_file(state: &mut State, file_id: NodeId<File>) -> Result<(), TypeCheckError> {
