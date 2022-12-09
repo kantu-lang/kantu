@@ -59,61 +59,53 @@ notation
 Some examples:
 
 ```pamlihu
-type False {}
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
 
 type Bool {
-    .true: Bool,
-    .false: Bool,
+    .True: Bool,
+    .False: Bool,
 }
+
+type False {}
 
 type Color {
-    .rgb(r: U8, g: U8, b: U8): Color,
-    .hsv (h: U8, s: U8, v: U8): Color,
-}
-
-type Vec2 {
-    .vec2(Nat, Nat) : Vec2,
-}
-
-type Quaternion {
-    .quaternion(one: Real, i: Real, j: Real, k: Real),
-}
-
-type Option(T: Type) {
-    .none(T: Type): Option(T),
-    .some(T: Type, v: T): Option(T),
+    .Rgb(r: U8, g: U8, b: U8): Color,
+    .Hsv (h: U8, s: U8, v: U8): Color,
 }
 
 type List(T: Type) {
-    .nil(T: Type): List(T),
-    .cons(T: Type, car: T, cdr: List(T)): List(T),
+    .Nil(T: Type): List(T),
+    .Cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
 type Equal(T: Type, x: T, y: T) {
-    .refl(T: Type, x: T): Equal(T, x, x),
+    .Refl(T: Type, x: T): Equal(T, x, x),
 }
 
 type Or(L: Type, R: Type) {
-    .inl(L: Type, R: Type, l: L): Or(L, R),
-    .inr(L: Type, R: Type, r: R): Or(L, R),
+    .Inl(L: Type, R: Type, l: L): Or(L, R),
+    .Inr(L: Type, R: Type, r: R): Or(L, R),
 }
 
-type False {}
-
-let In = fun In(T: Type, item: T, list: List(T)): Type => match list {
-    List.nil(_T) => False,
-    List.cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
+let In = fun In(T: Type, item: T, list: List(T)): Type {
+    match list {
+        List.Nil(_T) => False,
+        List.Cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
+    }
 };
 
 // Dependent types 🎉
 
 type LessThanOrEqualTo(L: Nat, R: Nat) {
-    .equal(n: Nat): LessThanOrEqualTo(n, n),
-    .step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.successor(b)),
+    .Equal(n: Nat): LessThanOrEqualTo(n, n),
+    .Step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.S(b)),
 }
 
 type ListOfEvenNats {
-    .list_of_even_nats(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) => Even(n)): ListOfEvenNats,
+    .C(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) { Even(n) }): ListOfEvenNats,
 }
 ```
 
@@ -133,78 +125,192 @@ In all likelihood, most users will not need to read the above article, because t
 Examples:
 
 ```pamlihu
-let q = Quaternion.quaternion(1, 1, 1, 1);
-let red = Color.rgb(r: 255, g: 0, b: 0);
-let three = Nat.successor(Nat.successor(Nat.successor(Nat.zero)));
+let q = Quaternion.C(1, 1, 1, 1);
+let red = Color.Rgb(255, 0, 0);
+let S: Nat.S;
+let _3 = S(S(S(Nat.O)));
 
-let add = fun add(a: Nat, b: Nat): Nat => match a {
-    .zero => b,
-    .successor a_pred => Nat.successor(add(a_pred, b)),
+let plus = fun plus_(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => b,
+        .S(a') => Nat.S(plus_(a', b)),
+    }
 };
-let mult = fun mult(a: Nat, b: Nat): Nat => match a {
-    .zero => Nat.zero,
-    .successor a_pred => add(b, mult(a_pred, b)),
+let mult = fun mult_(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => Nat.O,
+        .S(a') => plus(b, mult_(a', b)),
+    }
 };
-let fact = fun fact(n: Nat): Nat => match n {
-    .zero => Nat.successor(Nat.zero),
-    .successor n_pred => mult(n, fact(n_pred)),
-};
-
-let pred = fun pred(n: Nat): Nat => match n {
-    .zero => Nat.zero,
-    .successor n_pred => n_pred,
-};
-
-let subtract = fun subtract(min: Nat, sub: Nat): Nat => match sub {
-    .zero => min,
-    .successor sub_pred => pred(subtract(min, sub_pred)),
+let fact = fun fact_(-a: Nat): Nat {
+    match a {
+        .O => Nat.S(Nat.O),
+        .S(a') => mult(a, fact_(a')),
+    }
 };
 
-let s: Nat.successor;
-let four = s(s(s(s(Nat.zero))));
-let one = sub(min: four, sub: three);
+let pred = fun _(n: Nat): Nat {
+    match n {
+        .O => Nat.O,
+        .S(n') => n',
+    }
+};
+let subtract = fun substract_(min: Nat, -sub: Nat): Nat {
+    match sub {
+        .O => min,
+        .S(sub') => pred(subtract_(min, sub')),
+    }
+};
+
+let _4 = S(S(S(S(Nat.O))));
+let _1 = sub(_4, _3);
 ```
 
 ### Recursion Restrictions
 
 To prevent infinite recursion,
-Pamlihu forbidens mutual recursion.
-In other words, the only function a
-given function can recursively call is itself.
+Pamlihu enforces to two restrictions:
 
-For example:
+1. **No forward references except for recursive `fun` calls**
 
-**Forbidden:**
+   This implies that mutal recursion is forbidden. For example:
+
+   **Forbidden:**
+
+   ```pamlihu
+   let f = fun _(n: Nat): Nat {
+        match n {
+            .O => Nat.O,
+            // Forbidden because `g` is not yet defined
+            .S(n') => g(n'),
+        }
+   };
+
+   let g = fun _(n: Nat): Nat {
+        match n {
+            .O => Nat.O,
+            .S(n') => f(n'),
+        }
+   };
+   ```
+
+   However, recursive fun calls are permitted. For example:
+
+   **Allowed:**
+
+   ```pamlihu
+   let always_returns_zero = fun zero_(-n: Nat): Nat {
+        match n {
+            .O => Nat.O,
+            .S(n') => zero_(n'),
+        }
+   };
+   ```
+
+2. **Recursive functions must have exactly one explicitly decreasing parameter**
+
+   Every recursive function must have exactly one parameter annotated with `-` that
+   indicates that it is a _decreasing parameter_.
+   When you recursively call a function, you must pass in a _syntactic substructure_
+   of the decreasing parameter to the recursive call, in the same position.
+   A syntactic substructure to a value _n_ is any parameter that is either (1)
+   introduced (i.e., declared) by a `match n` expression, or (2) a syntactic substructure
+   of a parameter introduced by a `match n` expression.
+
+   For example, in
+
+   ```pamlihu
+   let foo = fun _(n: Nat, m: Nat) {
+       match n {
+           .O => Nat.O,
+           .S(n') =>
+               match n' {
+                   .O => Nat.O,
+                   .S(n'') => Nat.O,
+               }
+       }
+   }
+   ```
+
+   ...the syntactic substructures of `n` are `n'` and `n''`.
+   By rule (1), `n'` is a syntactic substructure of `n` because
+   it is defined by an arm (specically, the `.S(n')` arm) of the `match n` expression.
+   Similarly, `n''` is a syntactic substructure of `n'` because it is
+   defined by an arm of the `match n'` expression.
+   Since `n'` is a syntactic substructure of `n`, and `n''` is a syntactic substructure
+   of `n'`, by rule (2), we conclude that `n''` is a substructure of `n`.
+
+   An error will be emitted if you either
+
+   1. Pass a non syntactic substructure to a decreasing parameter.
+   2. Recursively call a function that does not have a decreasing parameter defined.
+
+   All this may seem intimidating to non-functional programmers when discussed in the
+   abstract, so here are some concrete examples:
+
+   **Permitted:**
+
+   ```pamlihu
+   let always_returns_zero = fun zero_(-n: Nat): Nat {
+        match n {
+            .O => Nat.O,
+            .S(n') => zero_(n'),
+        }
+   };
+   ```
+
+   **Forbidden:**
+
+   ```pamlihu
+   let infinite_recursion = fun f(-n: Nat): Nat {
+        // The compiler will not permit this because
+        // the first parameter of `f` is decreasing
+        // (because of the `-` in `-n: Nat`), but
+        // `n` is not a syntactic substructure of itself.
+        f(n)
+   };
+   ```
+
+   **Forbidden:**
+
+   ```pamlihu
+   let no_decreasing_param = fun f(n: Nat): Nat {
+        match n {
+            .O => Nat.O,
+            // Cannot recursively call `f` because
+            // it does not have a decreasing parameter
+            // defined (i.e., none of the parameters are
+            // marked with `-`).
+            .S(n') => f(n'),
+        }
+   };
+   ```
+
+## Comments
+
+Single line:
 
 ```pamlihu
-let f(n: Nat) = match n {
-    .zero => Nat.zero,
-    .successor n_pred => g(n_pred),
-};
-
-let g(n: Nat) = match n {
-    .zero => Nat.zero,
-    .successor n_pred => f(n_pred),
-};
+// This is a single line comment
+let foo = bar(
+    // Comments can pretty much go anywhere
+    baz,
+    quz,
+);
 ```
 
-This above example is forbidden because `f` and `g` mutually refer to
-each other.
-
-**Permitted:**
+Multiline:
 
 ```pamlihu
-let useless_function(n: Nat) = match n {
-    .zero => Nat.zero,
-    .successor n_pred => useless_function(n),
-};
+/* This is a
+multiline
+comment */
+
+let foo = fun bar(
+    n:
+    /* /* Nested comments */ are supported! */
+        Nat,
+): Nat { n };
 ```
 
-The above example is permitted, because the only function `f`
-recursively calls is `f` itself.
-
-2. For any recursive call, the arguments must be all identical, with the
-   following exceptions:
-
-   1. At least one argument must be a syntactic substructure of the value
-      the value that was passed in. TODO: Clarify this.
+##
