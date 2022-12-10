@@ -71,11 +71,6 @@ type Bool {
 
 type False {}
 
-type Color {
-    .Rgb(r: U8, g: U8, b: U8): Color,
-    .Hsv (h: U8, s: U8, v: U8): Color,
-}
-
 type List(T: Type) {
     .Nil(T: Type): List(T),
     .Cons(T: Type, car: T, cdr: List(T)): List(T),
@@ -113,12 +108,288 @@ Note that empty parameter lists are always omitted (so there is never `()`, outs
 
 ### Type Restrictions
 
-Types must be [strictly positive](https://cs.stackexchange.com/questions/55646/strict-positivity). TODO Give TLDR explanation.
+Type declarations must be [_strictly positive_](https://cs.stackexchange.com/questions/55646/strict-positivity).
+If you don't know what that means, don't worry--99% of types you
+write will probably satisfy this requirement.
+Odds are, the only time you will declare a type that violates
+the strict positivity requirement is if you deliberately try to.
 
-In all likelihood, most users will not need to read the above article, because they fall into one of two categories:
+However, if you're still curious about (and you don't already know) the
+definition of positivity, please read the article linked above.
 
-1. Those who are type theory enthusiasts, and already know what strict positivity is. Therefore, reading the attached article is not necessary.
-2. Those who come from more "mainstream" languages (e.g., Python, Java, JavaScript, TypeScript, Rust, C++, C, C#, Go, Ruby, Swift, etc.). These people will likely define types in a similar way to how they would in the other languages listed above. Those simple kinds of type definitions are almost always strictly positive. Therefore, reading the attached article is (probably) not necessary.
+#### Motivation of the strict positivity requirement
+
+Without the requirement, we could write "broken" types that
+allow us to prove false. For example:
+
+```pamlihu
+type False {}
+
+type Broken {
+    .B(f: forall(b: Broken) { False }): Broken,
+}
+
+let f = fun _(b: Broken): False {
+    match b {
+        .B(g) => g(b),
+    }
+};
+let broken = Broken.B(f);
+let false = f(broken);
+// We just proved False! 😨
+```
+
+To prevent these "broken" types, we require types to be
+strictly positive.
+For example, in the above example, the `Broken.B` type variant
+declaration would be rejected by the compiler, since `Broken`
+appears in a negative position (i.e., `b: Broken`).
+
+## `let` Aliases
+
+```pamlihu
+let N = Nat;
+let O = Nat.O;
+let S = Nat.S;
+let _3 = S(S(S(O)));
+```
+
+Note that `let` aliases can't be used in `.` expressions.
+For example, the following code will not compile:
+
+```pamlihu
+let N = Nat;
+// Error: Invalid Dot expression LHS
+let S = N.S;
+```
+
+## `match` Expressions
+
+The syntax is
+
+```pamlihu
+match matchee {
+    .Variant0(param0_0, param0_1, param0_2, /* ... */) => case0_output,
+    .Variant1(param1_0, param1_1, param1_2, /* ... */) => case1_output,
+    // ...
+}
+```
+
+Example:
+
+```pamlihu
+type Bool {
+    .False: Bool,
+    .True: Bool,
+}
+
+let false = match Bool.True {
+    .False => Bool.True,
+    .True => Bool.False,
+};
+```
+
+Wildcards are not supported. Impossible cases must have the `impossible` keyword
+written in place of the output.
+For example:
+
+```pamlihu
+type TypeEq(A: Type, B: Type) {
+    .Refl(C: Type): TypeEq,
+}
+
+type UnitX {
+    .C: UnitX,
+}
+
+type UnitY {
+    .C: UnitY,
+}
+
+type False {}
+
+let f = fun _(H: TypeEq(UnitX, UnitY)): False {
+    match H {
+        .Refl(_) =>
+        // This case is impossible, so rather than
+        // write an output expression, we must write
+        // `impossible`.
+            impossible,
+    }
+};
+```
+
+## Functions
+
+The syntax for a function expression is
+
+```pamlihu
+fun name(arg0: Type0, arg1: Type1, /* ... */): ReturnType {
+    return_value
+}
+```
+
+`fun`s must have at least one parameter.
+
+Example:
+
+```pamlihu
+type Bool {
+    .False: Bool,
+    .True: Bool,
+}
+
+let not = fun not(b: Bool): Bool {
+    match b {
+        .False => Bool.True,
+        .True => Bool.False,
+    }
+};
+// We can now call the Function through the
+// `let` binding. For example:
+let true = not(Bool.False);
+```
+
+You can make functions anonymous by writing `_`
+instead of a name.
+
+```pamlihu
+let not = fun _(b: Bool): Bool {
+    match b {
+        .False => Bool.True,
+        .True => Bool.False,
+    }
+};
+// We can still call the Function through the
+// `let` binding--the function's name (or lack thereof)
+// has no influence on the name of the binding.
+let true = not(Bool.False);
+```
+
+It is strongly encouraged to make non-recursive functions anonymous
+if you're assigning them to a `let` alias or passing them as a labeled argument
+to a function call, since the other name (i.e., `let` binding or argument label, respectively)
+should already provide sufficient documentation for readers of the code, and an extra
+name in the `fun` expression just becomes clutter.
+
+The main purpose of allowing `fun` expressions to be named is to allow recursion.
+
+TODO: Recursion section
+
+## `forall` Expressions
+
+Q: How do we express the type of a function?
+
+A: We use `forall` expressions.
+
+The syntax is
+
+```pamlihu
+forall (param0: Type0, param1: Type1, param2: Type2, /* ... */) { ReturnType }
+```
+
+Example:
+
+```pamlihu
+type Option(T: Type) {
+    .None(T: Type): Option(T),
+    .Some(T: Type, t: T): Option(T),
+}
+
+let map = fun _(T: Type, U: Type, o: Option(T), f: forall(t: T) { U }): Option(U) {
+    match o {
+        .None(_) => Option.None(U),
+        .Some(_, t) => Option.Some(f(t)),
+    }
+};
+```
+
+`forall`s must have at least one parameter.
+
+## Calling functions
+
+Syntax:
+
+```pamlihu
+callee(arg0, arg1, arg2, /* ... */)
+```
+
+Alternatively, if the function has labeled parameters:
+
+```pamlihu
+callee(label0: arg0, label1: arg1, label2: arg2, /* ... */)
+```
+
+You can call type constructors, type variant constructors, and `fun`s. Example:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type Option(T: Type) {
+    .None(T: Type): Option(T),
+    .Some(T: Type, t: T): Option(T),
+}
+
+// Calling type constructor `Option` with arguments `(Nat)`:
+let OptNat = Option(Nat);
+
+// Calling type variant constructor `Nat.S` with arguments `(Nat.O)`:
+let _1 = Nat.S(Nat.O);
+
+let _2 = Nat.S(Nat.S(Nat.O));
+
+/// Calling the `plus` function with arguments `(_1, _2)`:
+let _3 = fun plus(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => b,
+        .S(a') => Nat.S(plus(a', b)),
+    }
+}(_1, _2);
+
+let labeled_call_example = fun plus(~-a: Nat, bar~b: Nat): Nat {
+    match a {
+        .O => b,
+        .S(a') => Nat.S(plus(a', b)),
+    }
+}(a: _1, bar: _2);
+```
+
+## `check` Expressions
+
+`check` expressions are used to ask the compiler to check
+certain equalities at compile time. They have zero runtime impact.
+
+Syntax:
+
+```pamlihu
+check
+    // Type assertions:
+    expr0: Type0,
+    expr1: Type1,
+    /* ... */,
+    // Normal form assertions:
+    expr'0 = expr''0,
+    expr'1 = expr''1,
+    /* ... */
+{
+    output_expression
+}
+```
+
+As you can see, you can pass in zero or more _type assertions_ and zero or more
+_normal form assertions_.
+There must be at least one total assertions (i.e., `check { output_expression }` is illegal).
+
+Semantically, a `check` expression immediately evaluates to its output (which is
+why they have no runtime impact).
+
+However, what is useful is that the compiler will produce warnings if any of the
+assertions are incorrect.
+Furthermore, a good compiler will generate corrections for the incorrect types/values.
+This way, we can use `check` expressions to debug confusing type errors.
 
 ## Value definitions
 
