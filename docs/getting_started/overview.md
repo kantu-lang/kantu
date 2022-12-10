@@ -11,7 +11,7 @@ Identifier names can contain the following characters:
 
 ...with the exception of:
 
-- The characters `;:,.@=-?()[]{}<>` cannot appear anywhere.
+- The characters `;:,.@=-?~()[]{}<>` cannot appear anywhere.
 - The characters `0123456789` cannot appear as the first character, but may appear everywhere else.
 - White space cannot appear anywhere.
 
@@ -19,31 +19,30 @@ Additionally, the following strings are reserved words, and cannot be used as id
 
 ```
 _ (the underscore)
-∀ (Unicode universal quantifier symbol)
-∃ (Unicode existential quantifier symbol)
 
 type
+let
 Type
 Type0
 Type1
 Type2
 Type3
-let
 fun
 match
 forall
-exists
 check
 goal
+impossible
 
 struct
 var
 trait
 
 pub
+prot
 priv
 mod
-package
+pack
 use
 namespace
 
@@ -52,9 +51,13 @@ unsafe
 async
 
 notation
+exists
+
+∀ (Unicode universal quantifier symbol)
+∃ (Unicode existential quantifier symbol)
 ```
 
-## Type Definitions
+## Type definitions
 
 Some examples:
 
@@ -106,7 +109,7 @@ type ListOfEvenNats {
 
 Note that empty parameter lists are always omitted (so there is never `()`, outside of invocations).
 
-### Type Restrictions
+### Type definition restrictions
 
 Type declarations must be [_strictly positive_](https://cs.stackexchange.com/questions/55646/strict-positivity).
 If you don't know what that means, don't worry--99% of types you
@@ -145,7 +148,7 @@ For example, in the above example, the `Broken.B` type variant
 declaration would be rejected by the compiler, since `Broken`
 appears in a negative position (i.e., `b: Broken`).
 
-## `let` Aliases
+## `let` aliases
 
 ```pamlihu
 let N = Nat;
@@ -163,7 +166,7 @@ let N = Nat;
 let S = N.S;
 ```
 
-## `match` Expressions
+## `match` expressions
 
 The syntax is
 
@@ -219,7 +222,7 @@ let f = fun _(H: TypeEq(UnitX, UnitY)): False {
 };
 ```
 
-## Functions
+## `fun` expressions (functions)
 
 The syntax for a function expression is
 
@@ -266,15 +269,208 @@ let not = fun _(b: Bool): Bool {
 let true = not(Bool.False);
 ```
 
-It is strongly encouraged to make non-recursive functions anonymous
-if you're assigning them to a `let` alias or passing them as a labeled argument
-to a function call, since the other name (i.e., `let` binding or argument label, respectively)
-should already provide sufficient documentation for readers of the code, and an extra
-name in the `fun` expression just becomes clutter.
-
+It is strongly encouraged to make non-recursive functions anonymous.
 The main purpose of allowing `fun` expressions to be named is to allow recursion.
 
-TODO: Recursion section
+### Recursive functions
+
+Recursive functions must have a name (i.e., they cannot be anonymous), so
+that they may be recursively called within their body.
+
+Additionally, to prevent infinite recursion, they must also have a _decreasing parameter_.
+
+A decreasing parameter is a parameter whose value must "decrease" with each recursive call.
+
+The decreasing parameter must have a `-` before its name.
+However, the `-` is **not** included as part of its name.
+
+For example:
+
+```pamlihu
+let esoteric_identity_implementation = fun f(-n: Nat): Nat {
+    match n {
+        .O => Nat.O,
+        .S(n') => Nat.S(f(n')),
+    }
+};
+```
+
+#### A more formal definition of "decreasing"
+
+When you recursively call a function, you must pass in a _syntactic substructure_
+of the decreasing parameter to the recursive call, in the same position.
+A syntactic substructure to a value _n_ is any parameter that is either (1)
+introduced (i.e., declared) by a `match n` expression, or (2) a syntactic substructure
+of a parameter introduced by a `match n` expression.
+
+For example, in
+
+```pamlihu
+let foo = fun _(n: Nat, m: Nat) {
+    match n {
+        .O => Nat.O,
+        .S(n') =>
+            match n' {
+                .O => Nat.O,
+                .S(n'') => Nat.O,
+            }
+    }
+}
+```
+
+...the syntactic substructures of `n` are `n'` and `n''`.
+By rule (1), `n'` is a syntactic substructure of `n` because
+it is defined by an arm (specically, the `.S(n')` arm) of the `match n` expression.
+Similarly, `n''` is a syntactic substructure of `n'` because it is
+defined by an arm of the `match n'` expression.
+Since `n'` is a syntactic substructure of `n`, and `n''` is a syntactic substructure
+of `n'`, by rule (2), we conclude that `n''` is a substructure of `n`.
+
+An error will be emitted if you either
+
+1. Pass a non syntactic substructure to a decreasing parameter.
+2. Recursively call a function that does not have a decreasing parameter defined.
+
+All this may seem intimidating to non-functional programmers when discussed in the
+abstract, so here are some concrete examples:
+
+**Permitted:**
+
+```pamlihu
+let always_returns_zero = fun zero_(-n: Nat): Nat {
+    match n {
+        .O => Nat.O,
+        .S(n') => zero_(n'),
+    }
+};
+```
+
+**Forbidden:**
+
+```pamlihu
+let infinite_recursion = fun f(-n: Nat): Nat {
+    // The compiler will not permit this because
+    // the first parameter of `f` is decreasing
+    // (because of the `-` in `-n: Nat`), but
+    // `n` is not a syntactic substructure of itself.
+    f(n)
+};
+```
+
+**Forbidden:**
+
+```pamlihu
+let no_decreasing_param = fun f(n: Nat): Nat {
+    match n {
+        .O => Nat.O,
+        // Cannot recursively call `f` because
+        // it does not have a decreasing parameter
+        // defined (i.e., none of the parameters are
+        // marked with `-`).
+        .S(n') => f(n'),
+    }
+};
+```
+
+### Labeled parameters
+
+You can also choose to make a function's parameters _labeled_.
+Syntax:
+
+```pamlihu
+fun name(label0~param0: Type0, label1~param1: Type1, /* ... */): ReturnType {
+    return_value
+}
+```
+
+Example:
+
+```pamlihu
+let total_fruit = fun _(apples~a: Nat, bananas~ban: Nat, cherries~cher): Nat {
+    plus(plus(a, ban), cher)
+};
+let x = total_fruit(apples: Nat.O, bananas: Nat.S(Nat.O), cherries: Nat.O);
+```
+
+If a label is the same as the parameter name, you can omit the label. For example,
+
+```pamlihu
+fun _(apples~apples: Nat): Nat {
+    apples
+}
+```
+
+and
+
+```pamlihu
+fun _(~apples: Nat): Nat {
+    apples
+}
+```
+
+are semantically the same.
+
+A function must either have all unlabeled parameters or all labeled parameters--a mix is not allowed.
+A function with unlabeled parameters is called an _unlabeled function_.
+A function with labeled parameters is called a _labeled function_.
+
+Call arguments should be labeled if and only if the function's parameters are labeled.
+Both labeling arguments to an unlabeled function
+or not labeling arguments to a labeled function is an error.
+
+If you call a labeled function with the correct labels but in the wrong order, a warning will be
+emitted, but it will not be an error.
+
+#### Order of `~` and `-`
+
+Rule: The `-` _always_ directly precedes the parameter name.
+
+Quiz: Which two out of the following (i.e., A, B, C, D) are correct?
+
+```pamlihu
+let A = fun f(x~-x: Nat): Nat { x };
+let B = fun f(~-x: Nat): Nat { x };
+let C = fun f(-x~x: Nat): Nat { x };
+let D = fun f(-~x: Nat): Nat { x };
+```
+
+Answer: A and B.
+
+#### Are `fun` parameters the only parameters that can be labeled?
+
+A: No. `forall`, type constructor, and type variant constructor parameters
+can all be labeled.
+
+#### Labels are a part of the type!
+
+Example:
+
+```pamlihu
+let f = fun _(~a: Nat): Nat { a }
+let F = forall(~a: Nat) { Nat };
+let expect_F = fun _(_: F): Unit { Unit.C };
+
+// Okay: Labels of `f` match the labels of the required type (`F`).
+let okay = expect_F(f);
+
+let f' = fun _(a~b: Nat): Nat { b };
+// Okay: Even though the parameter name is different (i.e., `f'`'s is `b` but `F`'s is `a`),
+// the label still matches (both are `a`).
+let also_okay = expect_F(f');
+
+let unlabeled = fun _(a: Nat): Nat { a };
+// Error: `expect_F` expects a labeled function,
+// but `unlabeled` is an unlabled function
+let wrong = expect_F(unlabeled);
+
+let different_label = fun _(~b: Nat): Nat { b };
+// Error: `expect_F` expects a function
+// whose first parameter has a label `a`,
+// but `different_label` is a function whose
+// first parameter has a label `b`.
+let also_wrong = expect_F(different_label);
+
+```
 
 ## `forall` Expressions
 
@@ -391,172 +587,6 @@ assertions are incorrect.
 Furthermore, a good compiler will generate corrections for the incorrect types/values.
 This way, we can use `check` expressions to debug confusing type errors.
 
-## Value definitions
-
-Examples:
-
-```pamlihu
-let q = Quaternion.C(1, 1, 1, 1);
-let red = Color.Rgb(255, 0, 0);
-let S: Nat.S;
-let _3 = S(S(S(Nat.O)));
-
-let plus = fun plus_(-a: Nat, b: Nat): Nat {
-    match a {
-        .O => b,
-        .S(a') => Nat.S(plus_(a', b)),
-    }
-};
-let mult = fun mult_(-a: Nat, b: Nat): Nat {
-    match a {
-        .O => Nat.O,
-        .S(a') => plus(b, mult_(a', b)),
-    }
-};
-let fact = fun fact_(-a: Nat): Nat {
-    match a {
-        .O => Nat.S(Nat.O),
-        .S(a') => mult(a, fact_(a')),
-    }
-};
-
-let pred = fun _(n: Nat): Nat {
-    match n {
-        .O => Nat.O,
-        .S(n') => n',
-    }
-};
-let subtract = fun substract_(min: Nat, -sub: Nat): Nat {
-    match sub {
-        .O => min,
-        .S(sub') => pred(subtract_(min, sub')),
-    }
-};
-
-let _4 = S(S(S(S(Nat.O))));
-let _1 = sub(_4, _3);
-```
-
-### Recursion Restrictions
-
-To prevent infinite recursion,
-Pamlihu enforces to two restrictions:
-
-1. **No forward references except for recursive `fun` calls**
-
-   This implies that mutal recursion is forbidden. For example:
-
-   **Forbidden:**
-
-   ```pamlihu
-   let f = fun _(n: Nat): Nat {
-        match n {
-            .O => Nat.O,
-            // Forbidden because `g` is not yet defined
-            .S(n') => g(n'),
-        }
-   };
-
-   let g = fun _(n: Nat): Nat {
-        match n {
-            .O => Nat.O,
-            .S(n') => f(n'),
-        }
-   };
-   ```
-
-   However, recursive fun calls are permitted. For example:
-
-   **Allowed:**
-
-   ```pamlihu
-   let always_returns_zero = fun zero_(-n: Nat): Nat {
-        match n {
-            .O => Nat.O,
-            .S(n') => zero_(n'),
-        }
-   };
-   ```
-
-2. **Recursive functions must have exactly one explicitly decreasing parameter**
-
-   Every recursive function must have exactly one parameter annotated with `-` that
-   indicates that it is a _decreasing parameter_.
-   When you recursively call a function, you must pass in a _syntactic substructure_
-   of the decreasing parameter to the recursive call, in the same position.
-   A syntactic substructure to a value _n_ is any parameter that is either (1)
-   introduced (i.e., declared) by a `match n` expression, or (2) a syntactic substructure
-   of a parameter introduced by a `match n` expression.
-
-   For example, in
-
-   ```pamlihu
-   let foo = fun _(n: Nat, m: Nat) {
-       match n {
-           .O => Nat.O,
-           .S(n') =>
-               match n' {
-                   .O => Nat.O,
-                   .S(n'') => Nat.O,
-               }
-       }
-   }
-   ```
-
-   ...the syntactic substructures of `n` are `n'` and `n''`.
-   By rule (1), `n'` is a syntactic substructure of `n` because
-   it is defined by an arm (specically, the `.S(n')` arm) of the `match n` expression.
-   Similarly, `n''` is a syntactic substructure of `n'` because it is
-   defined by an arm of the `match n'` expression.
-   Since `n'` is a syntactic substructure of `n`, and `n''` is a syntactic substructure
-   of `n'`, by rule (2), we conclude that `n''` is a substructure of `n`.
-
-   An error will be emitted if you either
-
-   1. Pass a non syntactic substructure to a decreasing parameter.
-   2. Recursively call a function that does not have a decreasing parameter defined.
-
-   All this may seem intimidating to non-functional programmers when discussed in the
-   abstract, so here are some concrete examples:
-
-   **Permitted:**
-
-   ```pamlihu
-   let always_returns_zero = fun zero_(-n: Nat): Nat {
-        match n {
-            .O => Nat.O,
-            .S(n') => zero_(n'),
-        }
-   };
-   ```
-
-   **Forbidden:**
-
-   ```pamlihu
-   let infinite_recursion = fun f(-n: Nat): Nat {
-        // The compiler will not permit this because
-        // the first parameter of `f` is decreasing
-        // (because of the `-` in `-n: Nat`), but
-        // `n` is not a syntactic substructure of itself.
-        f(n)
-   };
-   ```
-
-   **Forbidden:**
-
-   ```pamlihu
-   let no_decreasing_param = fun f(n: Nat): Nat {
-        match n {
-            .O => Nat.O,
-            // Cannot recursively call `f` because
-            // it does not have a decreasing parameter
-            // defined (i.e., none of the parameters are
-            // marked with `-`).
-            .S(n') => f(n'),
-        }
-   };
-   ```
-
 ## Comments
 
 Single line:
@@ -583,5 +613,3 @@ let foo = fun bar(
         Nat,
 ): Nat { n };
 ```
-
-##
