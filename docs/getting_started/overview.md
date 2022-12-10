@@ -57,9 +57,43 @@ exists
 ∃ (Unicode existential quantifier symbol)
 ```
 
-## Type definitions
+## `type` statements
 
-Some examples:
+Use the `type` keyword to declare types. Syntax:
+
+```pamlihu
+type TypeName(
+    TypeParam0: TypeParamType0,
+    TypeParam1: TypeParamType1,
+    // ...
+) {
+    .Variant0(
+        VariantParam0: VariantParamType0,
+        VariantParam1: VariantParamType1,
+        // ...
+    ): TypeName(
+        Variant0Output_TypeArg0,
+        Variant0Output_TypeArg1,
+        Variant0Output_TypeArg2,
+        // ...
+    ),
+
+    .Variant1(
+        VariantParam0: VariantParamType0,
+        VariantParam1: VariantParamType1,
+        // ...
+    ): TypeName(
+        Variant1Output_TypeArg0,
+        Variant1Output_TypeArg1,
+        Variant1Output_TypeArg2,
+        // ...
+    ),
+
+    // ...
+}
+```
+
+Examples:
 
 ```pamlihu
 type Nat {
@@ -72,6 +106,11 @@ type Bool {
     .False: Bool,
 }
 
+type Rgb {
+    // Use `~` to create labeled parameters (more on this later):
+    .C(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
+}
+
 type False {}
 
 type List(T: Type) {
@@ -79,6 +118,7 @@ type List(T: Type) {
     .Cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
+// Dependent types are supported 🎉
 type Equal(T: Type, x: T, y: T) {
     .Refl(T: Type, x: T): Equal(T, x, x),
 }
@@ -94,8 +134,6 @@ let In = fun In(T: Type, item: T, list: List(T)): Type {
         List.Cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
     }
 };
-
-// Dependent types 🎉
 
 type LessThanOrEqualTo(L: Nat, R: Nat) {
     .Equal(n: Nat): LessThanOrEqualTo(n, n),
@@ -148,7 +186,7 @@ For example, in the above example, the `Broken.B` type variant
 declaration would be rejected by the compiler, since `Broken`
 appears in a negative position (i.e., `b: Broken`).
 
-## `let` aliases
+## `let` statements
 
 ```pamlihu
 let N = Nat;
@@ -441,7 +479,7 @@ Answer: A and B.
 A: No. `forall`, type constructor, and type variant constructor parameters
 can all be labeled.
 
-#### Labels are a part of the type!
+#### Labels _and_ order are a part of the type!
 
 Example:
 
@@ -471,6 +509,32 @@ let different_label = fun _(~b: Nat): Nat { b };
 let also_wrong = expect_F(different_label);
 
 ```
+
+If a function _f_ has the same labels as a forall _F_, but
+the labels are in a different order, _f_ will **not** be considered
+a member of type _F_.
+
+Example:
+
+```pamlihu
+let f = fun _(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah): Unit { Unit.C };
+let F = forall(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah) { Unit };
+let expect_F = fun _(_: F): Unit { Unit.C };
+
+// Okay: Both labels and order match.
+let okay = expect_F(f);
+
+let f' = fun(Texas~T: Type, Utah~U: Type, texas~t: T, utah~u: U): Unit { Unit.C };
+// Okay: The parameter names are different, but once again,
+// both the labels and order match.
+let also_okay = expect_F(f);
+
+let wrong_order = fun _(~Texas: Type, ~texas: Texas, ~Utah: Type, ~utah: Utah): Unit { Unit.C };
+// Error: The labels are in the wrong order.
+let wrong = expect_F(wrong_order);
+```
+
+In short, the labels _and_ the order must be the same.
 
 ## `forall` Expressions
 
