@@ -20,11 +20,17 @@ pub enum ParseError {
     UnexpectedEndOfInput,
 }
 
-pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseError> {
-    let first_token = if let Some(t) = tokens.iter().find(is_not_whitespace_or_comment_ref) {
-        t.clone()
-    } else {
-        return Ok(File {
+pub trait Parse: Sized {
+    fn from_empty_str(file_id: FileId) -> Result<Self, ParseError>;
+
+    fn initial_stack(file_id: FileId, first_token: Token) -> Vec<UnfinishedStackItem>;
+
+    fn finish(file_id: FileId, item: UnfinishedStackItem) -> Result<Self, ParseError>;
+}
+
+impl Parse for File {
+    fn from_empty_str(file_id: FileId) -> Result<Self, ParseError> {
+        Ok(File {
             span: TextSpan {
                 file_id,
                 start: 0,
@@ -32,23 +38,18 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
             },
             id: file_id,
             items: vec![],
-        });
-    };
-    let mut stack: Vec<UnfinishedStackItem> =
+        })
+    }
+
+    fn initial_stack(_: FileId, first_token: Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::File(Box::new(UnfinishedFile {
             first_token,
             items: vec![],
-        }))];
-
-    for token in tokens.into_iter().filter(is_not_whitespace_or_comment) {
-        handle_token(token, &mut stack, file_id)?;
+        }))]
     }
 
-    if stack.len() != 1 {
-        Err(ParseError::UnexpectedEndOfInput)
-    } else {
-        let top_unfinished = stack.pop().unwrap();
-        match top_unfinished {
+    fn finish(file_id: FileId, item: UnfinishedStackItem) -> Result<Self, ParseError> {
+        match item {
             UnfinishedStackItem::File(file) => Ok(File {
                 span: TextSpan {
                     file_id,
@@ -60,6 +61,30 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
             }),
             _ => panic!("The top item on the stack is not a file. This indicates a serious logic error with the parser.")
         }
+    }
+}
+
+pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseError> {
+    parse(tokens, file_id)
+}
+
+pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseError> {
+    let first_token = if let Some(t) = tokens.iter().find(is_not_whitespace_or_comment_ref) {
+        t.clone()
+    } else {
+        return T::from_empty_str(file_id);
+    };
+    let mut stack: Vec<UnfinishedStackItem> = T::initial_stack(file_id, first_token);
+
+    for token in tokens.into_iter().filter(is_not_whitespace_or_comment) {
+        handle_token(token, &mut stack, file_id)?;
+    }
+
+    if stack.len() != 1 {
+        Err(ParseError::UnexpectedEndOfInput)
+    } else {
+        let top_unfinished = stack.pop().unwrap();
+        T::finish(file_id, top_unfinished)
     }
 }
 
