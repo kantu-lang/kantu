@@ -30,12 +30,38 @@ impl Parse for File {
                 span: TextSpan {
                     file_id,
                     start: file.items[0].span().start,
-                    end: file.items.last().expect("File should have at least one item.").span().end,
+                    end: file
+                        .items
+                        .last()
+                        .expect("File should have at least one item.")
+                        .span()
+                        .end,
                 },
                 id: file_id,
                 items: file.items,
             }),
-            _ => panic!("The top item on the stack is not a file. This indicates a serious logic error with the parser.")
+            _ => Err(ParseError::UnexpectedEndOfInput),
+        }
+    }
+}
+
+impl Parse for Expression {
+    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
+        Err(ParseError::UnexpectedEndOfInput)
+    }
+
+    fn initial_stack(_: FileId, _: Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::UnfinishedDelimitedExpression(
+            UnfinishedDelimitedExpression::Empty,
+        )]
+    }
+
+    fn finish(_: FileId, item: UnfinishedStackItem) -> Result<Self, ParseError> {
+        match item {
+            UnfinishedStackItem::UnfinishedDelimitedExpression(
+                UnfinishedDelimitedExpression::WaitingForEndDelimiter(_first_token, expression),
+            ) => Ok(expression),
+            _ => Err(ParseError::UnexpectedEndOfInput),
         }
     }
 }
