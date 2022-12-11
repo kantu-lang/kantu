@@ -1,2 +1,2 @@
-mod should_fail;
-mod should_succeed;
+mod integration;
+mod unit;

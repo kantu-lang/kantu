@@ -14,18 +14,18 @@ fn expect_underscore_parse_error(src: &str) {
 
 #[test]
 fn type_() {
-    let src = include_str!("../../sample_code/should_fail/parse/illegal_underscore/type.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/illegal_underscore/type.ph");
     expect_underscore_parse_error(src);
 }
 
 #[test]
 fn variant() {
-    let src = include_str!("../../sample_code/should_fail/parse/illegal_underscore/variant.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/illegal_underscore/variant.ph");
     expect_underscore_parse_error(src);
 }
 
 #[test]
 fn let_() {
-    let src = include_str!("../../sample_code/should_fail/parse/illegal_underscore/let.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/illegal_underscore/let.ph");
     expect_underscore_parse_error(src);
 }

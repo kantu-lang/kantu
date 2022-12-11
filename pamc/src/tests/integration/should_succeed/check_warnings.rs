@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn check() {
-    let src = include_str!("../sample_code/should_succeed/check.ph");
+    let src = include_str!("../../sample_code/should_succeed/check.ph");
     expect_success_with_one_or_more_warnings(src);
 }
 

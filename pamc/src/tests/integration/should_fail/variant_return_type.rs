@@ -23,7 +23,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
 
 #[test]
 fn param() {
-    let src = include_str!("../sample_code/should_fail/variant_return_type/param.ph");
+    let src = include_str!("../../sample_code/should_fail/variant_return_type/param.ph");
     expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
         ExpressionRef::Name(name) => {
             assert_eq!(
@@ -39,7 +39,8 @@ fn param() {
 
 #[test]
 fn complex_expression() {
-    let src = include_str!("../sample_code/should_fail/variant_return_type/complex_expression.ph");
+    let src =
+        include_str!("../../sample_code/should_fail/variant_return_type/complex_expression.ph");
     expect_type_arg_extraction_error(src, |return_type, _registry| {
         assert!(
             matches!(return_type, ExpressionRef::Match(_)),
@@ -52,7 +53,7 @@ fn complex_expression() {
 #[test]
 fn foreign_nullary_type() {
     let src =
-        include_str!("../sample_code/should_fail/variant_return_type/foreign_nullary_type.ph");
+        include_str!("../../sample_code/should_fail/variant_return_type/foreign_nullary_type.ph");
     expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
         ExpressionRef::Name(name) => {
             assert_eq!(
@@ -68,8 +69,9 @@ fn foreign_nullary_type() {
 
 #[test]
 fn foreign_non_nullary_type() {
-    let src =
-        include_str!("../sample_code/should_fail/variant_return_type/foreign_non_nullary_type.ph");
+    let src = include_str!(
+        "../../sample_code/should_fail/variant_return_type/foreign_non_nullary_type.ph"
+    );
     expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
         ExpressionRef::Call(call) => {
             let arg_ids = registry.expression_list(call.arg_list_id);

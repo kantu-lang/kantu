@@ -49,39 +49,42 @@ mod illegal_type {
     #[test]
     fn forall_output() {
         let src =
-            include_str!("../sample_code/should_fail/type_check/illegal_type/forall_output.ph");
+            include_str!("../../sample_code/should_fail/type_check/illegal_type/forall_output.ph");
         expect_illegal_type_error(src, "U.U");
     }
 
     #[test]
     fn forall_param() {
         let src =
-            include_str!("../sample_code/should_fail/type_check/illegal_type/forall_param.ph");
+            include_str!("../../sample_code/should_fail/type_check/illegal_type/forall_param.ph");
         expect_illegal_type_error(src, "U.U");
     }
 
     #[test]
     fn fun_param() {
-        let src = include_str!("../sample_code/should_fail/type_check/illegal_type/fun_param.ph");
+        let src =
+            include_str!("../../sample_code/should_fail/type_check/illegal_type/fun_param.ph");
         expect_illegal_type_error(src, "U.U");
     }
 
     #[test]
     fn fun_return() {
-        let src = include_str!("../sample_code/should_fail/type_check/illegal_type/fun_return.ph");
+        let src =
+            include_str!("../../sample_code/should_fail/type_check/illegal_type/fun_return.ph");
         expect_illegal_type_error(src, "U.U");
     }
 
     #[test]
     fn type_param() {
-        let src = include_str!("../sample_code/should_fail/type_check/illegal_type/type_param.ph");
+        let src =
+            include_str!("../../sample_code/should_fail/type_check/illegal_type/type_param.ph");
         expect_illegal_type_error(src, "U.U");
     }
 
     #[test]
     fn variant_param() {
         let src =
-            include_str!("../sample_code/should_fail/type_check/illegal_type/variant_param.ph");
+            include_str!("../../sample_code/should_fail/type_check/illegal_type/variant_param.ph");
         expect_illegal_type_error(src, "U.U");
     }
 }
@@ -109,14 +112,14 @@ mod illegal_callee {
 
     #[test]
     fn forall() {
-        let src = include_str!("../sample_code/should_fail/type_check/illegal_callee/forall.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/illegal_callee/forall.ph");
         expect_illegal_callee_error(src, "forall(T: Type) { Type }");
     }
 
     #[test]
     fn non_nullary_adt_instance() {
         let src = include_str!(
-            "../sample_code/should_fail/type_check/illegal_callee/non_nullary_adt_instance.ph"
+            "../../sample_code/should_fail/type_check/illegal_callee/non_nullary_adt_instance.ph"
         );
         expect_illegal_callee_error(src, "Bar.B(U.U,)");
     }
@@ -124,7 +127,7 @@ mod illegal_callee {
     #[test]
     fn nullary_adt_instance() {
         let src = include_str!(
-            "../sample_code/should_fail/type_check/illegal_callee/nullary_adt_instance.ph"
+            "../../sample_code/should_fail/type_check/illegal_callee/nullary_adt_instance.ph"
         );
         expect_illegal_callee_error(src, "U.U");
     }
@@ -132,13 +135,13 @@ mod illegal_callee {
     #[test]
     fn nullary_type() {
         let src =
-            include_str!("../sample_code/should_fail/type_check/illegal_callee/nullary_type.ph");
+            include_str!("../../sample_code/should_fail/type_check/illegal_callee/nullary_type.ph");
         expect_illegal_callee_error(src, "U");
     }
 
     #[test]
     fn type0() {
-        let src = include_str!("../sample_code/should_fail/type_check/illegal_callee/type0.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/illegal_callee/type0.ph");
         expect_illegal_callee_error(src, "Type");
     }
 }
@@ -175,22 +178,24 @@ mod wrong_number_of_arguments {
 
     #[test]
     fn forall() {
-        let src =
-            include_str!("../sample_code/should_fail/type_check/wrong_number_of_arguments/fun.ph");
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/wrong_number_of_arguments/fun.ph"
+        );
         expect_wrong_number_of_arguments_error(src, "bar_(U.U, U.U,)", 1);
     }
 
     #[test]
     fn type_() {
-        let src =
-            include_str!("../sample_code/should_fail/type_check/wrong_number_of_arguments/type.ph");
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/wrong_number_of_arguments/type.ph"
+        );
         expect_wrong_number_of_arguments_error(src, "V(U.U, U.U,)", 1);
     }
 
     #[test]
     fn variant() {
         let src = include_str!(
-            "../sample_code/should_fail/type_check/wrong_number_of_arguments/variant.ph"
+            "../../sample_code/should_fail/type_check/wrong_number_of_arguments/variant.ph"
         );
         expect_wrong_number_of_arguments_error(src, "Bar.B(Empty, Empty,)", 1);
     }
@@ -228,25 +233,25 @@ mod wrong_number_of_case_params {
 
     #[test]
     fn expected_0_actually_1() {
-        let src = include_str!("../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_0_actually_1.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_0_actually_1.ph");
         expect_wrong_number_of_case_params_error(src, "O(n) => n,", 0);
     }
 
     #[test]
     fn expected_1_actually_0() {
-        let src = include_str!("../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_1_actually_0.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_1_actually_0.ph");
         expect_wrong_number_of_case_params_error(src, "S => Nat.O,", 1);
     }
 
     #[test]
     fn expected_1_actually_2() {
-        let src = include_str!("../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_1_actually_2.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_1_actually_2.ph");
         expect_wrong_number_of_case_params_error(src, "S(n, m) => n,", 1);
     }
 
     #[test]
     fn expected_2_actually_1() {
-        let src = include_str!("../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_2_actually_1.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/wrong_number_of_case_params/expected_2_actually_1.ph");
         expect_wrong_number_of_case_params_error(src, "Refl(O) => O,", 2);
     }
 }
@@ -305,21 +310,22 @@ mod type_mismatch {
 
     #[test]
     fn adt() {
-        let src = include_str!("../sample_code/should_fail/type_check/type_mismatch/adt.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/type_mismatch/adt.ph");
         expect_type_mismatch_error(src, "U2.U2", "U1", "U2");
     }
 
     #[test]
     fn type_not_a_type() {
-        let src =
-            include_str!("../sample_code/should_fail/type_check/type_mismatch/type_not_a_type.ph");
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/type_mismatch/type_not_a_type.ph"
+        );
         expect_type_mismatch_error(src, "Type", "Type", "Type1");
     }
 
     #[test]
     fn ill_typed_param_type() {
         let src = include_str!(
-            "../sample_code/should_fail/type_check/type_mismatch/ill_typed_param_type.ph"
+            "../../sample_code/should_fail/type_check/type_mismatch/ill_typed_param_type.ph"
         );
         expect_type_mismatch_error(
             src,
@@ -332,7 +338,7 @@ mod type_mismatch {
     #[test]
     fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
         let src = include_str!(
-            "../sample_code/should_fail/type_check/type_mismatch/ill_typed_match_case_output_evaluates_to_well_typed_term.ph"
+            "../../sample_code/should_fail/type_check/type_mismatch/ill_typed_match_case_output_evaluates_to_well_typed_term.ph"
         );
         expect_type_mismatch_error(src, "Nat.O", "Bool", "Nat");
     }
@@ -379,13 +385,13 @@ mod non_adt_matchee {
 
     #[test]
     fn type0() {
-        let src = include_str!("../sample_code/should_fail/type_check/non_adt_matchee/type0.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/non_adt_matchee/type0.ph");
         expect_non_adt_matchee_error(src, "U", "Type");
     }
 
     #[test]
     fn type1() {
-        let src = include_str!("../sample_code/should_fail/type_check/non_adt_matchee/type1.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/non_adt_matchee/type1.ph");
         expect_non_adt_matchee_error(src, "Type", "Type1");
     }
 }
@@ -437,7 +443,7 @@ mod duplicate_match_case {
 
     #[test]
     fn duplicate_match_case() {
-        let src = include_str!("../sample_code/should_fail/type_check/duplicate_match_case.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/duplicate_match_case.ph");
         expect_duplicate_match_case_error(src, "U => Bool.True,", "U => Bool.False,");
     }
 }
@@ -457,7 +463,7 @@ mod missing_match_case {
 
     #[test]
     fn missing_match_case() {
-        let src = include_str!("../sample_code/should_fail/type_check/missing_match_case.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/missing_match_case.ph");
         expect_missing_match_case_error(src, &standard_ident_name("False"));
     }
 }
@@ -488,7 +494,7 @@ mod extraneous_match_case {
 
     #[test]
     fn extraneous_match_case() {
-        let src = include_str!("../sample_code/should_fail/type_check/extraneous_match_case.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/extraneous_match_case.ph");
         expect_extraneous_match_case_error(src, "Maybe => Nat.S(Nat.S(Nat.O,),),");
     }
 }
@@ -519,7 +525,7 @@ mod ambiguous_output_type {
 
     #[test]
     fn ambiguous_output_type() {
-        let src = include_str!("../sample_code/should_fail/type_check/ambiguous_output_type.ph");
+        let src = include_str!("../../sample_code/should_fail/type_check/ambiguous_output_type.ph");
         expect_ambiguous_output_type_error(src, "S(problem) => Eq.Refl(Nat, Nat.S(problem,),),");
     }
 }

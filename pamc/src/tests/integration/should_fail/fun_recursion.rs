@@ -25,7 +25,7 @@ fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFun
 
 #[test]
 fn rec_fun_same_param() {
-    let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_same_param.ph");
+    let src = include_str!("../../sample_code/should_fail/illegal_recursion/rec_fun_same_param.ph");
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
             callee: callee_id,
@@ -49,7 +49,8 @@ fn rec_fun_same_param() {
 
 #[test]
 fn rec_fun_non_substruct() {
-    let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_non_substruct.ph");
+    let src =
+        include_str!("../../sample_code/should_fail/illegal_recursion/rec_fun_non_substruct.ph");
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
             callee: callee_id,
@@ -73,7 +74,7 @@ fn rec_fun_non_substruct() {
 
 #[test]
 fn rec_fun_non_ident() {
-    let src = include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_non_ident.ph");
+    let src = include_str!("../../sample_code/should_fail/illegal_recursion/rec_fun_non_ident.ph");
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
             callee: callee_id,
@@ -97,8 +98,9 @@ fn rec_fun_non_ident() {
 
 #[test]
 fn rec_fun_no_decreasing_param() {
-    let src =
-        include_str!("../sample_code/should_fail/illegal_recursion/rec_fun_no_decreasing_param.ph");
+    let src = include_str!(
+        "../../sample_code/should_fail/illegal_recursion/rec_fun_no_decreasing_param.ph"
+    );
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
             callee: callee_id,

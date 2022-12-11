@@ -14,39 +14,43 @@ fn expect_rparen_parse_error(src: &str) {
 
 #[test]
 fn empty_type_params() {
-    let src = include_str!("../../sample_code/should_fail/parse/empty_parens/empty_type_params.ph");
+    let src =
+        include_str!("../../../sample_code/should_fail/parse/empty_parens/empty_type_params.ph");
     expect_rparen_parse_error(src);
 }
 
 #[test]
 fn empty_variant_params() {
     let src =
-        include_str!("../../sample_code/should_fail/parse/empty_parens/empty_variant_params.ph");
+        include_str!("../../../sample_code/should_fail/parse/empty_parens/empty_variant_params.ph");
     expect_rparen_parse_error(src);
 }
 
 #[test]
 fn empty_fun_params() {
-    let src = include_str!("../../sample_code/should_fail/parse/empty_parens/empty_fun_params.ph");
+    let src =
+        include_str!("../../../sample_code/should_fail/parse/empty_parens/empty_fun_params.ph");
     expect_rparen_parse_error(src);
 }
 
 #[test]
 fn empty_call_params() {
-    let src = include_str!("../../sample_code/should_fail/parse/empty_parens/empty_call_params.ph");
+    let src =
+        include_str!("../../../sample_code/should_fail/parse/empty_parens/empty_call_params.ph");
     expect_rparen_parse_error(src);
 }
 
 #[test]
 fn empty_forall_params() {
     let src =
-        include_str!("../../sample_code/should_fail/parse/empty_parens/empty_forall_params.ph");
+        include_str!("../../../sample_code/should_fail/parse/empty_parens/empty_forall_params.ph");
     expect_rparen_parse_error(src);
 }
 
 #[test]
 fn empty_match_case_params() {
-    let src =
-        include_str!("../../sample_code/should_fail/parse/empty_parens/empty_match_case_params.ph");
+    let src = include_str!(
+        "../../../sample_code/should_fail/parse/empty_parens/empty_match_case_params.ph"
+    );
     expect_rparen_parse_error(src);
 }

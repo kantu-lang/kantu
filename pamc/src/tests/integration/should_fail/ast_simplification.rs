@@ -12,7 +12,7 @@ fn expect_simplification_error(src: &str, panicker: impl Fn(SimplifyAstError)) {
 
 #[test]
 fn illegal_dot_lhs() {
-    let src = include_str!("../sample_code/should_fail/ast_simplification/illegal_dot_lhs.ph");
+    let src = include_str!("../../sample_code/should_fail/ast_simplification/illegal_dot_lhs.ph");
     expect_simplification_error(src, |err| match err {
         SimplifyAstError::IllegalDotLhs(lhs) => {
             assert!(

@@ -14,24 +14,24 @@ fn expect_unexpected_token_error(src: &str, expected_kind: TokenKind) {
 
 #[test]
 fn question_checkee() {
-    let src = include_str!("../../sample_code/should_fail/parse/check/question_checkee.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/check/question_checkee.ph");
     expect_unexpected_token_error(src, TokenKind::Question);
 }
 
 #[test]
 fn question_output() {
-    let src = include_str!("../../sample_code/should_fail/parse/check/question_output.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/check/question_output.ph");
     expect_unexpected_token_error(src, TokenKind::Question);
 }
 
 #[test]
 fn goal_value() {
-    let src = include_str!("../../sample_code/should_fail/parse/check/goal_value.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/check/goal_value.ph");
     expect_unexpected_token_error(src, TokenKind::Equal);
 }
 
 #[test]
 fn goal_value_question() {
-    let src = include_str!("../../sample_code/should_fail/parse/check/goal_value_question.ph");
+    let src = include_str!("../../../sample_code/should_fail/parse/check/goal_value_question.ph");
     expect_unexpected_token_error(src, TokenKind::Equal);
 }

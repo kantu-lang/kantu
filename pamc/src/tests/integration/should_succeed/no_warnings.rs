@@ -2,67 +2,67 @@ use super::*;
 
 #[test]
 fn hello_world() {
-    let src = include_str!("../sample_code/should_succeed/hello_world.ph");
+    let src = include_str!("../../sample_code/should_succeed/hello_world.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn optional_commas() {
-    let src = include_str!("../sample_code/should_succeed/optional_commas.ph");
+    let src = include_str!("../../sample_code/should_succeed/optional_commas.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn empty_implies_anything() {
-    let src = include_str!("../sample_code/should_succeed/empty_implies_anything.ph");
+    let src = include_str!("../../sample_code/should_succeed/empty_implies_anything.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn match_explosion() {
-    let src = include_str!("../sample_code/should_succeed/match_explosion.ph");
+    let src = include_str!("../../sample_code/should_succeed/match_explosion.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn coercionless_match() {
-    let src = include_str!("../sample_code/should_succeed/coercionless_match.ph");
+    let src = include_str!("../../sample_code/should_succeed/coercionless_match.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn ill_typed_until_substituted() {
-    let src = include_str!("../sample_code/should_succeed/ill_typed_until_substituted.ph");
+    let src = include_str!("../../sample_code/should_succeed/ill_typed_until_substituted.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn forall() {
-    let src = include_str!("../sample_code/should_succeed/forall.ph");
+    let src = include_str!("../../sample_code/should_succeed/forall.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn underscore() {
-    let src = include_str!("../sample_code/should_succeed/underscore.ph");
+    let src = include_str!("../../sample_code/should_succeed/underscore.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn plus_commutative() {
-    let src = include_str!("../sample_code/should_succeed/plus_commutative.ph");
+    let src = include_str!("../../sample_code/should_succeed/plus_commutative.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn exists() {
-    let src = include_str!("../sample_code/should_succeed/exists.ph");
+    let src = include_str!("../../sample_code/should_succeed/exists.ph");
     expect_success_with_no_warnings(src);
 }
 
 #[test]
 fn comment() {
-    let src = include_str!("../sample_code/should_succeed/comment.ph");
+    let src = include_str!("../../sample_code/should_succeed/comment.ph");
     expect_success_with_no_warnings(src);
 }
 

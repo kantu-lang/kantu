@@ -40,25 +40,25 @@ fn expect_underscore_not_found_error(src: &str) {
 
 #[test]
 fn reference_let_in_body() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_let_in_body.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_let_in_body.ph");
     expect_name_not_found_error(src, ["a"]);
 }
 
 #[test]
 fn reference_type_in_param() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_type_in_param.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_type_in_param.ph");
     expect_name_not_found_error(src, ["U"]);
 }
 
 #[test]
 fn reference_fun_in_param() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_fun_in_param.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_fun_in_param.ph");
     expect_name_not_found_error(src, ["g"]);
 }
 
 #[test]
 fn reference_fun_in_return_type() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_fun_in_return_type.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_fun_in_return_type.ph");
     expect_name_not_found_error(src, ["g"]);
 }
 
@@ -73,20 +73,21 @@ fn expect_bind_error(src: &str, panicker: impl Fn(BindError)) {
 
 #[test]
 fn reference_variant_in_prev_variant() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_variant_in_prev_variant.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_variant_in_prev_variant.ph");
     expect_name_not_found_error(src, ["Bar", "C"]);
 }
 
 #[test]
 fn reference_variant_in_variant_return_type() {
     let src =
-        include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_return_type.ph");
+        include_str!("../../sample_code/should_fail/scope/ref_variant_in_variant_return_type.ph");
     expect_name_not_found_error(src, ["Bar", "B"]);
 }
 
 #[test]
 fn reference_variant_in_variant_param_type() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_variant_in_variant_param_type.ph");
+    let src =
+        include_str!("../../sample_code/should_fail/scope/ref_variant_in_variant_param_type.ph");
     expect_name_not_found_error(src, ["Bar", "D"]);
 }
 
@@ -108,54 +109,54 @@ fn expect_name_clash_error(src: &str, expected_source_name: &str) {
 
 #[test]
 fn fun_shadows_own_param() {
-    let src = include_str!("../sample_code/should_fail/scope/fun_shadows_own_param.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/fun_shadows_own_param.ph");
     expect_name_clash_error(src, "g");
 }
 
 #[test]
 fn duplicate_variants() {
-    let src = include_str!("../sample_code/should_fail/scope/duplicate_variants.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/duplicate_variants.ph");
     expect_name_clash_error(src, "F");
 }
 
 #[test]
 fn duplicate_type_params() {
-    let src = include_str!("../sample_code/should_fail/scope/duplicate_type_params.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/duplicate_type_params.ph");
     expect_name_clash_error(src, "T");
 }
 
 #[test]
 fn duplicate_variant_params() {
-    let src = include_str!("../sample_code/should_fail/scope/duplicate_variant_params.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/duplicate_variant_params.ph");
     expect_name_clash_error(src, "R");
 }
 
 #[test]
 fn duplicate_fun_params() {
-    let src = include_str!("../sample_code/should_fail/scope/duplicate_fun_params.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/duplicate_fun_params.ph");
     expect_name_clash_error(src, "U");
 }
 
 #[test]
 fn duplicate_forall_params() {
-    let src = include_str!("../sample_code/should_fail/scope/duplicate_forall_params.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/duplicate_forall_params.ph");
     expect_name_clash_error(src, "Q");
 }
 
 #[test]
 fn duplicate_match_case_params() {
-    let src = include_str!("../sample_code/should_fail/scope/duplicate_match_case_params.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/duplicate_match_case_params.ph");
     expect_name_clash_error(src, "x");
 }
 
 #[test]
 fn ref_underscore_param() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_underscore_param.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_underscore_param.ph");
     expect_underscore_not_found_error(src);
 }
 
 #[test]
 fn ref_underscore_fun() {
-    let src = include_str!("../sample_code/should_fail/scope/ref_underscore_fun.ph");
+    let src = include_str!("../../sample_code/should_fail/scope/ref_underscore_fun.ph");
     expect_underscore_not_found_error(src);
 }
