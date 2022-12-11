@@ -232,6 +232,7 @@ fn get_token_kind_of_special_non_underscore_character(c: char) -> Option<TokenKi
         '=' => Some(TokenKind::Equal),
         '-' => Some(TokenKind::Dash),
         '?' => Some(TokenKind::Question),
+        '~' => Some(TokenKind::Tilde),
         '(' => Some(TokenKind::LParen),
         ')' => Some(TokenKind::RParen),
         '[' => Some(TokenKind::LSquare),
