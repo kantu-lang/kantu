@@ -81,7 +81,7 @@ impl TryFrom<PendingTokenKind> for TokenKind {
         match pending_token_kind {
             PendingTokenKind::Equal => Ok(TokenKind::Equal),
             PendingTokenKind::StandardIdentifier => Ok(TokenKind::StandardIdentifier),
-            PendingTokenKind::Slash => Err(()),
+            PendingTokenKind::Slash => Ok(TokenKind::Slash),
             PendingTokenKind::SingleLineComment => Ok(TokenKind::SingleLineComment),
             PendingTokenKind::MultiLineComment {
                 left_delimiter_count,
@@ -290,6 +290,7 @@ fn get_token_kind_of_special_non_underscore_character(c: char) -> Option<TokenKi
         '=' => Some(TokenKind::Equal),
         '-' => Some(TokenKind::Dash),
         '?' => Some(TokenKind::Question),
+        '/' => Some(TokenKind::Slash),
         '~' => Some(TokenKind::Tilde),
         '(' => Some(TokenKind::LParen),
         ')' => Some(TokenKind::RParen),

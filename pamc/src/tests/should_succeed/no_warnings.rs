@@ -60,6 +60,14 @@ fn exists() {
     expect_success_with_no_warnings(src);
 }
 
+// TODO: Fix
+#[ignore]
+#[test]
+fn comment() {
+    let src = include_str!("../sample_code/should_succeed/comment.ph");
+    expect_success_with_no_warnings(src);
+}
+
 fn expect_success_with_no_warnings(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
