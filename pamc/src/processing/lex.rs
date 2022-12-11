@@ -1,5 +1,7 @@
 use crate::data::token::{Token, TokenKind};
 
+use std::convert::TryFrom;
+
 #[derive(Clone, Debug)]
 pub enum LexError {
     UnexpectedEoi,
@@ -13,23 +15,15 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
         pending_token: None,
     };
     for (i, c) in src.chars().enumerate() {
-        if let Some(err) = handle_char(&mut state, c, i) {
-            return Err(err);
-        }
+        handle_char(&mut state, c, i)?;
     }
 
     if let Some(pending_token) = state.pending_token {
-        match pending_token.kind {
-            PendingTokenKind::Equal => {
-                state.tokens.push(pending_token.into());
-                state.pending_token = None;
-            }
-
-            PendingTokenKind::StandardIdentifier => {
-                state.tokens.push(pending_token.into());
-                state.pending_token = None;
-            }
-        }
+        let Ok(token) = pending_token.try_into() else {
+            return Err(LexError::UnexpectedEoi);
+        };
+        state.tokens.push(token);
+        state.pending_token = None;
     }
 
     Ok(state.tokens)
@@ -57,34 +51,52 @@ struct PendingToken {
 enum PendingTokenKind {
     Equal,
     StandardIdentifier,
+    Slash,
+    SingleLineComment,
+    MultiLineComment { left_delimiter_count: usize },
 }
 
-impl From<PendingToken> for Token {
-    fn from(pending_token: PendingToken) -> Self {
+impl TryFrom<PendingToken> for Token {
+    type Error = ();
+
+    fn try_from(pending_token: PendingToken) -> Result<Self, ()> {
         let PendingToken {
             start_index,
             content,
             kind,
         } = pending_token;
-        let kind = kind.into();
-        Token {
+        let kind = kind.try_into()?;
+        Ok(Token {
             start_index,
             content,
             kind,
-        }
+        })
     }
 }
 
-impl From<PendingTokenKind> for TokenKind {
-    fn from(pending_token_kind: PendingTokenKind) -> Self {
+impl TryFrom<PendingTokenKind> for TokenKind {
+    type Error = ();
+
+    fn try_from(pending_token_kind: PendingTokenKind) -> Result<Self, Self::Error> {
         match pending_token_kind {
-            PendingTokenKind::Equal => TokenKind::Equal,
-            PendingTokenKind::StandardIdentifier => TokenKind::StandardIdentifier,
+            PendingTokenKind::Equal => Ok(TokenKind::Equal),
+            PendingTokenKind::StandardIdentifier => Ok(TokenKind::StandardIdentifier),
+            PendingTokenKind::Slash => Err(()),
+            PendingTokenKind::SingleLineComment => Ok(TokenKind::SingleLineComment),
+            PendingTokenKind::MultiLineComment {
+                left_delimiter_count,
+            } => {
+                if left_delimiter_count == 0 {
+                    Ok(TokenKind::MultiLineComment)
+                } else {
+                    Err(())
+                }
+            }
         }
     }
 }
 
-fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
+fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> {
     match &mut state.pending_token {
         None => {
             if c == '=' {
@@ -93,32 +105,39 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     content: c.into(),
                     kind: PendingTokenKind::Equal,
                 });
-                None
+                Ok(())
+            } else if c == '/' {
+                state.pending_token = Some(PendingToken {
+                    start_index: i,
+                    content: c.into(),
+                    kind: PendingTokenKind::Slash,
+                });
+                Ok(())
             } else if let Some(kind) = get_token_kind_of_special_non_underscore_character(c) {
                 state.tokens.push(Token {
                     start_index: i,
                     content: c.into(),
                     kind,
                 });
-                None
+                Ok(())
             } else if c.is_whitespace() {
                 state.tokens.push(Token {
                     start_index: i,
                     content: c.into(),
                     kind: TokenKind::Whitespace,
                 });
-                None
+                Ok(())
             } else if c.is_ascii_digit() {
-                Some(LexError::UnexpectedAsciiDigit)
+                Err(LexError::UnexpectedAsciiDigit)
             } else if does_character_category_permit_it_to_be_used_in_identifier_name(c) {
                 state.pending_token = Some(PendingToken {
                     start_index: i,
                     content: c.into(),
                     kind: PendingTokenKind::StandardIdentifier,
                 });
-                None
+                Ok(())
             } else {
-                Some(LexError::UnexpectedCharacter(c))
+                Err(LexError::UnexpectedCharacter(c))
             }
         }
         Some(pending_token) => match pending_token.kind {
@@ -130,9 +149,12 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                         kind: TokenKind::FatArrow,
                     });
                     state.pending_token = None;
-                    None
+                    Ok(())
                 } else {
-                    state.tokens.push(pending_token.clone().into());
+                    let Ok(token) = pending_token.clone().try_into() else {
+                        return Err(LexError::UnexpectedCharacter(c));
+                    };
+                    state.tokens.push(token);
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
@@ -141,7 +163,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
             PendingTokenKind::StandardIdentifier => {
                 if is_valid_non_initial_identifier_character(c) {
                     pending_token.content.push(c);
-                    None
+                    Ok(())
                 } else {
                     state.tokens.push(
                         if let Some(kind) =
@@ -159,16 +181,96 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                                 kind: TokenKind::Underscore,
                             }
                         } else {
-                            pending_token.clone().into()
+                            let Ok(token) = pending_token.clone().try_into() else {
+                                return Err(LexError::UnexpectedCharacter(c));
+                            };
+                            token
                         },
                     );
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
             }
+
+            PendingTokenKind::Slash => {
+                if c == '/' {
+                    state.pending_token = Some(PendingToken {
+                        start_index: pending_token.start_index,
+                        content: "//".into(),
+                        kind: PendingTokenKind::SingleLineComment,
+                    });
+                    Ok(())
+                } else if c == '*' {
+                    state.pending_token = Some(PendingToken {
+                        start_index: pending_token.start_index,
+                        content: "/*".into(),
+                        kind: PendingTokenKind::MultiLineComment {
+                            left_delimiter_count: 1,
+                        },
+                    });
+                    Ok(())
+                } else {
+                    let Ok(token) = pending_token.clone().try_into() else {
+                        return Err(LexError::UnexpectedCharacter(c));
+                    };
+                    state.tokens.push(token);
+                    state.pending_token = None;
+                    handle_char(state, c, i)
+                }
+            }
+
+            PendingTokenKind::SingleLineComment => {
+                pending_token.content.push(c);
+                if c == '\n' {
+                    state.tokens.push(Token {
+                        start_index: pending_token.start_index,
+                        content: pending_token.content.clone(),
+                        kind: TokenKind::SingleLineComment,
+                    });
+                    state.pending_token = None;
+                }
+                Ok(())
+            }
+
+            PendingTokenKind::MultiLineComment {
+                left_delimiter_count,
+            } => {
+                pending_token.content.push(c);
+                if pending_token.content.ends_with("*/") {
+                    let new_left_delimiter_count = left_delimiter_count - 1;
+                    if new_left_delimiter_count == 0 {
+                        state.tokens.push(Token {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: TokenKind::MultiLineComment,
+                        });
+                        state.pending_token = None;
+                    } else {
+                        state.pending_token = Some(PendingToken {
+                            start_index: pending_token.start_index,
+                            content: pending_token.content.clone(),
+                            kind: PendingTokenKind::MultiLineComment {
+                                left_delimiter_count: new_left_delimiter_count,
+                            },
+                        });
+                    }
+                } else if pending_token.content.ends_with("/*") {
+                    let new_left_delimiter_count = left_delimiter_count + 1;
+                    state.pending_token = Some(PendingToken {
+                        start_index: pending_token.start_index,
+                        content: pending_token.content.clone(),
+                        kind: PendingTokenKind::MultiLineComment {
+                            left_delimiter_count: new_left_delimiter_count,
+                        },
+                    });
+                }
+                Ok(())
+            }
         },
     }
 }
+
+// TODO: Make left_delimiter_count: NonZeroUsize
 
 fn is_valid_non_initial_identifier_character(c: char) -> bool {
     !c.is_whitespace()

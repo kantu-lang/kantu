@@ -28,6 +28,9 @@ pub enum TokenKind {
     LAngle,
     RAngle,
 
+    SingleLineComment,
+    MultiLineComment,
+
     FatArrow,
 
     Underscore,
