@@ -13,7 +13,7 @@ Identifier names can contain the following characters:
 
 - The characters `;:,.@=-?~()[]{}<>` cannot appear anywhere.
 - The characters `0123456789` cannot appear as the first character, but may appear everywhere else.
-- White space cannot appear anywhere.
+- Whitespace cannot appear anywhere.
 
 Additionally, the following strings are reserved words, and cannot be used as identifiers:
 
