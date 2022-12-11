@@ -18,7 +18,7 @@ fn unexpected_finished_item(item: &FinishedStackItem) -> AcceptResult {
     AcceptResult::Error(ParseError::UnexpectedToken(item.first_token().clone()))
 }
 
-fn token_span(file_id: FileId, token: &Token) -> TextSpan {
+fn span_single(file_id: FileId, token: &Token) -> TextSpan {
     let start = token.start_index;
     TextSpan {
         file_id,
@@ -27,7 +27,7 @@ fn token_span(file_id: FileId, token: &Token) -> TextSpan {
     }
 }
 
-fn tokens_span(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
+fn span_range_including_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
     let start = start.start_index;
     let end = end.start_index + end.content.len();
 
@@ -42,7 +42,7 @@ fn tokens_span(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
     }
 }
 
-fn tokens_span_exclusive_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
+fn span_range_excluding_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
     let start = start.start_index;
     let end = end.start_index;
 
@@ -58,13 +58,16 @@ fn tokens_span_exclusive_end(file_id: FileId, start: &Token, end: &Token) -> Tex
 }
 
 impl TextSpan {
-    fn merge(self, other: TextSpan) -> TextSpan {
+    fn inclusive_merge(self, other: TextSpan) -> TextSpan {
         if self.file_id != other.file_id {
             panic!("Cannot merge spans from different files.");
         }
 
-        let start = self.start.min(other.start);
-        let end = self.end.max(other.end);
+        let start = self.start;
+        let end = other.end;
+        if end < start {
+            panic!("End of span is before start of span.");
+        }
 
         TextSpan {
             file_id: self.file_id,
@@ -129,7 +132,7 @@ impl Accept for UnfinishedTypeStatement {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
@@ -190,7 +193,7 @@ impl Accept for UnfinishedTypeStatement {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
                             type_kw.clone(),
                             TypeStatement {
-                                span: tokens_span(file_id, &type_kw, &token),
+                                span: span_range_including_end(file_id, &type_kw, &token),
                                 name: name.clone(),
                                 params: params.clone(),
                                 variants: variants.clone(),
@@ -207,7 +210,11 @@ impl Accept for UnfinishedTypeStatement {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
                                 type_kw.clone(),
                                 TypeStatement {
-                                    span: tokens_span(file_id, &type_kw, &end_delimiter.0),
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &type_kw,
+                                        &end_delimiter.0,
+                                    ),
                                     name: name.clone(),
                                     params: params.clone(),
                                     variants: variants.clone(),
@@ -232,7 +239,7 @@ impl Accept for UnfinishedLetStatement {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
@@ -257,7 +264,11 @@ impl Accept for UnfinishedLetStatement {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Let(
                                 let_kw.clone(),
                                 LetStatement {
-                                    span: tokens_span(file_id, &let_kw, &end_delimiter.0),
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &let_kw,
+                                        &end_delimiter.0,
+                                    ),
                                     name: name.clone(),
                                     value: expression,
                                 },
@@ -287,7 +298,7 @@ impl Accept for UnfinishedParams {
                 }
                 TokenKind::StandardIdentifier => {
                     let name = Identifier {
-                        span: token_span(file_id, &token),
+                        span: span_single(file_id, &token),
                         name: IdentifierName::Standard(token.content.clone()),
                     };
                     let is_dashed = self.pending_dash.is_some();
@@ -298,7 +309,7 @@ impl Accept for UnfinishedParams {
                 }
                 TokenKind::Underscore => {
                     let name = Identifier {
-                        span: token_span(file_id, &token),
+                        span: span_single(file_id, &token),
                         name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                     };
                     let is_dashed = self.pending_dash.is_some();
@@ -352,11 +363,7 @@ impl Accept for UnfinishedParam {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
                         first_token.clone(),
                         Param {
-                            span: tokens_span_exclusive_end(
-                                file_id,
-                                &first_token,
-                                &end_delimiter.0,
-                            ),
+                            span: span_range_excluding_end(file_id, &first_token, &end_delimiter.0),
                             is_dashed: *is_dashed,
                             name: name.clone(),
                             type_: expression,
@@ -377,7 +384,7 @@ impl Accept for UnfinishedVariant {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedVariant::Name(dot.clone(), name);
@@ -412,7 +419,7 @@ impl Accept for UnfinishedVariant {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Variant(
                         dot.clone(),
                         Variant {
-                            span: token_span(file_id, &dot).merge(expression.span()),
+                            span: span_single(file_id, &dot).inclusive_merge(expression.span()),
                             name: name.clone(),
                             params: vec![],
                             return_type: expression,
@@ -435,7 +442,7 @@ impl Accept for UnfinishedVariant {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Variant(
                         dot.clone(),
                         Variant {
-                            span: token_span(file_id, &dot).merge(expression.span()),
+                            span: span_single(file_id, &dot).inclusive_merge(expression.span()),
                             name: name.clone(),
                             params: params.clone(),
                             return_type: expression,
@@ -456,7 +463,7 @@ impl Accept for UnfinishedDelimitedExpression {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::TypeTitleCase => {
                         let expression = Expression::Identifier(Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -466,7 +473,7 @@ impl Accept for UnfinishedDelimitedExpression {
                     }
                     TokenKind::Underscore => {
                         let expression = Expression::Identifier(Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -476,7 +483,7 @@ impl Accept for UnfinishedDelimitedExpression {
                     }
                     TokenKind::StandardIdentifier => {
                         let expression = Expression::Identifier(Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -573,7 +580,7 @@ impl Accept for UnfinishedFun {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
@@ -581,7 +588,7 @@ impl Accept for UnfinishedFun {
                     }
                     TokenKind::Underscore => {
                         let name = Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
@@ -645,7 +652,11 @@ impl Accept for UnfinishedFun {
                             FinishedStackItem::UndelimitedExpression(
                                 fun_kw.clone(),
                                 Expression::Fun(Box::new(Fun {
-                                    span: tokens_span(file_id, &fun_kw, &end_delimiter.0),
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &fun_kw,
+                                        &end_delimiter.0,
+                                    ),
                                     name: name.clone(),
                                     params: params.clone(),
                                     return_type: return_type.clone(),
@@ -690,7 +701,7 @@ impl Accept for UnfinishedMatch {
                         FinishedStackItem::UndelimitedExpression(
                             match_kw.clone(),
                             Expression::Match(Box::new(Match {
-                                span: tokens_span(file_id, &match_kw, &token),
+                                span: span_range_including_end(file_id, &match_kw, &token),
                                 matchee: matchee.clone(),
                                 cases: cases.clone(),
                             })),
@@ -706,7 +717,11 @@ impl Accept for UnfinishedMatch {
                             FinishedStackItem::UndelimitedExpression(
                                 match_kw.clone(),
                                 Expression::Match(Box::new(Match {
-                                    span: tokens_span(file_id, &match_kw, &end_delimiter.0),
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &match_kw,
+                                        &end_delimiter.0,
+                                    ),
                                     matchee: matchee.clone(),
                                     cases: cases.clone(),
                                 })),
@@ -759,7 +774,11 @@ impl Accept for UnfinishedForall {
                             FinishedStackItem::UndelimitedExpression(
                                 forall_kw.clone(),
                                 Expression::Forall(Box::new(Forall {
-                                    span: tokens_span(file_id, &forall_kw, &end_delimiter.0),
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &forall_kw,
+                                        &end_delimiter.0,
+                                    ),
                                     params: params.clone(),
                                     output: expression,
                                 })),
@@ -831,7 +850,7 @@ impl Accept for UnfinishedCheck {
                         *self = UnfinishedCheck::GoalCheckeeQuestionTypeAwaitingCurly(
                             check_kw.clone(),
                             goal_kw.clone(),
-                            token_span(file_id, &token),
+                            span_single(file_id, &token),
                         );
                         AcceptResult::ContinueToNextToken
                     } else {
@@ -897,12 +916,16 @@ impl Accept for UnfinishedCheck {
                                 FinishedStackItem::UndelimitedExpression(
                                     check_kw.clone(),
                                     Expression::Check(Box::new(Check {
-                                        span: tokens_span(file_id, &check_kw, &end_delimiter.0),
+                                        span: span_range_including_end(
+                                            file_id,
+                                            &check_kw,
+                                            &end_delimiter.0,
+                                        ),
                                         checkee_annotation: CheckeeAnnotation::Goal(
                                             GoalCheckeeAnnotation {
-                                                span: token_span(file_id, &goal_kw)
-                                                    .merge(checkee_type.span()),
-                                                goal_kw_span: token_span(file_id, &goal_kw),
+                                                span: span_single(file_id, &goal_kw)
+                                                    .inclusive_merge(checkee_type.span()),
+                                                goal_kw_span: span_single(file_id, &goal_kw),
                                                 checkee_type: checkee_type.clone(),
                                             },
                                         ),
@@ -926,7 +949,7 @@ impl Accept for UnfinishedCheck {
                         *self = UnfinishedCheck::ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(
                             check_kw.clone(),
                             checkee.clone(),
-                            token_span(file_id, &token),
+                            span_single(file_id, &token),
                         );
                         AcceptResult::ContinueToNextToken
                     } else {
@@ -1011,7 +1034,7 @@ impl Accept for UnfinishedCheck {
                             check_kw.clone(),
                             checkee.clone(),
                             checkee_type.clone(),
-                            token_span(file_id, &token),
+                            span_single(file_id, &token),
                         );
                         AcceptResult::ContinueToNextToken
                     } else {
@@ -1084,13 +1107,19 @@ impl Accept for UnfinishedCheck {
                             FinishedStackItem::UndelimitedExpression(
                                 check_kw.clone(),
                                 Expression::Check(Box::new(Check {
-                                    span: tokens_span(file_id, &check_kw, &end_delimiter.0),
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &check_kw,
+                                        &end_delimiter.0,
+                                    ),
                                     checkee_annotation: CheckeeAnnotation::Expression(
                                         ExpressionCheckeeAnnotation {
-                                            span: checkee.span().merge(match checkee_value {
-                                                Some(checkee_value) => checkee_value.span(),
-                                                None => checkee_type.span(),
-                                            }),
+                                            span: checkee.span().inclusive_merge(
+                                                match checkee_value {
+                                                    Some(checkee_value) => checkee_value.span(),
+                                                    None => checkee_type.span(),
+                                                },
+                                            ),
                                             checkee: checkee.clone(),
                                             checkee_type: checkee_type.clone(),
                                             checkee_value: checkee_value.clone(),
@@ -1118,13 +1147,13 @@ impl Accept for UnfinishedDot {
             FinishedStackItem::Token(token) => match token.kind {
                 TokenKind::StandardIdentifier => {
                     let right = Identifier {
-                        span: token_span(file_id, &token),
+                        span: span_single(file_id, &token),
                         name: IdentifierName::Standard(token.content.clone()),
                     };
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::UndelimitedExpression(
                         self.first_token.clone(),
                         Expression::Dot(Box::new(Dot {
-                            span: self.left.span().merge(right.span),
+                            span: self.left.span().inclusive_merge(right.span),
                             left: self.left.clone(),
                             right,
                         })),
@@ -1148,7 +1177,11 @@ impl Accept for UnfinishedCall {
                         FinishedStackItem::UndelimitedExpression(
                             self.first_token.clone(),
                             Expression::Call(Box::new(Call {
-                                span: tokens_span(file_id, &first_token, &end_delimiter.0),
+                                span: span_range_including_end(
+                                    file_id,
+                                    &first_token,
+                                    &end_delimiter.0,
+                                ),
                                 callee: self.callee.clone(),
                                 args: self.args.clone(),
                             })),
@@ -1176,7 +1209,7 @@ impl Accept for UnfinishedCall {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::UndelimitedExpression(
                         self.first_token.clone(),
                         Expression::Call(Box::new(Call {
-                            span: tokens_span(file_id, &self.first_token, &token),
+                            span: span_range_including_end(file_id, &self.first_token, &token),
                             callee: self.callee.clone(),
                             args: self.args.clone(),
                         })),
@@ -1196,7 +1229,7 @@ impl Accept for UnfinishedMatchCase {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            span: token_span(file_id, &token),
+                            span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedMatchCase::VariantName(dot_token.clone(), name);
@@ -1243,7 +1276,7 @@ impl Accept for UnfinishedMatchCase {
                             params.is_empty() || currently_has_ending_comma.0;
                         if can_accept_identifier {
                             let name = Identifier {
-                                span: token_span(file_id, &token),
+                                span: span_single(file_id, &token),
                                 name: IdentifierName::Standard(token.content.clone()),
                             };
                             params.push(name);
@@ -1258,7 +1291,7 @@ impl Accept for UnfinishedMatchCase {
                             params.is_empty() || currently_has_ending_comma.0;
                         if can_accept_identifier {
                             let name = Identifier {
-                                span: token_span(file_id, &token),
+                                span: span_single(file_id, &token),
                                 name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                             };
                             params.push(name);
@@ -1308,7 +1341,7 @@ impl Accept for UnfinishedMatchCase {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::MatchCase(
                                 dot_token.clone(),
                                 MatchCase {
-                                    span: tokens_span_exclusive_end(
+                                    span: span_range_excluding_end(
                                         file_id,
                                         &dot_token,
                                         &end_delimiter.0,
