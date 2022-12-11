@@ -15,13 +15,13 @@ fn expect_unexpected_token_error(src: &str, expected_kind: TokenKind) {
 #[test]
 fn question_checkee() {
     let src = include_str!("../../sample_code/should_fail/parse/check/question_checkee.ph");
-    expect_unexpected_token_error(src, TokenKind::QuestionMark);
+    expect_unexpected_token_error(src, TokenKind::Question);
 }
 
 #[test]
 fn question_output() {
     let src = include_str!("../../sample_code/should_fail/parse/check/question_output.ph");
-    expect_unexpected_token_error(src, TokenKind::QuestionMark);
+    expect_unexpected_token_error(src, TokenKind::Question);
 }
 
 #[test]

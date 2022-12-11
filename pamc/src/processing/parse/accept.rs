@@ -782,7 +782,7 @@ impl Accept for UnfinishedCheck {
             },
             UnfinishedCheck::GoalCheckeeReceivedColon(check_kw, goal_kw) => match item {
                 FinishedStackItem::Token(token) => {
-                    if token.kind == TokenKind::QuestionMark {
+                    if token.kind == TokenKind::Question {
                         *self = UnfinishedCheck::GoalCheckeeQuestionTypeAwaitingCurly(
                             check_kw.clone(),
                             goal_kw.clone(),
@@ -880,7 +880,7 @@ impl Accept for UnfinishedCheck {
 
             UnfinishedCheck::ExpressionCheckee(check_kw, checkee) => match item {
                 FinishedStackItem::Token(token) => {
-                    if token.kind == TokenKind::QuestionMark {
+                    if token.kind == TokenKind::Question {
                         *self = UnfinishedCheck::ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(
                             check_kw.clone(),
                             checkee.clone(),
@@ -967,7 +967,7 @@ impl Accept for UnfinishedCheck {
                 checkee_type,
             ) => match item {
                 FinishedStackItem::Token(token) => {
-                    if token.kind == TokenKind::QuestionMark {
+                    if token.kind == TokenKind::Question {
                         *self = UnfinishedCheck::ExpressionCheckeeQuestionValueAwaitingCurly(
                             check_kw.clone(),
                             checkee.clone(),

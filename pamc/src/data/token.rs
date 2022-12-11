@@ -17,7 +17,7 @@ pub enum TokenKind {
     At,
     Equal,
     Dash,
-    QuestionMark,
+    Question,
     LParen,
     RParen,
     LSquare,

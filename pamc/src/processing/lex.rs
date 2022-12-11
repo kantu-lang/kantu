@@ -231,7 +231,7 @@ fn get_token_kind_of_special_non_underscore_character(c: char) -> Option<TokenKi
         '@' => Some(TokenKind::At),
         '=' => Some(TokenKind::Equal),
         '-' => Some(TokenKind::Dash),
-        '?' => Some(TokenKind::QuestionMark),
+        '?' => Some(TokenKind::Question),
         '(' => Some(TokenKind::LParen),
         ')' => Some(TokenKind::RParen),
         '[' => Some(TokenKind::LSquare),
