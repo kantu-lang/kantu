@@ -53,7 +53,10 @@ enum PendingTokenKind {
     StandardIdentifier,
     Slash,
     SingleLineComment,
-    MultiLineComment { left_delimiter_count: usize },
+    MultiLineComment {
+        left_delimiter_count: usize,
+        last_char_changed_delimiter_count: bool,
+    },
 }
 
 impl TryFrom<PendingToken> for Token {
@@ -85,6 +88,7 @@ impl TryFrom<PendingTokenKind> for TokenKind {
             PendingTokenKind::SingleLineComment => Ok(TokenKind::SingleLineComment),
             PendingTokenKind::MultiLineComment {
                 left_delimiter_count,
+                ..
             } => {
                 if left_delimiter_count == 0 {
                     Ok(TokenKind::MultiLineComment)
@@ -206,6 +210,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                         content: "/*".into(),
                         kind: PendingTokenKind::MultiLineComment {
                             left_delimiter_count: 1,
+                            last_char_changed_delimiter_count: true,
                         },
                     });
                     Ok(())
@@ -234,9 +239,12 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
 
             PendingTokenKind::MultiLineComment {
                 left_delimiter_count,
+                last_char_changed_delimiter_count,
             } => {
                 pending_token.content.push(c);
-                if pending_token.content.ends_with("*/") {
+                set_last_char_changed_delimiter_count_or_panic(pending_token, false);
+
+                if pending_token.content.ends_with("*/") && !last_char_changed_delimiter_count {
                     let new_left_delimiter_count = left_delimiter_count - 1;
                     if new_left_delimiter_count == 0 {
                         state.tokens.push(Token {
@@ -251,16 +259,20 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                             content: pending_token.content.clone(),
                             kind: PendingTokenKind::MultiLineComment {
                                 left_delimiter_count: new_left_delimiter_count,
+                                last_char_changed_delimiter_count: true,
                             },
                         });
                     }
-                } else if pending_token.content.ends_with("/*") {
+                } else if pending_token.content.ends_with("/*")
+                    && !last_char_changed_delimiter_count
+                {
                     let new_left_delimiter_count = left_delimiter_count + 1;
                     state.pending_token = Some(PendingToken {
                         start_index: pending_token.start_index,
                         content: pending_token.content.clone(),
                         kind: PendingTokenKind::MultiLineComment {
                             left_delimiter_count: new_left_delimiter_count,
+                            last_char_changed_delimiter_count: true,
                         },
                     });
                 }
@@ -370,4 +382,19 @@ fn does_character_category_permit_it_to_be_used_in_identifier_name(c: char) -> b
             | GeneralCategory::TitlecaseLetter
             | GeneralCategory::UppercaseLetter
     )
+}
+
+fn set_last_char_changed_delimiter_count_or_panic(token: &mut PendingToken, value: bool) {
+    match &mut token.kind {
+        PendingTokenKind::MultiLineComment {
+            left_delimiter_count: _,
+            last_char_changed_delimiter_count,
+        } => {
+            *last_char_changed_delimiter_count = false;
+        }
+        other => panic!(
+            "Tried to set last_char_changed_delimiter_count to {:?}, but the token was of kind {:?}",
+            value, other
+        ),
+    }
 }

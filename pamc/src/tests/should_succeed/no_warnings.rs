@@ -60,8 +60,6 @@ fn exists() {
     expect_success_with_no_warnings(src);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn comment() {
     let src = include_str!("../sample_code/should_succeed/comment.ph");

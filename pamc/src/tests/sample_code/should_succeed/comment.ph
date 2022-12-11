@@ -27,9 +27,12 @@ comment*/plus = fun/*inline*/plus(- /*inline*/ a: /* inline */ Nat, b: Nat): Nat
 };
 
 let mult/**//**/ = fun /*inline*/ mult(-a: Nat, b: Nat): Nat {
-    match a/*/**/*/ {
-        .O => Nat.O,
-        .S(a_pred) => plus(b, mult(a_pred, b)),
+    match a/*/*/**/*/*/ {
+        .O /***/ => Nat.O,
+        .S(a_pred) =>
+        /*
+            /**/ * / /* */ */
+            plus(b, mult(a_pred, b)),
     }
 };
 
