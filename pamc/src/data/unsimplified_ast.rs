@@ -1,4 +1,4 @@
-use crate::data::{FileId, TextPosition};
+use crate::data::{FileId, TextSpan};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
@@ -52,7 +52,7 @@ pub enum Expression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Identifier {
-    pub start: TextPosition,
+    pub start: TextSpan,
     pub name: IdentifierName,
 }
 
@@ -121,7 +121,7 @@ pub enum CheckeeAnnotation {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GoalCheckeeAnnotation {
-    pub goal_kw_position: TextPosition,
+    pub goal_kw_span: TextSpan,
     pub checkee_type: QuestionMarkOrExpression,
 }
 
@@ -141,6 +141,6 @@ pub struct ExpressionCheckeeAnnotation {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QuestionMarkOrExpression {
-    QuestionMark { start: TextPosition },
+    QuestionMark { span: TextSpan },
     Expression(Expression),
 }

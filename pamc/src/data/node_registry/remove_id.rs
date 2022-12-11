@@ -3,7 +3,7 @@ use crate::data::{
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{ListId, NodeId, QuestionMarkOrPossiblyInvalidExpressionId},
-    simplified_ast as unbound, FileId, TextPosition,
+    simplified_ast as unbound, FileId, TextSpan,
 };
 
 // TODO: We could probably greatly simplify this by just making a
@@ -197,14 +197,14 @@ pub struct Identifier {
     /// This is `None` if the identifier is either
     /// 1. a built-in identifier (e.g., `Type`)
     /// 2. an identifier that appears in compiler-generated expressions
-    pub start: Option<TextPosition>,
+    pub span: Option<TextSpan>,
     pub name: IdentifierName,
 }
 impl RemoveId for with_id::Identifier {
     type Output = Identifier;
     fn remove_id(&self) -> Self::Output {
         Identifier {
-            start: self.start,
+            span: self.span,
             name: self.name.clone(),
         }
     }
@@ -214,7 +214,7 @@ impl AddId for Identifier {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Identifier {
             id,
-            start: self.start,
+            span: self.span,
             name: self.name.clone(),
         }
     }
@@ -387,14 +387,14 @@ impl AddId for Check {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GoalCheckeeAnnotation {
-    pub goal_kw_position: TextPosition,
+    pub goal_kw_span: TextSpan,
     pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
 impl RemoveId for with_id::GoalCheckeeAnnotation {
     type Output = GoalCheckeeAnnotation;
     fn remove_id(&self) -> Self::Output {
         GoalCheckeeAnnotation {
-            goal_kw_position: self.goal_kw_position,
+            goal_kw_span: self.goal_kw_position,
             checkee_type_id: self.checkee_type_id,
         }
     }
@@ -404,7 +404,7 @@ impl AddId for GoalCheckeeAnnotation {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::GoalCheckeeAnnotation {
             id,
-            goal_kw_position: self.goal_kw_position,
+            goal_kw_position: self.goal_kw_span,
             checkee_type_id: self.checkee_type_id,
         }
     }

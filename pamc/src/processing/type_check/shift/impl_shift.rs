@@ -447,8 +447,8 @@ impl ShiftDbIndices for QuestionMarkOrPossiblyInvalidExpressionId {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
-                QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start } => {
+                QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start }
             }
             QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
                 QuestionMarkOrPossiblyInvalidExpressionId::Expression(

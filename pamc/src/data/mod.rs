@@ -13,7 +13,10 @@ pub mod variant_return_type_validation_result;
 pub struct FileId(pub usize);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct TextPosition {
+pub struct TextSpan {
     pub file_id: FileId,
-    pub index: usize,
+    /// Inclusive
+    pub start: usize,
+    /// Exclusive
+    pub end: usize,
 }

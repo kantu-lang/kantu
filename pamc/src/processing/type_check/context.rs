@@ -79,7 +79,7 @@ impl Context {
                     vec![Identifier {
                         id: dummy_id(),
                         name: IdentifierName::Standard("Type2".to_owned()),
-                        start: None,
+                        span: None,
                     }],
                     DbIndex(0),
                 ),
@@ -96,7 +96,7 @@ impl Context {
                     vec![Identifier {
                         id: dummy_id(),
                         name: IdentifierName::Standard("Type1".to_owned()),
-                        start: None,
+                        span: None,
                     }],
                     DbIndex(0),
                 ),

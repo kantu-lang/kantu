@@ -1,4 +1,4 @@
-use crate::data::{light_ast::*, TextPosition};
+use crate::data::{light_ast::*, TextSpan};
 
 use rustc_hash::FxHashMap;
 use std::fmt::Debug;
@@ -46,7 +46,7 @@ pub enum CheckeeAnnotationId {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrPossiblyInvalidExpressionId {
-    QuestionMark { start: TextPosition },
+    QuestionMark { span: TextSpan },
     Expression(PossiblyInvalidExpressionId),
 }
 

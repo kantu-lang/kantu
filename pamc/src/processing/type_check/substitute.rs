@@ -322,8 +322,8 @@ impl Substitute for QuestionMarkOrPossiblyInvalidExpressionId {
 
     fn subst(self, substitution: Substitution, state: &mut ContextlessState) -> Self::Output {
         match self {
-            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
-                QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start } => {
+                QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start }
             }
             QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
                 QuestionMarkOrPossiblyInvalidExpressionId::Expression(id.subst(substitution, state))

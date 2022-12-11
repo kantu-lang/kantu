@@ -18,6 +18,15 @@ fn unexpected_finished_item(item: &FinishedStackItem) -> AcceptResult {
     AcceptResult::Error(ParseError::UnexpectedToken(item.first_token().clone()))
 }
 
+fn span(file_id: FileId, token: &Token) -> TextSpan {
+    let start = token.start_index;
+    TextSpan {
+        file_id,
+        start,
+        end: start + token.content.len(),
+    }
+}
+
 impl Accept for UnfinishedStackItem {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
@@ -73,10 +82,7 @@ impl Accept for UnfinishedTypeStatement {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
@@ -177,10 +183,7 @@ impl Accept for UnfinishedLetStatement {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
@@ -229,10 +232,7 @@ impl Accept for UnfinishedParams {
                 }
                 TokenKind::StandardIdentifier => {
                     let name = Identifier {
-                        start: TextPosition {
-                            file_id,
-                            index: token.start_index,
-                        },
+                        start: span(file_id, &token),
                         name: IdentifierName::Standard(token.content.clone()),
                     };
                     let is_dashed = self.pending_dash.is_some();
@@ -243,10 +243,7 @@ impl Accept for UnfinishedParams {
                 }
                 TokenKind::Underscore => {
                     let name = Identifier {
-                        start: TextPosition {
-                            file_id,
-                            index: token.start_index,
-                        },
+                        start: span(file_id, &token),
                         name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                     };
                     let is_dashed = self.pending_dash.is_some();
@@ -320,10 +317,7 @@ impl Accept for UnfinishedVariant {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedVariant::Name(dot.clone(), name);
@@ -400,10 +394,7 @@ impl Accept for UnfinishedDelimitedExpression {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::TypeTitleCase => {
                         let expression = Expression::Identifier(Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -413,10 +404,7 @@ impl Accept for UnfinishedDelimitedExpression {
                     }
                     TokenKind::Underscore => {
                         let expression = Expression::Identifier(Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -426,10 +414,7 @@ impl Accept for UnfinishedDelimitedExpression {
                     }
                     TokenKind::StandardIdentifier => {
                         let expression = Expression::Identifier(Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
@@ -526,10 +511,7 @@ impl Accept for UnfinishedFun {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
@@ -537,10 +519,7 @@ impl Accept for UnfinishedFun {
                     }
                     TokenKind::Underscore => {
                         let name = Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
@@ -786,10 +765,7 @@ impl Accept for UnfinishedCheck {
                         *self = UnfinishedCheck::GoalCheckeeQuestionTypeAwaitingCurly(
                             check_kw.clone(),
                             goal_kw.clone(),
-                            TextPosition {
-                                index: token.start_index,
-                                file_id,
-                            },
+                            span(file_id, &token),
                         );
                         AcceptResult::ContinueToNextToken
                     } else {
@@ -833,7 +809,7 @@ impl Accept for UnfinishedCheck {
                             check_kw.clone(),
                             goal_kw.clone(),
                             QuestionMarkOrExpression::QuestionMark {
-                                start: question_mark_position.clone(),
+                                span: question_mark_position.clone(),
                             },
                         );
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -857,10 +833,7 @@ impl Accept for UnfinishedCheck {
                                     Expression::Check(Box::new(Check {
                                         checkee_annotation: CheckeeAnnotation::Goal(
                                             GoalCheckeeAnnotation {
-                                                goal_kw_position: TextPosition {
-                                                    file_id,
-                                                    index: goal_kw.start_index,
-                                                },
+                                                goal_kw_span: span(file_id, &goal_kw),
                                                 checkee_type: checkee_type.clone(),
                                             },
                                         ),
@@ -884,10 +857,7 @@ impl Accept for UnfinishedCheck {
                         *self = UnfinishedCheck::ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(
                             check_kw.clone(),
                             checkee.clone(),
-                            TextPosition {
-                                index: token.start_index,
-                                file_id,
-                            },
+                            span(file_id, &token),
                         );
                         AcceptResult::ContinueToNextToken
                     } else {
@@ -938,7 +908,7 @@ impl Accept for UnfinishedCheck {
                             check_kw.clone(),
                             checkee.clone(),
                             QuestionMarkOrExpression::QuestionMark {
-                                start: question_mark_position.clone(),
+                                span: question_mark_position.clone(),
                             },
                         );
                         AcceptResult::ContinueToNextToken
@@ -948,7 +918,7 @@ impl Accept for UnfinishedCheck {
                             check_kw.clone(),
                             checkee.clone(),
                             QuestionMarkOrExpression::QuestionMark {
-                                start: question_mark_position.clone(),
+                                span: question_mark_position.clone(),
                             },
                             None,
                         );
@@ -972,10 +942,7 @@ impl Accept for UnfinishedCheck {
                             check_kw.clone(),
                             checkee.clone(),
                             checkee_type.clone(),
-                            TextPosition {
-                                index: token.start_index,
-                                file_id,
-                            },
+                            span(file_id, &token),
                         );
                         AcceptResult::ContinueToNextToken
                     } else {
@@ -1022,7 +989,7 @@ impl Accept for UnfinishedCheck {
                             checkee.clone(),
                             checkee_type.clone(),
                             Some(QuestionMarkOrExpression::QuestionMark {
-                                start: question_mark_position.clone(),
+                                span: question_mark_position.clone(),
                             }),
                         );
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -1077,10 +1044,7 @@ impl Accept for UnfinishedDot {
             FinishedStackItem::Token(token) => match token.kind {
                 TokenKind::StandardIdentifier => {
                     let right = Identifier {
-                        start: TextPosition {
-                            file_id,
-                            index: token.start_index,
-                        },
+                        start: span(file_id, &token),
                         name: IdentifierName::Standard(token.content.clone()),
                     };
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::UndelimitedExpression(
@@ -1155,10 +1119,7 @@ impl Accept for UnfinishedMatchCase {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
-                            start: TextPosition {
-                                file_id,
-                                index: token.start_index,
-                            },
+                            start: span(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
                         *self = UnfinishedMatchCase::VariantName(dot_token.clone(), name);
@@ -1205,10 +1166,7 @@ impl Accept for UnfinishedMatchCase {
                             params.is_empty() || currently_has_ending_comma.0;
                         if can_accept_identifier {
                             let name = Identifier {
-                                start: TextPosition {
-                                    file_id,
-                                    index: token.start_index,
-                                },
+                                start: span(file_id, &token),
                                 name: IdentifierName::Standard(token.content.clone()),
                             };
                             params.push(name);
@@ -1223,10 +1181,7 @@ impl Accept for UnfinishedMatchCase {
                             params.is_empty() || currently_has_ending_comma.0;
                         if can_accept_identifier {
                             let name = Identifier {
-                                start: TextPosition {
-                                    file_id,
-                                    index: token.start_index,
-                                },
+                                start: span(file_id, &token),
                                 name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                             };
                             params.push(name);

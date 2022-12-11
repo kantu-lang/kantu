@@ -1,6 +1,6 @@
 use crate::data::{
     bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
-    simplified_ast as unbound, FileId, TextPosition,
+    simplified_ast as unbound, FileId, TextSpan,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -69,14 +69,14 @@ pub struct DbLevel(pub usize);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Identifier {
-    pub start: Option<TextPosition>,
+    pub span: Option<TextSpan>,
     pub name: IdentifierName,
 }
 
 impl From<crate::data::simplified_ast::Identifier> for Identifier {
     fn from(id: crate::data::simplified_ast::Identifier) -> Self {
         Self {
-            start: Some(id.start),
+            span: Some(id.start),
             name: id.name,
         }
     }
@@ -139,7 +139,7 @@ pub enum CheckeeAnnotation {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GoalCheckeeAnnotation {
-    pub goal_kw_position: TextPosition,
+    pub goal_kw_span: TextSpan,
     pub checkee_type: QuestionMarkOrPossiblyInvalidExpression,
 }
 
@@ -152,7 +152,7 @@ pub struct ExpressionCheckeeAnnotation {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrPossiblyInvalidExpression {
-    QuestionMark { start: TextPosition },
+    QuestionMark { span: TextSpan },
     Expression(PossiblyInvalidExpression),
 }
 

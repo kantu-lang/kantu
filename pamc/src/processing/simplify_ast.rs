@@ -176,7 +176,7 @@ fn simplify_goal_checkee_annotation(
     unsimplified: ust::GoalCheckeeAnnotation,
 ) -> Result<GoalCheckeeAnnotation, SimplifyAstError> {
     Ok(GoalCheckeeAnnotation {
-        goal_kw_position: unsimplified.goal_kw_position,
+        goal_kw_span: unsimplified.goal_kw_span,
         checkee_type: simplify_question_mark_or_expression(unsimplified.checkee_type)?,
     })
 }
@@ -198,8 +198,8 @@ fn simplify_question_mark_or_expression(
     unsimplified: ust::QuestionMarkOrExpression,
 ) -> Result<QuestionMarkOrExpression, SimplifyAstError> {
     Ok(match unsimplified {
-        ust::QuestionMarkOrExpression::QuestionMark { start } => {
-            QuestionMarkOrExpression::QuestionMark { start }
+        ust::QuestionMarkOrExpression::QuestionMark { span: start } => {
+            QuestionMarkOrExpression::QuestionMark { span: start }
         }
         ust::QuestionMarkOrExpression::Expression(unsimplified) => {
             QuestionMarkOrExpression::Expression(simplify_expression(unsimplified)?)

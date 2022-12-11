@@ -3,7 +3,7 @@ use crate::data::{
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{ListId, NodeId, NodeRegistry},
-    TextPosition,
+    TextSpan,
 };
 
 use eval::*;
@@ -69,11 +69,11 @@ pub enum TypeCheckError {
 #[derive(Clone, Debug)]
 pub enum TypeCheckWarning {
     NoGoal {
-        goal_kw_start: TextPosition,
+        goal_kw_start: TextSpan,
     },
     // TODO: Rename "missing" to "incomplete"?
     MissingCheckeeType {
-        question_mark_start: TextPosition,
+        question_mark_start: TextSpan,
     },
     UntypecheckableExpression(InvalidExpressionId),
     IllTypedCheckeeType(ExpressionId, TypeCheckError),
@@ -83,7 +83,7 @@ pub enum TypeCheckWarning {
         actual_id: NormalFormId,
     },
     MissingCheckeeValue {
-        question_mark_start: TextPosition,
+        question_mark_start: TextSpan,
     },
     IllTypedCheckeeValue(ExpressionId, TypeCheckError),
     IncorrectCheckeeValue {

@@ -23,7 +23,7 @@ pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
         vec![Identifier {
             id: dummy_id(),
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
-            start: None,
+            span: None,
         }],
         state.context.type0_dbi(),
     );
@@ -1060,9 +1060,7 @@ fn min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cuto
     cutoff: usize,
 ) -> MinDbIndex {
     match id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: _ } => {
-            MinDbIndex::Infinity
-        }
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: _ } => MinDbIndex::Infinity,
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
             min_db_index_in_possibly_invalid_expression_relative_to_cutoff(registry, id, cutoff)
         }

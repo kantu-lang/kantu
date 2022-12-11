@@ -1,7 +1,7 @@
 use crate::data::{
     token::{Token, TokenKind},
     unsimplified_ast::*,
-    FileId, TextPosition,
+    FileId, TextSpan,
 };
 
 // TODO: Check first token location logic.

@@ -67,7 +67,7 @@ pub fn register_identifier(
 ) -> NodeId<Identifier> {
     registry.add_identifier_and_overwrite_its_id(Identifier {
         id: dummy_id(),
-        start: unregistered.start,
+        span: unregistered.span,
         name: unregistered.name,
     })
 }
@@ -262,7 +262,7 @@ pub fn register_goal_checkee_annotation(
     registry: &mut NodeRegistry,
     unregistered: heavy::GoalCheckeeAnnotation,
 ) -> NodeId<GoalCheckeeAnnotation> {
-    let goal_kw_position = unregistered.goal_kw_position;
+    let goal_kw_position = unregistered.goal_kw_span;
     let checkee_type_id =
         register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
     registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
@@ -295,8 +295,8 @@ pub fn register_question_mark_or_possibly_invalid_expression(
     unregistered: heavy::QuestionMarkOrPossiblyInvalidExpression,
 ) -> QuestionMarkOrPossiblyInvalidExpressionId {
     match unregistered {
-        heavy::QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start } => {
-            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+        heavy::QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: start } => {
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start }
         }
         heavy::QuestionMarkOrPossiblyInvalidExpression::Expression(unregistered) => {
             let id = register_possibly_invalid_expression(registry, unregistered);

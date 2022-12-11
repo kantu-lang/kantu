@@ -746,7 +746,7 @@ fn get_checkee_type_warning(
     annotated_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
 ) -> Option<TypeCheckWarning> {
     let annotated_type_id = match annotated_type_id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeType { question_mark_start }),
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeType { question_mark_start }),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
 
@@ -774,7 +774,7 @@ fn get_checkee_value_warning(
 ) -> Option<TypeCheckWarning> {
     let annotated_value_id = annotated_value_id?;
     let annotated_value_id = match annotated_value_id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeValue { question_mark_start }),
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeValue { question_mark_start }),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
 

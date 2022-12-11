@@ -297,7 +297,7 @@ pub fn format_question_mark_or_possibly_invalid_expression(
     options: &FormatOptions,
 ) -> String {
     match expression {
-        QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start: _ } => "?".to_string(),
+        QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: _ } => "?".to_string(),
         QuestionMarkOrPossiblyInvalidExpression::Expression(expression) => {
             format_possibly_invalid_expression(expression, indent_level, options)
         }

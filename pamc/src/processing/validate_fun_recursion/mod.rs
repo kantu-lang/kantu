@@ -570,8 +570,8 @@ fn validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
     id: QuestionMarkOrPossiblyInvalidExpressionId,
 ) -> Result<QuestionMarkOrPossiblyInvalidExpressionId, TaintedIllegalFunRecursionError> {
     Ok(match id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
-            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start }
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start } => {
+            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start }
         }
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
             QuestionMarkOrPossiblyInvalidExpressionId::Expression(

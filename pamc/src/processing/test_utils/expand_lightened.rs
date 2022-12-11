@@ -50,7 +50,7 @@ pub fn expand_identifier(registry: &NodeRegistry, id: NodeId<light::Identifier>)
     let light = registry.identifier(id);
     Identifier {
         name: light.name.clone(),
-        start: light.start,
+        span: light.span,
     }
 }
 
@@ -246,7 +246,7 @@ pub fn expand_goal_checkee_annotation(
     let checkee_type =
         expand_question_mark_or_possibly_invalid_expression(registry, light.checkee_type_id);
     GoalCheckeeAnnotation {
-        goal_kw_position,
+        goal_kw_span: goal_kw_position,
         checkee_type,
     }
 }
@@ -274,8 +274,8 @@ pub fn expand_question_mark_or_possibly_invalid_expression(
     id: QuestionMarkOrPossiblyInvalidExpressionId,
 ) -> QuestionMarkOrPossiblyInvalidExpression {
     match id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { start } => {
-            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start }
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start } => {
+            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: start }
         }
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(id) => {
             QuestionMarkOrPossiblyInvalidExpression::Expression(expand_possibly_invalid_expression(

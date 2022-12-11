@@ -2,7 +2,7 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     node_registry::{ListId, NodeId},
-    simplified_ast as unbound, FileId, TextPosition,
+    simplified_ast as unbound, FileId, TextSpan,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -60,7 +60,7 @@ pub use crate::data::bound_ast::{DbIndex, DbLevel};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
     pub id: NodeId<Self>,
-    pub start: Option<TextPosition>,
+    pub span: Option<TextSpan>,
     pub name: IdentifierName,
 }
 
@@ -124,7 +124,7 @@ pub use crate::data::node_registry::CheckeeAnnotationId;
 #[derive(Clone, Debug)]
 pub struct GoalCheckeeAnnotation {
     pub id: NodeId<Self>,
-    pub goal_kw_position: TextPosition,
+    pub goal_kw_position: TextSpan,
     pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
 

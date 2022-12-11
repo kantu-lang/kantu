@@ -317,7 +317,7 @@ fn bind_goal_checkee_annotation_dirty(
     let checkee_type =
         bind_question_mark_or_possibly_invalid_expression(context, annotation.checkee_type);
     Ok(GoalCheckeeAnnotation {
-        goal_kw_position: annotation.goal_kw_position,
+        goal_kw_span: annotation.goal_kw_span,
         checkee_type,
     })
 }
@@ -343,8 +343,8 @@ fn bind_question_mark_or_possibly_invalid_expression(
     expression: ub::QuestionMarkOrExpression,
 ) -> QuestionMarkOrPossiblyInvalidExpression {
     match expression {
-        ub::QuestionMarkOrExpression::QuestionMark { start } => {
-            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { start }
+        ub::QuestionMarkOrExpression::QuestionMark { span: start } => {
+            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: start }
         }
         ub::QuestionMarkOrExpression::Expression(expression) => {
             // Since we're not using `?` to terminate early (like we normally do),
