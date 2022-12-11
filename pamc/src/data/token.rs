@@ -30,14 +30,42 @@ pub enum TokenKind {
 
     FatArrow,
 
+    Underscore,
+
     TypeLowerCase,
-    TypeTitleCase,
     Let,
+    TypeTitleCase,
+    Type0,
+    Type1,
+    Type2,
+    Type3,
     Fun,
     Match,
     Forall,
-    Exists,
-    Underscore,
     Check,
     Goal,
+    Impossible,
+
+    // Currently unused but reserved for future use.
+    Struct,
+    Var,
+    Trait,
+
+    Pub,
+    Prot,
+    Priv,
+    Mod,
+    Pack,
+    Use,
+    Namespace,
+
+    Extern,
+    Unsafe,
+    Async,
+
+    Notation,
+    Exists,
+
+    Universal,
+    Existential,
 }

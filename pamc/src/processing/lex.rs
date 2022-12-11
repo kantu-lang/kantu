@@ -143,69 +143,25 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Option<LexError> {
                     pending_token.content.push(c);
                     None
                 } else {
-                    state.tokens.push(if pending_token.content == "type" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::TypeLowerCase,
-                        }
-                    } else if pending_token.content == "Type" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::TypeTitleCase,
-                        }
-                    } else if pending_token.content == "let" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Let,
-                        }
-                    } else if pending_token.content == "fun" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Fun,
-                        }
-                    } else if pending_token.content == "match" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Match,
-                        }
-                    } else if pending_token.content == "forall" || pending_token.content == "∀" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Forall,
-                        }
-                    } else if pending_token.content == "exists" || pending_token.content == "∃" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Exists,
-                        }
-                    } else if pending_token.content == "check" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Check,
-                        }
-                    } else if pending_token.content == "goal" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Goal,
-                        }
-                    } else if pending_token.content == "_" {
-                        Token {
-                            start_index: pending_token.start_index,
-                            content: pending_token.content.clone(),
-                            kind: TokenKind::Underscore,
-                        }
-                    } else {
-                        pending_token.clone().into()
-                    });
+                    state.tokens.push(
+                        if let Some(kind) =
+                            get_token_kind_of_non_underscore_keyword(&pending_token.content)
+                        {
+                            Token {
+                                start_index: pending_token.start_index,
+                                content: pending_token.content.clone(),
+                                kind,
+                            }
+                        } else if pending_token.content == "_" {
+                            Token {
+                                start_index: pending_token.start_index,
+                                content: pending_token.content.clone(),
+                                kind: TokenKind::Underscore,
+                            }
+                        } else {
+                            pending_token.clone().into()
+                        },
+                    );
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
@@ -241,6 +197,48 @@ fn get_token_kind_of_special_non_underscore_character(c: char) -> Option<TokenKi
         '}' => Some(TokenKind::RCurly),
         '<' => Some(TokenKind::LAngle),
         '>' => Some(TokenKind::RAngle),
+        _ => None,
+    }
+}
+
+fn get_token_kind_of_non_underscore_keyword(s: &str) -> Option<TokenKind> {
+    match s {
+        "type" => Some(TokenKind::TypeLowerCase),
+        "let" => Some(TokenKind::Let),
+        "Type" => Some(TokenKind::TypeTitleCase),
+        "Type0" => Some(TokenKind::Type0),
+        "Type1" => Some(TokenKind::Type1),
+        "Type2" => Some(TokenKind::Type2),
+        "Type3" => Some(TokenKind::Type3),
+        "fun" => Some(TokenKind::Fun),
+        "match" => Some(TokenKind::Match),
+        "forall" => Some(TokenKind::Forall),
+        "check" => Some(TokenKind::Check),
+        "goal" => Some(TokenKind::Goal),
+        "impossible" => Some(TokenKind::Impossible),
+
+        "struct" => Some(TokenKind::Struct),
+        "var" => Some(TokenKind::Var),
+        "trait" => Some(TokenKind::Trait),
+
+        "pub" => Some(TokenKind::Pub),
+        "prot" => Some(TokenKind::Prot),
+        "priv" => Some(TokenKind::Priv),
+        "mod" => Some(TokenKind::Mod),
+        "pack" => Some(TokenKind::Pack),
+        "use" => Some(TokenKind::Use),
+        "namespace" => Some(TokenKind::Namespace),
+
+        "extern" => Some(TokenKind::Extern),
+        "unsafe" => Some(TokenKind::Unsafe),
+        "async" => Some(TokenKind::Async),
+
+        "notation" => Some(TokenKind::Notation),
+        "exists" => Some(TokenKind::Exists),
+
+        "∀" => Some(TokenKind::Universal),
+        "∃" => Some(TokenKind::Existential),
+
         _ => None,
     }
 }
