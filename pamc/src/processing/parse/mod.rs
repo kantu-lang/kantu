@@ -25,6 +25,11 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
         t.clone()
     } else {
         return Ok(File {
+            span: TextSpan {
+                file_id,
+                start: 0,
+                end: 0,
+            },
             id: file_id,
             items: vec![],
         });
@@ -45,6 +50,11 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
         let top_unfinished = stack.pop().unwrap();
         match top_unfinished {
             UnfinishedStackItem::File(file) => Ok(File {
+                span: TextSpan {
+                    file_id,
+                    start: file.items[0].span().start,
+                    end: file.items.last().expect("File should have at least one item.").span().end,
+                },
                 id: file_id,
                 items: file.items,
             }),

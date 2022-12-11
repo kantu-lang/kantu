@@ -76,7 +76,7 @@ pub struct Identifier {
 impl From<crate::data::simplified_ast::Identifier> for Identifier {
     fn from(id: crate::data::simplified_ast::Identifier) -> Self {
         Self {
-            span: Some(id.start),
+            span: Some(id.span),
             name: id.name,
         }
     }
