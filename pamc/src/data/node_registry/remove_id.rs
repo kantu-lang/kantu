@@ -2,7 +2,10 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
-    node_registry::{ListId, NodeId, QuestionMarkOrPossiblyInvalidExpressionId},
+    node_registry::{
+        CheckAssertionId, GoalKwOrExpressionId, ListId, NodeId,
+        QuestionMarkOrPossiblyInvalidExpressionId,
+    },
     simplified_ast as unbound, FileId, TextSpan,
 };
 
@@ -28,6 +31,7 @@ pub trait AddId {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
+    pub span: TextSpan,
     pub file_id: FileId,
     pub item_list_id: ListId<FileItemNodeId>,
 }
@@ -35,6 +39,7 @@ impl RemoveId for with_id::File {
     type Output = File;
     fn remove_id(&self) -> Self::Output {
         File {
+            span: self.span,
             file_id: self.file_id,
             item_list_id: self.item_list_id,
         }
@@ -44,6 +49,7 @@ impl AddId for File {
     type Output = with_id::File;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::File {
+            span: self.span,
             file_id: self.file_id,
             id,
             item_list_id: self.item_list_id,
@@ -55,6 +61,7 @@ pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
+    pub span: TextSpan,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub variant_list_id: ListId<NodeId<with_id::Variant>>,
@@ -63,6 +70,7 @@ impl RemoveId for with_id::TypeStatement {
     type Output = TypeStatement;
     fn remove_id(&self) -> Self::Output {
         TypeStatement {
+            span: self.span,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             variant_list_id: self.variant_list_id,
@@ -74,6 +82,7 @@ impl AddId for TypeStatement {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::TypeStatement {
             id,
+            span: self.span,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             variant_list_id: self.variant_list_id,
@@ -83,6 +92,7 @@ impl AddId for TypeStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Param {
+    pub span: TextSpan,
     pub is_dashed: bool,
     pub name_id: NodeId<with_id::Identifier>,
     pub type_id: ExpressionId,
@@ -91,6 +101,7 @@ impl RemoveId for with_id::Param {
     type Output = Param;
     fn remove_id(&self) -> Self::Output {
         Param {
+            span: self.span,
             is_dashed: self.is_dashed,
             name_id: self.name_id,
             type_id: self.type_id,
@@ -102,6 +113,7 @@ impl AddId for Param {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Param {
             id,
+            span: self.span,
             is_dashed: self.is_dashed,
             name_id: self.name_id,
             type_id: self.type_id,
@@ -111,6 +123,7 @@ impl AddId for Param {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
+    pub span: TextSpan,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub return_type_id: ExpressionId,
@@ -119,6 +132,7 @@ impl RemoveId for with_id::Variant {
     type Output = Variant;
     fn remove_id(&self) -> Self::Output {
         Variant {
+            span: self.span,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             return_type_id: self.return_type_id,
@@ -130,6 +144,7 @@ impl AddId for Variant {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Variant {
             id,
+            span: self.span,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             return_type_id: self.return_type_id,
@@ -139,6 +154,7 @@ impl AddId for Variant {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
+    pub span: TextSpan,
     pub name_id: NodeId<with_id::Identifier>,
     pub value_id: ExpressionId,
 }
@@ -146,6 +162,7 @@ impl RemoveId for with_id::LetStatement {
     type Output = LetStatement;
     fn remove_id(&self) -> Self::Output {
         LetStatement {
+            span: self.span,
             name_id: self.name_id,
             value_id: self.value_id,
         }
@@ -156,6 +173,7 @@ impl AddId for LetStatement {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::LetStatement {
             id,
+            span: self.span,
             name_id: self.name_id,
             value_id: self.value_id,
         }
@@ -166,6 +184,7 @@ pub type ExpressionId = crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
+    pub span: TextSpan,
     pub component_list_id: ListId<NodeId<with_id::Identifier>>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
@@ -174,6 +193,7 @@ impl RemoveId for with_id::NameExpression {
     type Output = NameExpression;
     fn remove_id(&self) -> Self::Output {
         NameExpression {
+            span: self.span,
             component_list_id: self.component_list_id,
             db_index: self.db_index,
         }
@@ -184,6 +204,7 @@ impl AddId for NameExpression {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::NameExpression {
             id,
+            span: self.span,
             component_list_id: self.component_list_id,
             db_index: self.db_index,
         }
@@ -226,6 +247,7 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
+    pub span: TextSpan,
     pub callee_id: ExpressionId,
     pub arg_list_id: ListId<ExpressionId>,
 }
@@ -233,6 +255,7 @@ impl RemoveId for with_id::Call {
     type Output = Call;
     fn remove_id(&self) -> Self::Output {
         Call {
+            span: self.span,
             callee_id: self.callee_id,
             arg_list_id: self.arg_list_id,
         }
@@ -243,6 +266,7 @@ impl AddId for Call {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Call {
             id,
+            span: self.span,
             callee_id: self.callee_id,
             arg_list_id: self.arg_list_id,
         }
@@ -251,6 +275,7 @@ impl AddId for Call {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
+    pub span: TextSpan,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub return_type_id: ExpressionId,
@@ -261,6 +286,7 @@ impl RemoveId for with_id::Fun {
     type Output = Fun;
     fn remove_id(&self) -> Self::Output {
         Fun {
+            span: self.span,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             return_type_id: self.return_type_id,
@@ -274,6 +300,7 @@ impl AddId for Fun {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Fun {
             id,
+            span: self.span,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             return_type_id: self.return_type_id,
@@ -285,6 +312,7 @@ impl AddId for Fun {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Match {
+    pub span: TextSpan,
     pub matchee_id: ExpressionId,
     pub case_list_id: ListId<NodeId<with_id::MatchCase>>,
 }
@@ -292,6 +320,7 @@ impl RemoveId for with_id::Match {
     type Output = Match;
     fn remove_id(&self) -> Self::Output {
         Match {
+            span: self.span,
             matchee_id: self.matchee_id,
             case_list_id: self.case_list_id,
         }
@@ -302,6 +331,7 @@ impl AddId for Match {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Match {
             id,
+            span: self.span,
             matchee_id: self.matchee_id,
             case_list_id: self.case_list_id,
         }
@@ -310,6 +340,7 @@ impl AddId for Match {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MatchCase {
+    pub span: TextSpan,
     pub variant_name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Identifier>>,
     pub output_id: ExpressionId,
@@ -318,6 +349,7 @@ impl RemoveId for with_id::MatchCase {
     type Output = MatchCase;
     fn remove_id(&self) -> Self::Output {
         MatchCase {
+            span: self.span,
             variant_name_id: self.variant_name_id,
             param_list_id: self.param_list_id,
             output_id: self.output_id,
@@ -329,6 +361,7 @@ impl AddId for MatchCase {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::MatchCase {
             id,
+            span: self.span,
             variant_name_id: self.variant_name_id,
             param_list_id: self.param_list_id,
             output_id: self.output_id,
@@ -337,6 +370,7 @@ impl AddId for MatchCase {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
+    pub span: TextSpan,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub output_id: ExpressionId,
 }
@@ -344,6 +378,7 @@ impl RemoveId for with_id::Forall {
     type Output = Forall;
     fn remove_id(&self) -> Self::Output {
         Forall {
+            span: self.span,
             param_list_id: self.param_list_id,
             output_id: self.output_id,
         }
@@ -354,6 +389,7 @@ impl AddId for Forall {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Forall {
             id,
+            span: self.span,
             param_list_id: self.param_list_id,
             output_id: self.output_id,
         }
@@ -362,14 +398,16 @@ impl AddId for Forall {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
-    pub checkee_annotation_id: with_id::CheckeeAnnotationId,
+    pub span: TextSpan,
+    pub assertion_list_id: ListId<CheckAssertionId>,
     pub output_id: ExpressionId,
 }
 impl RemoveId for with_id::Check {
     type Output = Check;
     fn remove_id(&self) -> Self::Output {
         Check {
-            checkee_annotation_id: self.checkee_annotation_id,
+            span: self.span,
+            assertion_list_id: self.assertion_list_id,
             output_id: self.output_id,
         }
     }
@@ -379,67 +417,72 @@ impl AddId for Check {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::Check {
             id,
-            checkee_annotation_id: self.checkee_annotation_id,
+            span: self.span,
+            assertion_list_id: self.assertion_list_id,
             output_id: self.output_id,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct GoalCheckeeAnnotation {
-    pub goal_kw_span: TextSpan,
-    pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
+pub struct TypeAssertion {
+    pub span: TextSpan,
+    pub left_id: ExpressionId,
+    pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
-impl RemoveId for with_id::GoalCheckeeAnnotation {
-    type Output = GoalCheckeeAnnotation;
+impl RemoveId for with_id::TypeAssertion {
+    type Output = TypeAssertion;
     fn remove_id(&self) -> Self::Output {
-        GoalCheckeeAnnotation {
-            goal_kw_span: self.goal_kw_position,
-            checkee_type_id: self.checkee_type_id,
+        TypeAssertion {
+            span: self.span,
+            left_id: self.left_id,
+            right_id: self.right_id,
         }
     }
 }
-impl AddId for GoalCheckeeAnnotation {
-    type Output = with_id::GoalCheckeeAnnotation;
+impl AddId for TypeAssertion {
+    type Output = with_id::TypeAssertion;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::GoalCheckeeAnnotation {
+        with_id::TypeAssertion {
             id,
-            goal_kw_position: self.goal_kw_span,
-            checkee_type_id: self.checkee_type_id,
+            span: self.span,
+            left_id: self.left_id,
+            right_id: self.right_id,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ExpressionCheckeeAnnotation {
-    pub checkee_id: ExpressionId,
-    pub checkee_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
-    pub checkee_value_id: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
+pub struct NormalFormAssertion {
+    pub span: TextSpan,
+    pub left_id: GoalKwOrExpressionId,
+    pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
-impl RemoveId for with_id::ExpressionCheckeeAnnotation {
-    type Output = ExpressionCheckeeAnnotation;
+impl RemoveId for with_id::NormalFormAssertion {
+    type Output = NormalFormAssertion;
     fn remove_id(&self) -> Self::Output {
-        ExpressionCheckeeAnnotation {
-            checkee_id: self.checkee_id,
-            checkee_type_id: self.checkee_type_id,
-            checkee_value_id: self.checkee_value_id,
+        NormalFormAssertion {
+            span: self.span,
+            left_id: self.left_id,
+            right_id: self.right_id,
         }
     }
 }
-impl AddId for ExpressionCheckeeAnnotation {
-    type Output = with_id::ExpressionCheckeeAnnotation;
+impl AddId for NormalFormAssertion {
+    type Output = with_id::NormalFormAssertion;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::ExpressionCheckeeAnnotation {
+        with_id::NormalFormAssertion {
             id,
-            checkee_id: self.checkee_id,
-            checkee_type_id: self.checkee_type_id,
-            checkee_value_id: self.checkee_value_id,
+            span: self.span,
+            left_id: self.left_id,
+            right_id: self.right_id,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SymbolicallyInvalidExpression {
+    pub span: TextSpan,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
@@ -447,6 +490,7 @@ impl RemoveId for with_id::SymbolicallyInvalidExpression {
     type Output = SymbolicallyInvalidExpression;
     fn remove_id(&self) -> Self::Output {
         SymbolicallyInvalidExpression {
+            span: self.span,
             expression: self.expression.clone(),
             error: self.error.clone(),
         }
@@ -457,6 +501,7 @@ impl AddId for SymbolicallyInvalidExpression {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::SymbolicallyInvalidExpression {
             id,
+            span: self.span,
             expression: self.expression.clone(),
             error: self.error.clone(),
         }
@@ -465,6 +510,7 @@ impl AddId for SymbolicallyInvalidExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
+    pub span: TextSpan,
     pub expression_id: with_id::ExpressionId,
     pub error: IllegalFunRecursionError,
 }
@@ -472,6 +518,7 @@ impl RemoveId for with_id::IllegalFunRecursionExpression {
     type Output = IllegalFunRecursionExpression;
     fn remove_id(&self) -> Self::Output {
         IllegalFunRecursionExpression {
+            span: self.span,
             expression_id: self.expression_id.clone(),
             error: self.error.clone(),
         }
@@ -482,6 +529,7 @@ impl AddId for IllegalFunRecursionExpression {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::IllegalFunRecursionExpression {
             id,
+            span: self.span,
             expression_id: self.expression_id.clone(),
             error: self.error.clone(),
         }

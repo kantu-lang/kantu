@@ -42,7 +42,11 @@ fn bind_file_dirty(context: &mut Context, file: ub::File) -> Result<File, BindEr
         .map(|item| bind_file_item(context, item))
         .collect::<Result<Vec<_>, BindError>>()?;
     context.pop_n(number_of_file_items);
-    Ok(File { id: file.id, items })
+    Ok(File {
+        span: file.span,
+        id: file.id,
+        items,
+    })
 }
 
 fn bind_file_item(context: &mut Context, item: ub::FileItem) -> Result<FileItem, BindError> {
@@ -99,6 +103,7 @@ fn bind_type_statement_dirty(
     }
 
     Ok(TypeStatement {
+        span: type_statement.span,
         name: type_name,
         params,
         variants,
@@ -113,6 +118,7 @@ fn bind_param_dirty(context: &mut Context, param: ub::Param) -> Result<Param, Bi
     let type_ = bind_expression(context, param.type_)?;
     let name = create_name_and_add_to_scope(context, param.name)?;
     Ok(Param {
+        span: param.span,
         is_dashed: param.is_dashed,
         name,
         type_,
@@ -153,6 +159,7 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
     )?;
 
     Ok(Variant {
+        span: variant.span,
         name,
         params,
         return_type,
@@ -172,7 +179,11 @@ fn bind_let_statement_dirty(
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
     let name = create_name_and_add_to_scope(context, let_statement.name)?;
-    Ok(LetStatement { name, value })
+    Ok(LetStatement {
+        span: let_statement.span,
+        name,
+        value,
+    })
 }
 
 fn bind_expression(
@@ -202,6 +213,7 @@ fn bind_name_expression_dirty(
 ) -> Result<Expression, BindError> {
     let db_index = context.get_db_index(&name.components)?;
     Ok(Expression::Name(NameExpression {
+        span: name.span,
         components: name.components.into_iter().map(Into::into).collect(),
         db_index,
     }))
@@ -217,7 +229,11 @@ fn bind_call_expression_dirty(
         .into_iter()
         .map(|arg| bind_expression_dirty(context, arg))
         .collect::<Result<Vec<_>, BindError>>()?;
-    Ok(Expression::Call(Box::new(Call { callee, args })))
+    Ok(Expression::Call(Box::new(Call {
+        span: call.span,
+        callee,
+        args,
+    })))
 }
 
 fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError> {
@@ -233,6 +249,7 @@ fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, Bin
 
     let body = bind_expression_dirty(context, fun.body)?;
     let fun = Expression::Fun(Box::new(Fun {
+        span: fun.span,
         name,
         params,
         return_type,
@@ -251,7 +268,11 @@ fn bind_match_dirty(context: &mut Context, match_: ub::Match) -> Result<Expressi
         .into_iter()
         .map(|case| bind_match_case(context, case))
         .collect::<Result<Vec<_>, BindError>>()?;
-    Ok(Expression::Match(Box::new(Match { matchee, cases })))
+    Ok(Expression::Match(Box::new(Match {
+        span: match_.span,
+        matchee,
+        cases,
+    })))
 }
 
 fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCase, BindError> {
@@ -266,6 +287,7 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
 
     context.pop_n(arity);
     Ok(MatchCase {
+        span: case.span,
         variant_name,
         params,
         output,
@@ -280,7 +302,11 @@ fn bind_forall_dirty(context: &mut Context, forall: ub::Forall) -> Result<Expres
         .map(|param| bind_param(context, param))
         .collect::<Result<Vec<_>, BindError>>()?;
     let output = bind_expression_dirty(context, forall.output)?;
-    let forall = Expression::Forall(Box::new(Forall { params, output }));
+    let forall = Expression::Forall(Box::new(Forall {
+        span: forall.span,
+        params,
+        output,
+    }));
 
     context.pop_n(arity);
     Ok(forall)
