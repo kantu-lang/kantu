@@ -625,7 +625,7 @@ certain equalities at compile time. They have zero runtime impact.
 Syntax:
 
 ```pamlihu
-check
+check (
     // Type assertions:
     expr0: Type0,
     expr1: Type1,
@@ -634,14 +634,42 @@ check
     expr'0 = expr''0,
     expr'1 = expr''1,
     /* ... */
-{
+) {
     output_expression
 }
 ```
 
 As you can see, you can pass in zero or more _type assertions_ and zero or more
 _normal form assertions_.
-There must be at least one total assertions (i.e., `check { output_expression }` is illegal).
+Assertions may be in any order--type assertions are not required to come before
+normal form assertions.
+
+There must be at least one total assertions (i.e., `check () { output_expression }` is illegal).
+
+Example:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type EqNat(x: Nat, y: Nat) {
+    .Refl(z: Nat): EqNat(z, z),
+}
+
+let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
+    match H {
+        .Refl(c) =>
+            check (
+                EqNat(b, a) = EqNat(c, c),
+                EqNat.Refl(c): EqNat(c, c),
+            ) {
+                EqNat.Refl(c)
+            },
+    }
+}
+```
 
 Semantically, a `check` expression immediately evaluates to its output (which is
 why they have no runtime impact).
@@ -650,6 +678,75 @@ However, what is useful is that the compiler will produce warnings if any of the
 assertions are incorrect.
 Furthermore, a good compiler will generate corrections for the incorrect types/values.
 This way, we can use `check` expressions to debug confusing type errors.
+
+#### Using `goal` in a normal form assertion's LHS
+
+For normal form assertions, you can write `goal` in place of
+the left-hand side:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type EqNat(x: Nat, y: Nat) {
+    .Refl(z: Nat): EqNat(z, z),
+}
+
+let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
+    match H {
+        .Refl(c) =>
+            check (
+                // Observe that the LHS uses the `goal` keyword
+                // instead of an expression
+                goal = EqNat(c, c),
+
+                EqNat.Refl(c): EqNat(c, c),
+            ) {
+                EqNat.Refl(c)
+            },
+    }
+}
+```
+
+`goal` is the type that the current expression needs to take.
+
+#### Using `?` in an assertion's RHS
+
+For both type assertions and normal form assertions,
+you can write `?` in place of the right-hand side:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type EqNat(x: Nat, y: Nat) {
+    .Refl(z: Nat): EqNat(z, z),
+}
+
+let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
+    match H {
+        .Refl(c) =>
+            check (
+                // Observe that the RHS uses the `?` operator
+                // instead of an expression
+                goal = ?,
+                EqNat.Refl(c): ?,
+            ) {
+                EqNat.Refl(c)
+            },
+    }
+}
+```
+
+Using a `?` will automatically fail the assertion
+(thus triggering a warning--and on a good compiler/IDE,
+an accompanying suggested correction).
+This is useful when you want the compiler/IDE to provide
+a solution for you.
 
 ## Comments
 
