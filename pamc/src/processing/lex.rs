@@ -50,7 +50,7 @@ struct PendingToken {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PendingTokenKind {
     Equal,
-    StandardIdentifier,
+    Identifier,
     Slash,
     SingleLineComment,
     MultiLineComment {
@@ -68,7 +68,7 @@ impl TryFrom<PendingToken> for Token {
             content,
             kind,
         } = pending_token;
-        let kind = kind.try_into()?;
+        let kind = convert_pending_token_kind(kind, &content)?;
         Ok(Token {
             start_index,
             content,
@@ -77,29 +77,33 @@ impl TryFrom<PendingToken> for Token {
     }
 }
 
-impl TryFrom<PendingTokenKind> for TokenKind {
-    type Error = ();
-
-    fn try_from(pending_token_kind: PendingTokenKind) -> Result<Self, Self::Error> {
-        match pending_token_kind {
-            PendingTokenKind::Equal => Ok(TokenKind::Equal),
-            PendingTokenKind::StandardIdentifier => Ok(TokenKind::StandardIdentifier),
-            PendingTokenKind::Slash => Ok(TokenKind::Slash),
-            PendingTokenKind::SingleLineComment => Ok(TokenKind::SingleLineComment),
-            PendingTokenKind::MultiLineComment {
-                left_delimiter_count,
-                ..
-            } => {
-                if left_delimiter_count == 0 {
-                    Ok(TokenKind::MultiLineComment)
-                } else {
-                    Err(())
-                }
+fn convert_pending_token_kind(
+    pending_token_kind: PendingTokenKind,
+    content: &str,
+) -> Result<TokenKind, ()> {
+    match pending_token_kind {
+        PendingTokenKind::Equal => Ok(TokenKind::Equal),
+        PendingTokenKind::Identifier => Ok(if content == "_" {
+            TokenKind::Underscore
+        } else if let Some(kind) = get_token_kind_of_non_underscore_keyword(content) {
+            kind
+        } else {
+            TokenKind::StandardIdentifier
+        }),
+        PendingTokenKind::Slash => Ok(TokenKind::Slash),
+        PendingTokenKind::SingleLineComment => Ok(TokenKind::SingleLineComment),
+        PendingTokenKind::MultiLineComment {
+            left_delimiter_count,
+            ..
+        } => {
+            if left_delimiter_count == 0 {
+                Ok(TokenKind::MultiLineComment)
+            } else {
+                Err(())
             }
         }
     }
 }
-
 fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> {
     match &mut state.pending_token {
         None => {
@@ -137,7 +141,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                 state.pending_token = Some(PendingToken {
                     start_index: i,
                     content: c.into(),
-                    kind: PendingTokenKind::StandardIdentifier,
+                    kind: PendingTokenKind::Identifier,
                 });
                 Ok(())
             } else {
@@ -164,7 +168,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                 }
             }
 
-            PendingTokenKind::StandardIdentifier => {
+            PendingTokenKind::Identifier => {
                 if is_valid_non_initial_identifier_character(c) {
                     pending_token.content.push(c);
                     Ok(())
