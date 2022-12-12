@@ -3,7 +3,7 @@ type Unit {
 }
 
 let foo = fun _(_: Unit): Unit {
-    check goal: Unit = Unit.U {
+    check (goal: Unit) {
         Unit.U
     }
 };

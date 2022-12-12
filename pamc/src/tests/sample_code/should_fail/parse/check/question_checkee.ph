@@ -2,6 +2,6 @@ type Unit {
     .U: Unit,
 }
 
-let foo = check ?: Type {
+let foo = check (?: Unit) {
     Unit.U
 };
