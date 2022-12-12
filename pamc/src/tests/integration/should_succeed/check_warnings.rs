@@ -1,6 +1,7 @@
 use super::*;
 
-// TODO: Fix
+// TODO: Fix. This parses, but no warnings are produced because
+// type checking for check expressions has not been implemented yet.
 #[ignore]
 #[test]
 fn check() {
