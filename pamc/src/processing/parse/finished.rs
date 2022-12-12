@@ -73,7 +73,6 @@ pub enum FinishedStackItem {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-/// Can be `,;:={})`
 pub struct ExpressionEndDelimiter(Token);
 
 impl ExpressionEndDelimiter {
