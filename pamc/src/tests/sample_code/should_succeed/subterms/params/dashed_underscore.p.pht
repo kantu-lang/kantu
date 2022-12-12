@@ -1,0 +1,6 @@
+// Realistically, you'd never write this, since
+// there would be no way to obtain a syntactic substructure
+// (and therefore no way to legally recursively call the function).
+// However, for completeness, we still include this.
+
+-_: std.Nat

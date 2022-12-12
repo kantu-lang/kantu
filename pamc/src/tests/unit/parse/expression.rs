@@ -12,7 +12,7 @@ fn expect_expression(src: &str, panicker: impl Fn(Expression)) {
 
 #[test]
 fn dot1() {
-    let src = include_str!("../sample_code/should_succeed/expressions/dot1.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot1.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Identifier(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -21,7 +21,7 @@ fn dot1() {
 
 #[test]
 fn dot2() {
-    let src = include_str!("../sample_code/should_succeed/expressions/dot2.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot2.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Dot(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -30,7 +30,7 @@ fn dot2() {
 
 #[test]
 fn dot3() {
-    let src = include_str!("../sample_code/should_succeed/expressions/dot3.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot3.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Dot(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -39,7 +39,7 @@ fn dot3() {
 
 #[test]
 fn call() {
-    let src = include_str!("../sample_code/should_succeed/expressions/call.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/call.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Call(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -48,7 +48,7 @@ fn call() {
 
 #[test]
 fn fun() {
-    let src = include_str!("../sample_code/should_succeed/expressions/fun.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/fun.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Fun(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -57,7 +57,7 @@ fn fun() {
 
 #[test]
 fn match_() {
-    let src = include_str!("../sample_code/should_succeed/expressions/match.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/match.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Match(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -66,7 +66,7 @@ fn match_() {
 
 #[test]
 fn forall() {
-    let src = include_str!("../sample_code/should_succeed/expressions/forall.phx");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/forall.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Forall(_) => {}
         other => panic!("Unexpected expression {:?}", other),

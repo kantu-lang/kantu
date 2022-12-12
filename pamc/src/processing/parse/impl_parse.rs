@@ -24,7 +24,11 @@ impl Parse for File {
         }))]
     }
 
-    fn finish(file_id: FileId, item: UnfinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(
+        file_id: FileId,
+        item: UnfinishedStackItem,
+        _: Vec<UnfinishedStackItem>,
+    ) -> Result<Self, ParseError> {
         match item {
             UnfinishedStackItem::File(file) => Ok(File {
                 span: TextSpan {
@@ -56,11 +60,68 @@ impl Parse for Expression {
         )]
     }
 
-    fn finish(_: FileId, item: UnfinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(
+        _: FileId,
+        item: UnfinishedStackItem,
+        _: Vec<UnfinishedStackItem>,
+    ) -> Result<Self, ParseError> {
         match item {
             UnfinishedStackItem::UnfinishedDelimitedExpression(
                 UnfinishedDelimitedExpression::WaitingForEndDelimiter(_first_token, expression),
             ) => Ok(expression),
+            _ => Err(ParseError::UnexpectedEndOfInput),
+        }
+    }
+}
+
+impl Parse for Param {
+    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
+        Err(ParseError::UnexpectedEndOfInput)
+    }
+
+    fn initial_stack(_: FileId, first_token: Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Params(UnfinishedParams {
+            first_token,
+            maximum_dashed_params_allowed: 1,
+            pending_dash: None,
+            params: vec![],
+        })]
+    }
+
+    fn before_handle_token(
+        _: FileId,
+        token: &Token,
+        stack: &[UnfinishedStackItem],
+    ) -> Result<(), ParseError> {
+        if let Some(UnfinishedStackItem::Params(params)) = stack.get(0) {
+            if params.params.is_empty() {
+                return Ok(());
+            }
+        }
+        Err(ParseError::UnexpectedToken(token.clone()))
+    }
+
+    fn finish(
+        file_id: FileId,
+        item: UnfinishedStackItem,
+        mut remaining_stack: Vec<UnfinishedStackItem>,
+    ) -> Result<Self, ParseError> {
+        match (item, remaining_stack.pop()) {
+            (
+                UnfinishedStackItem::UnfinishedDelimitedExpression(
+                    UnfinishedDelimitedExpression::WaitingForEndDelimiter(_, param_type),
+                ),
+                Some(UnfinishedStackItem::Param(UnfinishedParam::Name(
+                    param_first_token,
+                    is_param_dashed,
+                    param_name,
+                ))),
+            ) => Ok(Param {
+                span: span_single(file_id, &param_first_token).inclusive_merge(param_type.span()),
+                is_dashed: is_param_dashed,
+                name: param_name,
+                type_: param_type,
+            }),
             _ => Err(ParseError::UnexpectedEndOfInput),
         }
     }

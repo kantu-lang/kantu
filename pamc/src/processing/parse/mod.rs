@@ -25,7 +25,19 @@ pub trait Parse: Sized {
 
     fn initial_stack(file_id: FileId, first_token: Token) -> Vec<UnfinishedStackItem>;
 
-    fn finish(file_id: FileId, item: UnfinishedStackItem) -> Result<Self, ParseError>;
+    fn before_handle_token(
+        _file_id: FileId,
+        _token: &Token,
+        _stack: &[UnfinishedStackItem],
+    ) -> Result<(), ParseError> {
+        Ok(())
+    }
+
+    fn finish(
+        file_id: FileId,
+        top_item: UnfinishedStackItem,
+        remaining_stack: Vec<UnfinishedStackItem>,
+    ) -> Result<Self, ParseError>;
 }
 
 pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseError> {
@@ -41,15 +53,12 @@ pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseEr
     let mut stack: Vec<UnfinishedStackItem> = T::initial_stack(file_id, first_token);
 
     for token in tokens.into_iter().filter(is_not_whitespace_or_comment) {
+        T::before_handle_token(file_id, &token, &stack)?;
         handle_token(token, &mut stack, file_id)?;
     }
 
-    if stack.len() != 1 {
-        Err(ParseError::UnexpectedEndOfInput)
-    } else {
-        let top_unfinished = stack.pop().unwrap();
-        T::finish(file_id, top_unfinished)
-    }
+    let top_unfinished = stack.pop().expect("Stack should never be empty");
+    T::finish(file_id, top_unfinished, stack)
 }
 
 fn is_not_whitespace_or_comment(token: &Token) -> bool {
@@ -97,6 +106,65 @@ fn handle_token(
         }
     }
     Ok(())
+}
+
+fn span_single(file_id: FileId, token: &Token) -> TextSpan {
+    let start = token.start_index;
+    TextSpan {
+        file_id,
+        start,
+        end: start + token.content.len(),
+    }
+}
+
+fn span_range_including_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
+    let start = start.start_index;
+    let end = end.start_index + end.content.len();
+
+    if end < start {
+        panic!("End of span is before start of span.");
+    }
+
+    TextSpan {
+        file_id,
+        start,
+        end,
+    }
+}
+
+fn span_range_excluding_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
+    let start = start.start_index;
+    let end = end.start_index;
+
+    if end < start {
+        panic!("End of span is before start of span.");
+    }
+
+    TextSpan {
+        file_id,
+        start,
+        end,
+    }
+}
+
+impl TextSpan {
+    fn inclusive_merge(self, other: TextSpan) -> TextSpan {
+        if self.file_id != other.file_id {
+            panic!("Cannot merge spans from different files.");
+        }
+
+        let start = self.start;
+        let end = other.end;
+        if end < start {
+            panic!("End of span is before start of span.");
+        }
+
+        TextSpan {
+            file_id: self.file_id,
+            start,
+            end,
+        }
+    }
 }
 
 use unfinished::*;
