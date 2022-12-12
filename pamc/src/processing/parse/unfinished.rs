@@ -9,10 +9,14 @@ pub enum UnfinishedStackItem {
     Param(UnfinishedParam),
     Variant(UnfinishedVariant),
     UnfinishedDelimitedExpression(UnfinishedDelimitedExpression),
+    UnfinishedDelimitedGoalKwOrExpression(UnfinishedDelimitedGoalKwOrExpression),
+    UnfinishedDelimitedQuestionMarkOrExpression(UnfinishedDelimitedQuestionMarkOrExpression),
     Fun(UnfinishedFun),
     Match(UnfinishedMatch),
     Forall(UnfinishedForall),
     Check(UnfinishedCheck),
+    CheckAssertions(UnfinishedCheckAssertions),
+    CheckAssertion(UnfinishedCheckAssertion),
     Dot(UnfinishedDot),
     Call(UnfinishedCall),
     MatchCase(UnfinishedMatchCase),
@@ -87,25 +91,38 @@ pub enum UnfinishedForall {
 #[derive(Clone, Debug)]
 pub enum UnfinishedCheck {
     Keyword(Token),
-    GoalCheckeeAwaitingColon(Token, Token),
-    GoalCheckeeReceivedColon(Token, Token),
-    GoalCheckeeQuestionTypeAwaitingCurly(Token, Token, TextSpan),
-    GoalCheckeeTypeReceivedCurly(Token, Token, QuestionMarkOrExpression),
-    ExpressionCheckee(Token, Expression),
-    ExpressionCheckeeQuestionTypeAwaitingEqualOrCurly(Token, Expression, TextSpan),
-    ExpressionCheckeeTypeReceivedEqualOrCurly(Token, Expression, QuestionMarkOrExpression),
-    ExpressionCheckeeQuestionValueAwaitingCurly(
-        Token,
-        Expression,
-        QuestionMarkOrExpression,
-        TextSpan,
-    ),
-    ExpressionCheckeeValueReceivedCurly(
-        Token,
-        Expression,
-        QuestionMarkOrExpression,
-        Option<QuestionMarkOrExpression>,
-    ),
+    Assertions(Token, Vec<CheckAssertion>),
+}
+
+#[derive(Clone, Debug)]
+pub struct UnfinishedCheckAssertions {
+    pub first_token: Token,
+    pub assertions: Vec<CheckAssertion>,
+}
+
+#[derive(Clone, Debug)]
+pub struct UnfinishedCheckAssertion {
+    pub first_token: Token,
+    pub left: GoalKwOrExpression,
+    pub kind: AssertionKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AssertionKind {
+    Type,
+    NormalForm,
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedGoalKwOrExpression {
+    Empty,
+    WaitingForEndDelimiter { goal_kw: Token },
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedQuestionMarkOrExpression {
+    Empty,
+    WaitingForEndDelimiter { question_mark: Token },
 }
 
 #[derive(Clone, Debug)]

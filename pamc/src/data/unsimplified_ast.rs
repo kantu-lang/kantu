@@ -144,29 +144,34 @@ pub struct Forall {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Check {
     pub span: TextSpan,
-    pub checkee_annotation: CheckeeAnnotation,
+    pub assertions: Vec<CheckAssertion>,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum CheckeeAnnotation {
-    Goal(GoalCheckeeAnnotation),
-    Expression(ExpressionCheckeeAnnotation),
+pub enum CheckAssertion {
+    Type(TypeAssertion),
+    NormalForm(NormalFormAssertion),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GoalCheckeeAnnotation {
+pub struct TypeAssertion {
     pub span: TextSpan,
-    pub goal_kw_span: TextSpan,
-    pub checkee_type: QuestionMarkOrExpression,
+    pub left: Expression,
+    pub right: QuestionMarkOrExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ExpressionCheckeeAnnotation {
+pub struct NormalFormAssertion {
     pub span: TextSpan,
-    pub checkee: Expression,
-    pub checkee_type: QuestionMarkOrExpression,
-    pub checkee_value: Option<QuestionMarkOrExpression>,
+    pub left: GoalKwOrExpression,
+    pub right: QuestionMarkOrExpression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GoalKwOrExpression {
+    GoalKw { span: TextSpan },
+    Expression(Expression),
 }
 
 // TODO: Choose a better name for "question mark".

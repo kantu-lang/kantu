@@ -153,56 +153,6 @@ fn simplify_forall(unsimplified: ust::Forall) -> Result<Expression, SimplifyAstE
 }
 
 fn simplify_check(unsimplified: ust::Check) -> Result<Expression, SimplifyAstError> {
-    Ok(Expression::Check(Box::new(Check {
-        checkee_annotation: simplify_checkee_annotation(unsimplified.checkee_annotation)?,
-        output: simplify_expression(unsimplified.output)?,
-    })))
-}
-
-fn simplify_checkee_annotation(
-    unsimplified: ust::CheckeeAnnotation,
-) -> Result<CheckeeAnnotation, SimplifyAstError> {
-    Ok(match unsimplified {
-        ust::CheckeeAnnotation::Goal(unsimplified) => {
-            CheckeeAnnotation::Goal(simplify_goal_checkee_annotation(unsimplified)?)
-        }
-        ust::CheckeeAnnotation::Expression(unsimplified) => {
-            CheckeeAnnotation::Expression(simplify_expression_checkee_annotation(unsimplified)?)
-        }
-    })
-}
-
-fn simplify_goal_checkee_annotation(
-    unsimplified: ust::GoalCheckeeAnnotation,
-) -> Result<GoalCheckeeAnnotation, SimplifyAstError> {
-    Ok(GoalCheckeeAnnotation {
-        goal_kw_span: unsimplified.goal_kw_span,
-        checkee_type: simplify_question_mark_or_expression(unsimplified.checkee_type)?,
-    })
-}
-
-fn simplify_expression_checkee_annotation(
-    unsimplified: ust::ExpressionCheckeeAnnotation,
-) -> Result<ExpressionCheckeeAnnotation, SimplifyAstError> {
-    Ok(ExpressionCheckeeAnnotation {
-        checkee: simplify_expression(unsimplified.checkee)?,
-        checkee_type: simplify_question_mark_or_expression(unsimplified.checkee_type)?,
-        checkee_value: unsimplified
-            .checkee_value
-            .map(simplify_question_mark_or_expression)
-            .transpose()?,
-    })
-}
-
-fn simplify_question_mark_or_expression(
-    unsimplified: ust::QuestionMarkOrExpression,
-) -> Result<QuestionMarkOrExpression, SimplifyAstError> {
-    Ok(match unsimplified {
-        ust::QuestionMarkOrExpression::QuestionMark { span: start } => {
-            QuestionMarkOrExpression::QuestionMark { span: start }
-        }
-        ust::QuestionMarkOrExpression::Expression(unsimplified) => {
-            QuestionMarkOrExpression::Expression(simplify_expression(unsimplified)?)
-        }
-    })
+    // TODO: Properly simplify Check
+    simplify_expression(unsimplified.output)
 }

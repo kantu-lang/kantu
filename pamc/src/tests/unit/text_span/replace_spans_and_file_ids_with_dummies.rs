@@ -205,46 +205,45 @@ impl ReplaceSpansAndFileIdsWithDummies for Check {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
 
-        self.checkee_annotation = self
-            .checkee_annotation
-            .replace_spans_and_file_ids_with_dummies();
+        self.assertions = self
+            .assertions
+            .into_iter()
+            .map(CheckAssertion::replace_spans_and_file_ids_with_dummies)
+            .collect();
         self.output = self.output.replace_spans_and_file_ids_with_dummies();
         self
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for CheckeeAnnotation {
+impl ReplaceSpansAndFileIdsWithDummies for CheckAssertion {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         match self {
-            CheckeeAnnotation::Goal(annotation) => {
-                CheckeeAnnotation::Goal(annotation.replace_spans_and_file_ids_with_dummies())
+            CheckAssertion::Type(assertion) => {
+                CheckAssertion::Type(assertion.replace_spans_and_file_ids_with_dummies())
             }
-            CheckeeAnnotation::Expression(annotation) => {
-                CheckeeAnnotation::Expression(annotation.replace_spans_and_file_ids_with_dummies())
+            CheckAssertion::NormalForm(assertion) => {
+                CheckAssertion::NormalForm(assertion.replace_spans_and_file_ids_with_dummies())
             }
         }
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for GoalCheckeeAnnotation {
+impl ReplaceSpansAndFileIdsWithDummies for TypeAssertion {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
-        self.goal_kw_span = dummy_span();
 
-        self.checkee_type = self.checkee_type.replace_spans_and_file_ids_with_dummies();
+        self.left = self.left.replace_spans_and_file_ids_with_dummies();
+        self.right = self.right.replace_spans_and_file_ids_with_dummies();
         self
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for ExpressionCheckeeAnnotation {
+impl ReplaceSpansAndFileIdsWithDummies for NormalFormAssertion {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
 
-        self.checkee = self.checkee.replace_spans_and_file_ids_with_dummies();
-        self.checkee_type = self.checkee_type.replace_spans_and_file_ids_with_dummies();
-        self.checkee_value = self
-            .checkee_value
-            .map(QuestionMarkOrExpression::replace_spans_and_file_ids_with_dummies);
+        self.left = self.left.replace_spans_and_file_ids_with_dummies();
+        self.right = self.right.replace_spans_and_file_ids_with_dummies();
         self
     }
 }
@@ -259,6 +258,17 @@ impl ReplaceSpansAndFileIdsWithDummies for QuestionMarkOrExpression {
                 QuestionMarkOrExpression::Expression(
                     expression.replace_spans_and_file_ids_with_dummies(),
                 )
+            }
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for GoalKwOrExpression {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        match self {
+            GoalKwOrExpression::GoalKw { .. } => GoalKwOrExpression::GoalKw { span: dummy_span() },
+            GoalKwOrExpression::Expression(expression) => {
+                GoalKwOrExpression::Expression(expression.replace_spans_and_file_ids_with_dummies())
             }
         }
     }

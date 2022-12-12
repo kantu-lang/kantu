@@ -279,40 +279,50 @@ impl DeepCheckChildSpans for Forall {
 
 impl DeepCheckChildSpans for Check {
     fn deep_check_child_spans(&self, src: &str) {
-        self.checkee_annotation.deep_check_spans(src);
+        self.assertions.deep_check_spans(src);
         self.output.deep_check_spans(src);
     }
 }
 
-impl ShallowCheckOwnSpan for CheckeeAnnotation {
+impl ShallowCheckOwnSpan for Vec<CheckAssertion> {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since we haven't implemented `Parse` for `CheckeeAnnotation` yet.
-        // TODO: Implement `Parse` for `CheckeeAnnotation` and use it here.
+        // Do nothing, since `Vec<CheckAssertion>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for CheckeeAnnotation {
+impl DeepCheckChildSpans for Vec<CheckAssertion> {
+    fn deep_check_child_spans(&self, src: &str) {
+        for assertion in self {
+            assertion.deep_check_spans(src);
+        }
+    }
+}
+
+impl ShallowCheckOwnSpan for CheckAssertion {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since we haven't implemented `Parse` for `CheckAssertion` yet.
+        // TODO: Implement `Parse` for `CheckAssertion` and use it here.
+    }
+}
+impl DeepCheckChildSpans for CheckAssertion {
     fn deep_check_child_spans(&self, src: &str) {
         match self {
-            CheckeeAnnotation::Goal(annotation) => annotation.deep_check_child_spans(src),
-            CheckeeAnnotation::Expression(annotation) => annotation.deep_check_child_spans(src),
+            CheckAssertion::Type(assertion) => assertion.deep_check_child_spans(src),
+            CheckAssertion::NormalForm(assertion) => assertion.deep_check_child_spans(src),
         }
     }
 }
 
-impl DeepCheckChildSpans for GoalCheckeeAnnotation {
+impl DeepCheckChildSpans for TypeAssertion {
     fn deep_check_child_spans(&self, src: &str) {
-        assert_eq!(Some("goal"), get_spanned_slice(src, self.goal_kw_span));
-        self.checkee_type.deep_check_spans(src);
+        self.left.deep_check_spans(src);
+        self.right.deep_check_spans(src);
     }
 }
 
-impl DeepCheckChildSpans for ExpressionCheckeeAnnotation {
+impl DeepCheckChildSpans for NormalFormAssertion {
     fn deep_check_child_spans(&self, src: &str) {
-        self.checkee.deep_check_spans(src);
-        self.checkee_type.deep_check_spans(src);
-        if let Some(value) = &self.checkee_value {
-            value.deep_check_spans(src);
-        }
+        self.left.deep_check_spans(src);
+        self.right.deep_check_spans(src);
     }
 }
 
@@ -323,6 +333,17 @@ impl DeepCheckSpans for QuestionMarkOrExpression {
                 assert_eq!(Some("?"), get_spanned_slice(src, *span))
             }
             QuestionMarkOrExpression::Expression(expression) => expression.deep_check_spans(src),
+        }
+    }
+}
+
+impl DeepCheckSpans for GoalKwOrExpression {
+    fn deep_check_spans(&self, src: &str) {
+        match self {
+            GoalKwOrExpression::GoalKw { span } => {
+                assert_eq!(Some("goal"), get_spanned_slice(src, *span))
+            }
+            GoalKwOrExpression::Expression(expression) => expression.deep_check_spans(src),
         }
     }
 }
