@@ -21,31 +21,37 @@ fn verify_that_spans_are_correct(src: &str) {
 
 #[test]
 fn hello_world() {
-    let src = include_str!("../../sample_code/should_succeed/hello_world.ph");
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/hello_world.ph"
+    );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn ill_typed_until_substituted() {
-    let src = include_str!("../../sample_code/should_succeed/ill_typed_until_substituted.ph");
+    let src = include_str!("../../sample_code/should_succeed/should_succeed_without_warnings/ill_typed_until_substituted.ph");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn plus_commutative() {
-    let src = include_str!("../../sample_code/should_succeed/plus_commutative.ph");
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/plus_commutative.ph"
+    );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn forall() {
-    let src = include_str!("../../sample_code/should_succeed/forall.ph");
+    let src =
+        include_str!("../../sample_code/should_succeed/should_succeed_without_warnings/forall.ph");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn exists() {
-    let src = include_str!("../../sample_code/should_succeed/exists.ph");
+    let src =
+        include_str!("../../sample_code/should_succeed/should_succeed_without_warnings/exists.ph");
     verify_that_spans_are_correct(src);
 }
 
@@ -53,30 +59,38 @@ fn exists() {
 #[ignore]
 #[test]
 fn check() {
-    let src = include_str!("../../sample_code/should_succeed/check.ph");
+    let src =
+        include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check.ph");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn comment() {
-    let src = include_str!("../../sample_code/should_succeed/comment.ph");
+    let src =
+        include_str!("../../sample_code/should_succeed/should_succeed_without_warnings/comment.ph");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn match_explosion() {
-    let src = include_str!("../../sample_code/should_succeed/match_explosion.ph");
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/match_explosion.ph"
+    );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn underscore() {
-    let src = include_str!("../../sample_code/should_succeed/underscore.ph");
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/underscore.ph"
+    );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn optional_commas() {
-    let src = include_str!("../../sample_code/should_succeed/optional_commas.ph");
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/optional_commas.ph"
+    );
     verify_that_spans_are_correct(src);
 }
