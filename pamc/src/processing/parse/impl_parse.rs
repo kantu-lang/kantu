@@ -60,6 +60,18 @@ impl Parse for Expression {
         )]
     }
 
+    fn before_handle_token(
+        _: FileId,
+        token: &Token,
+        stack: &[UnfinishedStackItem],
+    ) -> Result<(), ParseError> {
+        if stack.len() == 1 && ExpressionEndDelimiter::is_end_delimiter(token.kind) {
+            Err(ParseError::UnexpectedToken(token.clone()))
+        } else {
+            Ok(())
+        }
+    }
+
     fn finish(
         _: FileId,
         item: UnfinishedStackItem,

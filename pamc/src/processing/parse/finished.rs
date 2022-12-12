@@ -51,7 +51,40 @@ pub enum FinishedStackItem {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 /// Can be `,;:={})`
-pub struct ExpressionEndDelimiter(pub Token);
+pub struct ExpressionEndDelimiter(Token);
+
+impl ExpressionEndDelimiter {
+    pub fn is_end_delimiter(kind: TokenKind) -> bool {
+        matches!(
+            kind,
+            TokenKind::Comma
+                | TokenKind::Semicolon
+                | TokenKind::Colon
+                | TokenKind::Equal
+                | TokenKind::LCurly
+                | TokenKind::RCurly
+                | TokenKind::RParen
+        )
+    }
+
+    pub fn try_new(token: Token) -> Result<Self, Token> {
+        if ExpressionEndDelimiter::is_end_delimiter(token.kind) {
+            Ok(Self(token))
+        } else {
+            Err(token)
+        }
+    }
+}
+
+impl ExpressionEndDelimiter {
+    pub fn raw(&self) -> &Token {
+        &self.0
+    }
+
+    pub fn into_raw(self) -> Token {
+        self.0
+    }
+}
 
 impl FinishedStackItem {
     pub fn first_token(&self) -> &Token {

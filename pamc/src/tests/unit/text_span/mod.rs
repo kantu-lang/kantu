@@ -19,8 +19,6 @@ fn verify_that_spans_are_correct(src: &str) {
     check_spans_in_file(src, &file);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn hello_world() {
     let src = include_str!("../../sample_code/should_succeed/hello_world.ph");

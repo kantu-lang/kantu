@@ -145,7 +145,7 @@ impl Accept for UnfinishedTypeStatement {
                 },
                 FinishedStackItem::Variant(_, variant, end_delimiter) => {
                     variants.push(variant);
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::Comma => AcceptResult::ContinueToNextToken,
                         TokenKind::RCurly => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
@@ -154,7 +154,7 @@ impl Accept for UnfinishedTypeStatement {
                                     span: span_range_including_end(
                                         file_id,
                                         &type_kw,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     name: name.clone(),
                                     params: params.clone(),
@@ -162,9 +162,9 @@ impl Accept for UnfinishedTypeStatement {
                                 },
                             ))
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
@@ -200,7 +200,7 @@ impl Accept for UnfinishedLetStatement {
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::Semicolon => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Let(
                                 let_kw.clone(),
@@ -208,14 +208,16 @@ impl Accept for UnfinishedLetStatement {
                                     span: span_range_including_end(
                                         file_id,
                                         &let_kw,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     name: name.clone(),
                                     value: expression,
                                 },
                             ))
                         }
-                        _ => AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0)),
+                        _ => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
@@ -243,9 +245,11 @@ impl Accept for UnfinishedParams {
                         name: IdentifierName::Standard(token.content.clone()),
                     };
                     let is_dashed = self.pending_dash.is_some();
-                    self.pending_dash = None;
+                    let pending_dash = self.pending_dash.take();
                     AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
-                        token, is_dashed, name,
+                        pending_dash.unwrap_or(token),
+                        is_dashed,
+                        name,
                     )))
                 }
                 TokenKind::Underscore => {
@@ -254,9 +258,11 @@ impl Accept for UnfinishedParams {
                         name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                     };
                     let is_dashed = self.pending_dash.is_some();
-                    self.pending_dash = None;
+                    let pending_dash = self.pending_dash.take();
                     AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
-                        token, is_dashed, name,
+                        pending_dash.unwrap_or(token),
+                        is_dashed,
+                        name,
                     )))
                 }
                 TokenKind::RParen => {
@@ -273,13 +279,13 @@ impl Accept for UnfinishedParams {
             },
             FinishedStackItem::Param(_, param, end_delimiter) => {
                 self.params.push(param);
-                match end_delimiter.0.kind {
+                match end_delimiter.raw().kind {
                     TokenKind::Comma => AcceptResult::ContinueToNextToken,
                     TokenKind::RParen => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::Params(self.first_token.clone(), self.params.clone()),
                     ),
                     _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
                     }
                 }
             }
@@ -304,7 +310,11 @@ impl Accept for UnfinishedParam {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
                         first_token.clone(),
                         Param {
-                            span: span_range_excluding_end(file_id, &first_token, &end_delimiter.0),
+                            span: span_range_excluding_end(
+                                file_id,
+                                &first_token,
+                                end_delimiter.raw(),
+                            ),
                             is_dashed: *is_dashed,
                             name: name.clone(),
                             type_: expression,
@@ -456,46 +466,48 @@ impl Accept for UnfinishedDelimitedExpression {
             },
             UnfinishedDelimitedExpression::WaitingForEndDelimiter(first_token, expression) => {
                 match item {
-                    FinishedStackItem::Token(token) => match token.kind {
-                        TokenKind::Comma
-                        | TokenKind::Semicolon
-                        | TokenKind::Colon
-                        | TokenKind::Equal
-                        | TokenKind::LCurly
-                        | TokenKind::RCurly
-                        | TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                            FinishedStackItem::DelimitedExpression(
-                                first_token.clone(),
-                                expression.clone(),
-                                ExpressionEndDelimiter(token),
-                            ),
-                        ),
-                        TokenKind::Dot => {
-                            let unfinished = UnfinishedStackItem::Dot(UnfinishedDot {
-                                first_token: first_token.clone(),
-                                left: expression.clone(),
-                            });
-                            *self = UnfinishedDelimitedExpression::Empty;
-                            AcceptResult::Push(unfinished)
+                    FinishedStackItem::Token(token) => {
+                        let token = ExpressionEndDelimiter::try_new(token);
+                        let token = match token {
+                            Err(original_token) => original_token,
+                            Ok(wrapped_token) => {
+                                return AcceptResult::PopAndContinueReducing(
+                                    FinishedStackItem::DelimitedExpression(
+                                        first_token.clone(),
+                                        expression.clone(),
+                                        wrapped_token,
+                                    ),
+                                )
+                            }
+                        };
+                        match token.kind {
+                            TokenKind::Dot => {
+                                let unfinished = UnfinishedStackItem::Dot(UnfinishedDot {
+                                    first_token: first_token.clone(),
+                                    left: expression.clone(),
+                                });
+                                *self = UnfinishedDelimitedExpression::Empty;
+                                AcceptResult::Push(unfinished)
+                            }
+                            TokenKind::LParen => {
+                                let unfinished = UnfinishedStackItem::Call(UnfinishedCall {
+                                    first_token: first_token.clone(),
+                                    callee: expression.clone(),
+                                    args: vec![],
+                                });
+                                *self = UnfinishedDelimitedExpression::Empty;
+                                AcceptResult::Push2(
+                                    unfinished,
+                                    UnfinishedStackItem::UnfinishedDelimitedExpression(
+                                        UnfinishedDelimitedExpression::Empty,
+                                    ),
+                                )
+                            }
+                            _other_token_kind => {
+                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            }
                         }
-                        TokenKind::LParen => {
-                            let unfinished = UnfinishedStackItem::Call(UnfinishedCall {
-                                first_token: first_token.clone(),
-                                callee: expression.clone(),
-                                args: vec![],
-                            });
-                            *self = UnfinishedDelimitedExpression::Empty;
-                            AcceptResult::Push2(
-                                unfinished,
-                                UnfinishedStackItem::UnfinishedDelimitedExpression(
-                                    UnfinishedDelimitedExpression::Empty,
-                                ),
-                            )
-                        }
-                        _other_token_kind => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        }
-                    },
+                    }
                     other_item => unexpected_finished_item(&other_item),
                 }
             }
@@ -562,22 +574,22 @@ impl Accept for UnfinishedFun {
                         params.clone(),
                         expression,
                     );
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::LCurly => {
                             AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
                                 UnfinishedDelimitedExpression::Empty,
                             ))
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
             },
             UnfinishedFun::ReturnType(fun_kw, name, params, return_type) => match item {
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
                                 fun_kw.clone(),
@@ -585,7 +597,7 @@ impl Accept for UnfinishedFun {
                                     span: span_range_including_end(
                                         file_id,
                                         &fun_kw,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     name: name.clone(),
                                     params: params.clone(),
@@ -594,9 +606,9 @@ impl Accept for UnfinishedFun {
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
@@ -610,14 +622,14 @@ impl Accept for UnfinishedMatch {
         match self {
             UnfinishedMatch::Keyword(match_kw) => match item {
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::LCurly => {
                             *self = UnfinishedMatch::Cases(match_kw.clone(), expression, vec![]);
                             AcceptResult::ContinueToNextToken
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
@@ -641,7 +653,7 @@ impl Accept for UnfinishedMatch {
                 },
                 FinishedStackItem::MatchCase(_, case, end_delimiter) => {
                     cases.push(case);
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::Comma => AcceptResult::ContinueToNextToken,
                         TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
@@ -650,16 +662,16 @@ impl Accept for UnfinishedMatch {
                                     span: span_range_including_end(
                                         file_id,
                                         &match_kw,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     matchee: matchee.clone(),
                                     cases: cases.clone(),
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
@@ -699,7 +711,7 @@ impl Accept for UnfinishedForall {
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
                                 forall_kw.clone(),
@@ -707,16 +719,16 @@ impl Accept for UnfinishedForall {
                                     span: span_range_including_end(
                                         file_id,
                                         &forall_kw,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     params: params.clone(),
                                     output: expression,
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
@@ -747,7 +759,7 @@ impl Accept for UnfinishedCheck {
                 }
 
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::Colon => {
                             *self = UnfinishedCheck::ExpressionCheckee(
                                 check_kw.clone(),
@@ -755,9 +767,9 @@ impl Accept for UnfinishedCheck {
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
 
@@ -794,7 +806,7 @@ impl Accept for UnfinishedCheck {
                 }
 
                 FinishedStackItem::DelimitedExpression(_, checkee_type, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::LCurly => {
                             *self = UnfinishedCheck::GoalCheckeeTypeReceivedCurly(
                                 check_kw.clone(),
@@ -805,9 +817,9 @@ impl Accept for UnfinishedCheck {
                                 UnfinishedDelimitedExpression::Empty,
                             ))
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
 
@@ -841,7 +853,7 @@ impl Accept for UnfinishedCheck {
             UnfinishedCheck::GoalCheckeeTypeReceivedCurly(check_kw, goal_kw, checkee_type) => {
                 match item {
                     FinishedStackItem::DelimitedExpression(_, output, end_delimiter) => {
-                        match end_delimiter.0.kind {
+                        match end_delimiter.raw().kind {
                             TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
                                 FinishedStackItem::UndelimitedExpression(
                                     check_kw.clone(),
@@ -849,7 +861,7 @@ impl Accept for UnfinishedCheck {
                                         span: span_range_including_end(
                                             file_id,
                                             &check_kw,
-                                            &end_delimiter.0,
+                                            end_delimiter.raw(),
                                         ),
                                         checkee_annotation: CheckeeAnnotation::Goal(
                                             GoalCheckeeAnnotation {
@@ -863,9 +875,9 @@ impl Accept for UnfinishedCheck {
                                     })),
                                 ),
                             ),
-                            _other_end_delimiter => {
-                                AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                            }
+                            _other_end_delimiter => AcceptResult::Error(
+                                ParseError::UnexpectedToken(end_delimiter.into_raw()),
+                            ),
                         }
                     }
 
@@ -893,7 +905,7 @@ impl Accept for UnfinishedCheck {
                 }
 
                 FinishedStackItem::DelimitedExpression(_, checkee_type, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::Equal => {
                             *self = UnfinishedCheck::ExpressionCheckeeTypeReceivedEqualOrCurly(
                                 check_kw.clone(),
@@ -911,9 +923,9 @@ impl Accept for UnfinishedCheck {
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
 
@@ -978,7 +990,7 @@ impl Accept for UnfinishedCheck {
                 }
 
                 FinishedStackItem::DelimitedExpression(_, checkee_value, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::LCurly => {
                             *self = UnfinishedCheck::ExpressionCheckeeValueReceivedCurly(
                                 check_kw.clone(),
@@ -990,9 +1002,9 @@ impl Accept for UnfinishedCheck {
                                 UnfinishedDelimitedExpression::Empty,
                             ))
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
 
@@ -1032,7 +1044,7 @@ impl Accept for UnfinishedCheck {
                 checkee_value,
             ) => match item {
                 FinishedStackItem::DelimitedExpression(_, output, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
                                 check_kw.clone(),
@@ -1040,7 +1052,7 @@ impl Accept for UnfinishedCheck {
                                     span: span_range_including_end(
                                         file_id,
                                         &check_kw,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     checkee_annotation: CheckeeAnnotation::Expression(
                                         ExpressionCheckeeAnnotation {
@@ -1059,9 +1071,9 @@ impl Accept for UnfinishedCheck {
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
 
@@ -1101,7 +1113,7 @@ impl Accept for UnfinishedCall {
         match item {
             FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
                 self.args.push(expression);
-                match end_delimiter.0.kind {
+                match end_delimiter.raw().kind {
                     TokenKind::Comma => AcceptResult::ContinueToNextToken,
                     TokenKind::RParen => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::UndelimitedExpression(
@@ -1110,7 +1122,7 @@ impl Accept for UnfinishedCall {
                                 span: span_range_including_end(
                                     file_id,
                                     &first_token,
-                                    &end_delimiter.0,
+                                    end_delimiter.raw(),
                                 ),
                                 callee: self.callee.clone(),
                                 args: self.args.clone(),
@@ -1118,7 +1130,7 @@ impl Accept for UnfinishedCall {
                         ),
                     ),
                     _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
+                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
                     }
                 }
             }
@@ -1266,7 +1278,7 @@ impl Accept for UnfinishedMatchCase {
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    match end_delimiter.0.kind {
+                    match end_delimiter.raw().kind {
                         TokenKind::Comma | TokenKind::RCurly => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::MatchCase(
                                 dot_token.clone(),
@@ -1274,7 +1286,7 @@ impl Accept for UnfinishedMatchCase {
                                     span: span_range_excluding_end(
                                         file_id,
                                         &dot_token,
-                                        &end_delimiter.0,
+                                        end_delimiter.raw(),
                                     ),
                                     variant_name: variant_name.clone(),
                                     params: params.clone(),
@@ -1283,9 +1295,9 @@ impl Accept for UnfinishedMatchCase {
                                 end_delimiter,
                             ))
                         }
-                        _other_end_delimiter => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.0))
-                        }
+                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                            end_delimiter.into_raw(),
+                        )),
                     }
                 }
                 other_item => unexpected_finished_item(&other_item),
