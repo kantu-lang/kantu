@@ -154,6 +154,15 @@ pub enum CheckAssertion {
     NormalForm(NormalFormAssertion),
 }
 
+impl CheckAssertion {
+    pub fn span(&self) -> TextSpan {
+        match self {
+            CheckAssertion::Type(type_) => type_.span,
+            CheckAssertion::NormalForm(normal_form) => normal_form.span,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeAssertion {
     pub span: TextSpan,
@@ -174,12 +183,14 @@ pub enum GoalKwOrExpression {
     Expression(Expression),
 }
 
-// TODO: Choose a better name for "question mark".
-// This name is currently a leaky abstraction,
-// since we don't want to depend on the fact that
-// we use question marks to represent "holes" in the AST.
-// We should probably use a different name, like the
-// aforementioned "hole", or "query", or something like that.
+impl GoalKwOrExpression {
+    pub fn span(&self) -> TextSpan {
+        match self {
+            GoalKwOrExpression::GoalKw { span } => *span,
+            GoalKwOrExpression::Expression(expression) => expression.span(),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum QuestionMarkOrExpression {
