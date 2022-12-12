@@ -126,3 +126,78 @@ impl Parse for Param {
         }
     }
 }
+
+impl Parse for Variant {
+    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
+        Err(ParseError::UnexpectedEndOfInput)
+    }
+
+    fn initial_stack(_: FileId, _: Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Type(
+            UnfinishedTypeStatement::Variants(dummy_token(), dummy_identifier(), vec![], vec![]),
+        )]
+    }
+
+    fn before_handle_token(
+        _: FileId,
+        token: &Token,
+        stack: &[UnfinishedStackItem],
+    ) -> Result<(), ParseError> {
+        if let Some(UnfinishedStackItem::Type(UnfinishedTypeStatement::Variants(
+            _,
+            _,
+            _,
+            variants,
+        ))) = stack.get(0)
+        {
+            if variants.is_empty() {
+                return Ok(());
+            }
+        }
+        Err(ParseError::UnexpectedToken(token.clone()))
+    }
+
+    fn finish(
+        file_id: FileId,
+        item: UnfinishedStackItem,
+        mut remaining_stack: Vec<UnfinishedStackItem>,
+    ) -> Result<Self, ParseError> {
+        match (item, remaining_stack.pop()) {
+            (
+                UnfinishedStackItem::UnfinishedDelimitedExpression(
+                    UnfinishedDelimitedExpression::WaitingForEndDelimiter(_, return_type),
+                ),
+                Some(UnfinishedStackItem::Variant(UnfinishedVariant::Params(
+                    dot_token,
+                    name,
+                    params,
+                ))),
+            ) => Ok(Variant {
+                span: span_single(file_id, &dot_token).inclusive_merge(return_type.span()),
+                name,
+                params,
+                return_type,
+            }),
+            _ => Err(ParseError::UnexpectedEndOfInput),
+        }
+    }
+}
+
+fn dummy_token() -> Token {
+    Token {
+        start_index: 0,
+        content: "_".to_string(),
+        kind: TokenKind::Underscore,
+    }
+}
+
+fn dummy_identifier() -> Identifier {
+    Identifier {
+        span: TextSpan {
+            file_id: FileId(0),
+            start: 0,
+            end: 1,
+        },
+        name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+    }
+}

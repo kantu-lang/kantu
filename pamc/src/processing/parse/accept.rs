@@ -346,6 +346,7 @@ impl Accept for UnfinishedVariant {
                         }))
                     }
                     TokenKind::Colon => {
+                        *self = UnfinishedVariant::Params(dot.clone(), name.clone(), vec![]);
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
                             UnfinishedDelimitedExpression::Empty,
                         ))
@@ -355,18 +356,6 @@ impl Accept for UnfinishedVariant {
                 FinishedStackItem::Params(_, params) => {
                     *self = UnfinishedVariant::Params(dot.clone(), name.clone(), params);
                     AcceptResult::ContinueToNextToken
-                }
-                FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
-                    AcceptResult::PopAndContinueReducing(FinishedStackItem::Variant(
-                        dot.clone(),
-                        Variant {
-                            span: span_single(file_id, &dot).inclusive_merge(expression.span()),
-                            name: name.clone(),
-                            params: vec![],
-                            return_type: expression,
-                        },
-                        end_delimiter,
-                    ))
                 }
                 other_item => unexpected_finished_item(&other_item),
             },
