@@ -1111,8 +1111,8 @@ impl Accept for UnfinishedDot {
 impl Accept for UnfinishedCall {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match item {
-            FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
-                self.args.push(expression);
+            FinishedStackItem::DelimitedExpression(_, arg, end_delimiter) => {
+                self.args.push(arg);
                 match end_delimiter.raw().kind {
                     TokenKind::Comma => AcceptResult::ContinueToNextToken,
                     TokenKind::RParen => AcceptResult::PopAndContinueReducing(
@@ -1121,7 +1121,7 @@ impl Accept for UnfinishedCall {
                             Expression::Call(Box::new(Call {
                                 span: span_range_including_end(
                                     file_id,
-                                    &first_token,
+                                    &self.first_token,
                                     end_delimiter.raw(),
                                 ),
                                 callee: self.callee.clone(),
