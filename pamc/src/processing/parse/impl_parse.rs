@@ -183,6 +183,45 @@ impl Parse for Variant {
     }
 }
 
+impl Parse for FileItem {
+    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
+        Err(ParseError::UnexpectedEndOfInput)
+    }
+
+    fn initial_stack(_: FileId, first_token: Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::File(Box::new(UnfinishedFile {
+            first_token: first_token,
+            items: vec![],
+        }))]
+    }
+
+    fn before_handle_token(
+        _: FileId,
+        token: &Token,
+        stack: &[UnfinishedStackItem],
+    ) -> Result<(), ParseError> {
+        if let Some(UnfinishedStackItem::File(file)) = stack.get(0) {
+            if file.items.is_empty() {
+                return Ok(());
+            }
+        }
+        Err(ParseError::UnexpectedToken(token.clone()))
+    }
+
+    fn finish(
+        _: FileId,
+        item: UnfinishedStackItem,
+        _: Vec<UnfinishedStackItem>,
+    ) -> Result<Self, ParseError> {
+        match item {
+            UnfinishedStackItem::File(file) if !file.items.is_empty() => {
+                Ok(file.items.into_iter().next().unwrap())
+            }
+            _ => Err(ParseError::UnexpectedEndOfInput),
+        }
+    }
+}
+
 fn dummy_token() -> Token {
     Token {
         start_index: 0,
