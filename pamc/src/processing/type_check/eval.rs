@@ -75,11 +75,14 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             .map(NormalFormId::raw)
             .collect();
         let normalized_arg_list_id = registry.add_expression_list(normalized_arg_ids);
-        let normalized_call_id = registry.add_call_and_overwrite_its_id(Call {
-            id: dummy_id(),
-            callee_id: normalized_callee_id.raw(),
-            arg_list_id: normalized_arg_list_id,
-        });
+        let normalized_call_id = registry
+            .add_call_and_overwrite_its_id(Call {
+                id: dummy_id(),
+                span: None,
+                callee_id: normalized_callee_id.raw(),
+                arg_list_id: normalized_arg_list_id,
+            })
+            .without_spans(registry);
         Ok(NormalFormId::unchecked_new(ExpressionId::Call(
             normalized_call_id,
         )))
@@ -90,12 +93,17 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
     let normalized_callee_id = match evaluate_possibly_ill_typed_expression(state, call.callee_id) {
         Ok(nfid) => nfid,
         Err((callee_best_attempt_id, err)) => {
-            let best_attempt_id =
-                ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
-                    id: dummy_id(),
-                    callee_id: callee_best_attempt_id,
-                    arg_list_id: call.arg_list_id,
-                }));
+            let best_attempt_id = ExpressionId::Call(
+                state
+                    .registry
+                    .add_call_and_overwrite_its_id(Call {
+                        id: dummy_id(),
+                        span: None,
+                        callee_id: callee_best_attempt_id,
+                        arg_list_id: call.arg_list_id,
+                    })
+                    .without_spans(state.registry),
+            );
             return Err((best_attempt_id, err));
         }
     };
@@ -107,12 +115,17 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             Ok(normalized_arg_ids) => normalized_arg_ids,
             Err((arg_ids_best_attempt, err)) => {
                 let arg_ids_best_attempt = state.registry.add_expression_list(arg_ids_best_attempt);
-                let best_attempt_id =
-                    ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
-                        id: dummy_id(),
-                        callee_id: normalized_callee_id.raw(),
-                        arg_list_id: arg_ids_best_attempt,
-                    }));
+                let best_attempt_id = ExpressionId::Call(
+                    state
+                        .registry
+                        .add_call_and_overwrite_its_id(Call {
+                            id: dummy_id(),
+                            span: None,
+                            callee_id: normalized_callee_id.raw(),
+                            arg_list_id: arg_ids_best_attempt,
+                        })
+                        .without_spans(state.registry),
+                );
                 return Err((best_attempt_id, err));
             }
         }
@@ -190,12 +203,17 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
                     .map(NormalFormId::raw)
                     .collect(),
             );
-            let best_attempt_id =
-                ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
-                    id: dummy_id(),
-                    callee_id: normalized_callee_id.raw(),
-                    arg_list_id: normalized_arg_list_id,
-                }));
+            let best_attempt_id = ExpressionId::Call(
+                state
+                    .registry
+                    .add_call_and_overwrite_its_id(Call {
+                        id: dummy_id(),
+                        span: None,
+                        callee_id: normalized_callee_id.raw(),
+                        arg_list_id: normalized_arg_list_id,
+                    })
+                    .without_spans(state.registry),
+            );
             Err((best_attempt_id, EvalError::BadCallee(normalized_callee_id)))
         }
         ExpressionId::Check(_) => {
@@ -245,15 +263,20 @@ fn evaluate_possibly_ill_typed_fun_dirty(
             Ok(id) => id,
             Err(tainted) => {
                 return Err(tainted.map(|(param_list_best_attempt, err)| {
-                    let best_attempt_id =
-                        ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
-                            id: dummy_id(),
-                            name_id: fun.name_id,
-                            param_list_id: param_list_best_attempt,
-                            return_type_id: fun.return_type_id,
-                            body_id: fun.body_id,
-                            skip_type_checking_body: fun.skip_type_checking_body,
-                        }));
+                    let best_attempt_id = ExpressionId::Fun(
+                        state
+                            .registry
+                            .add_fun_and_overwrite_its_id(Fun {
+                                id: dummy_id(),
+                                span: None,
+                                name_id: fun.name_id,
+                                param_list_id: param_list_best_attempt,
+                                return_type_id: fun.return_type_id,
+                                body_id: fun.body_id,
+                                skip_type_checking_body: fun.skip_type_checking_body,
+                            })
+                            .without_spans(state.registry),
+                    );
                     (best_attempt_id, err)
                 }))
             }
@@ -266,6 +289,7 @@ fn evaluate_possibly_ill_typed_fun_dirty(
                 let best_attempt_id =
                     ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
                         id: dummy_id(),
+                        span: None,
                         name_id: fun.name_id,
                         param_list_id: normalized_param_list_id,
                         return_type_id: return_type_best_attempt_id,
@@ -278,14 +302,18 @@ fn evaluate_possibly_ill_typed_fun_dirty(
     state.context.pop_n(fun.param_list_id.len);
 
     Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
-        state.registry.add_fun_and_overwrite_its_id(Fun {
-            id: dummy_id(),
-            name_id: fun.name_id,
-            param_list_id: normalized_param_list_id,
-            return_type_id: normalized_return_type_id.raw(),
-            body_id: fun.body_id,
-            skip_type_checking_body: fun.skip_type_checking_body,
-        }),
+        state
+            .registry
+            .add_fun_and_overwrite_its_id(Fun {
+                id: dummy_id(),
+                span: None,
+                name_id: fun.name_id,
+                param_list_id: normalized_param_list_id,
+                return_type_id: normalized_return_type_id.raw(),
+                body_id: fun.body_id,
+                skip_type_checking_body: fun.skip_type_checking_body,
+            })
+            .without_spans(state.registry),
     )))
 }
 
@@ -310,6 +338,7 @@ fn normalize_params_as_much_as_possible_and_leave_in_context(
             Ok(normalized_param_type_id) => {
                 normalized_param_ids.push(state.registry.add_param_and_overwrite_its_id(Param {
                     id: dummy_id(),
+                    span: None,
                     is_dashed: param.is_dashed,
                     name_id: param.name_id,
                     type_id: normalized_param_type_id.raw(),
@@ -322,6 +351,7 @@ fn normalize_params_as_much_as_possible_and_leave_in_context(
             Err((param_type_best_attempt, err)) => {
                 normalized_param_ids.push(state.registry.add_param_and_overwrite_its_id(Param {
                     id: dummy_id(),
+                    span: None,
                     is_dashed: param.is_dashed,
                     name_id: param.name_id,
                     type_id: param_type_best_attempt,
@@ -343,6 +373,7 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
                 let best_attempt_id =
                     ExpressionId::Match(state.registry.add_match_and_overwrite_its_id(Match {
                         id: dummy_id(),
+                        span: None,
                         matchee_id: matchee_best_attempt_id,
                         case_list_id: match_.case_list_id,
                     }));
@@ -357,11 +388,15 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
             (variant_name_id, arg_list_id)
         } else {
             return Ok(NormalFormId::unchecked_new(ExpressionId::Match(
-                state.registry.add_match_and_overwrite_its_id(Match {
-                    id: dummy_id(),
-                    matchee_id: normalized_matchee_id.raw(),
-                    case_list_id: match_.case_list_id,
-                }),
+                state
+                    .registry
+                    .add_match_and_overwrite_its_id(Match {
+                        id: dummy_id(),
+                        span: None,
+                        matchee_id: normalized_matchee_id.raw(),
+                        case_list_id: match_.case_list_id,
+                    })
+                    .without_spans(state.registry),
             )));
         };
 
@@ -383,12 +418,17 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
     let case_id = match case_id {
         Some(id) => id,
         None => {
-            let best_attempt_id =
-                ExpressionId::Match(state.registry.add_match_and_overwrite_its_id(Match {
-                    id: dummy_id(),
-                    matchee_id: normalized_matchee_id.raw(),
-                    case_list_id: match_.case_list_id,
-                }));
+            let best_attempt_id = ExpressionId::Match(
+                state
+                    .registry
+                    .add_match_and_overwrite_its_id(Match {
+                        id: dummy_id(),
+                        span: None,
+                        matchee_id: normalized_matchee_id.raw(),
+                        case_list_id: match_.case_list_id,
+                    })
+                    .without_spans(state.registry),
+            );
             return Err((best_attempt_id, EvalError::NoMatchingCase(match_id)));
         }
     };
@@ -451,12 +491,17 @@ fn evaluate_possibly_ill_typed_forall_dirty(
         Ok(id) => id,
         Err(tainted) => {
             return Err(tainted.map(|(param_list_best_attempt, err)| {
-                let best_attempt_id =
-                    ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
-                        id: dummy_id(),
-                        param_list_id: param_list_best_attempt,
-                        output_id: forall.output_id,
-                    }));
+                let best_attempt_id = ExpressionId::Forall(
+                    state
+                        .registry
+                        .add_forall_and_overwrite_its_id(Forall {
+                            id: dummy_id(),
+                            span: None,
+                            param_list_id: param_list_best_attempt,
+                            output_id: forall.output_id,
+                        })
+                        .without_spans(state.registry),
+                );
                 (best_attempt_id, err)
             }))
         }
@@ -465,23 +510,32 @@ fn evaluate_possibly_ill_typed_forall_dirty(
     {
         Ok(nfid) => nfid,
         Err((output_best_attempt_id, err)) => {
-            let best_attempt_id =
-                ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
-                    id: dummy_id(),
-                    param_list_id: normalized_param_list_id,
-                    output_id: output_best_attempt_id,
-                }));
+            let best_attempt_id = ExpressionId::Forall(
+                state
+                    .registry
+                    .add_forall_and_overwrite_its_id(Forall {
+                        id: dummy_id(),
+                        span: None,
+                        param_list_id: normalized_param_list_id,
+                        output_id: output_best_attempt_id,
+                    })
+                    .without_spans(state.registry),
+            );
             return tainted_err((best_attempt_id, err));
         }
     };
     state.context.pop_n(forall.param_list_id.len);
 
     Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
-        state.registry.add_forall_and_overwrite_its_id(Forall {
-            id: dummy_id(),
-            param_list_id: normalized_param_list_id,
-            output_id: normalized_output_id.raw(),
-        }),
+        state
+            .registry
+            .add_forall_and_overwrite_its_id(Forall {
+                id: dummy_id(),
+                span: None,
+                param_list_id: normalized_param_list_id,
+                output_id: normalized_output_id.raw(),
+            })
+            .without_spans(state.registry),
     )))
 }
 

@@ -151,6 +151,7 @@ impl ShiftDbIndices for NodeId<Call> {
             .try_shift_with_cutoff(f, cutoff, registry)?;
         Ok(registry.add_call_and_overwrite_its_id(Call {
             id: dummy_id(),
+            span: call.span,
             callee_id: shifted_callee_id,
             arg_list_id: shifted_argument_id,
         }))
@@ -198,6 +199,7 @@ impl ShiftDbIndices for NodeId<Fun> {
                 .try_shift_with_cutoff(f, cutoff + param_arity + 1, registry)?;
         Ok(registry.add_fun_and_overwrite_its_id(Fun {
             id: dummy_id(),
+            span: fun.span,
             name_id: fun.name_id,
             param_list_id: shifted_param_list_id,
             return_type_id: shifted_return_type_id,
@@ -240,6 +242,7 @@ impl ShiftDbIndices for NodeId<Param> {
         let shifted_type_id = param.type_id.try_shift_with_cutoff(f, cutoff, registry)?;
         Ok(registry.add_param_and_overwrite_its_id(Param {
             id: dummy_id(),
+            span: param.span,
             is_dashed: param.is_dashed,
             name_id: param.name_id,
             type_id: shifted_type_id,
@@ -265,6 +268,7 @@ impl ShiftDbIndices for NodeId<Match> {
             .try_shift_with_cutoff(f, cutoff, registry)?;
         Ok(registry.add_match_and_overwrite_its_id(Match {
             id: dummy_id(),
+            span: match_.span,
             matchee_id: shifted_matchee_id,
             case_list_id: shifted_case_list_id,
         }))
@@ -306,6 +310,7 @@ impl ShiftDbIndices for NodeId<MatchCase> {
                 .try_shift_with_cutoff(f, cutoff + arity, registry)?;
         Ok(registry.add_match_case_and_overwrite_its_id(MatchCase {
             id: dummy_id(),
+            span: case.span,
             variant_name_id: case.variant_name_id,
             param_list_id: case.param_list_id,
             output_id: shifted_output_id,
@@ -333,6 +338,7 @@ impl ShiftDbIndices for NodeId<Forall> {
                 .try_shift_with_cutoff(f, cutoff + arity, registry)?;
         Ok(registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
+            span: forall.span,
             param_list_id: shifted_param_list_id,
             output_id: shifted_output_id,
         }))
@@ -349,19 +355,39 @@ impl ShiftDbIndices for NodeId<Check> {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         let check = registry.check(self).clone();
-        let shifted_checkee_annotation_id = check
-            .checkee_annotation_id
+        let shifted_assertion_list_id = check
+            .assertion_list_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
         let shifted_output_id = check.output_id.try_shift_with_cutoff(f, cutoff, registry)?;
         Ok(registry.add_check_and_overwrite_its_id(Check {
             id: dummy_id(),
-            checkee_annotation_id: shifted_checkee_annotation_id,
+            span: check.span,
+            assertion_list_id: shifted_assertion_list_id,
             output_id: shifted_output_id,
         }))
     }
 }
 
-impl ShiftDbIndices for CheckeeAnnotationId {
+impl ShiftDbIndices for ListId<CheckAssertionId> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let list: Vec<CheckAssertionId> = registry
+            .check_assertion_list(self)
+            .to_vec()
+            .into_iter()
+            .map(|id| id.try_shift_with_cutoff(f, cutoff, registry))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(registry.add_check_assertion_list(list))
+    }
+}
+
+impl ShiftDbIndices for CheckAssertionId {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -371,17 +397,17 @@ impl ShiftDbIndices for CheckeeAnnotationId {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            CheckeeAnnotationId::Goal(id) => {
-                CheckeeAnnotationId::Goal(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            CheckAssertionId::Type(id) => {
+                CheckAssertionId::Type(id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            CheckeeAnnotationId::Expression(id) => {
-                CheckeeAnnotationId::Expression(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            CheckAssertionId::NormalForm(id) => {
+                CheckAssertionId::NormalForm(id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
         })
     }
 }
 
-impl ShiftDbIndices for NodeId<GoalCheckeeAnnotation> {
+impl ShiftDbIndices for NodeId<TypeAssertion> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -390,21 +416,25 @@ impl ShiftDbIndices for NodeId<GoalCheckeeAnnotation> {
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
-        let annotation = registry.goal_checkee_annotation(self).clone();
-        let shifted_checkee_type_id = annotation
-            .checkee_type_id
+        let assertion = registry.type_assertion(self).clone();
+        let shifted_left_id = assertion
+            .left_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        let shifted_right_id = assertion
+            .right_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
         Ok(
-            registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+            registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
                 id: dummy_id(),
-                goal_kw_position: annotation.goal_kw_position,
-                checkee_type_id: shifted_checkee_type_id,
+                span: assertion.span,
+                left_id: shifted_left_id,
+                right_id: shifted_right_id,
             }),
         )
     }
 }
 
-impl ShiftDbIndices for NodeId<ExpressionCheckeeAnnotation> {
+impl ShiftDbIndices for NodeId<NormalFormAssertion> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -413,27 +443,41 @@ impl ShiftDbIndices for NodeId<ExpressionCheckeeAnnotation> {
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
-        let annotation = registry.expression_checkee_annotation(self).clone();
-        let shifted_checkee_id = annotation
-            .checkee_id
+        let assertion = registry.normal_form_assertion(self).clone();
+        let shifted_left_id = assertion
+            .left_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
-        let shifted_checkee_type_id = annotation
-            .checkee_type_id
+        let shifted_right_id = assertion
+            .right_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
-        let shifted_checkee_value_id = annotation
-            .checkee_value_id
-            .map(|id| id.try_shift_with_cutoff(f, cutoff, registry))
-            .transpose()?;
         Ok(
-            registry.add_expression_checkee_annotation_and_overwrite_its_id(
-                ExpressionCheckeeAnnotation {
-                    id: dummy_id(),
-                    checkee_id: shifted_checkee_id,
-                    checkee_type_id: shifted_checkee_type_id,
-                    checkee_value_id: shifted_checkee_value_id,
-                },
-            ),
+            registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
+                id: dummy_id(),
+                span: assertion.span,
+                left_id: shifted_left_id,
+                right_id: shifted_right_id,
+            }),
         )
+    }
+}
+
+impl ShiftDbIndices for GoalKwOrExpressionId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        Ok(match self {
+            GoalKwOrExpressionId::GoalKw { span: start } => {
+                GoalKwOrExpressionId::GoalKw { span: start }
+            }
+            GoalKwOrExpressionId::Expression(id) => GoalKwOrExpressionId::Expression(
+                id.try_shift_with_cutoff(f, cutoff, registry)?.into(),
+            ),
+        })
     }
 }
 

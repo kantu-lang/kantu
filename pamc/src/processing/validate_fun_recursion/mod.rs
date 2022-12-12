@@ -36,6 +36,7 @@ pub fn validate_fun_recursion_in_file(
     Ok(FunRecursionValidated::unchecked_new(
         registry.add_file_and_overwrite_its_id(File {
             id: dummy_id(),
+            span: file.span,
             file_id: file.file_id,
             item_list_id,
         }),
@@ -96,6 +97,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
     Ok(
         registry.add_type_statement_and_overwrite_its_id(TypeStatement {
             id: dummy_id(),
+            span: type_statement.span,
             name_id: type_statement.name_id,
             param_list_id,
             variant_list_id,
@@ -123,6 +125,7 @@ fn validate_fun_recursion_in_variant_dirty(
 
     Ok(registry.add_variant_and_overwrite_its_id(Variant {
         id: dummy_id(),
+        span: variant.span,
         name_id: variant.name_id,
         param_list_id,
         return_type_id,
@@ -154,6 +157,7 @@ fn validate_fun_recursion_in_let_statement_dirty(
     Ok(
         registry.add_let_statement_and_overwrite_its_id(LetStatement {
             id: dummy_id(),
+            span: let_statement.span,
             name_id: let_statement.name_id,
             value_id,
         }),
@@ -245,6 +249,7 @@ fn validate_fun_recursion_in_call_dirty(
 
     Ok(registry.add_call_and_overwrite_its_id(Call {
         id: dummy_id(),
+        span: call.span,
         callee_id,
         arg_list_id,
     }))
@@ -346,6 +351,7 @@ fn validate_fun_recursion_in_fun_dirty(
 
     Ok(registry.add_fun_and_overwrite_its_id(Fun {
         id: dummy_id(),
+        span: fun.span,
         name_id: fun.name_id,
         param_list_id,
         return_type_id,
@@ -370,6 +376,7 @@ fn validate_fun_recursion_in_params_and_leave_in_context_dirty(
             context.push(ContextEntry::NoInformation)?;
             Ok(registry.add_param_and_overwrite_its_id(Param {
                 id: dummy_id(),
+                span: param.span,
                 name_id: param.name_id,
                 type_id,
                 is_dashed: param.is_dashed,
@@ -408,6 +415,7 @@ fn validate_fun_recursion_in_match_dirty(
 
     Ok(registry.add_match_and_overwrite_its_id(Match {
         id: dummy_id(),
+        span: match_.span,
         matchee_id,
         case_list_id,
     }))
@@ -444,6 +452,7 @@ fn validate_fun_recursion_in_match_case_dirty(
 
     Ok(registry.add_match_case_and_overwrite_its_id(MatchCase {
         id: dummy_id(),
+        span: case.span,
         variant_name_id: case.variant_name_id,
         param_list_id,
         output_id,
@@ -469,6 +478,7 @@ fn validate_fun_recursion_in_forall_dirty(
 
     Ok(registry.add_forall_and_overwrite_its_id(Forall {
         id: dummy_id(),
+        span: forall.span,
         param_list_id,
         output_id,
     }))
@@ -480,88 +490,112 @@ fn validate_fun_recursion_in_check_dirty(
     check_id: NodeId<Check>,
 ) -> Result<NodeId<Check>, TaintedIllegalFunRecursionError> {
     let check = registry.check(check_id).clone();
-    let checkee_annotation_id = validate_fun_recursion_in_checkee_annotation_dirty(
+    let assertion_list_id = validate_fun_recursion_in_check_assertions_dirty(
         context,
         registry,
-        check.checkee_annotation_id,
+        check.assertion_list_id,
     )?;
     let output_id = validate_fun_recursion_in_expression_dirty(context, registry, check.output_id)?;
     Ok(registry.add_check_and_overwrite_its_id(Check {
         id: dummy_id(),
-        checkee_annotation_id,
+        span: check.span,
+        assertion_list_id,
         output_id,
     }))
 }
 
-fn validate_fun_recursion_in_checkee_annotation_dirty(
+fn validate_fun_recursion_in_check_assertions_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: CheckeeAnnotationId,
-) -> Result<CheckeeAnnotationId, TaintedIllegalFunRecursionError> {
+    id: ListId<CheckAssertionId>,
+) -> Result<ListId<CheckAssertionId>, TaintedIllegalFunRecursionError> {
+    let assertion_ids = registry
+        .check_assertion_list(id)
+        .to_vec()
+        .into_iter()
+        .map(|assertion_id| {
+            validate_fun_recursion_in_check_assertion_dirty(context, registry, assertion_id)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(registry.add_check_assertion_list(assertion_ids))
+}
+
+fn validate_fun_recursion_in_check_assertion_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    id: CheckAssertionId,
+) -> Result<CheckAssertionId, TaintedIllegalFunRecursionError> {
     Ok(match id {
-        CheckeeAnnotationId::Goal(id) => CheckeeAnnotationId::Goal(
-            validate_fun_recursion_in_goal_checkee_annotation_dirty(context, registry, id)?,
+        CheckAssertionId::Type(id) => CheckAssertionId::Type(
+            validate_fun_recursion_in_type_assertion_dirty(context, registry, id)?,
         ),
-        CheckeeAnnotationId::Expression(id) => CheckeeAnnotationId::Expression(
-            validate_fun_recursion_in_expression_checkee_annotation_dirty(context, registry, id)?,
+        CheckAssertionId::NormalForm(id) => CheckAssertionId::NormalForm(
+            validate_fun_recursion_in_normal_form_assertion_dirty(context, registry, id)?,
         ),
     })
 }
 
-fn validate_fun_recursion_in_goal_checkee_annotation_dirty(
+fn validate_fun_recursion_in_type_assertion_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: NodeId<GoalCheckeeAnnotation>,
-) -> Result<NodeId<GoalCheckeeAnnotation>, TaintedIllegalFunRecursionError> {
-    let annotation = registry.goal_checkee_annotation(id).clone();
-    let checkee_type_id =
-        validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
-            context,
-            registry,
-            annotation.checkee_type_id,
-        )?;
+    id: NodeId<TypeAssertion>,
+) -> Result<NodeId<TypeAssertion>, TaintedIllegalFunRecursionError> {
+    let assertion = registry.type_assertion(id).clone();
+    let left_id = validate_fun_recursion_in_expression_dirty(context, registry, assertion.left_id)?;
+    let right_id = validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
+        context,
+        registry,
+        assertion.right_id,
+    )?;
     Ok(
-        registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+        registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
             id: dummy_id(),
-            goal_kw_position: annotation.goal_kw_position,
-            checkee_type_id,
+            span: assertion.span,
+            left_id,
+            right_id,
         }),
     )
 }
 
-fn validate_fun_recursion_in_expression_checkee_annotation_dirty(
+fn validate_fun_recursion_in_normal_form_assertion_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: NodeId<ExpressionCheckeeAnnotation>,
-) -> Result<NodeId<ExpressionCheckeeAnnotation>, TaintedIllegalFunRecursionError> {
-    let annotation = registry.expression_checkee_annotation(id).clone();
-    let checkee_id =
-        validate_fun_recursion_in_expression_dirty(context, registry, annotation.checkee_id)?;
-    let checkee_type_id =
-        validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
-            context,
-            registry,
-            annotation.checkee_type_id,
-        )?;
-    let checkee_value_id = annotation
-        .checkee_value_id
-        .map(|id| {
-            validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
-                context, registry, id,
-            )
-        })
-        .transpose()?;
-
+    id: NodeId<NormalFormAssertion>,
+) -> Result<NodeId<NormalFormAssertion>, TaintedIllegalFunRecursionError> {
+    let assertion = registry.normal_form_assertion(id).clone();
+    let left_id = validate_fun_recursion_in_goal_kw_or_expression_dirty(
+        context,
+        registry,
+        assertion.left_id,
+    )?;
+    let right_id = validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
+        context,
+        registry,
+        assertion.right_id,
+    )?;
     Ok(
-        registry.add_expression_checkee_annotation_and_overwrite_its_id(
-            ExpressionCheckeeAnnotation {
-                id: dummy_id(),
-                checkee_id,
-                checkee_type_id,
-                checkee_value_id,
-            },
-        ),
+        registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
+            id: dummy_id(),
+            span: assertion.span,
+            left_id,
+            right_id,
+        }),
     )
+}
+
+fn validate_fun_recursion_in_goal_kw_or_expression_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    id: GoalKwOrExpressionId,
+) -> Result<GoalKwOrExpressionId, TaintedIllegalFunRecursionError> {
+    Ok(match id {
+        GoalKwOrExpressionId::GoalKw { span: start } => {
+            GoalKwOrExpressionId::GoalKw { span: start }
+        }
+        GoalKwOrExpressionId::Expression(id) => GoalKwOrExpressionId::Expression(
+            validate_fun_recursion_in_expression_dirty(context, registry, id)?,
+        ),
+    })
 }
 
 fn validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(

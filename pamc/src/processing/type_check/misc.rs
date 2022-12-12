@@ -35,6 +35,16 @@ pub fn add_name_expression_and_overwrite_component_ids(
     components: Vec<Identifier>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
+    let first_span = components
+        .first()
+        .expect("components should be non-empty")
+        .span;
+    let last_span = components
+        .last()
+        .expect("components should be non-empty")
+        .span;
+    let span = first_span
+        .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
     let component_ids = components
         .into_iter()
         .map(|component| registry.add_identifier_and_overwrite_its_id(component))
@@ -42,6 +52,7 @@ pub fn add_name_expression_and_overwrite_component_ids(
     let component_list_id = registry.add_identifier_list(component_ids);
     registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
+        span,
         component_list_id,
         db_index,
     })
@@ -52,9 +63,26 @@ pub fn add_name_expression(
     component_ids: Vec<NodeId<Identifier>>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
+    let first_span = registry
+        .identifier(
+            *component_ids
+                .first()
+                .expect("components should be non-empty"),
+        )
+        .span;
+    let last_span = registry
+        .identifier(
+            *component_ids
+                .last()
+                .expect("components should be non-empty"),
+        )
+        .span;
+    let span = first_span
+        .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
     let component_list_id = registry.add_identifier_list(component_ids);
     registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
+        span,
         component_list_id,
         db_index,
     })
@@ -65,6 +93,7 @@ pub fn dummy_id<T>() -> NodeId<T> {
 }
 
 impl Forall {
+    #[deprecated(note = "We should create a SemiForall that has a PossiblyEmptyListId.")]
     pub fn collapse_if_nullary(self, registry: &mut NodeRegistry) -> ExpressionId {
         if self.param_list_id.len == 0 {
             self.output_id
@@ -144,13 +173,15 @@ pub(super) fn normalize_params_and_leave_params_in_context_dirty(
                 let old_param = state.registry.param(param_id);
                 let normalized_param_with_dummy_id = Param {
                     id: dummy_id(),
+                    span: None,
                     is_dashed: old_param.is_dashed,
                     name_id: old_param.name_id,
                     type_id,
                 };
                 let normalized_id = state
                     .registry
-                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
+                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id)
+                    .without_spans(state.registry);
                 Ok(normalized_id)
             },
         )
@@ -384,51 +415,8 @@ fn is_left_inclusive_subterm_of_right(
         ExpressionId::Check(right_id) => {
             let right = state.registry.check(right_id).clone();
 
-            if let CheckeeAnnotationId::Goal(right_annotation_id) = right.checkee_annotation_id {
-                let right_annotation = state
-                    .registry
-                    .goal_checkee_annotation(right_annotation_id)
-                    .clone();
-
-                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
-                    PossiblyInvalidExpressionId::Valid(right_checkee_type_id),
-                ) = right_annotation.checkee_type_id
-                {
-                    if is_left_inclusive_subterm_of_right(state, left, right_checkee_type_id) {
-                        return true;
-                    }
-                }
-            }
-
-            if let CheckeeAnnotationId::Expression(right_annotation_id) =
-                right.checkee_annotation_id
-            {
-                let right_annotation = state
-                    .registry
-                    .expression_checkee_annotation(right_annotation_id)
-                    .clone();
-
-                if is_left_inclusive_subterm_of_right(state, left, right_annotation.checkee_id) {
-                    return true;
-                }
-
-                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
-                    PossiblyInvalidExpressionId::Valid(right_checkee_type_id),
-                ) = right_annotation.checkee_type_id
-                {
-                    if is_left_inclusive_subterm_of_right(state, left, right_checkee_type_id) {
-                        return true;
-                    }
-                }
-
-                if let Some(QuestionMarkOrPossiblyInvalidExpressionId::Expression(
-                    PossiblyInvalidExpressionId::Valid(right_checkee_value_id),
-                )) = right_annotation.checkee_value_id
-                {
-                    if is_left_inclusive_subterm_of_right(state, left, right_checkee_value_id) {
-                        return true;
-                    }
-                }
+            if is_left_inclusive_subterm_of_any_right_assertion(state, left, right_id) {
+                return true;
             }
 
             if is_left_inclusive_subterm_of_right(state, left, right.output_id) {
@@ -438,6 +426,63 @@ fn is_left_inclusive_subterm_of_right(
             false
         }
     }
+}
+
+fn is_left_inclusive_subterm_of_any_right_assertion(
+    state: &mut State,
+    left: ExpressionId,
+    right: NodeId<Check>,
+) -> bool {
+    let right = state.registry.check(right).clone();
+    let right_assertion_ids = state
+        .registry
+        .check_assertion_list(right.assertion_list_id)
+        .to_vec();
+    right_assertion_ids
+        .into_iter()
+        .any(|right_assertion_id| match right_assertion_id {
+            CheckAssertionId::Type(right_assertion_id) => {
+                let assertion = state.registry.type_assertion(right_assertion_id).clone();
+
+                if is_left_inclusive_subterm_of_right(state, left, assertion.left_id) {
+                    return true;
+                }
+
+                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+                    PossiblyInvalidExpressionId::Valid(assertion_right_id),
+                ) = assertion.right_id
+                {
+                    if is_left_inclusive_subterm_of_right(state, left, assertion_right_id) {
+                        return true;
+                    }
+                }
+
+                false
+            }
+            CheckAssertionId::NormalForm(right_assertion_id) => {
+                let assertion = state
+                    .registry
+                    .normal_form_assertion(right_assertion_id)
+                    .clone();
+
+                if let GoalKwOrExpressionId::Expression(assertion_left_id) = assertion.left_id {
+                    if is_left_inclusive_subterm_of_right(state, left, assertion_left_id) {
+                        return true;
+                    }
+                }
+
+                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+                    PossiblyInvalidExpressionId::Valid(assertion_right_id),
+                ) = assertion.right_id
+                {
+                    if is_left_inclusive_subterm_of_right(state, left, assertion_right_id) {
+                        return true;
+                    }
+                }
+
+                false
+            }
+        })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -993,65 +1038,80 @@ fn min_db_index_in_check_relative_to_cutoff(
     cutoff: usize,
 ) -> MinDbIndex {
     let check = registry.check(id).clone();
-    let annotation_min = min_db_index_in_checkee_annotation_relative_to_cutoff(
-        registry,
-        check.checkee_annotation_id,
-        cutoff,
-    );
+    let assertions_min = registry
+        .check_assertion_list(check.assertion_list_id)
+        .iter()
+        .copied()
+        .map(|assertion_id| {
+            min_db_index_in_check_assertion_relative_to_cutoff(registry, assertion_id, cutoff)
+        })
+        .min();
     let output_min =
         min_db_index_in_expression_relative_to_cutoff(registry, check.output_id, cutoff);
-    annotation_min.min(output_min)
+    min_or_first(output_min, assertions_min)
 }
 
-fn min_db_index_in_checkee_annotation_relative_to_cutoff(
+fn min_db_index_in_check_assertion_relative_to_cutoff(
     registry: &NodeRegistry,
-    id: CheckeeAnnotationId,
+    id: CheckAssertionId,
     cutoff: usize,
 ) -> MinDbIndex {
     match id {
-        CheckeeAnnotationId::Goal(id) => {
-            min_db_index_in_goal_checkee_annotation_relative_to_cutoff(registry, id, cutoff)
+        CheckAssertionId::Type(id) => {
+            min_db_index_in_type_assertion_relative_to_cutoff(registry, id, cutoff)
         }
-        CheckeeAnnotationId::Expression(id) => {
-            min_db_index_in_expression_checkee_annotation_relative_to_cutoff(registry, id, cutoff)
+        CheckAssertionId::NormalForm(id) => {
+            min_db_index_in_normal_form_assertion_relative_to_cutoff(registry, id, cutoff)
         }
     }
 }
 
-fn min_db_index_in_goal_checkee_annotation_relative_to_cutoff(
+fn min_db_index_in_type_assertion_relative_to_cutoff(
     registry: &NodeRegistry,
-    id: NodeId<GoalCheckeeAnnotation>,
+    id: NodeId<TypeAssertion>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let annotation = registry.goal_checkee_annotation(id);
-    min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
+    let assertion = registry.type_assertion(id);
+    let left_min =
+        min_db_index_in_expression_relative_to_cutoff(registry, assertion.left_id, cutoff);
+    let right_min = min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
         registry,
-        annotation.checkee_type_id,
-        cutoff,
-    )
-}
-
-fn min_db_index_in_expression_checkee_annotation_relative_to_cutoff(
-    registry: &NodeRegistry,
-    id: NodeId<ExpressionCheckeeAnnotation>,
-    cutoff: usize,
-) -> MinDbIndex {
-    let annotation = registry.expression_checkee_annotation(id);
-    let checkee_min =
-        min_db_index_in_expression_relative_to_cutoff(registry, annotation.checkee_id, cutoff);
-    let type_min = min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
-        registry,
-        annotation.checkee_type_id,
+        assertion.right_id,
         cutoff,
     );
-    let value_min = if let Some(value_id) = annotation.checkee_value_id {
-        min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
-            registry, value_id, cutoff,
-        )
-    } else {
-        MinDbIndex::Infinity
-    };
-    checkee_min.min(type_min).min(value_min)
+    left_min.min(right_min)
+}
+
+fn min_db_index_in_normal_form_assertion_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NodeId<NormalFormAssertion>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let assertion = registry.normal_form_assertion(id);
+    let left_min = min_db_index_in_goal_kw_or_expression_relative_to_cutoff(
+        registry,
+        assertion.left_id,
+        cutoff,
+    );
+    let right_min = min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
+        registry,
+        assertion.right_id,
+        cutoff,
+    );
+    left_min.min(right_min)
+}
+
+fn min_db_index_in_goal_kw_or_expression_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: GoalKwOrExpressionId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match id {
+        GoalKwOrExpressionId::GoalKw { span: _ } => MinDbIndex::Infinity,
+        GoalKwOrExpressionId::Expression(id) => {
+            min_db_index_in_expression_relative_to_cutoff(registry, id, cutoff)
+        }
+    }
 }
 
 fn min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(

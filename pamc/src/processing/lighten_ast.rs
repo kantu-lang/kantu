@@ -17,6 +17,7 @@ pub fn lighten_file(registry: &mut NodeRegistry, unregistered: heavy::File) -> N
     let item_list_id = registry.add_file_item_list(item_ids);
     registry.add_file_and_overwrite_its_id(File {
         id: dummy_id(),
+        span: unregistered.span,
         file_id: unregistered.id,
         item_list_id,
     })
@@ -55,6 +56,7 @@ pub fn register_type_statement(
     let variant_list_id = registry.add_variant_list(variant_ids);
     registry.add_type_statement_and_overwrite_its_id(TypeStatement {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         param_list_id,
         variant_list_id,
@@ -77,6 +79,7 @@ pub fn register_param(registry: &mut NodeRegistry, unregistered: heavy::Param) -
     let type_id = register_expression(registry, unregistered.type_);
     registry.add_param_and_overwrite_its_id(Param {
         id: dummy_id(),
+        span: unregistered.span,
         is_dashed: unregistered.is_dashed,
         name_id,
         type_id,
@@ -97,6 +100,7 @@ pub fn register_variant(
     let return_type_id = register_expression(registry, unregistered.return_type);
     registry.add_variant_and_overwrite_its_id(Variant {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         param_list_id,
         return_type_id,
@@ -111,6 +115,7 @@ pub fn register_let_statement(
     let value_id = register_expression(registry, unregistered.value);
     registry.add_let_statement_and_overwrite_its_id(LetStatement {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         value_id,
     })
@@ -160,6 +165,7 @@ pub fn register_name_expression(
     let component_list_id = registry.add_identifier_list(component_ids);
     registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
+        span: unregistered.span,
         component_list_id,
         db_index: unregistered.db_index,
     })
@@ -175,6 +181,7 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> 
     let arg_list_id = registry.add_expression_list(arg_ids);
     registry.add_call_and_overwrite_its_id(Call {
         id: dummy_id(),
+        span: unregistered.span,
         callee_id,
         arg_list_id,
     })
@@ -193,6 +200,7 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> No
     let skip_type_checking_body = unregistered.skip_type_checking_body;
     registry.add_fun_and_overwrite_its_id(Fun {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         param_list_id,
         return_type_id,
@@ -211,6 +219,7 @@ pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -
     let case_list_id = registry.add_match_case_list(case_ids);
     registry.add_match_and_overwrite_its_id(Match {
         id: dummy_id(),
+        span: unregistered.span,
         matchee_id,
         case_list_id,
     })
@@ -226,68 +235,87 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall)
     let output_id = register_expression(registry, unregistered.output);
     registry.add_forall_and_overwrite_its_id(Forall {
         id: dummy_id(),
+        span: unregistered.span,
         param_list_id,
         output_id,
     })
 }
 
 pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -> NodeId<Check> {
-    let checkee_annotation_id =
-        register_checkee_annotation(registry, unregistered.checkee_annotation);
+    let assertion_ids = unregistered
+        .assertions
+        .into_iter()
+        .map(|unregistered| register_check_assertion(registry, unregistered))
+        .collect();
+    let assertion_list_id = registry.add_check_assertion_list(assertion_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add_check_and_overwrite_its_id(Check {
         id: dummy_id(),
-        checkee_annotation_id,
+        span: unregistered.span,
+        assertion_list_id,
         output_id,
     })
 }
 
-pub fn register_checkee_annotation(
+pub fn register_check_assertion(
     registry: &mut NodeRegistry,
-    unregistered: heavy::CheckeeAnnotation,
-) -> CheckeeAnnotationId {
+    unregistered: heavy::CheckAssertion,
+) -> CheckAssertionId {
     match unregistered {
-        heavy::CheckeeAnnotation::Goal(unregistered) => {
-            let id = register_goal_checkee_annotation(registry, unregistered);
-            CheckeeAnnotationId::Goal(id)
+        heavy::CheckAssertion::Type(unregistered) => {
+            let id = register_type_assertion(registry, unregistered);
+            CheckAssertionId::Type(id)
         }
-        heavy::CheckeeAnnotation::Expression(unregistered) => {
-            let id = register_expression_checkee_annotation(registry, unregistered);
-            CheckeeAnnotationId::Expression(id)
+        heavy::CheckAssertion::NormalForm(unregistered) => {
+            let id = register_normal_form_assertion(registry, unregistered);
+            CheckAssertionId::NormalForm(id)
         }
     }
 }
 
-pub fn register_goal_checkee_annotation(
+pub fn register_type_assertion(
     registry: &mut NodeRegistry,
-    unregistered: heavy::GoalCheckeeAnnotation,
-) -> NodeId<GoalCheckeeAnnotation> {
-    let goal_kw_position = unregistered.goal_kw_span;
-    let checkee_type_id =
-        register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
-    registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+    unregistered: heavy::TypeAssertion,
+) -> NodeId<TypeAssertion> {
+    let left_id = register_expression(registry, unregistered.left);
+    let right_id =
+        register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
+    registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
         id: dummy_id(),
-        goal_kw_position,
-        checkee_type_id,
+        span: unregistered.span,
+        left_id,
+        right_id,
     })
 }
 
-pub fn register_expression_checkee_annotation(
+pub fn register_normal_form_assertion(
     registry: &mut NodeRegistry,
-    unregistered: heavy::ExpressionCheckeeAnnotation,
-) -> NodeId<ExpressionCheckeeAnnotation> {
-    let checkee_id = register_expression(registry, unregistered.checkee);
-    let checkee_type_id =
-        register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
-    let checkee_value_id = unregistered
-        .checkee_value
-        .map(|value_id| register_question_mark_or_possibly_invalid_expression(registry, value_id));
-    registry.add_expression_checkee_annotation_and_overwrite_its_id(ExpressionCheckeeAnnotation {
+    unregistered: heavy::NormalFormAssertion,
+) -> NodeId<NormalFormAssertion> {
+    let left_id = register_goal_kw_or_expression(registry, unregistered.left);
+    let right_id =
+        register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
+    registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
         id: dummy_id(),
-        checkee_id,
-        checkee_type_id,
-        checkee_value_id,
+        span: unregistered.span,
+        left_id,
+        right_id,
     })
+}
+
+pub fn register_goal_kw_or_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::GoalKwOrExpression,
+) -> GoalKwOrExpressionId {
+    match unregistered {
+        heavy::GoalKwOrExpression::GoalKw { span: start } => {
+            GoalKwOrExpressionId::GoalKw { span: start }
+        }
+        heavy::GoalKwOrExpression::Expression(unregistered) => {
+            let id = register_expression(registry, unregistered);
+            GoalKwOrExpressionId::Expression(id)
+        }
+    }
 }
 
 pub fn register_question_mark_or_possibly_invalid_expression(
@@ -378,6 +406,7 @@ pub fn register_match_case(
     let output_id = register_expression(registry, unregistered.output);
     registry.add_match_case_and_overwrite_its_id(MatchCase {
         id: dummy_id(),
+        span: unregistered.span,
         variant_name_id,
         param_list_id,
         output_id,

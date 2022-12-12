@@ -72,10 +72,12 @@ fn type_check_type_constructor_dirty(
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
+            span: None,
             param_list_id: normalized_param_list_id,
             output_id: type0_expression(state).raw(),
         }
-        .collapse_if_nullary(state.registry),
+        .collapse_if_nullary(state.registry)
+        .without_spans(state.registry),
     );
     state.context.pop_n(arity);
 
@@ -125,10 +127,12 @@ fn type_check_type_variant_dirty(
     let type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
+            span: None,
             param_list_id: normalized_param_list_id,
             output_id: return_type_id.raw(),
         }
-        .collapse_if_nullary(state.registry),
+        .collapse_if_nullary(state.registry)
+        .without_spans(state.registry),
     );
     state.context.pop_n(arity);
     Ok(state.context.push(ContextEntry {
@@ -351,9 +355,10 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
         state.registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
+            span: None,
             param_list_id: normalized_param_list_id,
             output_id: normalized_return_type_id.raw(),
-        }),
+        }).without_spans(state.registry),
     ));
 
     {
@@ -605,9 +610,10 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                 let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
                     state.registry.add_call_and_overwrite_its_id(Call {
                         id: dummy_id(),
+                        span: None,
                         callee_id,
                         arg_list_id,
-                    }),
+                    }).without_spans(state.registry),
                 ));
 
                 let output_substitutions: Vec<Substitution> = case_param_ids
@@ -704,93 +710,105 @@ fn get_check_expression_warnings(
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
 ) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
-    let check = state.registry.check(check_id).clone();
-    match check.checkee_annotation_id {
-        CheckeeAnnotationId::Goal(annotation_id) => Ok(get_goal_check_expression_warnings(state, coercion_target_id, annotation_id)),
-        CheckeeAnnotationId::Expression(annotation_id) => get_expression_check_expression_warnings(state, coercion_target_id, annotation_id),
-    }
+    // TODO: Redesign
+    Ok(vec![])
 }
 
-fn get_goal_check_expression_warnings(
-    state: &mut State,
-    coercion_target_id: Option<NormalFormId>,
-    annotation_id: NodeId<GoalCheckeeAnnotation>,
-) -> Vec<TypeCheckWarning> {
-    let annotation = state.registry.goal_checkee_annotation(annotation_id).clone();
-    let Some(coercion_target_id) = coercion_target_id else {
-        return vec![TypeCheckWarning::NoGoal { goal_kw_start: annotation.goal_kw_position }];
-    };
-    get_checkee_type_warning(state, coercion_target_id, annotation.checkee_type_id).into_iter().collect()
-}
 
-fn get_expression_check_expression_warnings(
-    state: &mut State,
-    coercion_target_id: Option<NormalFormId>,
-    annotation_id: NodeId<ExpressionCheckeeAnnotation>,
-) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
-    let mut warnings = vec![];
-    let annotation = state.registry.expression_checkee_annotation(annotation_id).clone();
+// TODO: Delete
 
-    let actual_checkee_type = get_type_of_expression(state, coercion_target_id, annotation.checkee_id)?;
-    let normalized_checkee_id = evaluate_well_typed_expression(state, annotation.checkee_id);
+// fn get_check_expression_warnings(
+//     state: &mut State,
+//     coercion_target_id: Option<NormalFormId>,
+//     check_id: NodeId<Check>,
+// ) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
+//     let check = state.registry.check(check_id).clone();
+//     match check.checkee_annotation_id {
+//         CheckeeAnnotationId::Goal(annotation_id) => Ok(get_goal_check_expression_warnings(state, coercion_target_id, annotation_id)),
+//         CheckeeAnnotationId::Expression(annotation_id) => get_expression_check_expression_warnings(state, coercion_target_id, annotation_id),
+//     }
+// }
+//
+// fn get_goal_check_expression_warnings(
+//     state: &mut State,
+//     coercion_target_id: Option<NormalFormId>,
+//     annotation_id: NodeId<GoalCheckeeAnnotation>,
+// ) -> Vec<TypeCheckWarning> {
+//     let annotation = state.registry.goal_checkee_annotation(annotation_id).clone();
+//     let Some(coercion_target_id) = coercion_target_id else {
+//         return vec![TypeCheckWarning::NoGoal { goal_kw_start: annotation.goal_kw_position }];
+//     };
+//     get_checkee_type_warning(state, coercion_target_id, annotation.checkee_type_id).into_iter().collect()
+// }
 
-    warnings.extend(get_checkee_type_warning(state, actual_checkee_type, annotation.checkee_type_id));
-    warnings.extend(get_checkee_value_warning(state, normalized_checkee_id, annotation.checkee_value_id));
+// fn get_expression_check_expression_warnings(
+//     state: &mut State,
+//     coercion_target_id: Option<NormalFormId>,
+//     annotation_id: NodeId<ExpressionCheckeeAnnotation>,
+// ) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
+//     let mut warnings = vec![];
+//     let annotation = state.registry.expression_checkee_annotation(annotation_id).clone();
+
+//     let actual_checkee_type = get_type_of_expression(state, coercion_target_id, annotation.checkee_id)?;
+//     let normalized_checkee_id = evaluate_well_typed_expression(state, annotation.checkee_id);
+
+//     warnings.extend(get_checkee_type_warning(state, actual_checkee_type, annotation.checkee_type_id));
+//     warnings.extend(get_checkee_value_warning(state, normalized_checkee_id, annotation.checkee_value_id));
     
-    Ok(warnings)
-}
+//     Ok(warnings)
+// }
 
-fn get_checkee_type_warning(
-    state: &mut State,
-    actual_type_id: NormalFormId,
-    annotated_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
-) -> Option<TypeCheckWarning> {
-    let annotated_type_id = match annotated_type_id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeType { question_mark_start }),
-        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
-        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
+// fn get_checkee_type_warning(
+//     state: &mut State,
+//     actual_type_id: NormalFormId,
+//     annotated_type_id: QuestionMarkOrPossiblyInvalidExpressionId,
+// ) -> Option<TypeCheckWarning> {
+//     let annotated_type_id = match annotated_type_id {
+//         QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeType { question_mark_start }),
+//         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
+//         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
 
-    };
-    if let Err(err) = type_check_expression(state, Some(actual_type_id), annotated_type_id) {
-        return Some(TypeCheckWarning::IllTypedCheckeeType(annotated_type_id, err));
-    }
-    let normalized_annotated_type_id = evaluate_well_typed_expression(state, annotated_type_id);
-    // TODO: Consider context substitutions
-    if state.equality_checker.eq(actual_type_id.raw(), normalized_annotated_type_id.raw(), state.registry) {
-        None
-    } else {
-        Some(TypeCheckWarning::IncorrectCheckeeType {
-            checkee_type_id: annotated_type_id,
-            expected_id: actual_type_id,
-            actual_id: normalized_annotated_type_id,
-        })
-    }
-}
+//     };
+//     if let Err(err) = type_check_expression(state, Some(actual_type_id), annotated_type_id) {
+//         return Some(TypeCheckWarning::IllTypedCheckeeType(annotated_type_id, err));
+//     }
+//     let normalized_annotated_type_id = evaluate_well_typed_expression(state, annotated_type_id);
+//     // TODO: Consider context substitutions
+//     if state.equality_checker.eq(actual_type_id.raw(), normalized_annotated_type_id.raw(), state.registry) {
+//         None
+//     } else {
+//         Some(TypeCheckWarning::IncorrectCheckeeType {
+//             checkee_type_id: annotated_type_id,
+//             expected_id: actual_type_id,
+//             actual_id: normalized_annotated_type_id,
+//         })
+//     }
+// }
 
-fn get_checkee_value_warning(
-    state: &mut State,
-    actual_value_id: NormalFormId,
-    annotated_value_id: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
-) -> Option<TypeCheckWarning> {
-    let annotated_value_id = annotated_value_id?;
-    let annotated_value_id = match annotated_value_id {
-        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeValue { question_mark_start }),
-        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
-        QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
+// fn get_checkee_value_warning(
+//     state: &mut State,
+//     actual_value_id: NormalFormId,
+//     annotated_value_id: Option<QuestionMarkOrPossiblyInvalidExpressionId>,
+// ) -> Option<TypeCheckWarning> {
+//     let annotated_value_id = annotated_value_id?;
+//     let annotated_value_id = match annotated_value_id {
+//         QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: question_mark_start } => return Some(TypeCheckWarning::MissingCheckeeValue { question_mark_start }),
+//         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Invalid(checkee_type_id)) => return Some(TypeCheckWarning::UntypecheckableExpression(checkee_type_id)),
+//         QuestionMarkOrPossiblyInvalidExpressionId::Expression(PossiblyInvalidExpressionId::Valid(checkee_type_id)) => checkee_type_id,
 
-    };
-    if let Err(err) = type_check_expression(state, Some(actual_value_id), annotated_value_id) {
-        return Some(TypeCheckWarning::IllTypedCheckeeValue(annotated_value_id, err));
-    }
-    let normalized_annotated_value_id = evaluate_well_typed_expression(state, annotated_value_id);
-    // TODO: Consider context substitutions
-    if state.equality_checker.eq(actual_value_id.raw(), normalized_annotated_value_id.raw(), state.registry) {
-        None
-    } else {
-        Some(TypeCheckWarning::IncorrectCheckeeValue {
-            checkee_type_id: annotated_value_id,
-            expected_id: actual_value_id,
-            actual_id: normalized_annotated_value_id,
-        })
-    }
-}
+//     };
+//     if let Err(err) = type_check_expression(state, Some(actual_value_id), annotated_value_id) {
+//         return Some(TypeCheckWarning::IllTypedCheckeeValue(annotated_value_id, err));
+//     }
+//     let normalized_annotated_value_id = evaluate_well_typed_expression(state, annotated_value_id);
+//     // TODO: Consider context substitutions
+//     if state.equality_checker.eq(actual_value_id.raw(), normalized_annotated_value_id.raw(), state.registry) {
+//         None
+//     } else {
+//         Some(TypeCheckWarning::IncorrectCheckeeValue {
+//             checkee_type_id: annotated_value_id,
+//             expected_id: actual_value_id,
+//             actual_id: normalized_annotated_value_id,
+//         })
+//     }
+// }

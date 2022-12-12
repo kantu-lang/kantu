@@ -213,81 +213,94 @@ pub fn format_forall(forall: &Forall, indent_level: usize, options: &FormatOptio
 pub fn format_check(check: &Check, indent_level: usize, options: &FormatOptions) -> String {
     let i0 = indent(indent_level, options);
     let i1 = indent(indent_level + 1, options);
-    let annotation =
-        format_checkee_annotation(&check.checkee_annotation, indent_level + 1, options);
+    let assertions = format_check_assertions(&check.assertions, indent_level + 1, options);
     let output = format_expression(&check.output, indent_level + 1, options);
+    format!("case {} {{\n{}{}\n{}}}", assertions, &i1, output, &i0,)
+}
+
+pub fn format_check_assertions(
+    assertions: &[CheckAssertion],
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    let i0 = indent(indent_level, options);
+    let i1 = indent(indent_level + 1, options);
     format!(
-        "case {} {{\n{}{}\n{}}}",
-        try_oneline_with_multi_parens(&annotation, indent_level, options),
-        &i1,
-        output,
-        &i0,
+        "({}\n{})",
+        assertions
+            .iter()
+            .map(|assertion| format!(
+                "\n{}{},",
+                &i1,
+                format_check_assertion(assertion, indent_level + 1, options)
+            ))
+            .collect::<Vec<_>>()
+            .join(","),
+        i0
     )
 }
 
-pub fn format_checkee_annotation(
-    annotation: &CheckeeAnnotation,
+pub fn format_check_assertion(
+    assertion: &CheckAssertion,
     indent_level: usize,
     options: &FormatOptions,
 ) -> String {
-    match annotation {
-        CheckeeAnnotation::Goal(annotation) => {
-            format_goal_checkee_annotation(annotation, indent_level, options)
-        }
-        CheckeeAnnotation::Expression(annotation) => {
-            format_expression_checkee_annotation(annotation, indent_level, options)
+    match assertion {
+        CheckAssertion::Type(assertion) => format_type_assertion(assertion, indent_level, options),
+        CheckAssertion::NormalForm(assertion) => {
+            format_normal_form_assertion(assertion, indent_level, options)
         }
     }
 }
 
-pub fn format_goal_checkee_annotation(
-    annotation: &GoalCheckeeAnnotation,
+pub fn format_type_assertion(
+    annotation: &TypeAssertion,
     indent_level: usize,
     options: &FormatOptions,
 ) -> String {
     let i1 = indent(indent_level + 1, options);
-    let checkee_type = format_question_mark_or_possibly_invalid_expression(
-        &annotation.checkee_type,
+    let left = format_expression(&annotation.left, indent_level + 1, options);
+    let right = format_question_mark_or_possibly_invalid_expression(
+        &annotation.right,
         indent_level + 2,
         options,
     );
-    if checkee_type.contains('\n') {
-        format!("goal:\n{}{}", &i1, checkee_type)
+    if left.contains('\n') || right.contains('\n') {
+        format!("{}:\n{}{}", left, &i1, right)
     } else {
-        format!("goal: {}", checkee_type)
+        format!("{}: {}", left, right)
     }
 }
 
-pub fn format_expression_checkee_annotation(
-    annotation: &ExpressionCheckeeAnnotation,
+pub fn format_normal_form_assertion(
+    annotation: &NormalFormAssertion,
     indent_level: usize,
     options: &FormatOptions,
 ) -> String {
     let i1 = indent(indent_level + 1, options);
-    let checkee = format_expression(&annotation.checkee, indent_level + 1, options);
-    let checkee_type = format_question_mark_or_possibly_invalid_expression(
-        &annotation.checkee_type,
+    let left = format_goal_kw_or_expression(&annotation.left, indent_level + 1, options);
+    let right = format_question_mark_or_possibly_invalid_expression(
+        &annotation.right,
         indent_level + 2,
         options,
     );
-    let checkee_value = if let Some(value) = &annotation.checkee_value {
-        format!(
-            " = {}",
-            format_question_mark_or_possibly_invalid_expression(value, indent_level + 2, options)
-        )
+    if left.contains('\n') || right.contains('\n') {
+        format!("{} =\n{}{}", left, &i1, right)
     } else {
-        "".to_string()
-    };
-    let attempted_oneliner = format!("{}: {}{}", checkee, checkee_type, checkee_value);
-    if attempted_oneliner.contains('\n') {
-        let checkee_value = if checkee_value == "" {
-            checkee_value
-        } else {
-            format!("\n{}{}", &i1, checkee_value)
-        };
-        format!("{}:\n{}{}{}", checkee, &i1, checkee_type, checkee_value)
-    } else {
-        attempted_oneliner
+        format!("{} = {}", left, right)
+    }
+}
+
+pub fn format_goal_kw_or_expression(
+    expression: &GoalKwOrExpression,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    match expression {
+        GoalKwOrExpression::GoalKw { span: _ } => "goal".to_string(),
+        GoalKwOrExpression::Expression(expression) => {
+            format_expression(expression, indent_level, options)
+        }
     }
 }
 

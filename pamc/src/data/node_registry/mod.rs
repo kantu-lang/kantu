@@ -39,15 +39,21 @@ pub enum ExpressionRef<'a> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum CheckeeAnnotationId {
-    Goal(NodeId<GoalCheckeeAnnotation>),
-    Expression(NodeId<ExpressionCheckeeAnnotation>),
+pub enum CheckAssertionId {
+    Type(NodeId<TypeAssertion>),
+    NormalForm(NodeId<NormalFormAssertion>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrPossiblyInvalidExpressionId {
-    QuestionMark { span: TextSpan },
+    QuestionMark { span: Option<TextSpan> },
     Expression(PossiblyInvalidExpressionId),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum GoalKwOrExpressionId {
+    GoalKw { span: Option<TextSpan> },
+    Expression(ExpressionId),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -80,8 +86,8 @@ pub struct NodeRegistry {
     match_cases: Subregistry<MatchCase>,
     foralls: Subregistry<Forall>,
     checks: Subregistry<Check>,
-    goal_checkee_annotations: Subregistry<GoalCheckeeAnnotation>,
-    expression_checkee_annotations: Subregistry<ExpressionCheckeeAnnotation>,
+    type_assertions: Subregistry<TypeAssertion>,
+    normal_form_assertions: Subregistry<NormalFormAssertion>,
     symbolically_invalid_expressions: Subregistry<SymbolicallyInvalidExpression>,
     illegal_fun_recursion_expressions: Subregistry<IllegalFunRecursionExpression>,
     identifiers: Subregistry<Identifier>,
@@ -90,6 +96,7 @@ pub struct NodeRegistry {
     param_lists: ListSubregistry<NodeId<Param>>,
     variant_lists: ListSubregistry<NodeId<Variant>>,
     match_case_lists: ListSubregistry<NodeId<MatchCase>>,
+    check_assertion_lists: ListSubregistry<CheckAssertionId>,
     expression_lists: ListSubregistry<ExpressionId>,
     identifier_lists: ListSubregistry<NodeId<Identifier>>,
 }
@@ -109,8 +116,8 @@ impl NodeRegistry {
             match_cases: Subregistry::new(),
             foralls: Subregistry::new(),
             checks: Subregistry::new(),
-            goal_checkee_annotations: Subregistry::new(),
-            expression_checkee_annotations: Subregistry::new(),
+            type_assertions: Subregistry::new(),
+            normal_form_assertions: Subregistry::new(),
             symbolically_invalid_expressions: Subregistry::new(),
             illegal_fun_recursion_expressions: Subregistry::new(),
             identifiers: Subregistry::new(),
@@ -119,6 +126,7 @@ impl NodeRegistry {
             param_lists: ListSubregistry::new(),
             variant_lists: ListSubregistry::new(),
             match_case_lists: ListSubregistry::new(),
+            check_assertion_lists: ListSubregistry::new(),
             expression_lists: ListSubregistry::new(),
             identifier_lists: ListSubregistry::new(),
         }
@@ -191,19 +199,19 @@ impl NodeRegistry {
         self.checks.add_and_overwrite_id(check)
     }
 
-    pub fn add_goal_checkee_annotation_and_overwrite_its_id(
+    pub fn add_type_assertion_and_overwrite_its_id(
         &mut self,
-        goal_checkee_annotation: GoalCheckeeAnnotation,
-    ) -> NodeId<GoalCheckeeAnnotation> {
-        self.goal_checkee_annotations
+        goal_checkee_annotation: TypeAssertion,
+    ) -> NodeId<TypeAssertion> {
+        self.type_assertions
             .add_and_overwrite_id(goal_checkee_annotation)
     }
 
-    pub fn add_expression_checkee_annotation_and_overwrite_its_id(
+    pub fn add_normal_form_assertion_and_overwrite_its_id(
         &mut self,
-        expression_checkee_annotation: ExpressionCheckeeAnnotation,
-    ) -> NodeId<ExpressionCheckeeAnnotation> {
-        self.expression_checkee_annotations
+        expression_checkee_annotation: NormalFormAssertion,
+    ) -> NodeId<NormalFormAssertion> {
+        self.normal_form_assertions
             .add_and_overwrite_id(expression_checkee_annotation)
     }
 
@@ -280,18 +288,12 @@ impl NodeRegistry {
         self.checks.get(id)
     }
 
-    pub fn goal_checkee_annotation(
-        &self,
-        id: NodeId<GoalCheckeeAnnotation>,
-    ) -> &GoalCheckeeAnnotation {
-        self.goal_checkee_annotations.get(id)
+    pub fn type_assertion(&self, id: NodeId<TypeAssertion>) -> &TypeAssertion {
+        self.type_assertions.get(id)
     }
 
-    pub fn expression_checkee_annotation(
-        &self,
-        id: NodeId<ExpressionCheckeeAnnotation>,
-    ) -> &ExpressionCheckeeAnnotation {
-        self.expression_checkee_annotations.get(id)
+    pub fn normal_form_assertion(&self, id: NodeId<NormalFormAssertion>) -> &NormalFormAssertion {
+        self.normal_form_assertions.get(id)
     }
 
     pub fn symbolically_invalid_expression(
@@ -333,6 +335,13 @@ impl NodeRegistry {
         self.match_case_lists.add(list)
     }
 
+    pub fn add_check_assertion_list(
+        &mut self,
+        list: Vec<CheckAssertionId>,
+    ) -> ListId<CheckAssertionId> {
+        self.check_assertion_lists.add(list)
+    }
+
     pub fn add_expression_list(&mut self, list: Vec<ExpressionId>) -> ListId<ExpressionId> {
         self.expression_lists.add(list)
     }
@@ -360,6 +369,10 @@ impl NodeRegistry {
 
     pub fn match_case_list(&self, id: ListId<NodeId<MatchCase>>) -> &[NodeId<MatchCase>] {
         self.match_case_lists.get(id)
+    }
+
+    pub fn check_assertion_list(&self, id: ListId<CheckAssertionId>) -> &[CheckAssertionId] {
+        self.check_assertion_lists.get(id)
     }
 
     pub fn expression_list(&self, id: ListId<ExpressionId>) -> &[ExpressionId] {
@@ -580,13 +593,13 @@ mod set_id {
         }
     }
 
-    impl SetId for GoalCheckeeAnnotation {
+    impl SetId for TypeAssertion {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }
     }
 
-    impl SetId for ExpressionCheckeeAnnotation {
+    impl SetId for NormalFormAssertion {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }
