@@ -198,8 +198,7 @@ pub fn with_push_warning<T>(value: T) -> WithPushWarning<T> {
 }
 
 impl Context {
-    // TODO: Make private after redesign taint system.
-    pub fn truncate(&mut self, new_len: usize) {
+    fn truncate(&mut self, new_len: usize) {
         if new_len > self.len() {
             panic!(
                 "Tried to truncate a context with {} elements to {} elements",
