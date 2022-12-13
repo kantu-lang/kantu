@@ -355,8 +355,8 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
         }
 
         let check = state.registry.check(self).clone();
-        let substituted_annotation_id = check
-            .checkee_annotation_id
+        let substituted_assertion_list_id = check
+            .assertion_list_id
             .subst_without_removing_spans(substitution, state);
         let substituted_output_id = check
             .output_id
@@ -364,13 +364,33 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
 
         ExpressionId::Check(state.registry.add_check_and_overwrite_its_id(Check {
             id: dummy_id(),
-            checkee_annotation_id: substituted_annotation_id,
+            span: None,
+            assertion_list_id: substituted_assertion_list_id,
             output_id: substituted_output_id,
         }))
     }
 }
 
-impl SubstituteWithoutRemovingSpans for CheckeeAnnotationId {
+impl SubstituteWithoutRemovingSpans for ListId<CheckAssertionId> {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        let new_ids = state
+            .registry
+            .check_assertion_list(self)
+            .to_vec()
+            .into_iter()
+            .map(|id| id.subst_without_removing_spans(substitution, state))
+            .collect();
+        state.registry.add_check_assertion_list(new_ids)
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for CheckAssertionId {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -379,17 +399,17 @@ impl SubstituteWithoutRemovingSpans for CheckeeAnnotationId {
         state: &mut ContextlessState,
     ) -> Self::Output {
         match self {
-            CheckeeAnnotationId::Goal(id) => {
-                CheckeeAnnotationId::Goal(id.subst_without_removing_spans(substitution, state))
+            CheckAssertionId::Type(id) => {
+                CheckAssertionId::Type(id.subst_without_removing_spans(substitution, state))
             }
-            CheckeeAnnotationId::Expression(id) => CheckeeAnnotationId::Expression(
-                id.subst_without_removing_spans(substitution, state),
-            ),
+            CheckAssertionId::NormalForm(id) => {
+                CheckAssertionId::NormalForm(id.subst_without_removing_spans(substitution, state))
+            }
         }
     }
 }
 
-impl SubstituteWithoutRemovingSpans for NodeId<GoalCheckeeAnnotation> {
+impl SubstituteWithoutRemovingSpans for NodeId<TypeAssertion> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -397,21 +417,25 @@ impl SubstituteWithoutRemovingSpans for NodeId<GoalCheckeeAnnotation> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        let original = state.registry.goal_checkee_annotation(self).clone();
-        let substituted_checkee_type_id = original
-            .checkee_type_id
+        let original = state.registry.type_assertion(self).clone();
+        let substituted_left_id = original
+            .left_id
+            .subst_without_removing_spans(substitution, state);
+        let substituted_right_id = original
+            .right_id
             .subst_without_removing_spans(substitution, state);
         state
             .registry
-            .add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+            .add_type_assertion_and_overwrite_its_id(TypeAssertion {
                 id: dummy_id(),
-                goal_kw_position: original.goal_kw_position,
-                checkee_type_id: substituted_checkee_type_id,
+                span: None,
+                left_id: substituted_left_id,
+                right_id: substituted_right_id,
             })
     }
 }
 
-impl SubstituteWithoutRemovingSpans for NodeId<ExpressionCheckeeAnnotation> {
+impl SubstituteWithoutRemovingSpans for NodeId<NormalFormAssertion> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -419,24 +443,40 @@ impl SubstituteWithoutRemovingSpans for NodeId<ExpressionCheckeeAnnotation> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        let original = state.registry.expression_checkee_annotation(self).clone();
-        let substituted_checkee_id = original
-            .checkee_id
+        let original = state.registry.normal_form_assertion(self).clone();
+        let substituted_left_id = original
+            .left_id
             .subst_without_removing_spans(substitution, state);
-        let substituted_checkee_type_id = original
-            .checkee_type_id
+        let substituted_right_id = original
+            .right_id
             .subst_without_removing_spans(substitution, state);
-        let substituted_checkee_value_id = original
-            .checkee_value_id
-            .map(|value_id| value_id.subst_without_removing_spans(substitution, state));
         state
             .registry
-            .add_expression_checkee_annotation_and_overwrite_its_id(ExpressionCheckeeAnnotation {
+            .add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
                 id: dummy_id(),
-                checkee_id: substituted_checkee_id,
-                checkee_type_id: substituted_checkee_type_id,
-                checkee_value_id: substituted_checkee_value_id,
+                span: None,
+                left_id: substituted_left_id,
+                right_id: substituted_right_id,
             })
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for GoalKwOrExpressionId {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        match self {
+            GoalKwOrExpressionId::GoalKw { span: start } => {
+                GoalKwOrExpressionId::GoalKw { span: start }
+            }
+            GoalKwOrExpressionId::Expression(id) => GoalKwOrExpressionId::Expression(
+                id.subst_without_removing_spans(substitution, state),
+            ),
+        }
     }
 }
 

@@ -64,3 +64,26 @@ impl WithoutSpans for NodeId<Check> {
         unimplemented!()
     }
 }
+
+impl WithoutSpans for CheckAssertionId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            CheckAssertionId::Type(id) => CheckAssertionId::Type(id.without_spans(registry)),
+            CheckAssertionId::NormalForm(id) => {
+                CheckAssertionId::NormalForm(id.without_spans(registry))
+            }
+        }
+    }
+}
+
+impl WithoutSpans for NodeId<TypeAssertion> {
+    fn without_spans(self, _: &mut NodeRegistry) -> Self {
+        unimplemented!()
+    }
+}
+
+impl WithoutSpans for NodeId<NormalFormAssertion> {
+    fn without_spans(self, _: &mut NodeRegistry) -> Self {
+        unimplemented!()
+    }
+}
