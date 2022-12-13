@@ -23,15 +23,3 @@ fn question_output() {
     let src = include_str!("../../../sample_code/should_fail/parse/check/question_output.ph");
     expect_unexpected_token_error(src, TokenKind::Question);
 }
-
-#[test]
-fn goal_value() {
-    let src = include_str!("../../../sample_code/should_fail/parse/check/goal_type.ph");
-    expect_unexpected_token_error(src, TokenKind::Colon);
-}
-
-#[test]
-fn goal_value_question() {
-    let src = include_str!("../../../sample_code/should_fail/parse/check/goal_type_question.ph");
-    expect_unexpected_token_error(src, TokenKind::Colon);
-}

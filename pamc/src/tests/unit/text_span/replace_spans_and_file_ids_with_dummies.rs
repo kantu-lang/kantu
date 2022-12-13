@@ -216,29 +216,6 @@ impl ReplaceSpansAndFileIdsWithDummies for Check {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for CheckAssertion {
-    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        match self {
-            CheckAssertion::Type(assertion) => {
-                CheckAssertion::Type(assertion.replace_spans_and_file_ids_with_dummies())
-            }
-            CheckAssertion::NormalForm(assertion) => {
-                CheckAssertion::NormalForm(assertion.replace_spans_and_file_ids_with_dummies())
-            }
-        }
-    }
-}
-
-impl ReplaceSpansAndFileIdsWithDummies for TypeAssertion {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.left = self.left.replace_spans_and_file_ids_with_dummies();
-        self.right = self.right.replace_spans_and_file_ids_with_dummies();
-        self
-    }
-}
-
-impl ReplaceSpansAndFileIdsWithDummies for NormalFormAssertion {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
 

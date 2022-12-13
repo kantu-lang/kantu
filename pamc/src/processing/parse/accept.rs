@@ -816,24 +816,18 @@ impl Accept for UnfinishedCheckAssertions {
                 goal_kw_or_expression,
                 end_delimiter,
             ) => match end_delimiter.raw().kind {
-                TokenKind::Colon => match goal_kw_or_expression {
-                    GoalKwOrExpression::GoalKw { .. } => {
-                        // `goal` cannot appear on the LHS of a type assertion
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
-                    }
-                    GoalKwOrExpression::Expression(expression) => AcceptResult::Push(
-                        UnfinishedStackItem::CheckAssertion(UnfinishedCheckAssertion {
-                            first_token,
-                            left: GoalKwOrExpression::Expression(expression),
-                            kind: AssertionKind::Type,
-                        }),
-                    ),
-                },
+                TokenKind::Colon => AcceptResult::Push(UnfinishedStackItem::CheckAssertion(
+                    UnfinishedCheckAssertion {
+                        first_token,
+                        left: goal_kw_or_expression,
+                        kind: CheckAssertionKind::Type,
+                    },
+                )),
                 TokenKind::Equal => AcceptResult::Push(UnfinishedStackItem::CheckAssertion(
                     UnfinishedCheckAssertion {
                         first_token,
                         left: goal_kw_or_expression,
-                        kind: AssertionKind::NormalForm,
+                        kind: CheckAssertionKind::NormalForm,
                     },
                 )),
                 _other_end_delimiter => {
@@ -869,39 +863,16 @@ impl Accept for UnfinishedCheckAssertion {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match item {
             FinishedStackItem::DelimitedQuestionMarkOrExpression(_, right, end_delimiter) => {
-                match self.kind {
-                    AssertionKind::Type => {
-                        let left = match &self.left {
-                            GoalKwOrExpression::GoalKw { .. } => {
-                                // `goal` cannot appear on the LHS of a type assertion
-                                unreachable!()
-                            }
-                            GoalKwOrExpression::Expression(expression) => expression.clone(),
-                        };
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::CheckAssertion(
-                            self.first_token.clone(),
-                            CheckAssertion::Type(TypeAssertion {
-                                span: span_single(file_id, &self.first_token)
-                                    .inclusive_merge(right.span()),
-                                left,
-                                right,
-                            }),
-                            end_delimiter,
-                        ))
-                    }
-                    AssertionKind::NormalForm => {
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::CheckAssertion(
-                            self.first_token.clone(),
-                            CheckAssertion::NormalForm(NormalFormAssertion {
-                                span: span_single(file_id, &self.first_token)
-                                    .inclusive_merge(right.span()),
-                                left: self.left.clone(),
-                                right,
-                            }),
-                            end_delimiter,
-                        ))
-                    }
-                }
+                AcceptResult::PopAndContinueReducing(FinishedStackItem::CheckAssertion(
+                    self.first_token.clone(),
+                    CheckAssertion {
+                        span: span_single(file_id, &self.first_token).inclusive_merge(right.span()),
+                        kind: self.kind,
+                        left: self.left.clone(),
+                        right,
+                    },
+                    end_delimiter,
+                ))
             }
 
             other_item => AcceptResult::PushAndContinueReducingWithNewTop(

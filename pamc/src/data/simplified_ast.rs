@@ -134,33 +134,14 @@ pub struct Check {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum CheckAssertion {
-    Type(TypeAssertion),
-    NormalForm(NormalFormAssertion),
-}
-
-impl CheckAssertion {
-    pub fn span(&self) -> TextSpan {
-        match self {
-            CheckAssertion::Type(type_) => type_.span,
-            CheckAssertion::NormalForm(normal_form) => normal_form.span,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TypeAssertion {
+pub struct CheckAssertion {
     pub span: TextSpan,
-    pub left: Expression,
-    pub right: QuestionMarkOrExpression,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NormalFormAssertion {
-    pub span: TextSpan,
+    pub kind: CheckAssertionKind,
     pub left: GoalKwOrExpression,
     pub right: QuestionMarkOrExpression,
 }
+
+pub use crate::data::unsimplified_ast::CheckAssertionKind;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GoalKwOrExpression {

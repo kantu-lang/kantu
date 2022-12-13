@@ -104,13 +104,7 @@ pub struct UnfinishedCheckAssertions {
 pub struct UnfinishedCheckAssertion {
     pub first_token: Token,
     pub left: GoalKwOrExpression,
-    pub kind: AssertionKind,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AssertionKind {
-    Type,
-    NormalForm,
+    pub kind: CheckAssertionKind,
 }
 
 #[derive(Clone, Debug)]
