@@ -46,13 +46,13 @@ pub enum CheckAssertionId {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrPossiblyInvalidExpressionId {
-    QuestionMark { span: TextSpan },
+    QuestionMark { span: Option<TextSpan> },
     Expression(PossiblyInvalidExpressionId),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GoalKwOrExpressionId {
-    GoalKw { span: TextSpan },
+    GoalKw { span: Option<TextSpan> },
     Expression(ExpressionId),
 }
 

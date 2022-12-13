@@ -147,26 +147,6 @@ fn span_range_excluding_end(file_id: FileId, start: &Token, end: &Token) -> Text
     }
 }
 
-impl TextSpan {
-    fn inclusive_merge(self, other: TextSpan) -> TextSpan {
-        if self.file_id != other.file_id {
-            panic!("Cannot merge spans from different files.");
-        }
-
-        let start = self.start;
-        let end = other.end;
-        if end < start {
-            panic!("End of span is before start of span.");
-        }
-
-        TextSpan {
-            file_id: self.file_id,
-            start,
-            end,
-        }
-    }
-}
-
 use unfinished::*;
 mod unfinished;
 

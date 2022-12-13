@@ -31,7 +31,7 @@ pub trait AddId {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub file_id: FileId,
     pub item_list_id: ListId<FileItemNodeId>,
 }
@@ -61,7 +61,7 @@ pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub variant_list_id: ListId<NodeId<with_id::Variant>>,
@@ -92,7 +92,7 @@ impl AddId for TypeStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Param {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub is_dashed: bool,
     pub name_id: NodeId<with_id::Identifier>,
     pub type_id: ExpressionId,
@@ -123,7 +123,7 @@ impl AddId for Param {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub return_type_id: ExpressionId,
@@ -154,7 +154,7 @@ impl AddId for Variant {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
     pub value_id: ExpressionId,
 }
@@ -184,7 +184,7 @@ pub type ExpressionId = crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub component_list_id: ListId<NodeId<with_id::Identifier>>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
@@ -247,7 +247,7 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
     pub arg_list_id: ListId<ExpressionId>,
 }
@@ -275,7 +275,7 @@ impl AddId for Call {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub return_type_id: ExpressionId,
@@ -312,7 +312,7 @@ impl AddId for Fun {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Match {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub matchee_id: ExpressionId,
     pub case_list_id: ListId<NodeId<with_id::MatchCase>>,
 }
@@ -340,7 +340,7 @@ impl AddId for Match {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MatchCase {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<with_id::Identifier>,
     pub param_list_id: ListId<NodeId<with_id::Identifier>>,
     pub output_id: ExpressionId,
@@ -370,7 +370,7 @@ impl AddId for MatchCase {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub param_list_id: ListId<NodeId<with_id::Param>>,
     pub output_id: ExpressionId,
 }
@@ -398,7 +398,7 @@ impl AddId for Forall {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub assertion_list_id: ListId<CheckAssertionId>,
     pub output_id: ExpressionId,
 }
@@ -426,7 +426,7 @@ impl AddId for Check {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeAssertion {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub left_id: ExpressionId,
     pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
@@ -454,7 +454,7 @@ impl AddId for TypeAssertion {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NormalFormAssertion {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub left_id: GoalKwOrExpressionId,
     pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
@@ -482,7 +482,7 @@ impl AddId for NormalFormAssertion {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SymbolicallyInvalidExpression {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
@@ -510,7 +510,7 @@ impl AddId for SymbolicallyInvalidExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub expression_id: with_id::ExpressionId,
     pub error: IllegalFunRecursionError,
 }

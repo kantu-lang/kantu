@@ -28,6 +28,9 @@ pub use type_check_node::type_check_files;
 use type_check_node::*;
 mod type_check_node;
 
+mod without_spans;
+use without_spans::*;
+
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
     IllegalTypeExpression(ExpressionId),

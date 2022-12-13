@@ -7,7 +7,7 @@ use crate::data::{
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub file_id: FileId,
     pub id: NodeId<Self>,
     pub item_list_id: ListId<FileItemNodeId>,
@@ -18,7 +18,7 @@ pub use crate::data::node_registry::FileItemNodeId;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Param>>,
     pub variant_list_id: ListId<NodeId<Variant>>,
@@ -27,7 +27,7 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub is_dashed: bool,
     pub name_id: NodeId<Identifier>,
     pub type_id: ExpressionId,
@@ -36,7 +36,7 @@ pub struct Param {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Variant {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Param>>,
     pub return_type_id: ExpressionId,
@@ -45,7 +45,7 @@ pub struct Variant {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
     pub value_id: ExpressionId,
 }
@@ -55,7 +55,7 @@ pub type ExpressionId = crate::data::node_registry::ExpressionId;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NameExpression {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub component_list_id: ListId<NodeId<Identifier>>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
@@ -77,7 +77,7 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
     pub arg_list_id: ListId<ExpressionId>,
 }
@@ -85,7 +85,7 @@ pub struct Call {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Param>>,
     pub return_type_id: ExpressionId,
@@ -101,7 +101,7 @@ pub struct Fun {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub matchee_id: ExpressionId,
     pub case_list_id: ListId<NodeId<MatchCase>>,
 }
@@ -109,7 +109,7 @@ pub struct Match {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<Identifier>,
     pub param_list_id: ListId<NodeId<Identifier>>,
     pub output_id: ExpressionId,
@@ -118,7 +118,7 @@ pub struct MatchCase {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub param_list_id: ListId<NodeId<Param>>,
     pub output_id: ExpressionId,
 }
@@ -126,7 +126,7 @@ pub struct Forall {
 #[derive(Clone, Debug)]
 pub struct Check {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub assertion_list_id: ListId<CheckAssertionId>,
     pub output_id: ExpressionId,
 }
@@ -136,7 +136,7 @@ pub use crate::data::node_registry::CheckAssertionId;
 #[derive(Clone, Debug)]
 pub struct TypeAssertion {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub left_id: ExpressionId,
     pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
@@ -144,7 +144,7 @@ pub struct TypeAssertion {
 #[derive(Clone, Debug)]
 pub struct NormalFormAssertion {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub left_id: GoalKwOrExpressionId,
     pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
@@ -158,7 +158,7 @@ pub use crate::data::node_registry::{
 #[derive(Clone, Debug)]
 pub struct SymbolicallyInvalidExpression {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
@@ -166,7 +166,7 @@ pub struct SymbolicallyInvalidExpression {
 #[derive(Clone, Debug)]
 pub struct IllegalFunRecursionExpression {
     pub id: NodeId<Self>,
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub expression_id: ExpressionId,
     pub error: IllegalFunRecursionError,
 }

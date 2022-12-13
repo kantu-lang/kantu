@@ -5,7 +5,7 @@ use crate::data::{
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub id: FileId,
     pub items: Vec<FileItem>,
 }
@@ -17,7 +17,7 @@ pub enum FileItem {
 }
 
 impl FileItem {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             FileItem::Type(type_) => type_.span,
             FileItem::Let(let_) => let_.span,
@@ -27,7 +27,7 @@ impl FileItem {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name: Identifier,
     pub params: Vec<Param>,
     pub variants: Vec<Variant>,
@@ -35,7 +35,7 @@ pub struct TypeStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Param {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub is_dashed: bool,
     pub name: Identifier,
     pub type_: Expression,
@@ -43,7 +43,7 @@ pub struct Param {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
@@ -51,7 +51,7 @@ pub struct Variant {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name: Identifier,
     pub value: Expression,
 }
@@ -67,7 +67,7 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             Expression::Name(name) => name.span,
             Expression::Call(call) => call.span,
@@ -81,7 +81,7 @@ impl Expression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub components: Vec<Identifier>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
@@ -116,14 +116,14 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub callee: Expression,
     pub args: Vec<Expression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub name: Identifier,
     pub params: Vec<Param>,
     pub return_type: Expression,
@@ -138,14 +138,14 @@ pub struct Fun {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Match {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub matchee: Expression,
     pub cases: Vec<MatchCase>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MatchCase {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub variant_name: Identifier,
     pub params: Vec<Identifier>,
     pub output: Expression,
@@ -153,7 +153,7 @@ pub struct MatchCase {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub params: Vec<Param>,
     pub output: Expression,
 }
@@ -162,7 +162,7 @@ pub struct Forall {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub assertions: Vec<CheckAssertion>,
     pub output: Expression,
 }
@@ -174,7 +174,7 @@ pub enum CheckAssertion {
 }
 
 impl CheckAssertion {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             CheckAssertion::Type(type_) => type_.span,
             CheckAssertion::NormalForm(normal_form) => normal_form.span,
@@ -184,26 +184,26 @@ impl CheckAssertion {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeAssertion {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub left: Expression,
     pub right: QuestionMarkOrPossiblyInvalidExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NormalFormAssertion {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub left: GoalKwOrExpression,
     pub right: QuestionMarkOrPossiblyInvalidExpression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GoalKwOrExpression {
-    GoalKw { span: TextSpan },
+    GoalKw { span: Option<TextSpan> },
     Expression(Expression),
 }
 
 impl GoalKwOrExpression {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             GoalKwOrExpression::GoalKw { span } => *span,
             GoalKwOrExpression::Expression(expression) => expression.span(),
@@ -213,12 +213,12 @@ impl GoalKwOrExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrPossiblyInvalidExpression {
-    QuestionMark { span: TextSpan },
+    QuestionMark { span: Option<TextSpan> },
     Expression(PossiblyInvalidExpression),
 }
 
 impl QuestionMarkOrPossiblyInvalidExpression {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span } => *span,
             QuestionMarkOrPossiblyInvalidExpression::Expression(expression) => expression.span(),
@@ -233,7 +233,7 @@ pub enum PossiblyInvalidExpression {
 }
 
 impl PossiblyInvalidExpression {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             PossiblyInvalidExpression::Valid(expression) => expression.span(),
             PossiblyInvalidExpression::Invalid(expression) => expression.span(),
@@ -248,7 +248,7 @@ pub enum InvalidExpression {
 }
 
 impl InvalidExpression {
-    pub fn span(&self) -> TextSpan {
+    pub fn span(&self) -> Option<TextSpan> {
         match self {
             InvalidExpression::SymbolicallyInvalid(expression) => expression.span,
             InvalidExpression::IllegalFunRecursion(expression) => expression.span,
@@ -258,14 +258,14 @@ impl InvalidExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SymbolicallyInvalidExpression {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub expression: Expression,
     pub error: IllegalFunRecursionError,
 }

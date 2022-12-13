@@ -35,6 +35,16 @@ pub fn add_name_expression_and_overwrite_component_ids(
     components: Vec<Identifier>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
+    let first_span = components
+        .first()
+        .expect("components should be non-empty")
+        .span;
+    let last_span = components
+        .last()
+        .expect("components should be non-empty")
+        .span;
+    let span = first_span
+        .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
     let component_ids = components
         .into_iter()
         .map(|component| registry.add_identifier_and_overwrite_its_id(component))
@@ -42,6 +52,7 @@ pub fn add_name_expression_and_overwrite_component_ids(
     let component_list_id = registry.add_identifier_list(component_ids);
     registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
+        span,
         component_list_id,
         db_index,
     })
@@ -52,9 +63,26 @@ pub fn add_name_expression(
     component_ids: Vec<NodeId<Identifier>>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
+    let first_span = registry
+        .identifier(
+            *component_ids
+                .first()
+                .expect("components should be non-empty"),
+        )
+        .span;
+    let last_span = registry
+        .identifier(
+            *component_ids
+                .last()
+                .expect("components should be non-empty"),
+        )
+        .span;
+    let span = first_span
+        .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
     let component_list_id = registry.add_identifier_list(component_ids);
     registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
+        span,
         component_list_id,
         db_index,
     })
@@ -144,13 +172,15 @@ pub(super) fn normalize_params_and_leave_params_in_context_dirty(
                 let old_param = state.registry.param(param_id);
                 let normalized_param_with_dummy_id = Param {
                     id: dummy_id(),
+                    span: None,
                     is_dashed: old_param.is_dashed,
                     name_id: old_param.name_id,
                     type_id,
                 };
                 let normalized_id = state
                     .registry
-                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id);
+                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id)
+                    .without_spans(state.registry);
                 Ok(normalized_id)
             },
         )
