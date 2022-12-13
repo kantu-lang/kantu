@@ -155,6 +155,8 @@ pub use crate::data::node_registry::{
     InvalidExpressionId, PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
 };
 
+// TODO: Fix span of these (there's no way to remove spans)
+
 #[derive(Clone, Debug)]
 pub struct SymbolicallyInvalidExpression {
     pub id: NodeId<Self>,
