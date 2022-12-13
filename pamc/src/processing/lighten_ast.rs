@@ -242,63 +242,80 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall)
 }
 
 pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -> NodeId<Check> {
-    let checkee_annotation_id =
-        register_checkee_annotation(registry, unregistered.checkee_annotation);
+    let assertion_ids = unregistered
+        .assertions
+        .into_iter()
+        .map(|unregistered| register_check_assertion(registry, unregistered))
+        .collect();
+    let assertion_list_id = registry.add_check_assertion_list(assertion_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add_check_and_overwrite_its_id(Check {
         id: dummy_id(),
         span: unregistered.span,
-        checkee_annotation_id,
+        assertion_list_id,
         output_id,
     })
 }
 
-pub fn register_checkee_annotation(
+pub fn register_check_assertion(
     registry: &mut NodeRegistry,
-    unregistered: heavy::CheckeeAnnotation,
-) -> CheckeeAnnotationId {
+    unregistered: heavy::CheckAssertion,
+) -> CheckAssertionId {
     match unregistered {
-        heavy::CheckeeAnnotation::Goal(unregistered) => {
-            let id = register_goal_checkee_annotation(registry, unregistered);
-            CheckeeAnnotationId::Goal(id)
+        heavy::CheckAssertion::Type(unregistered) => {
+            let id = register_type_assertion(registry, unregistered);
+            CheckAssertionId::Type(id)
         }
-        heavy::CheckeeAnnotation::Expression(unregistered) => {
-            let id = register_expression_checkee_annotation(registry, unregistered);
-            CheckeeAnnotationId::Expression(id)
+        heavy::CheckAssertion::NormalForm(unregistered) => {
+            let id = register_normal_form_assertion(registry, unregistered);
+            CheckAssertionId::NormalForm(id)
         }
     }
 }
 
-pub fn register_goal_checkee_annotation(
+pub fn register_type_assertion(
     registry: &mut NodeRegistry,
-    unregistered: heavy::GoalCheckeeAnnotation,
-) -> NodeId<GoalCheckeeAnnotation> {
-    let goal_kw_position = unregistered.goal_kw_span;
-    let checkee_type_id =
-        register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
-    registry.add_goal_checkee_annotation_and_overwrite_its_id(GoalCheckeeAnnotation {
+    unregistered: heavy::TypeAssertion,
+) -> NodeId<TypeAssertion> {
+    let left_id = register_expression(registry, unregistered.left);
+    let right_id =
+        register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
+    registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
         id: dummy_id(),
-        goal_kw_position,
-        checkee_type_id,
+        span: unregistered.span,
+        left_id,
+        right_id,
     })
 }
 
-pub fn register_expression_checkee_annotation(
+pub fn register_normal_form_assertion(
     registry: &mut NodeRegistry,
-    unregistered: heavy::ExpressionCheckeeAnnotation,
-) -> NodeId<ExpressionCheckeeAnnotation> {
-    let checkee_id = register_expression(registry, unregistered.checkee);
-    let checkee_type_id =
-        register_question_mark_or_possibly_invalid_expression(registry, unregistered.checkee_type);
-    let checkee_value_id = unregistered
-        .checkee_value
-        .map(|value_id| register_question_mark_or_possibly_invalid_expression(registry, value_id));
-    registry.add_expression_checkee_annotation_and_overwrite_its_id(ExpressionCheckeeAnnotation {
+    unregistered: heavy::NormalFormAssertion,
+) -> NodeId<NormalFormAssertion> {
+    let left_id = register_goal_kw_or_expression(registry, unregistered.left);
+    let right_id =
+        register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
+    registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
         id: dummy_id(),
-        checkee_id,
-        checkee_type_id,
-        checkee_value_id,
+        span: unregistered.span,
+        left_id,
+        right_id,
     })
+}
+
+pub fn register_goal_kw_or_expression(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::GoalKwOrExpression,
+) -> GoalKwOrExpressionId {
+    match unregistered {
+        heavy::GoalKwOrExpression::GoalKw { span: start } => {
+            GoalKwOrExpressionId::GoalKw { span: start }
+        }
+        heavy::GoalKwOrExpression::Expression(unregistered) => {
+            let id = register_expression(registry, unregistered);
+            GoalKwOrExpressionId::Expression(id)
+        }
+    }
 }
 
 pub fn register_question_mark_or_possibly_invalid_expression(
