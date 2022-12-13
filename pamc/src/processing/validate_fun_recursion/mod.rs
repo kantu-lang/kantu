@@ -507,8 +507,8 @@ fn validate_fun_recursion_in_check_dirty(
 fn validate_fun_recursion_in_check_assertions_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: ListId<CheckAssertionId>,
-) -> Result<ListId<CheckAssertionId>, TaintedIllegalFunRecursionError> {
+    id: ListId<NodeId<CheckAssertion>>,
+) -> Result<ListId<NodeId<CheckAssertion>>, TaintedIllegalFunRecursionError> {
     let assertion_ids = registry
         .check_assertion_list(id)
         .to_vec()
@@ -523,46 +523,9 @@ fn validate_fun_recursion_in_check_assertions_dirty(
 fn validate_fun_recursion_in_check_assertion_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: CheckAssertionId,
-) -> Result<CheckAssertionId, TaintedIllegalFunRecursionError> {
-    Ok(match id {
-        CheckAssertionId::Type(id) => CheckAssertionId::Type(
-            validate_fun_recursion_in_type_assertion_dirty(context, registry, id)?,
-        ),
-        CheckAssertionId::NormalForm(id) => CheckAssertionId::NormalForm(
-            validate_fun_recursion_in_normal_form_assertion_dirty(context, registry, id)?,
-        ),
-    })
-}
-
-fn validate_fun_recursion_in_type_assertion_dirty(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    id: NodeId<TypeAssertion>,
-) -> Result<NodeId<TypeAssertion>, TaintedIllegalFunRecursionError> {
-    let assertion = registry.type_assertion(id).clone();
-    let left_id = validate_fun_recursion_in_expression_dirty(context, registry, assertion.left_id)?;
-    let right_id = validate_fun_recursion_in_question_mark_or_possibly_invalid_expression_dirty(
-        context,
-        registry,
-        assertion.right_id,
-    )?;
-    Ok(
-        registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
-            id: dummy_id(),
-            span: assertion.span,
-            left_id,
-            right_id,
-        }),
-    )
-}
-
-fn validate_fun_recursion_in_normal_form_assertion_dirty(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    id: NodeId<NormalFormAssertion>,
-) -> Result<NodeId<NormalFormAssertion>, TaintedIllegalFunRecursionError> {
-    let assertion = registry.normal_form_assertion(id).clone();
+    id: NodeId<CheckAssertion>,
+) -> Result<NodeId<CheckAssertion>, TaintedIllegalFunRecursionError> {
+    let assertion = registry.check_assertion(id).clone();
     let left_id = validate_fun_recursion_in_goal_kw_or_expression_dirty(
         context,
         registry,
@@ -574,9 +537,10 @@ fn validate_fun_recursion_in_normal_form_assertion_dirty(
         assertion.right_id,
     )?;
     Ok(
-        registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
+        registry.add_check_assertion_and_overwrite_its_id(CheckAssertion {
             id: dummy_id(),
             span: assertion.span,
+            kind: assertion.kind,
             left_id,
             right_id,
         }),
@@ -586,15 +550,17 @@ fn validate_fun_recursion_in_normal_form_assertion_dirty(
 fn validate_fun_recursion_in_goal_kw_or_expression_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: GoalKwOrExpressionId,
-) -> Result<GoalKwOrExpressionId, TaintedIllegalFunRecursionError> {
+    id: GoalKwOrPossiblyInvalidExpressionId,
+) -> Result<GoalKwOrPossiblyInvalidExpressionId, TaintedIllegalFunRecursionError> {
     Ok(match id {
-        GoalKwOrExpressionId::GoalKw { span: start } => {
-            GoalKwOrExpressionId::GoalKw { span: start }
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start } => {
+            GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start }
         }
-        GoalKwOrExpressionId::Expression(id) => GoalKwOrExpressionId::Expression(
-            validate_fun_recursion_in_expression_dirty(context, registry, id)?,
-        ),
+        GoalKwOrPossiblyInvalidExpressionId::Expression(id) => {
+            GoalKwOrPossiblyInvalidExpressionId::Expression(
+                validate_fun_recursion_in_possibly_invalid_expression_dirty(context, registry, id),
+            )
+        }
     })
 }
 
@@ -641,6 +607,7 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
                                 id: dummy_id(),
                                 expression_id: original_id,
                                 error: err,
+                                span_invalidated: false,
                             },
                         ),
                     ))

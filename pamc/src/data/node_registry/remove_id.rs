@@ -3,7 +3,7 @@ use crate::data::{
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{
-        CheckAssertionId, GoalKwOrExpressionId, ListId, NodeId,
+        GoalKwOrPossiblyInvalidExpressionId, ListId, NodeId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
     simplified_ast as unbound, FileId, TextSpan,
@@ -399,7 +399,7 @@ impl AddId for Forall {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: Option<TextSpan>,
-    pub assertion_list_id: ListId<CheckAssertionId>,
+    pub assertion_list_id: ListId<NodeId<with_id::CheckAssertion>>,
     pub output_id: ExpressionId,
 }
 impl RemoveId for with_id::Check {
@@ -425,55 +425,30 @@ impl AddId for Check {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TypeAssertion {
+pub struct CheckAssertion {
     pub span: Option<TextSpan>,
-    pub left_id: ExpressionId,
+    pub kind: with_id::CheckAssertionKind,
+    pub left_id: GoalKwOrPossiblyInvalidExpressionId,
     pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
-impl RemoveId for with_id::TypeAssertion {
-    type Output = TypeAssertion;
+impl RemoveId for with_id::CheckAssertion {
+    type Output = CheckAssertion;
     fn remove_id(&self) -> Self::Output {
-        TypeAssertion {
+        CheckAssertion {
             span: self.span,
+            kind: self.kind,
             left_id: self.left_id,
             right_id: self.right_id,
         }
     }
 }
-impl AddId for TypeAssertion {
-    type Output = with_id::TypeAssertion;
+impl AddId for CheckAssertion {
+    type Output = with_id::CheckAssertion;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::TypeAssertion {
+        with_id::CheckAssertion {
             id,
             span: self.span,
-            left_id: self.left_id,
-            right_id: self.right_id,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NormalFormAssertion {
-    pub span: Option<TextSpan>,
-    pub left_id: GoalKwOrExpressionId,
-    pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
-}
-impl RemoveId for with_id::NormalFormAssertion {
-    type Output = NormalFormAssertion;
-    fn remove_id(&self) -> Self::Output {
-        NormalFormAssertion {
-            span: self.span,
-            left_id: self.left_id,
-            right_id: self.right_id,
-        }
-    }
-}
-impl AddId for NormalFormAssertion {
-    type Output = with_id::NormalFormAssertion;
-    fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::NormalFormAssertion {
-            id,
-            span: self.span,
+            kind: self.kind,
             left_id: self.left_id,
             right_id: self.right_id,
         }
@@ -484,6 +459,7 @@ impl AddId for NormalFormAssertion {
 pub struct SymbolicallyInvalidExpression {
     pub expression: unbound::Expression,
     pub error: BindError,
+    pub span_invalidated: bool,
 }
 impl RemoveId for with_id::SymbolicallyInvalidExpression {
     type Output = SymbolicallyInvalidExpression;
@@ -491,6 +467,7 @@ impl RemoveId for with_id::SymbolicallyInvalidExpression {
         SymbolicallyInvalidExpression {
             expression: self.expression.clone(),
             error: self.error.clone(),
+            span_invalidated: self.span_invalidated,
         }
     }
 }
@@ -501,6 +478,7 @@ impl AddId for SymbolicallyInvalidExpression {
             id,
             expression: self.expression.clone(),
             error: self.error.clone(),
+            span_invalidated: self.span_invalidated,
         }
     }
 }
@@ -509,6 +487,7 @@ impl AddId for SymbolicallyInvalidExpression {
 pub struct IllegalFunRecursionExpression {
     pub expression_id: with_id::ExpressionId,
     pub error: IllegalFunRecursionError,
+    pub span_invalidated: bool,
 }
 impl RemoveId for with_id::IllegalFunRecursionExpression {
     type Output = IllegalFunRecursionExpression;
@@ -516,6 +495,7 @@ impl RemoveId for with_id::IllegalFunRecursionExpression {
         IllegalFunRecursionExpression {
             expression_id: self.expression_id.clone(),
             error: self.error.clone(),
+            span_invalidated: self.span_invalidated,
         }
     }
 }
@@ -526,6 +506,7 @@ impl AddId for IllegalFunRecursionExpression {
             id,
             expression_id: self.expression_id.clone(),
             error: self.error.clone(),
+            span_invalidated: self.span_invalidated,
         }
     }
 }

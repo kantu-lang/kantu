@@ -168,45 +168,26 @@ pub struct Check {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum CheckAssertion {
-    Type(TypeAssertion),
-    NormalForm(NormalFormAssertion),
-}
-
-impl CheckAssertion {
-    pub fn span(&self) -> Option<TextSpan> {
-        match self {
-            CheckAssertion::Type(type_) => type_.span,
-            CheckAssertion::NormalForm(normal_form) => normal_form.span,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TypeAssertion {
+pub struct CheckAssertion {
     pub span: Option<TextSpan>,
-    pub left: Expression,
+    pub kind: CheckAssertionKind,
+    pub left: GoalKwOrPossiblyInvalidExpression,
     pub right: QuestionMarkOrPossiblyInvalidExpression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NormalFormAssertion {
-    pub span: Option<TextSpan>,
-    pub left: GoalKwOrExpression,
-    pub right: QuestionMarkOrPossiblyInvalidExpression,
-}
+pub use crate::data::simplified_ast::CheckAssertionKind;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum GoalKwOrExpression {
+pub enum GoalKwOrPossiblyInvalidExpression {
     GoalKw { span: Option<TextSpan> },
-    Expression(Expression),
+    Expression(PossiblyInvalidExpression),
 }
 
-impl GoalKwOrExpression {
+impl GoalKwOrPossiblyInvalidExpression {
     pub fn span(&self) -> Option<TextSpan> {
         match self {
-            GoalKwOrExpression::GoalKw { span } => *span,
-            GoalKwOrExpression::Expression(expression) => expression.span(),
+            GoalKwOrPossiblyInvalidExpression::GoalKw { span } => *span,
+            GoalKwOrPossiblyInvalidExpression::Expression(expression) => expression.span(),
         }
     }
 }
@@ -262,10 +243,12 @@ impl InvalidExpression {
 pub struct SymbolicallyInvalidExpression {
     pub expression: unbound::Expression,
     pub error: BindError,
+    pub span_invalidated: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
     pub expression: Expression,
     pub error: IllegalFunRecursionError,
+    pub span_invalidated: bool,
 }

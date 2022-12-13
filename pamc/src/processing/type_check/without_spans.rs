@@ -197,7 +197,7 @@ impl WithoutSpans for NodeId<Check> {
     }
 }
 
-impl WithoutSpans for ListId<CheckAssertionId> {
+impl WithoutSpans for ListId<NodeId<CheckAssertion>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.check_assertion_list(self).to_vec();
         let new = original
@@ -208,51 +208,29 @@ impl WithoutSpans for ListId<CheckAssertionId> {
     }
 }
 
-impl WithoutSpans for CheckAssertionId {
+impl WithoutSpans for NodeId<CheckAssertion> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.check_assertion(self).clone();
+        let left_id = original.left_id.without_spans(registry);
+        let right_id = original.right_id.without_spans(registry);
+        registry.add_check_assertion_and_overwrite_its_id(CheckAssertion {
+            id: dummy_id(),
+            span: None,
+            kind: original.kind,
+            left_id,
+            right_id,
+        })
+    }
+}
+
+impl WithoutSpans for GoalKwOrPossiblyInvalidExpressionId {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         match self {
-            CheckAssertionId::Type(id) => CheckAssertionId::Type(id.without_spans(registry)),
-            CheckAssertionId::NormalForm(id) => {
-                CheckAssertionId::NormalForm(id.without_spans(registry))
+            GoalKwOrPossiblyInvalidExpressionId::GoalKw { .. } => {
+                GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: None }
             }
-        }
-    }
-}
-
-impl WithoutSpans for NodeId<TypeAssertion> {
-    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.type_assertion(self).clone();
-        let left_id = original.left_id.without_spans(registry);
-        let right_id = original.right_id.without_spans(registry);
-        registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
-            id: dummy_id(),
-            span: None,
-            left_id,
-            right_id,
-        })
-    }
-}
-
-impl WithoutSpans for NodeId<NormalFormAssertion> {
-    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.normal_form_assertion(self).clone();
-        let left_id = original.left_id.without_spans(registry);
-        let right_id = original.right_id.without_spans(registry);
-        registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
-            id: dummy_id(),
-            span: None,
-            left_id,
-            right_id,
-        })
-    }
-}
-
-impl WithoutSpans for GoalKwOrExpressionId {
-    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        match self {
-            GoalKwOrExpressionId::GoalKw { .. } => GoalKwOrExpressionId::GoalKw { span: None },
-            GoalKwOrExpressionId::Expression(id) => {
-                GoalKwOrExpressionId::Expression(id.without_spans(registry))
+            GoalKwOrPossiblyInvalidExpressionId::Expression(id) => {
+                GoalKwOrPossiblyInvalidExpressionId::Expression(id.without_spans(registry))
             }
         }
     }

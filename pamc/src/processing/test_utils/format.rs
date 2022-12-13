@@ -245,61 +245,33 @@ pub fn format_check_assertion(
     indent_level: usize,
     options: &FormatOptions,
 ) -> String {
-    match assertion {
-        CheckAssertion::Type(assertion) => format_type_assertion(assertion, indent_level, options),
-        CheckAssertion::NormalForm(assertion) => {
-            format_normal_form_assertion(assertion, indent_level, options)
-        }
-    }
-}
-
-pub fn format_type_assertion(
-    annotation: &TypeAssertion,
-    indent_level: usize,
-    options: &FormatOptions,
-) -> String {
     let i1 = indent(indent_level + 1, options);
-    let left = format_expression(&annotation.left, indent_level + 1, options);
+    let kind = match assertion.kind {
+        CheckAssertionKind::Type => ":",
+        CheckAssertionKind::NormalForm => " =",
+    };
+    let left = format_goal_kw_or_expression(&assertion.left, indent_level + 1, options);
     let right = format_question_mark_or_possibly_invalid_expression(
-        &annotation.right,
+        &assertion.right,
         indent_level + 2,
         options,
     );
     if left.contains('\n') || right.contains('\n') {
-        format!("{}:\n{}{}", left, &i1, right)
+        format!("{}{}\n{}{}", left, kind, &i1, right)
     } else {
-        format!("{}: {}", left, right)
-    }
-}
-
-pub fn format_normal_form_assertion(
-    annotation: &NormalFormAssertion,
-    indent_level: usize,
-    options: &FormatOptions,
-) -> String {
-    let i1 = indent(indent_level + 1, options);
-    let left = format_goal_kw_or_expression(&annotation.left, indent_level + 1, options);
-    let right = format_question_mark_or_possibly_invalid_expression(
-        &annotation.right,
-        indent_level + 2,
-        options,
-    );
-    if left.contains('\n') || right.contains('\n') {
-        format!("{} =\n{}{}", left, &i1, right)
-    } else {
-        format!("{} = {}", left, right)
+        format!("{}{} {}", left, kind, right)
     }
 }
 
 pub fn format_goal_kw_or_expression(
-    expression: &GoalKwOrExpression,
+    expression: &GoalKwOrPossiblyInvalidExpression,
     indent_level: usize,
     options: &FormatOptions,
 ) -> String {
     match expression {
-        GoalKwOrExpression::GoalKw { span: _ } => "goal".to_string(),
-        GoalKwOrExpression::Expression(expression) => {
-            format_expression(expression, indent_level, options)
+        GoalKwOrPossiblyInvalidExpression::GoalKw { span: _ } => "goal".to_string(),
+        GoalKwOrPossiblyInvalidExpression::Expression(expression) => {
+            format_possibly_invalid_expression(expression, indent_level, options)
         }
     }
 }

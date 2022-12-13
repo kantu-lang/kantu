@@ -368,7 +368,7 @@ impl ShiftDbIndices for NodeId<Check> {
     }
 }
 
-impl ShiftDbIndices for ListId<CheckAssertionId> {
+impl ShiftDbIndices for ListId<NodeId<CheckAssertion>> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -377,7 +377,7 @@ impl ShiftDbIndices for ListId<CheckAssertionId> {
         cutoff: usize,
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
-        let list: Vec<CheckAssertionId> = registry
+        let list: Vec<NodeId<CheckAssertion>> = registry
             .check_assertion_list(self)
             .to_vec()
             .into_iter()
@@ -387,7 +387,35 @@ impl ShiftDbIndices for ListId<CheckAssertionId> {
     }
 }
 
-impl ShiftDbIndices for CheckAssertionId {
+impl ShiftDbIndices for NodeId<CheckAssertion> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let assertion = registry.check_assertion(self).clone();
+        let shifted_left_id = assertion
+            .left_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        let shifted_right_id = assertion
+            .right_id
+            .try_shift_with_cutoff(f, cutoff, registry)?;
+        Ok(
+            registry.add_check_assertion_and_overwrite_its_id(CheckAssertion {
+                id: dummy_id(),
+                span: assertion.span,
+                kind: assertion.kind,
+                left_id: shifted_left_id,
+                right_id: shifted_right_id,
+            }),
+        )
+    }
+}
+
+impl ShiftDbIndices for GoalKwOrPossiblyInvalidExpressionId {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -397,86 +425,14 @@ impl ShiftDbIndices for CheckAssertionId {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            CheckAssertionId::Type(id) => {
-                CheckAssertionId::Type(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start } => {
+                GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start }
             }
-            CheckAssertionId::NormalForm(id) => {
-                CheckAssertionId::NormalForm(id.try_shift_with_cutoff(f, cutoff, registry)?)
+            GoalKwOrPossiblyInvalidExpressionId::Expression(id) => {
+                GoalKwOrPossiblyInvalidExpressionId::Expression(
+                    id.try_shift_with_cutoff(f, cutoff, registry)?.into(),
+                )
             }
-        })
-    }
-}
-
-impl ShiftDbIndices for NodeId<TypeAssertion> {
-    type Output = Self;
-
-    fn try_shift_with_cutoff<F: ShiftFn>(
-        self,
-        f: F,
-        cutoff: usize,
-        registry: &mut NodeRegistry,
-    ) -> Result<Self, F::ShiftError> {
-        let assertion = registry.type_assertion(self).clone();
-        let shifted_left_id = assertion
-            .left_id
-            .try_shift_with_cutoff(f, cutoff, registry)?;
-        let shifted_right_id = assertion
-            .right_id
-            .try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(
-            registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
-                id: dummy_id(),
-                span: assertion.span,
-                left_id: shifted_left_id,
-                right_id: shifted_right_id,
-            }),
-        )
-    }
-}
-
-impl ShiftDbIndices for NodeId<NormalFormAssertion> {
-    type Output = Self;
-
-    fn try_shift_with_cutoff<F: ShiftFn>(
-        self,
-        f: F,
-        cutoff: usize,
-        registry: &mut NodeRegistry,
-    ) -> Result<Self, F::ShiftError> {
-        let assertion = registry.normal_form_assertion(self).clone();
-        let shifted_left_id = assertion
-            .left_id
-            .try_shift_with_cutoff(f, cutoff, registry)?;
-        let shifted_right_id = assertion
-            .right_id
-            .try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(
-            registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
-                id: dummy_id(),
-                span: assertion.span,
-                left_id: shifted_left_id,
-                right_id: shifted_right_id,
-            }),
-        )
-    }
-}
-
-impl ShiftDbIndices for GoalKwOrExpressionId {
-    type Output = Self;
-
-    fn try_shift_with_cutoff<F: ShiftFn>(
-        self,
-        f: F,
-        cutoff: usize,
-        registry: &mut NodeRegistry,
-    ) -> Result<Self, F::ShiftError> {
-        Ok(match self {
-            GoalKwOrExpressionId::GoalKw { span: start } => {
-                GoalKwOrExpressionId::GoalKw { span: start }
-            }
-            GoalKwOrExpressionId::Expression(id) => GoalKwOrExpressionId::Expression(
-                id.try_shift_with_cutoff(f, cutoff, registry)?.into(),
-            ),
         })
     }
 }
