@@ -313,88 +313,85 @@ fn bind_forall_dirty(context: &mut Context, forall: ub::Forall) -> Result<Expres
 }
 
 fn bind_check_dirty(context: &mut Context, check: ub::Check) -> Result<Expression, BindError> {
-    // TODO: Properly bind
-    bind_expression_dirty(context, check.output)
+    let assertions = check
+        .assertions
+        .into_iter()
+        .map(|param| bind_check_assertion_dirty(context, param))
+        .collect::<Result<Vec<_>, BindError>>()?;
+    let output = bind_expression_dirty(context, check.output)?;
+    Ok(Expression::Check(Box::new(Check {
+        span: Some(check.span),
+        assertions,
+        output,
+    })))
 }
 
-// fn bind_check_dirty(context: &mut Context, check: ub::Check) -> Result<Expression, BindError> {
-//     let checkee_annotation = bind_checkee_annotation_dirty(context, check.checkee_annotation)?;
-//     let output = bind_expression_dirty(context, check.output)?;
-//     let check = Expression::Check(Box::new(Check {
-//         checkee_annotation,
-//         output,
-//     }));
-//     Ok(check)
-// }
+fn bind_check_assertion_dirty(
+    context: &mut Context,
+    check: ub::CheckAssertion,
+) -> Result<CheckAssertion, BindError> {
+    let left = bind_goal_kw_or_possibly_invalid_expression(context, check.left);
+    let right = bind_question_mark_or_possibly_invalid_expression(context, check.right);
+    Ok(CheckAssertion {
+        span: Some(check.span),
+        kind: check.kind,
+        left,
+        right,
+    })
+}
 
-// fn bind_checkee_annotation_dirty(
-//     context: &mut Context,
-//     checkee_annotation: ub::CheckeeAnnotation,
-// ) -> Result<CheckeeAnnotation, BindError> {
-//     match checkee_annotation {
-//         ub::CheckeeAnnotation::Goal(annotation) => Ok(CheckeeAnnotation::Goal(
-//             bind_goal_checkee_annotation_dirty(context, annotation)?,
-//         )),
-//         ub::CheckeeAnnotation::Expression(annotation) => Ok(CheckeeAnnotation::Expression(
-//             bind_expression_checkee_annotation_dirty(context, annotation)?,
-//         )),
-//     }
-// }
+fn bind_goal_kw_or_possibly_invalid_expression(
+    context: &mut Context,
+    expression: ub::GoalKwOrExpression,
+) -> GoalKwOrPossiblyInvalidExpression {
+    match expression {
+        ub::GoalKwOrExpression::GoalKw { span: start } => {
+            GoalKwOrPossiblyInvalidExpression::GoalKw { span: Some(start) }
+        }
+        ub::GoalKwOrExpression::Expression(expression) => {
+            GoalKwOrPossiblyInvalidExpression::Expression(bind_possibly_invalid_expression(
+                context, expression,
+            ))
+        }
+    }
+}
 
-// fn bind_goal_checkee_annotation_dirty(
-//     context: &mut Context,
-//     annotation: ub::GoalCheckeeAnnotation,
-// ) -> Result<GoalCheckeeAnnotation, BindError> {
-//     let checkee_type =
-//         bind_question_mark_or_possibly_invalid_expression(context, annotation.checkee_type);
-//     Ok(GoalCheckeeAnnotation {
-//         goal_kw_span: annotation.goal_kw_span,
-//         checkee_type,
-//     })
-// }
+fn bind_question_mark_or_possibly_invalid_expression(
+    context: &mut Context,
+    expression: ub::QuestionMarkOrExpression,
+) -> QuestionMarkOrPossiblyInvalidExpression {
+    match expression {
+        ub::QuestionMarkOrExpression::QuestionMark { span: start } => {
+            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: Some(start) }
+        }
+        ub::QuestionMarkOrExpression::Expression(expression) => {
+            QuestionMarkOrPossiblyInvalidExpression::Expression(bind_possibly_invalid_expression(
+                context, expression,
+            ))
+        }
+    }
+}
 
-// fn bind_expression_checkee_annotation_dirty(
-//     context: &mut Context,
-//     annotation: ub::ExpressionCheckeeAnnotation,
-// ) -> Result<ExpressionCheckeeAnnotation, BindError> {
-//     Ok(ExpressionCheckeeAnnotation {
-//         checkee: bind_expression_dirty(context, annotation.checkee)?,
-//         checkee_type: bind_question_mark_or_possibly_invalid_expression(
-//             context,
-//             annotation.checkee_type,
-//         ),
-//         checkee_value: annotation.checkee_value.map(|checkee_value| {
-//             bind_question_mark_or_possibly_invalid_expression(context, checkee_value)
-//         }),
-//     })
-// }
-
-// fn bind_question_mark_or_possibly_invalid_expression(
-//     context: &mut Context,
-//     expression: ub::QuestionMarkOrExpression,
-// ) -> QuestionMarkOrPossiblyInvalidExpression {
-//     match expression {
-//         ub::QuestionMarkOrExpression::QuestionMark { span: start } => {
-//             QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: start }
-//         }
-//         ub::QuestionMarkOrExpression::Expression(expression) => {
-//             // Since we're not using `?` to terminate early (like we normally do),
-//             // we need to use `bind_expression` (instead of `bind_expression_dirty`),
-//             // since we need the context to be clean even if `bind_result`
-//             // is an `Err(_)` (since we'll still ultimately return `Ok` in that case).
-//             let bind_result = bind_expression(context, expression.clone());
-//             let possibly_invalid_expression = match bind_result {
-//                 Ok(bound) => PossiblyInvalidExpression::Valid(bound),
-//                 Err(error) => {
-//                     PossiblyInvalidExpression::Invalid(InvalidExpression::SymbolicallyInvalid(
-//                         SymbolicallyInvalidExpression { expression, error },
-//                     ))
-//                 }
-//             };
-//             QuestionMarkOrPossiblyInvalidExpression::Expression(possibly_invalid_expression)
-//         }
-//     }
-// }
+fn bind_possibly_invalid_expression(
+    context: &mut Context,
+    expression: ub::Expression,
+) -> PossiblyInvalidExpression {
+    // Since we're not using `?` to terminate early (like we normally do),
+    // we need to use `bind_expression` (instead of `bind_expression_dirty`),
+    // since we need the context to be clean even if `bind_result`
+    // is an `Err(_)` (since we'll still ultimately return `Ok` in that case).
+    let bind_result = bind_expression(context, expression.clone());
+    match bind_result {
+        Ok(bound) => PossiblyInvalidExpression::Valid(bound),
+        Err(error) => PossiblyInvalidExpression::Invalid(InvalidExpression::SymbolicallyInvalid(
+            SymbolicallyInvalidExpression {
+                expression,
+                error,
+                span_invalidated: false,
+            },
+        )),
+    }
+}
 
 fn create_name_without_adding_to_scope(
     _context: &mut Context,
