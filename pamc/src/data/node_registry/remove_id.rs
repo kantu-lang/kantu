@@ -482,7 +482,6 @@ impl AddId for NormalFormAssertion {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SymbolicallyInvalidExpression {
-    pub span: Option<TextSpan>,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
@@ -490,7 +489,6 @@ impl RemoveId for with_id::SymbolicallyInvalidExpression {
     type Output = SymbolicallyInvalidExpression;
     fn remove_id(&self) -> Self::Output {
         SymbolicallyInvalidExpression {
-            span: self.span,
             expression: self.expression.clone(),
             error: self.error.clone(),
         }
@@ -501,7 +499,6 @@ impl AddId for SymbolicallyInvalidExpression {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::SymbolicallyInvalidExpression {
             id,
-            span: self.span,
             expression: self.expression.clone(),
             error: self.error.clone(),
         }
@@ -510,7 +507,6 @@ impl AddId for SymbolicallyInvalidExpression {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
-    pub span: Option<TextSpan>,
     pub expression_id: with_id::ExpressionId,
     pub error: IllegalFunRecursionError,
 }
@@ -518,7 +514,6 @@ impl RemoveId for with_id::IllegalFunRecursionExpression {
     type Output = IllegalFunRecursionExpression;
     fn remove_id(&self) -> Self::Output {
         IllegalFunRecursionExpression {
-            span: self.span,
             expression_id: self.expression_id.clone(),
             error: self.error.clone(),
         }
@@ -529,7 +524,6 @@ impl AddId for IllegalFunRecursionExpression {
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
         with_id::IllegalFunRecursionExpression {
             id,
-            span: self.span,
             expression_id: self.expression_id.clone(),
             error: self.error.clone(),
         }

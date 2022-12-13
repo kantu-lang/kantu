@@ -250,22 +250,22 @@ pub enum InvalidExpression {
 impl InvalidExpression {
     pub fn span(&self) -> Option<TextSpan> {
         match self {
-            InvalidExpression::SymbolicallyInvalid(expression) => expression.span,
-            InvalidExpression::IllegalFunRecursion(expression) => expression.span,
+            InvalidExpression::SymbolicallyInvalid(expression) => {
+                Some(expression.expression.span())
+            }
+            InvalidExpression::IllegalFunRecursion(expression) => expression.expression.span(),
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SymbolicallyInvalidExpression {
-    pub span: Option<TextSpan>,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IllegalFunRecursionExpression {
-    pub span: Option<TextSpan>,
     pub expression: Expression,
     pub error: IllegalFunRecursionError,
 }

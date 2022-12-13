@@ -158,7 +158,6 @@ pub use crate::data::node_registry::{
 #[derive(Clone, Debug)]
 pub struct SymbolicallyInvalidExpression {
     pub id: NodeId<Self>,
-    pub span: Option<TextSpan>,
     pub expression: unbound::Expression,
     pub error: BindError,
 }
@@ -166,7 +165,6 @@ pub struct SymbolicallyInvalidExpression {
 #[derive(Clone, Debug)]
 pub struct IllegalFunRecursionExpression {
     pub id: NodeId<Self>,
-    pub span: Option<TextSpan>,
     pub expression_id: ExpressionId,
     pub error: IllegalFunRecursionError,
 }

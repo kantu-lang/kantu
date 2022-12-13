@@ -372,7 +372,6 @@ pub fn register_symbolically_invalid_expression(
     registry.add_symbolically_invalid_expression_and_overwrite_its_id(
         SymbolicallyInvalidExpression {
             id: dummy_id(),
-            span: unregistered.span,
             expression: unregistered.expression,
             error: unregistered.error,
         },
@@ -387,7 +386,6 @@ pub fn register_illegal_fun_recursion_expression(
     registry.add_illegal_fun_recursion_expression_and_overwrite_its_id(
         IllegalFunRecursionExpression {
             id: dummy_id(),
-            span: unregistered.span,
             expression_id,
             error: unregistered.error,
         },

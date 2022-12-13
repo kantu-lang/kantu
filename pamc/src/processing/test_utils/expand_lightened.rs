@@ -359,11 +359,7 @@ pub fn expand_symbolically_invalid_expression(
     let light = registry.symbolically_invalid_expression(id);
     let expression = light.expression.clone();
     let error = light.error.clone();
-    SymbolicallyInvalidExpression {
-        span: light.span,
-        expression,
-        error,
-    }
+    SymbolicallyInvalidExpression { expression, error }
 }
 
 pub fn expand_illegal_fun_recursion_expression(
@@ -373,9 +369,5 @@ pub fn expand_illegal_fun_recursion_expression(
     let light = registry.illegal_fun_recursion_expression(id);
     let expression = expand_expression(registry, light.expression_id);
     let error = light.error.clone();
-    IllegalFunRecursionExpression {
-        span: light.span,
-        expression,
-        error,
-    }
+    IllegalFunRecursionExpression { expression, error }
 }
