@@ -158,8 +158,6 @@ pub struct Forall {
     pub output: Expression,
 }
 
-// TODO: Cut
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: Option<TextSpan>,

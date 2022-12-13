@@ -4,10 +4,6 @@ use crate::data::{
     FileId, TextSpan,
 };
 
-// TODO: Check first token location logic.
-// We don't want to give incorrect error messages!
-// (E.g., "Error at index 234" but it's actually at index 864.)
-
 // TODO: Make errors more informative.
 // For example, if possible, it would be possible
 // to include "expected token <x>" information.
