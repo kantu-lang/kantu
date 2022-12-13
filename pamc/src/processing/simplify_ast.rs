@@ -175,32 +175,9 @@ fn simplify_check(unsimplified: ust::Check) -> Result<Expression, SimplifyAstErr
 fn simplify_check_assertion(
     unsimplified: ust::CheckAssertion,
 ) -> Result<CheckAssertion, SimplifyAstError> {
-    Ok(match unsimplified {
-        ust::CheckAssertion::Type(assertion) => {
-            CheckAssertion::Type(simplify_type_assertion(assertion)?)
-        }
-
-        ust::CheckAssertion::NormalForm(assertion) => {
-            CheckAssertion::NormalForm(simplify_normal_form_assertion(assertion)?)
-        }
-    })
-}
-
-fn simplify_type_assertion(
-    unsimplified: ust::TypeAssertion,
-) -> Result<TypeAssertion, SimplifyAstError> {
-    Ok(TypeAssertion {
+    Ok(CheckAssertion {
         span: unsimplified.span,
-        left: simplify_expression(unsimplified.left)?,
-        right: simplify_question_mark_or_expression(unsimplified.right)?,
-    })
-}
-
-fn simplify_normal_form_assertion(
-    unsimplified: ust::NormalFormAssertion,
-) -> Result<NormalFormAssertion, SimplifyAstError> {
-    Ok(NormalFormAssertion {
-        span: unsimplified.span,
+        kind: unsimplified.kind,
         left: simplify_goal_kw_or_expression(unsimplified.left)?,
         right: simplify_question_mark_or_expression(unsimplified.right)?,
     })

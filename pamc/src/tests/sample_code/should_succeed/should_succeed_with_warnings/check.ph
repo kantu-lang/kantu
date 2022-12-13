@@ -27,6 +27,17 @@ let foo = fun _(n: Nat): Nat {
     }
 };
 
+let type_assertion_goal_lhs = fun _(n: Nat): Nat {
+    match n {
+        .O => check (goal: Nat) {
+            Nat.O
+        },
+        .S(n') => check (goal: ?) {
+            Nat.O
+        },
+    }
+};
+
 let m = Nat.O;
 let question_mark_rhs = match m {
     .O => check (m: ?, m = ?) {

@@ -305,22 +305,6 @@ impl ShallowCheckOwnSpan for CheckAssertion {
 }
 impl DeepCheckChildSpans for CheckAssertion {
     fn deep_check_child_spans(&self, src: &str) {
-        match self {
-            CheckAssertion::Type(assertion) => assertion.deep_check_child_spans(src),
-            CheckAssertion::NormalForm(assertion) => assertion.deep_check_child_spans(src),
-        }
-    }
-}
-
-impl DeepCheckChildSpans for TypeAssertion {
-    fn deep_check_child_spans(&self, src: &str) {
-        self.left.deep_check_spans(src);
-        self.right.deep_check_spans(src);
-    }
-}
-
-impl DeepCheckChildSpans for NormalFormAssertion {
-    fn deep_check_child_spans(&self, src: &str) {
         self.left.deep_check_spans(src);
         self.right.deep_check_spans(src);
     }
