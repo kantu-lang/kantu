@@ -72,10 +72,12 @@ fn type_check_type_constructor_dirty(
     let type_constructor_type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
+            span: None,
             param_list_id: normalized_param_list_id,
             output_id: type0_expression(state).raw(),
         }
-        .collapse_if_nullary(state.registry),
+        .collapse_if_nullary(state.registry)
+        .without_spans(state.registry),
     );
     state.context.pop_n(arity);
 
@@ -125,10 +127,12 @@ fn type_check_type_variant_dirty(
     let type_id = NormalFormId::unchecked_new(
         Forall {
             id: dummy_id(),
+            span: None,
             param_list_id: normalized_param_list_id,
             output_id: return_type_id.raw(),
         }
-        .collapse_if_nullary(state.registry),
+        .collapse_if_nullary(state.registry)
+        .without_spans(state.registry),
     );
     state.context.pop_n(arity);
     Ok(state.context.push(ContextEntry {
@@ -351,9 +355,10 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
         state.registry.add_forall_and_overwrite_its_id(Forall {
             id: dummy_id(),
+            span: None,
             param_list_id: normalized_param_list_id,
             output_id: normalized_return_type_id.raw(),
-        }),
+        }).without_spans(state.registry),
     ));
 
     {
@@ -605,9 +610,10 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                 let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
                     state.registry.add_call_and_overwrite_its_id(Call {
                         id: dummy_id(),
+                        span: None,
                         callee_id,
                         arg_list_id,
-                    }),
+                    }).without_spans(state.registry),
                 ));
 
                 let output_substitutions: Vec<Substitution> = case_param_ids

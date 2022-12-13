@@ -17,6 +17,7 @@ pub fn lighten_file(registry: &mut NodeRegistry, unregistered: heavy::File) -> N
     let item_list_id = registry.add_file_item_list(item_ids);
     registry.add_file_and_overwrite_its_id(File {
         id: dummy_id(),
+        span: unregistered.span,
         file_id: unregistered.id,
         item_list_id,
     })
@@ -55,6 +56,7 @@ pub fn register_type_statement(
     let variant_list_id = registry.add_variant_list(variant_ids);
     registry.add_type_statement_and_overwrite_its_id(TypeStatement {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         param_list_id,
         variant_list_id,
@@ -77,6 +79,7 @@ pub fn register_param(registry: &mut NodeRegistry, unregistered: heavy::Param) -
     let type_id = register_expression(registry, unregistered.type_);
     registry.add_param_and_overwrite_its_id(Param {
         id: dummy_id(),
+        span: unregistered.span,
         is_dashed: unregistered.is_dashed,
         name_id,
         type_id,
@@ -97,6 +100,7 @@ pub fn register_variant(
     let return_type_id = register_expression(registry, unregistered.return_type);
     registry.add_variant_and_overwrite_its_id(Variant {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         param_list_id,
         return_type_id,
@@ -111,6 +115,7 @@ pub fn register_let_statement(
     let value_id = register_expression(registry, unregistered.value);
     registry.add_let_statement_and_overwrite_its_id(LetStatement {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         value_id,
     })
@@ -160,6 +165,7 @@ pub fn register_name_expression(
     let component_list_id = registry.add_identifier_list(component_ids);
     registry.add_name_expression_and_overwrite_its_id(NameExpression {
         id: dummy_id(),
+        span: unregistered.span,
         component_list_id,
         db_index: unregistered.db_index,
     })
@@ -175,6 +181,7 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> 
     let arg_list_id = registry.add_expression_list(arg_ids);
     registry.add_call_and_overwrite_its_id(Call {
         id: dummy_id(),
+        span: unregistered.span,
         callee_id,
         arg_list_id,
     })
@@ -193,6 +200,7 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> No
     let skip_type_checking_body = unregistered.skip_type_checking_body;
     registry.add_fun_and_overwrite_its_id(Fun {
         id: dummy_id(),
+        span: unregistered.span,
         name_id,
         param_list_id,
         return_type_id,
@@ -211,6 +219,7 @@ pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -
     let case_list_id = registry.add_match_case_list(case_ids);
     registry.add_match_and_overwrite_its_id(Match {
         id: dummy_id(),
+        span: unregistered.span,
         matchee_id,
         case_list_id,
     })
@@ -226,6 +235,7 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall)
     let output_id = register_expression(registry, unregistered.output);
     registry.add_forall_and_overwrite_its_id(Forall {
         id: dummy_id(),
+        span: unregistered.span,
         param_list_id,
         output_id,
     })
@@ -237,6 +247,7 @@ pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -
     let output_id = register_expression(registry, unregistered.output);
     registry.add_check_and_overwrite_its_id(Check {
         id: dummy_id(),
+        span: unregistered.span,
         checkee_annotation_id,
         output_id,
     })
@@ -344,6 +355,7 @@ pub fn register_symbolically_invalid_expression(
     registry.add_symbolically_invalid_expression_and_overwrite_its_id(
         SymbolicallyInvalidExpression {
             id: dummy_id(),
+            span: unregistered.span,
             expression: unregistered.expression,
             error: unregistered.error,
         },
@@ -358,6 +370,7 @@ pub fn register_illegal_fun_recursion_expression(
     registry.add_illegal_fun_recursion_expression_and_overwrite_its_id(
         IllegalFunRecursionExpression {
             id: dummy_id(),
+            span: unregistered.span,
             expression_id,
             error: unregistered.error,
         },
@@ -378,6 +391,7 @@ pub fn register_match_case(
     let output_id = register_expression(registry, unregistered.output);
     registry.add_match_case_and_overwrite_its_id(MatchCase {
         id: dummy_id(),
+        span: unregistered.span,
         variant_name_id,
         param_list_id,
         output_id,
