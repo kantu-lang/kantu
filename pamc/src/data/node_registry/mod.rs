@@ -39,21 +39,15 @@ pub enum ExpressionRef<'a> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum CheckAssertionId {
-    Type(NodeId<TypeAssertion>),
-    NormalForm(NodeId<NormalFormAssertion>),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrPossiblyInvalidExpressionId {
     QuestionMark { span: Option<TextSpan> },
     Expression(PossiblyInvalidExpressionId),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum GoalKwOrExpressionId {
+pub enum GoalKwOrPossiblyInvalidExpressionId {
     GoalKw { span: Option<TextSpan> },
-    Expression(ExpressionId),
+    Expression(PossiblyInvalidExpressionId),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -86,8 +80,7 @@ pub struct NodeRegistry {
     match_cases: Subregistry<MatchCase>,
     foralls: Subregistry<Forall>,
     checks: Subregistry<Check>,
-    type_assertions: Subregistry<TypeAssertion>,
-    normal_form_assertions: Subregistry<NormalFormAssertion>,
+    check_assertions: Subregistry<CheckAssertion>,
     symbolically_invalid_expressions: Subregistry<SymbolicallyInvalidExpression>,
     illegal_fun_recursion_expressions: Subregistry<IllegalFunRecursionExpression>,
     identifiers: Subregistry<Identifier>,
@@ -96,7 +89,7 @@ pub struct NodeRegistry {
     param_lists: ListSubregistry<NodeId<Param>>,
     variant_lists: ListSubregistry<NodeId<Variant>>,
     match_case_lists: ListSubregistry<NodeId<MatchCase>>,
-    check_assertion_lists: ListSubregistry<CheckAssertionId>,
+    check_assertion_lists: ListSubregistry<NodeId<CheckAssertion>>,
     expression_lists: ListSubregistry<ExpressionId>,
     identifier_lists: ListSubregistry<NodeId<Identifier>>,
 }
@@ -116,8 +109,7 @@ impl NodeRegistry {
             match_cases: Subregistry::new(),
             foralls: Subregistry::new(),
             checks: Subregistry::new(),
-            type_assertions: Subregistry::new(),
-            normal_form_assertions: Subregistry::new(),
+            check_assertions: Subregistry::new(),
             symbolically_invalid_expressions: Subregistry::new(),
             illegal_fun_recursion_expressions: Subregistry::new(),
             identifiers: Subregistry::new(),
@@ -199,20 +191,11 @@ impl NodeRegistry {
         self.checks.add_and_overwrite_id(check)
     }
 
-    pub fn add_type_assertion_and_overwrite_its_id(
+    pub fn add_check_assertion_and_overwrite_its_id(
         &mut self,
-        goal_checkee_annotation: TypeAssertion,
-    ) -> NodeId<TypeAssertion> {
-        self.type_assertions
-            .add_and_overwrite_id(goal_checkee_annotation)
-    }
-
-    pub fn add_normal_form_assertion_and_overwrite_its_id(
-        &mut self,
-        expression_checkee_annotation: NormalFormAssertion,
-    ) -> NodeId<NormalFormAssertion> {
-        self.normal_form_assertions
-            .add_and_overwrite_id(expression_checkee_annotation)
+        assertion: CheckAssertion,
+    ) -> NodeId<CheckAssertion> {
+        self.check_assertions.add_and_overwrite_id(assertion)
     }
 
     pub fn add_symbolically_invalid_expression_and_overwrite_its_id(
@@ -288,12 +271,8 @@ impl NodeRegistry {
         self.checks.get(id)
     }
 
-    pub fn type_assertion(&self, id: NodeId<TypeAssertion>) -> &TypeAssertion {
-        self.type_assertions.get(id)
-    }
-
-    pub fn normal_form_assertion(&self, id: NodeId<NormalFormAssertion>) -> &NormalFormAssertion {
-        self.normal_form_assertions.get(id)
+    pub fn check_assertion(&self, id: NodeId<CheckAssertion>) -> &CheckAssertion {
+        self.check_assertions.get(id)
     }
 
     pub fn symbolically_invalid_expression(
@@ -337,8 +316,8 @@ impl NodeRegistry {
 
     pub fn add_check_assertion_list(
         &mut self,
-        list: Vec<CheckAssertionId>,
-    ) -> ListId<CheckAssertionId> {
+        list: Vec<NodeId<CheckAssertion>>,
+    ) -> ListId<NodeId<CheckAssertion>> {
         self.check_assertion_lists.add(list)
     }
 
@@ -371,7 +350,10 @@ impl NodeRegistry {
         self.match_case_lists.get(id)
     }
 
-    pub fn check_assertion_list(&self, id: ListId<CheckAssertionId>) -> &[CheckAssertionId] {
+    pub fn check_assertion_list(
+        &self,
+        id: ListId<NodeId<CheckAssertion>>,
+    ) -> &[NodeId<CheckAssertion>] {
         self.check_assertion_lists.get(id)
     }
 
@@ -394,18 +376,6 @@ impl NodeRegistry {
             ExpressionId::Forall(id) => ExpressionRef::Forall(self.forall(id)),
             ExpressionId::Check(id) => ExpressionRef::Check(self.check(id)),
         }
-    }
-}
-
-impl NodeRegistry {
-    pub fn rightmost_component(&self, id: NodeId<NameExpression>) -> &Identifier {
-        let name = self.name_expression(id);
-        let component_ids = self.identifier_list(name.component_list_id);
-        let rightmost_component_id = *component_ids
-            .last()
-            .expect("A name expression should always have at least one component. This condition should have been checked by NodeRegistry::add_name_expression_and_overwrite_its_id. The fact that a zero-component name expression was successfully registered indicates a serious logic error.")
-            ;
-        self.identifier(rightmost_component_id)
     }
 }
 
@@ -593,13 +563,7 @@ mod set_id {
         }
     }
 
-    impl SetId for TypeAssertion {
-        fn set_id(&mut self, id: NodeId<Self>) {
-            self.id = id;
-        }
-    }
-
-    impl SetId for NormalFormAssertion {
+    impl SetId for CheckAssertion {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }

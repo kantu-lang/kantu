@@ -260,44 +260,14 @@ pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -
 pub fn register_check_assertion(
     registry: &mut NodeRegistry,
     unregistered: heavy::CheckAssertion,
-) -> CheckAssertionId {
-    match unregistered {
-        heavy::CheckAssertion::Type(unregistered) => {
-            let id = register_type_assertion(registry, unregistered);
-            CheckAssertionId::Type(id)
-        }
-        heavy::CheckAssertion::NormalForm(unregistered) => {
-            let id = register_normal_form_assertion(registry, unregistered);
-            CheckAssertionId::NormalForm(id)
-        }
-    }
-}
-
-pub fn register_type_assertion(
-    registry: &mut NodeRegistry,
-    unregistered: heavy::TypeAssertion,
-) -> NodeId<TypeAssertion> {
-    let left_id = register_expression(registry, unregistered.left);
-    let right_id =
-        register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
-    registry.add_type_assertion_and_overwrite_its_id(TypeAssertion {
-        id: dummy_id(),
-        span: unregistered.span,
-        left_id,
-        right_id,
-    })
-}
-
-pub fn register_normal_form_assertion(
-    registry: &mut NodeRegistry,
-    unregistered: heavy::NormalFormAssertion,
-) -> NodeId<NormalFormAssertion> {
+) -> NodeId<CheckAssertion> {
     let left_id = register_goal_kw_or_expression(registry, unregistered.left);
     let right_id =
         register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
-    registry.add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
+    registry.add_check_assertion_and_overwrite_its_id(CheckAssertion {
         id: dummy_id(),
         span: unregistered.span,
+        kind: unregistered.kind,
         left_id,
         right_id,
     })
@@ -305,15 +275,15 @@ pub fn register_normal_form_assertion(
 
 pub fn register_goal_kw_or_expression(
     registry: &mut NodeRegistry,
-    unregistered: heavy::GoalKwOrExpression,
-) -> GoalKwOrExpressionId {
+    unregistered: heavy::GoalKwOrPossiblyInvalidExpression,
+) -> GoalKwOrPossiblyInvalidExpressionId {
     match unregistered {
-        heavy::GoalKwOrExpression::GoalKw { span: start } => {
-            GoalKwOrExpressionId::GoalKw { span: start }
+        heavy::GoalKwOrPossiblyInvalidExpression::GoalKw { span: start } => {
+            GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start }
         }
-        heavy::GoalKwOrExpression::Expression(unregistered) => {
-            let id = register_expression(registry, unregistered);
-            GoalKwOrExpressionId::Expression(id)
+        heavy::GoalKwOrPossiblyInvalidExpression::Expression(unregistered) => {
+            let id = register_possibly_invalid_expression(registry, unregistered);
+            GoalKwOrPossiblyInvalidExpressionId::Expression(id)
         }
     }
 }
@@ -374,6 +344,7 @@ pub fn register_symbolically_invalid_expression(
             id: dummy_id(),
             expression: unregistered.expression,
             error: unregistered.error,
+            span_invalidated: unregistered.span_invalidated,
         },
     )
 }
@@ -388,6 +359,7 @@ pub fn register_illegal_fun_recursion_expression(
             id: dummy_id(),
             expression_id,
             error: unregistered.error,
+            span_invalidated: unregistered.span_invalidated,
         },
     )
 }

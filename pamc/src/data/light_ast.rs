@@ -127,41 +127,33 @@ pub struct Forall {
 pub struct Check {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub assertion_list_id: ListId<CheckAssertionId>,
+    pub assertion_list_id: ListId<NodeId<CheckAssertion>>,
     pub output_id: ExpressionId,
 }
 
-pub use crate::data::node_registry::CheckAssertionId;
-
 #[derive(Clone, Debug)]
-pub struct TypeAssertion {
+pub struct CheckAssertion {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub left_id: ExpressionId,
+    pub kind: CheckAssertionKind,
+    pub left_id: GoalKwOrPossiblyInvalidExpressionId,
     pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
 }
 
-#[derive(Clone, Debug)]
-pub struct NormalFormAssertion {
-    pub id: NodeId<Self>,
-    pub span: Option<TextSpan>,
-    pub left_id: GoalKwOrExpressionId,
-    pub right_id: QuestionMarkOrPossiblyInvalidExpressionId,
-}
+pub use crate::data::bound_ast::CheckAssertionKind;
 
-pub use crate::data::node_registry::GoalKwOrExpressionId;
+pub use crate::data::node_registry::GoalKwOrPossiblyInvalidExpressionId;
 
 pub use crate::data::node_registry::{
     InvalidExpressionId, PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
 };
-
-// TODO: Fix span of these (there's no way to remove spans)
 
 #[derive(Clone, Debug)]
 pub struct SymbolicallyInvalidExpression {
     pub id: NodeId<Self>,
     pub expression: unbound::Expression,
     pub error: BindError,
+    pub span_invalidated: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -169,4 +161,5 @@ pub struct IllegalFunRecursionExpression {
     pub id: NodeId<Self>,
     pub expression_id: ExpressionId,
     pub error: IllegalFunRecursionError,
+    pub span_invalidated: bool,
 }

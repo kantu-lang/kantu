@@ -438,51 +438,28 @@ fn is_left_inclusive_subterm_of_any_right_assertion(
         .registry
         .check_assertion_list(right.assertion_list_id)
         .to_vec();
-    right_assertion_ids
-        .into_iter()
-        .any(|right_assertion_id| match right_assertion_id {
-            CheckAssertionId::Type(right_assertion_id) => {
-                let assertion = state.registry.type_assertion(right_assertion_id).clone();
-
-                if is_left_inclusive_subterm_of_right(state, left, assertion.left_id) {
-                    return true;
-                }
-
-                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
-                    PossiblyInvalidExpressionId::Valid(assertion_right_id),
-                ) = assertion.right_id
-                {
-                    if is_left_inclusive_subterm_of_right(state, left, assertion_right_id) {
-                        return true;
-                    }
-                }
-
-                false
+    right_assertion_ids.into_iter().any(|right_assertion_id| {
+        let assertion = state.registry.check_assertion(right_assertion_id).clone();
+        if let GoalKwOrPossiblyInvalidExpressionId::Expression(
+            PossiblyInvalidExpressionId::Valid(assertion_left_id),
+        ) = assertion.left_id
+        {
+            if is_left_inclusive_subterm_of_right(state, left, assertion_left_id) {
+                return true;
             }
-            CheckAssertionId::NormalForm(right_assertion_id) => {
-                let assertion = state
-                    .registry
-                    .normal_form_assertion(right_assertion_id)
-                    .clone();
+        }
 
-                if let GoalKwOrExpressionId::Expression(assertion_left_id) = assertion.left_id {
-                    if is_left_inclusive_subterm_of_right(state, left, assertion_left_id) {
-                        return true;
-                    }
-                }
-
-                if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
-                    PossiblyInvalidExpressionId::Valid(assertion_right_id),
-                ) = assertion.right_id
-                {
-                    if is_left_inclusive_subterm_of_right(state, left, assertion_right_id) {
-                        return true;
-                    }
-                }
-
-                false
+        if let QuestionMarkOrPossiblyInvalidExpressionId::Expression(
+            PossiblyInvalidExpressionId::Valid(assertion_right_id),
+        ) = assertion.right_id
+        {
+            if is_left_inclusive_subterm_of_right(state, left, assertion_right_id) {
+                return true;
             }
-        })
+        }
+
+        false
+    })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1053,41 +1030,10 @@ fn min_db_index_in_check_relative_to_cutoff(
 
 fn min_db_index_in_check_assertion_relative_to_cutoff(
     registry: &NodeRegistry,
-    id: CheckAssertionId,
+    id: NodeId<CheckAssertion>,
     cutoff: usize,
 ) -> MinDbIndex {
-    match id {
-        CheckAssertionId::Type(id) => {
-            min_db_index_in_type_assertion_relative_to_cutoff(registry, id, cutoff)
-        }
-        CheckAssertionId::NormalForm(id) => {
-            min_db_index_in_normal_form_assertion_relative_to_cutoff(registry, id, cutoff)
-        }
-    }
-}
-
-fn min_db_index_in_type_assertion_relative_to_cutoff(
-    registry: &NodeRegistry,
-    id: NodeId<TypeAssertion>,
-    cutoff: usize,
-) -> MinDbIndex {
-    let assertion = registry.type_assertion(id);
-    let left_min =
-        min_db_index_in_expression_relative_to_cutoff(registry, assertion.left_id, cutoff);
-    let right_min = min_db_index_in_question_mark_or_possibly_invalid_expression_relative_to_cutoff(
-        registry,
-        assertion.right_id,
-        cutoff,
-    );
-    left_min.min(right_min)
-}
-
-fn min_db_index_in_normal_form_assertion_relative_to_cutoff(
-    registry: &NodeRegistry,
-    id: NodeId<NormalFormAssertion>,
-    cutoff: usize,
-) -> MinDbIndex {
-    let assertion = registry.normal_form_assertion(id);
+    let assertion = registry.check_assertion(id);
     let left_min = min_db_index_in_goal_kw_or_expression_relative_to_cutoff(
         registry,
         assertion.left_id,
@@ -1103,13 +1049,13 @@ fn min_db_index_in_normal_form_assertion_relative_to_cutoff(
 
 fn min_db_index_in_goal_kw_or_expression_relative_to_cutoff(
     registry: &NodeRegistry,
-    id: GoalKwOrExpressionId,
+    id: GoalKwOrPossiblyInvalidExpressionId,
     cutoff: usize,
 ) -> MinDbIndex {
     match id {
-        GoalKwOrExpressionId::GoalKw { span: _ } => MinDbIndex::Infinity,
-        GoalKwOrExpressionId::Expression(id) => {
-            min_db_index_in_expression_relative_to_cutoff(registry, id, cutoff)
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: _ } => MinDbIndex::Infinity,
+        GoalKwOrPossiblyInvalidExpressionId::Expression(id) => {
+            min_db_index_in_possibly_invalid_expression_relative_to_cutoff(registry, id, cutoff)
         }
     }
 }

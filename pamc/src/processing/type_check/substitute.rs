@@ -371,7 +371,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
     }
 }
 
-impl SubstituteWithoutRemovingSpans for ListId<CheckAssertionId> {
+impl SubstituteWithoutRemovingSpans for ListId<NodeId<CheckAssertion>> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -390,7 +390,7 @@ impl SubstituteWithoutRemovingSpans for ListId<CheckAssertionId> {
     }
 }
 
-impl SubstituteWithoutRemovingSpans for CheckAssertionId {
+impl SubstituteWithoutRemovingSpans for NodeId<CheckAssertion> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -398,26 +398,7 @@ impl SubstituteWithoutRemovingSpans for CheckAssertionId {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        match self {
-            CheckAssertionId::Type(id) => {
-                CheckAssertionId::Type(id.subst_without_removing_spans(substitution, state))
-            }
-            CheckAssertionId::NormalForm(id) => {
-                CheckAssertionId::NormalForm(id.subst_without_removing_spans(substitution, state))
-            }
-        }
-    }
-}
-
-impl SubstituteWithoutRemovingSpans for NodeId<TypeAssertion> {
-    type Output = Self;
-
-    fn subst_without_removing_spans(
-        self,
-        substitution: Substitution,
-        state: &mut ContextlessState,
-    ) -> Self::Output {
-        let original = state.registry.type_assertion(self).clone();
+        let original = state.registry.check_assertion(self).clone();
         let substituted_left_id = original
             .left_id
             .subst_without_removing_spans(substitution, state);
@@ -426,42 +407,17 @@ impl SubstituteWithoutRemovingSpans for NodeId<TypeAssertion> {
             .subst_without_removing_spans(substitution, state);
         state
             .registry
-            .add_type_assertion_and_overwrite_its_id(TypeAssertion {
+            .add_check_assertion_and_overwrite_its_id(CheckAssertion {
                 id: dummy_id(),
                 span: None,
+                kind: original.kind,
                 left_id: substituted_left_id,
                 right_id: substituted_right_id,
             })
     }
 }
 
-impl SubstituteWithoutRemovingSpans for NodeId<NormalFormAssertion> {
-    type Output = Self;
-
-    fn subst_without_removing_spans(
-        self,
-        substitution: Substitution,
-        state: &mut ContextlessState,
-    ) -> Self::Output {
-        let original = state.registry.normal_form_assertion(self).clone();
-        let substituted_left_id = original
-            .left_id
-            .subst_without_removing_spans(substitution, state);
-        let substituted_right_id = original
-            .right_id
-            .subst_without_removing_spans(substitution, state);
-        state
-            .registry
-            .add_normal_form_assertion_and_overwrite_its_id(NormalFormAssertion {
-                id: dummy_id(),
-                span: None,
-                left_id: substituted_left_id,
-                right_id: substituted_right_id,
-            })
-    }
-}
-
-impl SubstituteWithoutRemovingSpans for GoalKwOrExpressionId {
+impl SubstituteWithoutRemovingSpans for GoalKwOrPossiblyInvalidExpressionId {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -470,12 +426,14 @@ impl SubstituteWithoutRemovingSpans for GoalKwOrExpressionId {
         state: &mut ContextlessState,
     ) -> Self::Output {
         match self {
-            GoalKwOrExpressionId::GoalKw { span: start } => {
-                GoalKwOrExpressionId::GoalKw { span: start }
+            GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start } => {
+                GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start }
             }
-            GoalKwOrExpressionId::Expression(id) => GoalKwOrExpressionId::Expression(
-                id.subst_without_removing_spans(substitution, state),
-            ),
+            GoalKwOrPossiblyInvalidExpressionId::Expression(id) => {
+                GoalKwOrPossiblyInvalidExpressionId::Expression(
+                    id.subst_without_removing_spans(substitution, state),
+                )
+            }
         }
     }
 }

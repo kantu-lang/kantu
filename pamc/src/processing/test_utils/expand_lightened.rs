@@ -2,9 +2,8 @@ use crate::data::{
     bound_ast::*,
     light_ast as light,
     node_registry::{
-        CheckAssertionId, FileItemNodeId, GoalKwOrExpressionId, InvalidExpressionId, ListId,
-        NodeId, NodeRegistry, PossiblyInvalidExpressionId,
-        QuestionMarkOrPossiblyInvalidExpressionId,
+        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, ListId, NodeId,
+        NodeRegistry, PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
 };
 
@@ -250,7 +249,7 @@ pub fn expand_check(registry: &NodeRegistry, id: NodeId<light::Check>) -> Check 
 
 pub fn expand_check_assertion_list(
     registry: &NodeRegistry,
-    id: ListId<CheckAssertionId>,
+    id: ListId<NodeId<light::CheckAssertion>>,
 ) -> Vec<CheckAssertion> {
     registry
         .check_assertion_list(id)
@@ -259,38 +258,16 @@ pub fn expand_check_assertion_list(
         .collect()
 }
 
-pub fn expand_check_assertion(registry: &NodeRegistry, id: CheckAssertionId) -> CheckAssertion {
-    match id {
-        CheckAssertionId::Type(id) => CheckAssertion::Type(expand_type_annotation(registry, id)),
-        CheckAssertionId::NormalForm(id) => {
-            CheckAssertion::NormalForm(expand_normal_form_annotation(registry, id))
-        }
-    }
-}
-
-pub fn expand_type_annotation(
+pub fn expand_check_assertion(
     registry: &NodeRegistry,
-    id: NodeId<light::TypeAssertion>,
-) -> TypeAssertion {
-    let light = registry.type_assertion(id);
-    let left = expand_expression(registry, light.left_id);
-    let right = expand_question_mark_or_possibly_invalid_expression(registry, light.right_id);
-    TypeAssertion {
-        span: light.span,
-        left,
-        right,
-    }
-}
-
-pub fn expand_normal_form_annotation(
-    registry: &NodeRegistry,
-    id: NodeId<light::NormalFormAssertion>,
-) -> NormalFormAssertion {
-    let light = registry.normal_form_assertion(id);
+    id: NodeId<light::CheckAssertion>,
+) -> CheckAssertion {
+    let light = registry.check_assertion(id);
     let left = expand_goal_kw_or_expression(registry, light.left_id);
     let right = expand_question_mark_or_possibly_invalid_expression(registry, light.right_id);
-    NormalFormAssertion {
+    CheckAssertion {
         span: light.span,
+        kind: light.kind,
         left,
         right,
     }
@@ -298,12 +275,16 @@ pub fn expand_normal_form_annotation(
 
 pub fn expand_goal_kw_or_expression(
     registry: &NodeRegistry,
-    id: GoalKwOrExpressionId,
-) -> GoalKwOrExpression {
+    id: GoalKwOrPossiblyInvalidExpressionId,
+) -> GoalKwOrPossiblyInvalidExpression {
     match id {
-        GoalKwOrExpressionId::GoalKw { span } => GoalKwOrExpression::GoalKw { span },
-        GoalKwOrExpressionId::Expression(expression) => {
-            GoalKwOrExpression::Expression(expand_expression(registry, expression))
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span } => {
+            GoalKwOrPossiblyInvalidExpression::GoalKw { span }
+        }
+        GoalKwOrPossiblyInvalidExpressionId::Expression(expression) => {
+            GoalKwOrPossiblyInvalidExpression::Expression(expand_possibly_invalid_expression(
+                registry, expression,
+            ))
         }
     }
 }
@@ -359,7 +340,11 @@ pub fn expand_symbolically_invalid_expression(
     let light = registry.symbolically_invalid_expression(id);
     let expression = light.expression.clone();
     let error = light.error.clone();
-    SymbolicallyInvalidExpression { expression, error }
+    SymbolicallyInvalidExpression {
+        expression,
+        error,
+        span_invalidated: light.span_invalidated,
+    }
 }
 
 pub fn expand_illegal_fun_recursion_expression(
@@ -369,5 +354,9 @@ pub fn expand_illegal_fun_recursion_expression(
     let light = registry.illegal_fun_recursion_expression(id);
     let expression = expand_expression(registry, light.expression_id);
     let error = light.error.clone();
-    IllegalFunRecursionExpression { expression, error }
+    IllegalFunRecursionExpression {
+        expression,
+        error,
+        span_invalidated: light.span_invalidated,
+    }
 }
