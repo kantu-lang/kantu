@@ -826,3 +826,25 @@ let foo = fun bar(
         Nat,
 ): Nat { n };
 ```
+
+## Errors vs. warnings
+
+When the compiler spots a problem, it has 2 modes of reporting it:
+
+1. Errors - Your code can _never_ build while it has one or more errors.
+2. Warnings - By default, the compiler will reject code with one or more warnings, but you can run the compiler in "lax mode" to force it to build in spite of warnings.
+
+The motivation behind having this distinction between errors and warnings is there are often
+bad coding practices (e.g., unused variables) that we want the compiler to alert us of, but that we want the compiler to also be able to ignore.
+
+For example, imagine writing some new code which
+results in previously used variables no longer being used.
+You want to test this code _now_, and only go back and fix
+the problems (e.g., remove the unused variables) later.
+A compiler will warn you of the problems, but it shouldn't _force_ you to fix them if it doesn't have to (i.e., if it's still capable
+of building an executable despite the problems).
+This is what warnings are for.
+
+On the other hand, we also have times when
+code problems are so severe there is no sane way
+to build an executable (e.g., we reference and undefined name). These are errors.
