@@ -748,6 +748,58 @@ an accompanying suggested correction).
 This is useful when you want the compiler/IDE to provide
 a solution for you.
 
+#### Syntactically well-formed assertions will not produce compiler errors
+
+Since check assertions are intended to be like "interactive comments", the compiler doesn't really
+care what you write in them, as long as they are syntactically correct.
+
+> Obviously, if you write a syntactically *in*correct
+> check assertion, then the parser will not know how to parse it.
+> Thus, even though check assertions are designed to be as lenient as possible (with respect to emitting errors),
+> we must at least require check assertions
+> to be syntactically well-formed (i.e., correct).
+> Fortunately, this is an incredibly low bar to meet.
+
+As a result, the below code will generate warnings,
+but no errors:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+let foo = fun _(n: Nat): Nat {
+    check (
+        // Undefined names (`b` and `c`)
+        b = c,
+        // Ill typed RHS
+        goal: Nat.S(Nat),
+        g = fun infinite_loop(a: Nat): Nat {
+            infinite_loop(a)
+        },
+    ) {
+        Nat.O
+    }
+};
+```
+
+As you can see, there were numerous problems in the
+above code, such as references to undefined names
+(e.g., `b`, `c`), ill-typed terms `Nat.S(Nat)`, and illegal recursion.
+All these problems would normally result in errors.
+However, check assertions are meant to serve as
+compiler-checked documentation--like comments, they don't have any
+impact on the semantic meaning of the code.
+Thus, the compiler demotes these would-be errors
+into mere warnings, since they do not stop otherwise
+correct code from being compiled.
+
+The reason the compiler generates warnings at all is
+because if your check assertions are ill-formed, it
+is incorrect documentation, which almost always (1) indicates buggy code, and (2) misleads developers who read said documentation.
+Consequently, one is encouraged to fix the warnings when they get the time.
+
 ## Comments
 
 Single line:
