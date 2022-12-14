@@ -71,29 +71,42 @@ pub enum TypeCheckError {
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckWarning {
-    NoGoal {
-        goal_kw_start: TextSpan,
+    TypeAssertion(TypeAssertionWarning),
+    NormalFormAssertion(NormalFormAssertionWarning),
+}
+
+#[derive(Clone, Debug)]
+pub enum TypeAssertionWarning {
+    GoalLhs(NodeId<CheckAssertion>),
+    CompareeTypeCheckFailure(TypeCheckFailureReason),
+    TypesDoNotMatch {
+        left_id: ExpressionId,
+        rewritten_left_type_id: NormalFormId,
+        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsIsQuestionMark>,
     },
-    // TODO: Rename "missing" to "incomplete"?
-    MissingCheckeeType {
-        question_mark_start: TextSpan,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct RhsIsQuestionMark;
+
+#[derive(Clone, Debug)]
+pub enum NormalFormAssertionWarning {
+    NoGoalExists(NodeId<CheckAssertion>),
+    CompareeTypeCheckFailure(TypeCheckFailureReason),
+    CompareesDoNotMatch {
+        left_id: Result<ExpressionId, LhsIsGoalKw>,
+        rewritten_left_id: NormalFormId,
+        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsIsQuestionMark>,
     },
-    UntypecheckableExpression(InvalidExpressionId),
-    IllTypedCheckeeType(ExpressionId, TypeCheckError),
-    IncorrectCheckeeType {
-        checkee_type_id: ExpressionId,
-        expected_id: NormalFormId,
-        actual_id: NormalFormId,
-    },
-    MissingCheckeeValue {
-        question_mark_start: TextSpan,
-    },
-    IllTypedCheckeeValue(ExpressionId, TypeCheckError),
-    IncorrectCheckeeValue {
-        checkee_type_id: ExpressionId,
-        expected_id: NormalFormId,
-        actual_id: NormalFormId,
-    },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct LhsIsGoalKw;
+
+#[derive(Clone, Debug)]
+pub enum TypeCheckFailureReason {
+    CannotTypeCheck(InvalidExpressionId),
+    TypeCheckError(ExpressionId, TypeCheckError),
 }
 
 #[derive(Debug)]
