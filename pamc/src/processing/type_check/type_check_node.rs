@@ -728,7 +728,7 @@ fn get_check_assertion_warnings(
 ) -> Vec<TypeCheckWarning> {
     let assertion = state.registry.check_assertion(assertion_id).clone();
     match assertion.kind {
-        CheckAssertionKind::Type => get_type_assertion_warnings(state, coercion_target_id, assertion),
+        CheckAssertionKind::Type => get_type_assertion_warnings(state, coercion_target_id, assertion).into_iter().map(TypeCheckWarning::TypeAssertion).collect(),
         CheckAssertionKind::NormalForm => get_normal_form_assertion_warnings(state, coercion_target_id, assertion),
     }
 }
@@ -737,9 +737,9 @@ fn get_type_assertion_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     assertion: CheckAssertion,
-) -> Vec<TypeCheckWarning> {
+) -> Vec<TypeAssertionWarning> {
     match assertion.left_id {
-        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span } => vec![TypeCheckWarning::GoalTypeAssertion { assertion_id: assertion.id }],
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span } => vec![TypeAssertionWarning::GoalLhs(assertion.id)],
         GoalKwOrPossiblyInvalidExpressionId::Expression(expression_id) => get_non_goal_type_assertion_warnings(state, coercion_target_id, assertion, expression_id),
     }
 }
@@ -749,7 +749,7 @@ fn get_non_goal_type_assertion_warnings(
     coercion_target_id: Option<NormalFormId>,
     assertion: CheckAssertion,
     left_id: PossiblyInvalidExpressionId,
-) -> Vec<TypeCheckWarning> {
+) -> Vec<TypeAssertionWarning> {
     let left_correctness = get_type_correctness_of_possibly_invalid_expression(state, coercion_target_id, left_id);
     let right_correctness = get_type_correctness_of_question_mark_or_possibly_invalid_expression(state, coercion_target_id, assertion.right_id);
     
@@ -763,10 +763,10 @@ fn get_non_goal_type_assertion_warnings(
         }
         (other_left, other_right) => {
             if let Err(reason) = other_left {
-                out.push(TypeCheckWarning::CheckAssertionSideTypeCheckFailed { expression_id: left_id, reason });
+                out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
             }
             if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(right_id, reason) = other_right {
-                out.push(TypeCheckWarning::CheckAssertionSideTypeCheckFailed { expression_id: right_id, reason });
+                out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
             }
         }
     }

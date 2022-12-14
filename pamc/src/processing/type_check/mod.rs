@@ -71,24 +71,24 @@ pub enum TypeCheckError {
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckWarning {
-    GoalTypeAssertion {
-        assertion_id: NodeId<CheckAssertion>,
-    },
-    GoalNfAssertionMadeWhereThereIsNoGoal {
-        goal_kw_start: TextSpan,
-    },
-    IncorrectCheckAssertion {
-        assertion_id: NodeId<CheckAssertion>,
-        original_left_comparee: ExpressionId,
-        rewritten_left_comparee: NormalFormId,
-        original_right_comparee: ExpressionId,
-        rewritten_right_comparee: NormalFormId,
-    },
-    CheckAssertionSideTypeCheckFailed {
-        expression_id: PossiblyInvalidExpressionId,
-        reason: TypeCheckFailureReason,
+    TypeAssertion(TypeAssertionWarning),
+    NormalFormAssertion(NormalFormAssertionWarning),
+}
+
+#[derive(Clone, Debug)]
+pub enum TypeAssertionWarning {
+    GoalLhs(NodeId<CheckAssertion>),
+    CompareeTypeCheckFailure(TypeCheckFailureReason),
+    CompareesDoNotMatch {
+        left_id: ExpressionId,
+        left_type_id: NormalFormId,
+        right_id: ExpressionId,
+        rewritten_right_id: NormalFormId,
     },
 }
+
+#[derive(Clone, Debug)]
+pub enum NormalFormAssertionWarning {}
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckFailureReason {
