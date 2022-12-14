@@ -46,15 +46,30 @@ pub enum UnfinishedLetStatement {
 pub struct UnfinishedParams {
     pub first_token: Token,
     pub maximum_dashed_params_allowed: usize,
+    pub pending_tilde: Option<Token>,
     pub pending_dash: Option<Token>,
     pub params: Vec<Param>,
 }
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedParam {
-    Name {
+    NoExplicitLabel {
+        first_token: Token,
+        is_tilded: bool,
+        is_dashed: bool,
+        is_dash_allowed: bool,
+        name_or_label: Identifier,
+    },
+    ExplicitLabel {
         first_token: Token,
         is_dashed: bool,
+        is_dash_allowed: bool,
+        label: Identifier,
+    },
+    ExplicitLabelAndName {
+        first_token: Token,
+        is_dashed: bool,
+        label: Identifier,
         name: Identifier,
     },
 }

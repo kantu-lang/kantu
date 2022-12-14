@@ -23,6 +23,7 @@ impl Accept for UnfinishedVariant {
                         AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                             first_token: token.clone(),
                             maximum_dashed_params_allowed: 0,
+                            pending_tilde: None,
                             pending_dash: None,
                             params: vec![],
                         }))

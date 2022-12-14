@@ -95,6 +95,7 @@ impl Parse for Param {
         vec![UnfinishedStackItem::Params(UnfinishedParams {
             first_token,
             maximum_dashed_params_allowed: 1,
+            pending_tilde: None,
             pending_dash: None,
             params: vec![],
         })]
@@ -123,17 +124,41 @@ impl Parse for Param {
                 UnfinishedStackItem::UnfinishedDelimitedExpression(
                     UnfinishedDelimitedExpression::WaitingForEndDelimiter(_, param_type),
                 ),
-                Some(UnfinishedStackItem::Param(UnfinishedParam::Name {
+                Some(UnfinishedStackItem::Param(unfinished_param)),
+            ) => match unfinished_param {
+                UnfinishedParam::NoExplicitLabel {
                     first_token: param_first_token,
+                    is_tilded: is_param_tilded,
+                    is_dashed: is_param_dashed,
+                    is_dash_allowed: _,
+                    name_or_label: param_name,
+                } => Ok(Param {
+                    span: span_single(file_id, &param_first_token)
+                        .inclusive_merge(param_type.span()),
+                    label: if is_param_tilded {
+                        Some(ParamLabel::Implicit)
+                    } else {
+                        None
+                    },
                     is_dashed: is_param_dashed,
                     name: param_name,
-                })),
-            ) => Ok(Param {
-                span: span_single(file_id, &param_first_token).inclusive_merge(param_type.span()),
-                is_dashed: is_param_dashed,
-                name: param_name,
-                type_: param_type,
-            }),
+                    type_: param_type,
+                }),
+                UnfinishedParam::ExplicitLabel { .. } => Err(ParseError::UnexpectedEndOfInput),
+                UnfinishedParam::ExplicitLabelAndName {
+                    first_token: param_first_token,
+                    is_dashed: is_param_dashed,
+                    label,
+                    name: param_name,
+                } => Ok(Param {
+                    span: span_single(file_id, &param_first_token)
+                        .inclusive_merge(param_type.span()),
+                    label: Some(ParamLabel::Explicit(label)),
+                    is_dashed: is_param_dashed,
+                    name: param_name,
+                    type_: param_type,
+                }),
+            },
             _ => Err(ParseError::UnexpectedEndOfInput),
         }
     }

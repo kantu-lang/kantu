@@ -33,9 +33,16 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Param {
     pub span: TextSpan,
+    pub label: Option<ParamLabel>,
     pub is_dashed: bool,
     pub name: Identifier,
     pub type_: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ParamLabel {
+    Implicit,
+    Explicit(Identifier),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

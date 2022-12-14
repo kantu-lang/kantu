@@ -23,6 +23,7 @@ impl Accept for UnfinishedTypeStatement {
                         AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                             first_token: token,
                             maximum_dashed_params_allowed: 0,
+                            pending_tilde: None,
                             pending_dash: None,
                             params: vec![],
                         }))

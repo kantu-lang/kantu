@@ -31,6 +31,7 @@ impl Accept for UnfinishedFun {
                         AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
                             first_token: token.clone(),
                             maximum_dashed_params_allowed: 1,
+                            pending_tilde: None,
                             pending_dash: None,
                             params: vec![],
                         }))
