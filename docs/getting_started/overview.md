@@ -605,6 +605,70 @@ let wrong = expect_F(wrong_order);
 
 In short, the labels _and_ the order must be the same.
 
+#### Writing `match` cases on variants with labeled parameters
+
+If you try writing the following code, you will get an error
+
+```pamlihu
+type Color {
+    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+}
+
+let redness_WRONG = fun _(c: Color): Nat {
+    match c {
+        // Error:
+        // Variant has labeled parameters
+        // but match case has unlabeled parameters.
+        .C(red, _, _) => red,
+    }
+};
+```
+
+This is because `match` cases corresponding to variants with labeled parameters must have labeled parameters themselves.
+
+To fix this code, one could write
+
+```pamlihu
+let redness = fun _(c: Color): Nat {
+    match c {
+        .C(r: red, g: _, b: _) => red,
+    }
+};
+```
+
+##### `...` syntax
+
+Writing `g: _, b: _` may be a hassle
+(especially if you have many parameters), so
+you can alternatively write
+
+```pamlihu
+let redness2 = fun _(c: Color): Nat {
+    match c {
+        .C(r: red, ...) => red,
+    }
+};
+```
+
+The `...` must go at the end of the parameter list (e.g., `.C(..., r: red)` is illegal).
+
+##### Implicit label syntax
+
+Similar to how `~foo` can be used as shorthand for
+`foo~foo`, we can also use `:foo` as shorthand for
+`foo: foo`.
+
+In the above example, if we used the name `r` instead of `red`, then we would have `r: r`, which
+would could be shortened to `:r`:
+
+```pamlihu
+let redness3 = fun _(c: Color): Nat {
+    match c {
+        .C(:r, ...) => r,
+    }
+};
+```
+
 ## `forall` Expressions
 
 Q: How do we express the type of a function?
