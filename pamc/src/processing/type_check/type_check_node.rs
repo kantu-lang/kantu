@@ -158,19 +158,6 @@ fn type_check_let_statement_dirty(
     }))
 }
 
-fn type_check_expression(
-    state: &mut State,
-    coercion_target_id: Option<NormalFormId>,
-    expression: ExpressionId,
-) -> Result<(), TypeCheckError> {
-    // In the future, we could implement a version of this that skips the
-    // allocations required by `get_type_of_expression`, since we don't
-    // actually use the returned type.
-    // But for now, we'll just reuse the existing code, for the sake of
-    // simplicity.
-    get_type_of_expression(state, coercion_target_id, expression).map(std::mem::drop)
-}
-
 fn type_check_expression_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
@@ -739,7 +726,7 @@ fn get_type_assertion_warnings(
     assertion: CheckAssertion,
 ) -> Vec<TypeAssertionWarning> {
     match assertion.left_id {
-        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span } => vec![TypeAssertionWarning::GoalLhs(assertion.id)],
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { .. } => vec![TypeAssertionWarning::GoalLhs(assertion.id)],
         GoalKwOrPossiblyInvalidExpressionId::Expression(expression_id) => get_non_goal_type_assertion_warnings(state, coercion_target_id, assertion, expression_id),
     }
 }
@@ -789,7 +776,7 @@ fn get_non_goal_type_assertion_warnings(
             if let Err(reason) = other_left {
                 out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
             }
-            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(right_id, reason) = other_right {
+            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(reason) = other_right {
                 out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
             }
             
@@ -864,7 +851,7 @@ fn get_goal_normal_form_assertion_warnings_given_goal_exists(
             }]
         }
         other_right => {
-            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(_, reason) = other_right {
+            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(reason) = other_right {
                 vec![NormalFormAssertionWarning::CompareeTypeCheckFailure(reason)]
             } else {
                 vec![]
@@ -919,7 +906,7 @@ fn get_non_goal_normal_form_assertion_warnings(
             if let Err(reason) = other_left {
                 out.push(NormalFormAssertionWarning::CompareeTypeCheckFailure(reason));
             }
-            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(_, reason) = other_right {
+            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(reason) = other_right {
                 out.push(NormalFormAssertionWarning::CompareeTypeCheckFailure(reason));
             }
             
@@ -947,7 +934,7 @@ fn get_type_correctness_of_possibly_invalid_expression(
 
 enum QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness {
     Correct(ExpressionId, NormalFormId),
-    Incorrect(PossiblyInvalidExpressionId, TypeCheckFailureReason),
+    Incorrect(TypeCheckFailureReason),
     QuestionMark,
 }
 
@@ -959,10 +946,10 @@ fn get_type_correctness_of_question_mark_or_possibly_invalid_expression(
     match id {
         QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { .. } => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark,
         QuestionMarkOrPossiblyInvalidExpressionId::Expression(possibly_typecheckable) => match possibly_typecheckable {
-            PossiblyInvalidExpressionId::Invalid(untypecheckable) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::CannotTypeCheck(untypecheckable)),
+            PossiblyInvalidExpressionId::Invalid(untypecheckable) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(TypeCheckFailureReason::CannotTypeCheck(untypecheckable)),
             PossiblyInvalidExpressionId::Valid(typecheckable) => match get_type_of_expression(state, coercion_target_id, typecheckable) {
                 Ok(type_id) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(typecheckable, type_id),
-                Err(err) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::TypeCheckError(typecheckable, err)),
+                Err(err) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(TypeCheckFailureReason::TypeCheckError(typecheckable, err)),
             },
         }
     }
