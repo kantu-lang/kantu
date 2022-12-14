@@ -93,7 +93,6 @@ pub fn dummy_id<T>() -> NodeId<T> {
 }
 
 impl Forall {
-    #[deprecated(note = "We should create a SemiForall that has a PossiblyEmptyListId.")]
     pub fn collapse_if_nullary(self, registry: &mut NodeRegistry) -> ExpressionId {
         if self.param_list_id.len == 0 {
             self.output_id
