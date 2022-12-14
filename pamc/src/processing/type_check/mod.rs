@@ -3,7 +3,6 @@ use crate::data::{
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{ListId, NodeId, NodeRegistry},
-    TextSpan,
 };
 
 use eval::*;
