@@ -933,7 +933,16 @@ fn get_type_correctness_of_possibly_invalid_expression(
     coercion_target_id: Option<NormalFormId>,
     id: PossiblyInvalidExpressionId,
 ) -> Result<(ExpressionId, NormalFormId), TypeCheckFailureReason> {
-    unimplemented!()
+    match id {
+        PossiblyInvalidExpressionId::Invalid(untypecheckable) => Err(TypeCheckFailureReason::CannotTypeCheck(untypecheckable)),
+        PossiblyInvalidExpressionId::Valid(expression_id) => {
+            let type_id_or_err = get_type_of_expression(state, coercion_target_id, expression_id);
+            match type_id_or_err {
+                Ok(type_id) => Ok((expression_id, type_id)),
+                Err(type_check_err) => Err(TypeCheckFailureReason::TypeCheckError(expression_id, type_check_err)),
+            }
+        }
+    }
 }
 
 enum QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness {
