@@ -114,6 +114,15 @@ pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId)
     }
 }
 
+pub(super) fn are_types_mutually_assignable(
+    state: &mut State,
+    left: NormalFormId,
+    right: NormalFormId,
+) -> bool {
+    is_left_type_assignable_to_right_type(state, left, right)
+        && is_left_type_assignable_to_right_type(state, right, left)
+}
+
 pub(super) fn is_left_type_assignable_to_right_type(
     state: &mut State,
     left: NormalFormId,

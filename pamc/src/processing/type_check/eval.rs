@@ -23,6 +23,8 @@ impl BestEvalAttempt for EvalResult {
 
 type TaintedEvalResult = Result<NormalFormId, Tainted<(ExpressionId, EvalError)>>;
 
+// TODO: Idea: Make this take a `type_id` param, to prove that the
+// expression is well-typed.
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
     evaluate_possibly_ill_typed_expression(state, id).expect(
         "evaluate_possibly_ill_typed_expression should return Ok() if the expression is well-typed",

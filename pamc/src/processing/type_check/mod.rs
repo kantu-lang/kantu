@@ -81,11 +81,13 @@ pub enum TypeAssertionWarning {
     CompareeTypeCheckFailure(TypeCheckFailureReason),
     CompareesDoNotMatch {
         left_id: ExpressionId,
-        left_type_id: NormalFormId,
-        right_id: ExpressionId,
-        rewritten_right_id: NormalFormId,
+        rewritten_left_type_id: NormalFormId,
+        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsWasQuestionMark>,
     },
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct RhsWasQuestionMark;
 
 #[derive(Clone, Debug)]
 pub enum NormalFormAssertionWarning {}
