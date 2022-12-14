@@ -968,34 +968,6 @@ fn get_type_correctness_of_question_mark_or_possibly_invalid_expression(
     }
 }
 
-enum GoalKwOrPossiblyInvalidExpressionTypeCorrectness {
-    Correct(ExpressionId, NormalFormId),
-    Incorrect(PossiblyInvalidExpressionId, TypeCheckFailureReason),
-    GoalExists(NormalFormId),
-    GoalDoesNotExist,
-}
-
-fn get_type_correctness_of_goal_kw_or_possibly_invalid_expression(
-    state: &mut State,
-    coercion_target_id: Option<NormalFormId>,
-    id: GoalKwOrPossiblyInvalidExpressionId,
-) -> GoalKwOrPossiblyInvalidExpressionTypeCorrectness {
-    match id {
-        GoalKwOrPossiblyInvalidExpressionId::GoalKw { .. } => if let Some(coercion_target_id) = coercion_target_id {
-            GoalKwOrPossiblyInvalidExpressionTypeCorrectness::GoalExists(coercion_target_id)
-        } else {
-            GoalKwOrPossiblyInvalidExpressionTypeCorrectness::GoalDoesNotExist
-        },
-        GoalKwOrPossiblyInvalidExpressionId::Expression(possibly_typecheckable) => match possibly_typecheckable {
-            PossiblyInvalidExpressionId::Invalid(untypecheckable) => GoalKwOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::CannotTypeCheck(untypecheckable)),
-            PossiblyInvalidExpressionId::Valid(typecheckable) => match get_type_of_expression(state, coercion_target_id, typecheckable) {
-                Ok(type_id) => GoalKwOrPossiblyInvalidExpressionTypeCorrectness::Correct(typecheckable, type_id),
-                Err(err) => GoalKwOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::TypeCheckError(typecheckable, err)),
-            },
-        }
-    }
-}
-
 // TODO: Delete
 // fn get_type_assertion_warnings(
 //     state: &mut State,
