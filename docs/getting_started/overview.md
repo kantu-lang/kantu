@@ -33,6 +33,7 @@ forall
 check
 goal
 impossible
+todo
 
 struct
 var

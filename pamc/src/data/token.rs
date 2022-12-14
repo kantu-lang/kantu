@@ -49,6 +49,7 @@ pub enum TokenKind {
     Check,
     Goal,
     Impossible,
+    Todo,
 
     // Currently unused but reserved for future use.
     Struct,

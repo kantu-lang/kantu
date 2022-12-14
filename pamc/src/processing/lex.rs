@@ -335,6 +335,7 @@ fn get_token_kind_of_non_underscore_keyword(s: &str) -> Option<TokenKind> {
         "check" => Some(TokenKind::Check),
         "goal" => Some(TokenKind::Goal),
         "impossible" => Some(TokenKind::Impossible),
+        "todo" => Some(TokenKind::Todo),
 
         "struct" => Some(TokenKind::Struct),
         "var" => Some(TokenKind::Var),
