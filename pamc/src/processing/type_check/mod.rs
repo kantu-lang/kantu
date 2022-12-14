@@ -71,29 +71,29 @@ pub enum TypeCheckError {
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckWarning {
-    NoGoal {
+    GoalTypeAssertion {
+        assertion_id: NodeId<CheckAssertion>,
+    },
+    GoalNfAssertionMadeWhereThereIsNoGoal {
         goal_kw_start: TextSpan,
     },
-    // TODO: Rename "missing" to "incomplete"?
-    MissingCheckeeType {
-        question_mark_start: TextSpan,
+    IncorrectCheckAssertion {
+        assertion_id: NodeId<CheckAssertion>,
+        original_left_comparee: ExpressionId,
+        rewritten_left_comparee: NormalFormId,
+        original_right_comparee: ExpressionId,
+        rewritten_right_comparee: NormalFormId,
     },
-    UntypecheckableExpression(InvalidExpressionId),
-    IllTypedCheckeeType(ExpressionId, TypeCheckError),
-    IncorrectCheckeeType {
-        checkee_type_id: ExpressionId,
-        expected_id: NormalFormId,
-        actual_id: NormalFormId,
+    CheckAssertionSideTypeCheckFailed {
+        expression_id: PossiblyInvalidExpressionId,
+        reason: TypeCheckFailureReason,
     },
-    MissingCheckeeValue {
-        question_mark_start: TextSpan,
-    },
-    IllTypedCheckeeValue(ExpressionId, TypeCheckError),
-    IncorrectCheckeeValue {
-        checkee_type_id: ExpressionId,
-        expected_id: NormalFormId,
-        actual_id: NormalFormId,
-    },
+}
+
+#[derive(Clone, Debug)]
+pub enum TypeCheckFailureReason {
+    CannotTypeCheck(InvalidExpressionId),
+    TypeCheckError(ExpressionId, TypeCheckError),
 }
 
 #[derive(Debug)]

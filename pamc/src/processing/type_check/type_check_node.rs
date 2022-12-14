@@ -211,8 +211,7 @@ fn get_type_of_expression_dirty(
         ExpressionId::Fun(fun) => get_type_of_fun_dirty(state, fun),
         ExpressionId::Match(match_) => get_type_of_match_dirty(state, coercion_target_id, match_),
         ExpressionId::Forall(forall) => get_type_of_forall_dirty(state, forall),
-        // TODO: Redesign to use `get_type_of_check_expression_dirty`
-        ExpressionId::Check(check) => get_type_of_check_expression(state, coercion_target_id, check).map_err(Tainted::new),
+        ExpressionId::Check(check) => get_type_of_check_expression_dirty(state, coercion_target_id, check),
     }
 }
 
@@ -685,14 +684,14 @@ fn get_type_of_forall_dirty(
 }
 
 
-fn get_type_of_check_expression(
+fn get_type_of_check_expression_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
-) -> Result<NormalFormId, TypeCheckError> {
-    add_check_expression_warnings(state, coercion_target_id, check_id)?;
+) -> Result<NormalFormId, Tainted<TypeCheckError>> {
+    add_check_expression_warnings(state, coercion_target_id, check_id).map_err(Tainted::new)?;
     let check = state.registry.check(check_id).clone();
-    get_type_of_expression(state, coercion_target_id, check.output_id)
+    get_type_of_expression_dirty(state, coercion_target_id, check.output_id)
 }
 
 fn add_check_expression_warnings(
@@ -700,7 +699,7 @@ fn add_check_expression_warnings(
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
 ) -> Result<(), TypeCheckError> {
-    let warnings = get_check_expression_warnings(state, coercion_target_id, check_id)?;
+    let warnings = get_check_expression_warnings(state, coercion_target_id, check_id);
     state.warnings.extend(warnings);
     Ok(())
 }
@@ -709,10 +708,156 @@ fn get_check_expression_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,
-) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
-    // TODO: Redesign
-    Ok(vec![])
+) -> Vec<TypeCheckWarning> {
+    let assertion_ids = {
+        let check = state.registry.check(check_id);
+        state.registry.check_assertion_list(check.assertion_list_id).to_vec()
+    };
+    assertion_ids
+        .into_iter()
+        .map(|assertion_id| get_check_assertion_warnings(state, coercion_target_id, assertion_id))
+        .flatten()
+        .collect()
 }
+
+
+fn get_check_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion_id: NodeId<CheckAssertion>,
+) -> Vec<TypeCheckWarning> {
+    let assertion = state.registry.check_assertion(assertion_id).clone();
+    match assertion.kind {
+        CheckAssertionKind::Type => get_type_assertion_warnings(state, coercion_target_id, assertion),
+        CheckAssertionKind::NormalForm => get_normal_form_assertion_warnings(state, coercion_target_id, assertion),
+    }
+}
+
+fn get_type_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion: CheckAssertion,
+) -> Vec<TypeCheckWarning> {
+    match assertion.left_id {
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { span } => vec![TypeCheckWarning::GoalTypeAssertion { assertion_id: assertion.id }],
+        GoalKwOrPossiblyInvalidExpressionId::Expression(expression_id) => get_non_goal_type_assertion_warnings(state, coercion_target_id, assertion, expression_id),
+    }
+}
+
+fn get_non_goal_type_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion: CheckAssertion,
+    left_id: PossiblyInvalidExpressionId,
+) -> Vec<TypeCheckWarning> {
+    let left_correctness = get_type_correctness_of_possibly_invalid_expression(state, coercion_target_id, left_id);
+    let right_correctness = get_type_correctness_of_question_mark_or_possibly_invalid_expression(state, coercion_target_id, assertion.right_id);
+    
+    let mut out = vec![];
+    match (left_correctness, right_correctness) {
+        (Ok((left_expression_id, left_type_id)), QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(right_expression_id, right_type_id)) => {
+            unimplemented!()
+        }
+        (Ok((left_expression_id, left_type_id)), QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark) => {
+            unimplemented!()
+        }
+        (other_left, other_right) => {
+            if let Err(reason) = other_left {
+                out.push(TypeCheckWarning::CheckAssertionSideTypeCheckFailed { expression_id: left_id, reason });
+            }
+            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(right_id, reason) = other_right {
+                out.push(TypeCheckWarning::CheckAssertionSideTypeCheckFailed { expression_id: right_id, reason });
+            }
+        }
+    }
+    out
+}
+
+fn get_type_correctness_of_possibly_invalid_expression(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    id: PossiblyInvalidExpressionId,
+) -> Result<(ExpressionId, NormalFormId), TypeCheckFailureReason> {
+    unimplemented!()
+}
+
+enum QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness {
+    Correct(ExpressionId, NormalFormId),
+    Incorrect(PossiblyInvalidExpressionId, TypeCheckFailureReason),
+    QuestionMark,
+}
+
+fn get_type_correctness_of_question_mark_or_possibly_invalid_expression(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    id: QuestionMarkOrPossiblyInvalidExpressionId,
+) -> QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness {
+    match id {
+        QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { .. } => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark,
+        QuestionMarkOrPossiblyInvalidExpressionId::Expression(possibly_typecheckable) => match possibly_typecheckable {
+            PossiblyInvalidExpressionId::Invalid(untypecheckable) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::CannotTypeCheck(untypecheckable)),
+            PossiblyInvalidExpressionId::Valid(typecheckable) => match get_type_of_expression(state, coercion_target_id, typecheckable) {
+                Ok(type_id) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(typecheckable, type_id),
+                Err(err) => QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::TypeCheckError(typecheckable, err)),
+            },
+        }
+    }
+}
+
+fn get_normal_form_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion: CheckAssertion,
+) -> Vec<TypeCheckWarning> {
+    unimplemented!()
+}
+
+// TODO: Delete
+// fn get_type_assertion_warnings(
+//     state: &mut State,
+//     coercion_target_id: Option<NormalFormId>,
+//     assertion: CheckAssertion,
+// ) -> Vec<TypeCheckWarning> {
+//     let mut out = vec![];
+
+//     let left_status: Result<(ExpressionId, NormalFormId), TypeCheckWarning> = match assertion.left_id {
+//         GoalKwOrPossiblyInvalidExpressionId::GoalKw { span } => Err(TypeCheckWarning::GoalTypeAssertion { assertion_id: assertion.id }),
+//         GoalKwOrPossiblyInvalidExpressionId::Expression(expression_id) => get_valid_expression_and_type(state, coercion_target_id, expression_id).map_err(),
+//     };
+
+//     match (left_status, right_status) {
+//         (Ok((left_expression_id, left_type_id)), Ok((right_expression_id, right_type_id))) => {
+//             // TODO
+//             unimplemented!()
+//         }
+//         (other_left, other_right) => {
+//             out.push(other_left.into_err());
+//             out.push(other_right.into_err());
+//         }
+//     }
+//     out.extend(left_warning);
+//     out.extend(right_warning);
+//     out
+   
+// }
+
+
+// fn get_valid_expression_and_type(
+//     state: &mut State,
+//     coercion_target_id: Option<NormalFormId>,
+//     id: PossiblyInvalidExpressionId,
+// ) -> Result<(ExpressionId, NormalFormId), TypeCheckFailureReason> {
+//     match id {
+//         PossiblyInvalidExpressionId::Invalid(invalid_id) => Err(TypeCheckFailureReason::Untypable(invalid_id)),
+//         PossiblyInvalidExpressionId::Valid(expression_id) => {
+//             let type_id_or_err = get_type_of_expression(state, coercion_target_id, expression_id);
+//             match type_id_or_err {
+//                 Ok(type_id) => Ok((expression_id, type_id)),
+//                 Err(type_check_err) => Err(TypeCheckFailureReason::TypeCheckError(expression_id, type_check_err)),
+//             }
+//         }
+//     }
+// }
 
 
 // TODO: Delete
