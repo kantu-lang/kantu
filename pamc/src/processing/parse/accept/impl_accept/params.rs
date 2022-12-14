@@ -20,11 +20,11 @@ impl Accept for UnfinishedParams {
                     };
                     let is_dashed = self.pending_dash.is_some();
                     let pending_dash = self.pending_dash.take();
-                    AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
-                        pending_dash.unwrap_or(token),
+                    AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name {
+                        first_token: pending_dash.unwrap_or(token),
                         is_dashed,
                         name,
-                    )))
+                    }))
                 }
                 TokenKind::Underscore => {
                     let name = Identifier {
@@ -33,11 +33,11 @@ impl Accept for UnfinishedParams {
                     };
                     let is_dashed = self.pending_dash.is_some();
                     let pending_dash = self.pending_dash.take();
-                    AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name(
-                        pending_dash.unwrap_or(token),
+                    AcceptResult::Push(UnfinishedStackItem::Param(UnfinishedParam::Name {
+                        first_token: pending_dash.unwrap_or(token),
                         is_dashed,
                         name,
-                    )))
+                    }))
                 }
                 TokenKind::RParen => {
                     if self.params.is_empty() || self.pending_dash.is_some() {

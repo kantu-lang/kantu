@@ -52,7 +52,11 @@ pub struct UnfinishedParams {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedParam {
-    Name(Token, bool, Identifier),
+    Name {
+        first_token: Token,
+        is_dashed: bool,
+        name: Identifier,
+    },
 }
 
 #[derive(Clone, Debug)]

@@ -3,7 +3,11 @@ use super::*;
 impl Accept for UnfinishedParam {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedParam::Name(first_token, is_dashed, name) => match item {
+            UnfinishedParam::Name {
+                first_token,
+                is_dashed,
+                name,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Colon => {
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(

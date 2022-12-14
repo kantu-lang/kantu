@@ -123,11 +123,11 @@ impl Parse for Param {
                 UnfinishedStackItem::UnfinishedDelimitedExpression(
                     UnfinishedDelimitedExpression::WaitingForEndDelimiter(_, param_type),
                 ),
-                Some(UnfinishedStackItem::Param(UnfinishedParam::Name(
-                    param_first_token,
-                    is_param_dashed,
-                    param_name,
-                ))),
+                Some(UnfinishedStackItem::Param(UnfinishedParam::Name {
+                    first_token: param_first_token,
+                    is_dashed: is_param_dashed,
+                    name: param_name,
+                })),
             ) => Ok(Param {
                 span: span_single(file_id, &param_first_token).inclusive_merge(param_type.span()),
                 is_dashed: is_param_dashed,
