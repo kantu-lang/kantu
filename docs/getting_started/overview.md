@@ -57,6 +57,74 @@ exists
 ∃ (Unicode existential quantifier symbol)
 ```
 
+### Name shadowing
+
+Name shadowing (declaring two variables with the same name) is strictly forbidden.
+
+However, keep in mind that the binding declared by a `let` statement does not go into scope until _after_ the statement is completely finished, making it possible to write things like this:
+
+```pamlihu
+let foo = fun foo(n: Nat): Nat {
+    // The `let foo` statement is not complete,
+    // so that `foo` is not in scope.
+    // Only the `identity` defined by the `fun`
+    // is in scope.
+    // Thus, there are no conflicting names,
+    // and this code is legal.
+
+    check (foo: forall(x: Nat) { Nat }) {
+        Nat.S(n)
+    }
+}(Nat.O);
+
+// Now the `let foo` statement in complete,
+// so that `foo` is now in scope.
+// The `foo` defined by the `fun foo` expression
+// is only in scope within the body of the `fun` expression,
+// so it is not in scope here.
+// Thus, there are no conflicting names,
+// and this code is legal.
+let y = check (foo = Nat.S(Nat.O)) {
+    foo
+};
+```
+
+This "not in scope until declaration fully ends" rule
+also applies to type parameters, variant parameters function parameters, and forall parameters.
+
+So the below code is legal (although strongly discouraged, since it's not very readable):
+
+```pamlihu
+type Foo(a: forall(a: Nat) { Nat }) {}
+
+type Bar {
+    .BarVariant(a: forall(a: Nat) { Nat }): Bar,
+}
+
+let x1 = fun _(f: fun _(f: Nat): Type { Nat }(Nat.O)): Nat {
+    f
+};
+
+let x2 = forall(f: forall(f: Nat) { Nat }) { Unit };
+```
+
+Also, keep in mind that type parameters are not in scope within the type variant declarations, so this is perfectly legal, clean code:
+
+```pamlihu
+type List(T: Type /* The `T` defined here...*/) {
+    // ...is NOT in scope here.
+    .Nil(
+        // Thus, we are free to name another
+        // parameter `T`, since this does NOT
+        // cause any name conflict:
+        T: Type,
+    ): List(T),
+
+    // Same thing here
+    .Cons(T: Type, car: T, cdr: List(T)): List(T),
+}
+```
+
 ## `type` statements
 
 Use the `type` keyword to declare types. Syntax:
