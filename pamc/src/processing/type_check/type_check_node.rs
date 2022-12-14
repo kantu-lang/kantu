@@ -753,21 +753,22 @@ fn get_non_goal_type_assertion_warnings(
     let left_correctness = get_type_correctness_of_possibly_invalid_expression(state, coercion_target_id, left_id);
     let right_correctness = get_type_correctness_of_question_mark_or_possibly_invalid_expression(state, coercion_target_id, assertion.right_id);
     
-    let mut out = vec![];
     match (left_correctness, right_correctness) {
         (Ok((left_expression_id, left_type_id)), QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(right_expression_id, _right_type_id)) => {
             let normalized_right_expression_id = evaluate_well_typed_expression(state, right_expression_id);
             match apply_substitutions_from_substitution_context(state, ((left_type_id,), (normalized_right_expression_id,))) {
                 Ok(((rewritten_left_type_id,), (rewritten_right_id,),)) => {
-                    if !are_types_mutually_assignable(state, rewritten_left_type_id, rewritten_right_id) {
-                        out.push(TypeAssertionWarning::CompareesDoNotMatch {
+                    if are_types_mutually_assignable(state, rewritten_left_type_id, rewritten_right_id) {
+                        vec![]
+                    } else {
+                        vec![TypeAssertionWarning::CompareesDoNotMatch {
                             left_id: left_expression_id,
                             rewritten_left_type_id,
                             original_and_rewritten_right_ids: Ok((right_expression_id, rewritten_right_id)),
-                        });
+                        }]
                     }
                 },
-                Err(Exploded) => {},
+                Err(Exploded) => vec![],
             }
         }
         (Ok((left_expression_id, left_type_id)), QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark) => {
@@ -776,22 +777,25 @@ fn get_non_goal_type_assertion_warnings(
                     Ok(rewritten) => rewritten,
                     Err(Exploded) => (left_type_id,),
                 };
-            out.push(TypeAssertionWarning::CompareesDoNotMatch {
+            vec![TypeAssertionWarning::CompareesDoNotMatch {
                 left_id: left_expression_id,
                 rewritten_left_type_id,
                 original_and_rewritten_right_ids: Err(RhsWasQuestionMark),
-            });
+            }]
         }
         (other_left, other_right) => {
+            let mut out = vec![];
+
             if let Err(reason) = other_left {
                 out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
             }
             if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(right_id, reason) = other_right {
                 out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
             }
+            
+            out
         }
     }
-    out
 }
 
 fn get_type_correctness_of_possibly_invalid_expression(
