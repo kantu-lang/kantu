@@ -761,7 +761,7 @@ fn get_non_goal_type_assertion_warnings(
                     if are_types_mutually_assignable(state, rewritten_left_type_id, rewritten_right_id) {
                         vec![]
                     } else {
-                        vec![TypeAssertionWarning::CompareesDoNotMatch {
+                        vec![TypeAssertionWarning::TypesDoNotMatch {
                             left_id: left_expression_id,
                             rewritten_left_type_id,
                             original_and_rewritten_right_ids: Ok((right_expression_id, rewritten_right_id)),
@@ -777,10 +777,10 @@ fn get_non_goal_type_assertion_warnings(
                     Ok(rewritten) => rewritten,
                     Err(Exploded) => (left_type_id,),
                 };
-            vec![TypeAssertionWarning::CompareesDoNotMatch {
+            vec![TypeAssertionWarning::TypesDoNotMatch {
                 left_id: left_expression_id,
                 rewritten_left_type_id,
-                original_and_rewritten_right_ids: Err(RhsWasQuestionMark),
+                original_and_rewritten_right_ids: Err(RhsIsQuestionMark),
             }]
         }
         (other_left, other_right) => {
@@ -791,6 +791,136 @@ fn get_non_goal_type_assertion_warnings(
             }
             if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(right_id, reason) = other_right {
                 out.push(TypeAssertionWarning::CompareeTypeCheckFailure(reason));
+            }
+            
+            out
+        }
+    }
+}
+
+fn get_normal_form_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion: CheckAssertion,
+) -> Vec<TypeCheckWarning> {
+    let nonwrapped = match assertion.left_id {
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { .. } => get_goal_normal_form_assertion_warnings(state, coercion_target_id, assertion),
+        GoalKwOrPossiblyInvalidExpressionId::Expression(expression_id) => get_non_goal_normal_form_assertion_warnings(state, coercion_target_id, assertion, expression_id),
+    };
+    nonwrapped.into_iter().map(TypeCheckWarning::NormalFormAssertion).collect()
+}
+
+// TODO: DRY
+
+fn get_goal_normal_form_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion: CheckAssertion,
+) -> Vec<NormalFormAssertionWarning> {
+    if let Some(coercion_target_id) = coercion_target_id {
+        get_goal_normal_form_assertion_warnings_given_goal_exists(state, coercion_target_id, assertion)
+    } else {
+        vec![NormalFormAssertionWarning::NoGoalExists(assertion.id)]
+    }
+}
+
+fn get_goal_normal_form_assertion_warnings_given_goal_exists(
+    state: &mut State,
+    goal_id: NormalFormId,
+    assertion: CheckAssertion,
+) -> Vec<NormalFormAssertionWarning> {
+    let coercion_target_id = Some(goal_id);
+    // TODO: DRY (this is copied from `get_non_goal_normal_form_assertion_warnings`)
+    let right_correctness = get_type_correctness_of_question_mark_or_possibly_invalid_expression(state, coercion_target_id, assertion.right_id);
+    
+    match right_correctness {
+        QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(right_expression_id, _right_type_id) => {
+            let normalized_right_expression_id = evaluate_well_typed_expression(state, right_expression_id);
+            match apply_substitutions_from_substitution_context(state, ((goal_id,), (normalized_right_expression_id,))) {
+                Ok(((rewritten_goal_id,), (rewritten_right_expression_id,),)) => {
+                    if are_types_mutually_assignable(state, rewritten_goal_id, rewritten_right_expression_id) {
+                        vec![]
+                    } else {
+                        vec![NormalFormAssertionWarning::CompareesDoNotMatch {
+                            left_id: Err(LhsIsGoalKw),
+                            rewritten_left_id: rewritten_goal_id,
+                            original_and_rewritten_right_ids: Ok((right_expression_id, rewritten_right_expression_id)),
+                        }]
+                    }
+                },
+                Err(Exploded) => vec![],
+            }
+        }
+        QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark => {
+            let (rewritten_goal_id,) =
+                match apply_substitutions_from_substitution_context(state, (goal_id,)) {
+                    Ok(rewritten) => rewritten,
+                    Err(Exploded) => (goal_id,),
+                };
+            vec![NormalFormAssertionWarning::CompareesDoNotMatch {
+                left_id: Err(LhsIsGoalKw),
+                rewritten_left_id: rewritten_goal_id,
+                original_and_rewritten_right_ids: Err(RhsIsQuestionMark),
+            }]
+        }
+        other_right => {
+            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(_, reason) = other_right {
+                vec![NormalFormAssertionWarning::CompareeTypeCheckFailure(reason)]
+            } else {
+                vec![]
+            }
+        }
+    }
+}
+
+fn get_non_goal_normal_form_assertion_warnings(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    assertion: CheckAssertion,
+    left_id: PossiblyInvalidExpressionId,
+) -> Vec<NormalFormAssertionWarning> {
+    let left_correctness = get_type_correctness_of_possibly_invalid_expression(state, coercion_target_id, left_id);
+    let right_correctness = get_type_correctness_of_question_mark_or_possibly_invalid_expression(state, coercion_target_id, assertion.right_id);
+    
+    match (left_correctness, right_correctness) {
+        (Ok((left_expression_id, _left_type_id)), QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(right_expression_id, _right_type_id)) => {
+            let normalized_left_expression_id = evaluate_well_typed_expression(state, left_expression_id);
+            let normalized_right_expression_id = evaluate_well_typed_expression(state, right_expression_id);
+            match apply_substitutions_from_substitution_context(state, ((normalized_left_expression_id,), (normalized_right_expression_id,))) {
+                Ok(((rewritten_left_expression_id,), (rewritten_right_expression_id,),)) => {
+                    if are_types_mutually_assignable(state, rewritten_left_expression_id, rewritten_right_expression_id) {
+                        vec![]
+                    } else {
+                        vec![NormalFormAssertionWarning::CompareesDoNotMatch {
+                            left_id: Ok(left_expression_id),
+                            rewritten_left_id: rewritten_left_expression_id,
+                            original_and_rewritten_right_ids: Ok((right_expression_id, rewritten_right_expression_id)),
+                        }]
+                    }
+                },
+                Err(Exploded) => vec![],
+            }
+        }
+        (Ok((left_expression_id, left_type_id)), QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark) => {
+            let (rewritten_left_type_id,) =
+                match apply_substitutions_from_substitution_context(state, (left_type_id,)) {
+                    Ok(rewritten) => rewritten,
+                    Err(Exploded) => (left_type_id,),
+                };
+            vec![NormalFormAssertionWarning::CompareesDoNotMatch {
+                left_id: Ok(left_expression_id),
+                rewritten_left_id: rewritten_left_type_id,
+                original_and_rewritten_right_ids: Err(RhsIsQuestionMark),
+            }]
+        }
+        (other_left, other_right) => {
+            let mut out = vec![];
+
+            if let Err(reason) = other_left {
+                out.push(NormalFormAssertionWarning::CompareeTypeCheckFailure(reason));
+            }
+            if let QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(_, reason) = other_right {
+                out.push(NormalFormAssertionWarning::CompareeTypeCheckFailure(reason));
             }
             
             out
@@ -829,12 +959,32 @@ fn get_type_correctness_of_question_mark_or_possibly_invalid_expression(
     }
 }
 
-fn get_normal_form_assertion_warnings(
+enum GoalKwOrPossiblyInvalidExpressionTypeCorrectness {
+    Correct(ExpressionId, NormalFormId),
+    Incorrect(PossiblyInvalidExpressionId, TypeCheckFailureReason),
+    GoalExists(NormalFormId),
+    GoalDoesNotExist,
+}
+
+fn get_type_correctness_of_goal_kw_or_possibly_invalid_expression(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    assertion: CheckAssertion,
-) -> Vec<TypeCheckWarning> {
-    unimplemented!()
+    id: GoalKwOrPossiblyInvalidExpressionId,
+) -> GoalKwOrPossiblyInvalidExpressionTypeCorrectness {
+    match id {
+        GoalKwOrPossiblyInvalidExpressionId::GoalKw { .. } => if let Some(coercion_target_id) = coercion_target_id {
+            GoalKwOrPossiblyInvalidExpressionTypeCorrectness::GoalExists(coercion_target_id)
+        } else {
+            GoalKwOrPossiblyInvalidExpressionTypeCorrectness::GoalDoesNotExist
+        },
+        GoalKwOrPossiblyInvalidExpressionId::Expression(possibly_typecheckable) => match possibly_typecheckable {
+            PossiblyInvalidExpressionId::Invalid(untypecheckable) => GoalKwOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::CannotTypeCheck(untypecheckable)),
+            PossiblyInvalidExpressionId::Valid(typecheckable) => match get_type_of_expression(state, coercion_target_id, typecheckable) {
+                Ok(type_id) => GoalKwOrPossiblyInvalidExpressionTypeCorrectness::Correct(typecheckable, type_id),
+                Err(err) => GoalKwOrPossiblyInvalidExpressionTypeCorrectness::Incorrect(possibly_typecheckable, TypeCheckFailureReason::TypeCheckError(typecheckable, err)),
+            },
+        }
+    }
 }
 
 // TODO: Delete

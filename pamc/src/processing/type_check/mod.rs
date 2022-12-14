@@ -79,18 +79,29 @@ pub enum TypeCheckWarning {
 pub enum TypeAssertionWarning {
     GoalLhs(NodeId<CheckAssertion>),
     CompareeTypeCheckFailure(TypeCheckFailureReason),
-    CompareesDoNotMatch {
+    TypesDoNotMatch {
         left_id: ExpressionId,
         rewritten_left_type_id: NormalFormId,
-        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsWasQuestionMark>,
+        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsIsQuestionMark>,
     },
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct RhsWasQuestionMark;
+pub struct RhsIsQuestionMark;
 
 #[derive(Clone, Debug)]
-pub enum NormalFormAssertionWarning {}
+pub enum NormalFormAssertionWarning {
+    NoGoalExists(NodeId<CheckAssertion>),
+    CompareeTypeCheckFailure(TypeCheckFailureReason),
+    CompareesDoNotMatch {
+        left_id: Result<ExpressionId, LhsIsGoalKw>,
+        rewritten_left_id: NormalFormId,
+        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsIsQuestionMark>,
+    },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct LhsIsGoalKw;
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckFailureReason {
