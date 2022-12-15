@@ -1,4 +1,5 @@
 use crate::data::{
+    non_empty_vec::NonEmptyVec,
     simplified_ast::*,
     // `ust` stands for "unsimplified syntax tree".
     unsimplified_ast as ust,
@@ -7,7 +8,7 @@ use crate::data::{
 #[derive(Clone, Debug)]
 pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
-    HeterogeneousParams(Vec<ust::Param>),
+    HeterogeneousParams(NonEmptyVec<ust::Param>),
 }
 
 pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> {
@@ -44,25 +45,106 @@ fn simplify_type_statement(
     Ok(TypeStatement {
         span: unsimplified.span,
         name: unsimplified.name,
-        params: vec_result_map(unsimplified.params, simplify_param)?,
+        params: simplify_optional_params(unsimplified.params)?,
         variants: vec_result_map(unsimplified.variants, simplify_variant)?,
     })
 }
 
-fn simplify_param(unsimplified: ust::Param) -> Result<Param, SimplifyAstError> {
-    Ok(Param {
-        span: unsimplified.span,
-        is_dashed: unsimplified.is_dashed,
-        name: unsimplified.name,
-        type_: simplify_expression(unsimplified.type_)?,
-    })
+fn simplify_optional_params(
+    unsimplified: Option<NonEmptyVec<ust::Param>>,
+) -> Result<Option<NonEmptyParamVec>, SimplifyAstError> {
+    Ok(unsimplified.map(simplify_params).transpose()?)
+}
+
+fn simplify_params(
+    unsimplified: NonEmptyVec<ust::Param>,
+) -> Result<NonEmptyParamVec, SimplifyAstError> {
+    let hetero_err = SimplifyAstError::HeterogeneousParams(unsimplified.clone());
+    let (last, remaining) = unsimplified.into_popped();
+    if let Some(label) = last.label {
+        let last = LabeledParam {
+            span: last.span,
+            label,
+            is_dashed: last.is_dashed,
+            name: last.name,
+            type_: simplify_expression(last.type_)?,
+        };
+        let remaining = simplify_params_but_require_labels(remaining, &hetero_err)?;
+        Ok(NonEmptyParamVec::Labeled(NonEmptyVec::from_pushed(
+            remaining, last,
+        )))
+    } else {
+        let last = UnlabeledParam {
+            span: last.span,
+            is_dashed: last.is_dashed,
+            name: last.name,
+            type_: simplify_expression(last.type_)?,
+        };
+        let remaining = simplify_params_but_forbid_labels(remaining, &hetero_err)?;
+        Ok(NonEmptyParamVec::Unlabeled(NonEmptyVec::from_pushed(
+            remaining, last,
+        )))
+    }
+}
+
+fn simplify_params_but_require_labels(
+    unsimplified: Vec<ust::Param>,
+    hetero_err: &SimplifyAstError,
+) -> Result<Vec<LabeledParam>, SimplifyAstError> {
+    unsimplified
+        .into_iter()
+        .map(|param| simplify_param_but_require_label(param, hetero_err))
+        .collect()
+}
+
+fn simplify_params_but_forbid_labels(
+    unsimplified: Vec<ust::Param>,
+    hetero_err: &SimplifyAstError,
+) -> Result<Vec<UnlabeledParam>, SimplifyAstError> {
+    unsimplified
+        .into_iter()
+        .map(|param| simplify_param_but_forbid_label(param, hetero_err))
+        .collect()
+}
+
+fn simplify_param_but_require_label(
+    unsimplified: ust::Param,
+    hetero_err: &SimplifyAstError,
+) -> Result<LabeledParam, SimplifyAstError> {
+    if let Some(label) = unsimplified.label {
+        Ok(LabeledParam {
+            span: unsimplified.span,
+            label,
+            is_dashed: unsimplified.is_dashed,
+            name: unsimplified.name,
+            type_: simplify_expression(unsimplified.type_)?,
+        })
+    } else {
+        Err(hetero_err.clone())
+    }
+}
+
+fn simplify_param_but_forbid_label(
+    unsimplified: ust::Param,
+    hetero_err: &SimplifyAstError,
+) -> Result<UnlabeledParam, SimplifyAstError> {
+    if let Some(_) = unsimplified.label {
+        Err(hetero_err.clone())
+    } else {
+        Ok(UnlabeledParam {
+            span: unsimplified.span,
+            is_dashed: unsimplified.is_dashed,
+            name: unsimplified.name,
+            type_: simplify_expression(unsimplified.type_)?,
+        })
+    }
 }
 
 fn simplify_variant(unsimplified: ust::Variant) -> Result<Variant, SimplifyAstError> {
     Ok(Variant {
         span: unsimplified.span,
         name: unsimplified.name,
-        params: vec_result_map(unsimplified.params, simplify_param)?,
+        params: simplify_optional_params(unsimplified.params)?,
         return_type: simplify_expression(unsimplified.return_type)?,
     })
 }
@@ -93,7 +175,7 @@ fn simplify_expression(unsimplified: ust::Expression) -> Result<Expression, Simp
 fn simplify_identifier(unsimplified: ust::Identifier) -> Expression {
     Expression::Name(NameExpression {
         span: unsimplified.span,
-        components: vec![unsimplified],
+        components: NonEmptyVec::singleton(unsimplified),
     })
 }
 
@@ -103,9 +185,9 @@ fn simplify_dot(unsimplified: Box<ust::Dot>) -> Result<Expression, SimplifyAstEr
 
     fn get_components(
         expr: ust::Expression,
-    ) -> Result<Vec<ust::Identifier>, NotANameExpressionError> {
+    ) -> Result<NonEmptyVec<ust::Identifier>, NotANameExpressionError> {
         match expr {
-            ust::Expression::Identifier(identifier) => Ok(vec![identifier]),
+            ust::Expression::Identifier(identifier) => Ok(NonEmptyVec::singleton(identifier)),
             ust::Expression::Dot(dot) => {
                 let mut components = get_components(dot.left)?;
                 components.push(dot.right);
@@ -126,7 +208,7 @@ fn simplify_call(unsimplified: ust::Call) -> Result<Expression, SimplifyAstError
     Ok(Expression::Call(Box::new(Call {
         span: unsimplified.span,
         callee: simplify_expression(unsimplified.callee)?,
-        args: vec_result_map(unsimplified.args, simplify_expression)?,
+        args: unsimplified.args.try_into_mapped(simplify_expression)?,
     })))
 }
 
@@ -134,7 +216,7 @@ fn simplify_fun(unsimplified: ust::Fun) -> Result<Expression, SimplifyAstError> 
     Ok(Expression::Fun(Box::new(Fun {
         span: unsimplified.span,
         name: unsimplified.name,
-        params: vec_result_map(unsimplified.params, simplify_param)?,
+        params: simplify_params(unsimplified.params)?,
         return_type: simplify_expression(unsimplified.return_type)?,
         body: simplify_expression(unsimplified.body)?,
     })))
@@ -160,7 +242,7 @@ fn simplify_match_case(unsimplified: ust::MatchCase) -> Result<MatchCase, Simpli
 fn simplify_forall(unsimplified: ust::Forall) -> Result<Expression, SimplifyAstError> {
     Ok(Expression::Forall(Box::new(Forall {
         span: unsimplified.span,
-        params: vec_result_map(unsimplified.params, simplify_param)?,
+        params: simplify_params(unsimplified.params)?,
         output: simplify_expression(unsimplified.output)?,
     })))
 }
@@ -168,7 +250,9 @@ fn simplify_forall(unsimplified: ust::Forall) -> Result<Expression, SimplifyAstE
 fn simplify_check(unsimplified: ust::Check) -> Result<Expression, SimplifyAstError> {
     Ok(Expression::Check(Box::new(Check {
         span: unsimplified.span,
-        assertions: vec_result_map(unsimplified.assertions, simplify_check_assertion)?,
+        assertions: unsimplified
+            .assertions
+            .try_into_mapped(simplify_check_assertion)?,
         output: simplify_expression(unsimplified.output)?,
     })))
 }
