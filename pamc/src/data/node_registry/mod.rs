@@ -1,4 +1,8 @@
-use crate::data::{light_ast::*, non_empty_vec::NonEmptyVec, TextSpan};
+use crate::data::{
+    light_ast::*,
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    TextSpan,
+};
 
 use std::{fmt::Debug, hash::Hash, num::NonZeroUsize};
 
@@ -23,6 +27,25 @@ pub enum FileItemNodeId {
 pub enum NonEmptyParamListId {
     Unlabeled(NonEmptyListId<NodeId<UnlabeledParam>>),
     Labeled(NonEmptyListId<NodeId<LabeledParam>>),
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyParamListId> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.non_zero_len().get()).unwrap_or(0)
+    }
+}
+
+impl NonEmptyParamListId {
+    pub fn len(&self) -> usize {
+        self.non_zero_len().get()
+    }
+
+    pub fn non_zero_len(&self) -> NonZeroUsize {
+        match self {
+            NonEmptyParamListId::Unlabeled(vec) => vec.len,
+            NonEmptyParamListId::Labeled(vec) => vec.len,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -531,6 +554,17 @@ impl NodeRegistry {
     {
         T::subregistry(self).get(id)
     }
+
+    pub fn get_possibly_empty_list<T>(&self, id: Option<NonEmptyListId<T>>) -> &[T]
+    where
+        T: RegisterableList + Clone + Eq + Hash,
+    {
+        if let Some(id) = id {
+            self.get_list(id)
+        } else {
+            &[]
+        }
+    }
 }
 
 // TODO: Move
@@ -610,6 +644,16 @@ mod registerable_list {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
             &mut registry.expression_lists
+        }
+    }
+
+    impl RegisterableList for NodeId<Identifier> {
+        fn subregistry(registry: &NodeRegistry) -> &ListSubregistry<Self> {
+            &registry.identifier_lists
+        }
+
+        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
+            &mut registry.identifier_lists
         }
     }
 }

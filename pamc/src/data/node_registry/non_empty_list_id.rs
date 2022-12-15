@@ -44,3 +44,9 @@ impl<T> PartialEq<NonEmptyListId<T>> for NonEmptyListId<T> {
 }
 
 impl<T> Eq for NonEmptyListId<T> {}
+
+impl<T> OptionalNonEmptyVecLen for Option<NonEmptyListId<T>> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.len.get()).unwrap_or(0)
+    }
+}

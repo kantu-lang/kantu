@@ -1,4 +1,7 @@
-use crate::data::{non_empty_vec::NonEmptyVec, FileId, TextSpan};
+use crate::data::{
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    FileId, TextSpan,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
@@ -34,6 +37,12 @@ pub struct TypeStatement {
 pub enum NonEmptyParamVec {
     Unlabeled(NonEmptyVec<UnlabeledParam>),
     Labeled(NonEmptyVec<LabeledParam>),
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyParamVec> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.len()).unwrap_or(0)
+    }
 }
 
 impl NonEmptyParamVec {

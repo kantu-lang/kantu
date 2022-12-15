@@ -1,7 +1,7 @@
 use crate::data::{
     bind_error::*,
     bound_ast::*,
-    non_empty_vec::{NonEmptyVec, OptionalNonEmptyToVec},
+    non_empty_vec::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
 };
@@ -456,21 +456,5 @@ where
             context.truncate(original_len);
             Err(err)
         }
-    }
-}
-
-trait OptionalNonEmptyVecLen {
-    fn len(&self) -> usize;
-}
-
-impl<T> OptionalNonEmptyVecLen for Option<NonEmptyVec<T>> {
-    fn len(&self) -> usize {
-        self.as_ref().map(|v| v.len()).unwrap_or(0)
-    }
-}
-
-impl OptionalNonEmptyVecLen for Option<ub::NonEmptyParamVec> {
-    fn len(&self) -> usize {
-        self.as_ref().map(|v| v.len()).unwrap_or(0)
     }
 }

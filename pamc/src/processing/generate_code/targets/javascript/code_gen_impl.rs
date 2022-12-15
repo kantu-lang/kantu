@@ -18,7 +18,7 @@ fn generate_code_for_file(
 ) -> Result<File, CompileToJavaScriptError> {
     let mut context = Context::new();
     let file = registry.get(file_id);
-    let item_ids = registry.get_list(file.item_list_id);
+    let item_ids = registry.get_possibly_empty_list(file.item_list_id);
     let items = {
         let mut out = vec![];
         out.extend(generate_code_for_type1_and_type0_without_adding_to_context());
@@ -121,7 +121,7 @@ fn generate_code_for_type_statement(
     type_id: NodeId<light::TypeStatement>,
 ) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
     let type_ = registry.get(type_id);
-    let variant_ids = registry.get_list(type_.variant_list_id);
+    let variant_ids = registry.get_possibly_empty_list(type_.variant_list_id);
     let mut out = Vec::with_capacity(variant_ids.len() + 1);
 
     let type_constructor = generate_code_for_type_constructor(registry, context, type_id)?;
@@ -148,20 +148,38 @@ fn generate_code_for_type_constructor(
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
     let type_ = registry.get(type_id);
 
-    let param_js_names: Vec<ValidJsIdentifierName> = {
-        let type_param_ids = registry.get_list(type_.param_list_id);
-        let param_js_names = type_param_ids
-            .iter()
-            .map(|id| {
-                let param = registry.get(*id);
-                let param_name = &registry.get(param.name_id).name;
-                context.try_push_name(param_name.js_name());
-                let param_js_name = context.js_name(DbIndex(0));
-                param_js_name
-            })
-            .collect();
-        context.pop_n(type_param_ids.len());
-        param_js_names
+    let param_js_names: Vec<ValidJsIdentifierName> = match type_.param_list_id {
+        Some(NonEmptyParamListId::Unlabeled(param_list_id)) => {
+            let type_param_ids = registry.get_list(param_list_id);
+            let param_js_names = type_param_ids
+                .iter()
+                .map(|id| {
+                    let param = registry.get(*id);
+                    let param_name = &registry.get(param.name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    param_js_name
+                })
+                .collect();
+            context.pop_n(type_param_ids.len());
+            param_js_names
+        }
+        Some(NonEmptyParamListId::Labeled(param_list_id)) => {
+            let type_param_ids = registry.get_list(param_list_id);
+            let param_js_names = type_param_ids
+                .iter()
+                .map(|id| {
+                    let param = registry.get(*id);
+                    let param_name = &registry.get(param.name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    param_js_name
+                })
+                .collect();
+            context.pop_n(type_param_ids.len());
+            param_js_names
+        }
+        None => vec![],
     };
 
     let type_name = &registry.get(type_.name_id).name;
@@ -206,21 +224,38 @@ fn generate_code_for_variant_constructor(
     type_constructor_js_name: &ValidJsIdentifierName,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
     let variant = registry.get(variant_id);
-    let arity = variant.param_list_id.len;
+    let arity = variant.param_list_id.len();
 
-    let param_js_names: Vec<ValidJsIdentifierName> = {
-        let type_param_ids = registry.get_list(variant.param_list_id);
-        let param_js_names = type_param_ids
-            .iter()
-            .map(|id| {
-                let param = registry.get(*id);
-                let param_name = &registry.get(param.name_id).name;
-                context.try_push_name(param_name.js_name());
-                let param_js_name = context.js_name(DbIndex(0));
-                param_js_name
-            })
-            .collect();
-        param_js_names
+    let param_js_names: Vec<ValidJsIdentifierName> = match variant.param_list_id {
+        Some(NonEmptyParamListId::Unlabeled(param_list_id)) => {
+            let type_param_ids = registry.get_list(param_list_id);
+            let param_js_names = type_param_ids
+                .iter()
+                .map(|id| {
+                    let param = registry.get(*id);
+                    let param_name = &registry.get(param.name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    param_js_name
+                })
+                .collect();
+            param_js_names
+        }
+        Some(NonEmptyParamListId::Labeled(param_list_id)) => {
+            let type_param_ids = registry.get_list(param_list_id);
+            let param_js_names = type_param_ids
+                .iter()
+                .map(|id| {
+                    let param = registry.get(*id);
+                    let param_name = &registry.get(param.name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    param_js_name
+                })
+                .collect();
+            param_js_names
+        }
+        None => vec![],
     };
     let return_value = {
         let mut items = Vec::with_capacity(arity + 1);
@@ -327,18 +362,31 @@ fn generate_code_for_fun(
     context: &mut Context,
     fun: &light::Fun,
 ) -> Result<Expression, CompileToJavaScriptError> {
-    let param_arity = fun.param_list_id.len;
-    let param_js_names = registry
-        .get_list(fun.param_list_id)
-        .iter()
-        .map(|id| {
-            let param = registry.get(*id);
-            let param_name = &registry.get(param.name_id).name;
-            context.try_push_name(param_name.js_name());
-            let param_js_name = context.js_name(DbIndex(0));
-            param_js_name
-        })
-        .collect();
+    let param_arity = fun.param_list_id.len();
+    let param_js_names = match fun.param_list_id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => registry
+            .get_list(param_list_id)
+            .iter()
+            .map(|id| {
+                let param = registry.get(*id);
+                let param_name = &registry.get(param.name_id).name;
+                context.try_push_name(param_name.js_name());
+                let param_js_name = context.js_name(DbIndex(0));
+                param_js_name
+            })
+            .collect(),
+        NonEmptyParamListId::Labeled(param_list_id) => registry
+            .get_list(param_list_id)
+            .iter()
+            .map(|id| {
+                let param = registry.get(*id);
+                let param_name = &registry.get(param.name_id).name;
+                context.try_push_name(param_name.js_name());
+                let param_js_name = context.js_name(DbIndex(0));
+                param_js_name
+            })
+            .collect(),
+    };
     let fun_js_name = {
         let fun_name = &registry.get(fun.name_id).name;
         context.try_push_name(fun_name.js_name());
@@ -363,7 +411,7 @@ fn generate_code_for_match(
 
     let matchee = generate_code_for_expression(registry, context, match_.matchee_id)?;
     let cases = registry
-        .get_list(match_.case_list_id)
+        .get_possibly_empty_list(match_.case_list_id)
         .iter()
         .map(|case_id| {
             let case = registry.get(*case_id);
@@ -403,11 +451,11 @@ fn generate_code_for_match_case(
     };
 
     let body = {
-        let arity = case.param_list_id.len;
+        let arity = case.param_list_id.len();
         let mut body = Vec::with_capacity(arity + 1);
 
         for (param_index, param_id) in registry
-            .get_list(case.param_list_id)
+            .get_possibly_empty_list(case.param_list_id)
             .iter()
             .copied()
             .enumerate()

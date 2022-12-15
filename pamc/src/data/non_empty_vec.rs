@@ -186,12 +186,12 @@ impl<T> DerefMut for NonEmptyVec<T> {
     }
 }
 
-pub trait OptionalNonEmptyToVec {
+pub trait OptionalNonEmptyVecToVec {
     type Output;
     fn option_to_vec(self) -> Vec<Self::Output>;
 }
 
-impl<T> OptionalNonEmptyToVec for Option<NonEmptyVec<T>> {
+impl<T> OptionalNonEmptyVecToVec for Option<NonEmptyVec<T>> {
     type Output = T;
     fn option_to_vec(self) -> Vec<T> {
         self.map_or_else(Vec::new, Vec::from)
@@ -237,3 +237,13 @@ impl_from_array!(5);
 impl_from_array!(6);
 impl_from_array!(7);
 impl_from_array!(8);
+
+pub trait OptionalNonEmptyVecLen {
+    fn len(&self) -> usize;
+}
+
+impl<T> OptionalNonEmptyVecLen for Option<NonEmptyVec<T>> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.len()).unwrap_or(0)
+    }
+}
