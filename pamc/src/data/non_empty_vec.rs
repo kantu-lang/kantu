@@ -2,7 +2,7 @@ use std::{
     convert::TryFrom,
     iter::IntoIterator,
     num::NonZeroUsize,
-    ops::{Index, IndexMut, Range},
+    ops::{Deref, DerefMut, Index, IndexMut, Range},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
@@ -119,10 +119,19 @@ impl<T> NonEmptyVec<T> {
         (last, self.raw)
     }
 
-    pub fn into_mapped(self, f: impl FnMut(T) -> T) -> NonEmptyVec<T> {
+    pub fn into_mapped<U>(self, f: impl FnMut(T) -> U) -> NonEmptyVec<U> {
         NonEmptyVec {
             raw: self.raw.into_iter().map(f).collect(),
         }
+    }
+
+    pub fn try_into_mapped<U, E>(
+        self,
+        f: impl FnMut(T) -> Result<U, E>,
+    ) -> Result<NonEmptyVec<U>, E> {
+        Ok(NonEmptyVec {
+            raw: self.raw.into_iter().map(f).collect::<Result<_, _>>()?,
+        })
     }
 }
 
@@ -160,6 +169,32 @@ impl<T> Index<Range<usize>> for NonEmptyVec<T> {
 impl<T> IndexMut<Range<usize>> for NonEmptyVec<T> {
     fn index_mut(&mut self, index: Range<usize>) -> &mut Self::Output {
         &mut self.raw[index]
+    }
+}
+
+impl<T> Deref for NonEmptyVec<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.raw
+    }
+}
+
+impl<T> DerefMut for NonEmptyVec<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.raw
+    }
+}
+
+pub trait OptionalNonEmptyToVec {
+    type Output;
+    fn option_to_vec(self) -> Vec<Self::Output>;
+}
+
+impl<T> OptionalNonEmptyToVec for Option<NonEmptyVec<T>> {
+    type Output = T;
+    fn option_to_vec(self) -> Vec<T> {
+        self.map_or_else(Vec::new, Vec::from)
     }
 }
 

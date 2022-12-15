@@ -36,6 +36,15 @@ pub enum NonEmptyParamVec {
     Labeled(NonEmptyVec<LabeledParam>),
 }
 
+impl NonEmptyParamVec {
+    pub fn len(&self) -> usize {
+        match self {
+            NonEmptyParamVec::Unlabeled(vec) => vec.len(),
+            NonEmptyParamVec::Labeled(vec) => vec.len(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct UnlabeledParam {
     pub span: TextSpan,
