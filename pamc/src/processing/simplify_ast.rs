@@ -7,6 +7,7 @@ use crate::data::{
 #[derive(Clone, Debug)]
 pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
+    HeterogeneousParams(Vec<ust::Param>),
 }
 
 pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> {

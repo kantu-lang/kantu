@@ -12,7 +12,8 @@ fn expect_simplification_error(src: &str, panicker: impl Fn(SimplifyAstError)) {
 
 #[test]
 fn illegal_dot_lhs() {
-    let src = include_str!("../../sample_code/should_fail/ast_simplification/illegal_dot_lhs.ph");
+    let src =
+        include_str!("../../sample_code/should_fail/ast_simplification/dot/illegal_dot_lhs.ph");
     expect_simplification_error(src, |err| match err {
         SimplifyAstError::IllegalDotLhs(lhs) => {
             assert!(
@@ -21,5 +22,18 @@ fn illegal_dot_lhs() {
                 lhs
             );
         }
+        other_err => panic!("Unexpected error: {:#?}", other_err),
     });
 }
+
+// TODO: Fix after we updater simplifier
+#[ignore]
+#[test]
+fn explicitly_labeled_before_unlabeled_param() {
+    let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_before_unlabeled.ph");
+    expect_simplification_error(src, |err| match err {
+        other_err => panic!("Unexpected error: {:#?}", other_err),
+    });
+}
+
+// TODO: Add other test cases
