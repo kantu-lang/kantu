@@ -27,8 +27,8 @@ fn type_check_file(state: &mut State, file_id: NodeId<File>) -> Result<(), TypeC
 }
 
 fn type_check_file_dirty(state: &mut State, file_id: NodeId<File>) -> Result<(), Tainted<TypeCheckError>> {
-    let file = state.registry.file(file_id);
-    let items = state.registry.file_item_list(file.item_list_id).to_vec();
+    let file = state.registry.get(file_id);
+    let items = state.registry.get_list(file.item_list_id).to_vec();
     for &item_id in &items {
         type_check_file_item_dirty(state, item_id)??;
     }
@@ -49,10 +49,9 @@ fn type_check_type_statement_dirty(
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     type_check_type_constructor_dirty(state, type_statement_id)??;
 
-    let type_statement = state.registry.type_statement(type_statement_id);
+    let type_statement = state.registry.get(type_statement_id);
     let variant_ids = state
-        .registry
-        .variant_list(type_statement.variant_list_id)
+        .registry.get_list(type_statement.variant_list_id)
         .to_vec();
     for variant_id in variant_ids {
         type_check_type_variant_dirty(state, variant_id)??;
@@ -65,7 +64,7 @@ fn type_check_type_constructor_dirty(
     state: &mut State,
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
-    let type_statement = state.registry.type_statement(type_statement_id).clone();
+    let type_statement = state.registry.get(type_statement_id).clone();
     let arity = type_statement.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context_dirty(state, type_statement.param_list_id)??;
@@ -82,12 +81,12 @@ fn type_check_type_constructor_dirty(
     state.context.pop_n(arity);
 
     let variant_name_list_id = {
-        let variant_ids = state.registry.variant_list(type_statement.variant_list_id);
+        let variant_ids = state.registry.get_list(type_statement.variant_list_id);
         let variant_name_ids = variant_ids
             .iter()
-            .map(|&variant_id| state.registry.variant(variant_id).name_id)
+            .map(|&variant_id| state.registry.get(variant_id).name_id)
             .collect();
-        state.registry.add_identifier_list(variant_name_ids)
+        state.registry.add_list(variant_name_ids)
     };
     Ok(state.context.push(ContextEntry {
         type_id: type_constructor_type_id,
@@ -101,7 +100,7 @@ pub(super) fn type_check_param_dirty(
     state: &mut State,
     param_id: NodeId<Param>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
-    let param = state.registry.param(param_id).clone();
+    let param = state.registry.get(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
         return tainted_err(TypeCheckError::IllegalTypeExpression(param.type_id));
@@ -118,7 +117,7 @@ fn type_check_type_variant_dirty(
     state: &mut State,
     variant_id: NodeId<Variant>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
-    let variant = state.registry.variant(variant_id).clone();
+    let variant = state.registry.get(variant_id).clone();
     let arity = variant.param_list_id.len;
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context_dirty(state, variant.param_list_id)??;
@@ -147,7 +146,7 @@ fn type_check_let_statement_dirty(
     state: &mut State,
     let_statement_id: NodeId<LetStatement>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
-    let let_statement = state.registry.let_statement(let_statement_id).clone();
+    let let_statement = state.registry.get(let_statement_id).clone();
     let type_id = get_type_of_expression_dirty(state, None, let_statement.value_id)?;
     let normalized_value_id = evaluate_well_typed_expression(state, let_statement.value_id);
     Ok(state.context.push(ContextEntry {
@@ -203,7 +202,7 @@ fn get_type_of_expression_dirty(
 }
 
 fn get_type_of_name(state: &mut State, name_id: NodeId<NameExpression>) -> NormalFormId {
-    let name = state.registry.name_expression(name_id);
+    let name = state.registry.get(name_id);
     state.context.get_type(name.db_index, state.registry)
 }
 
@@ -211,27 +210,26 @@ fn get_type_of_call_dirty(
     state: &mut State,
     call_id: NodeId<Call>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    let call = state.registry.call(call_id).clone();
+    let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
     } else {
         return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
     };
-    let arg_ids = state.registry.expression_list(call.arg_list_id).to_vec();
+    let arg_ids = state.registry.get_list(call.arg_list_id).to_vec();
     let normalized_arg_ids: Vec<NormalFormId> = arg_ids
         .iter()
         .copied()
         .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
         .collect();
 
-    let callee_type = state.registry.forall(callee_type_id).clone();
+    let callee_type = state.registry.get(callee_type_id).clone();
     // We use the params of the callee _type_ rather than the params of the
     // callee itself, since the callee type is a normal form, which guarantees
     // that its params are normal forms.
     let callee_type_param_ids = state
-        .registry
-        .param_list(callee_type.param_list_id)
+        .registry.get_list(callee_type.param_list_id)
         .to_vec();
     {
         let expected_arity = callee_type_param_ids.len();
@@ -250,7 +248,7 @@ fn get_type_of_call_dirty(
         .enumerate()
     {
         let substituted_param_type_id = {
-            let callee_type_param = state.registry.param(callee_type_param_id);
+            let callee_type_param = state.registry.get(callee_type_param_id);
             // This is safe because the param is the param of a normal
             // form Forall node, which guarantees that its type is a
             // normal form.
@@ -261,7 +259,7 @@ fn get_type_of_call_dirty(
                 .enumerate()
                 .map(|(j, normalized_arg_id)| {
                     let db_index = DbIndex(i - j - 1);
-                    let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
+                    let param_name_id = state.registry.get(callee_type_param_ids[j]).name_id;
                     Substitution {
                         from: ExpressionId::Name(add_name_expression(
                             state.registry,
@@ -299,7 +297,7 @@ fn get_type_of_call_dirty(
             .enumerate()
             .map(|(j, normalized_arg_id)| {
                 let db_index = DbIndex(arity - j - 1);
-                let param_name_id = state.registry.param(callee_type_param_ids[j]).name_id;
+                let param_name_id = state.registry.get(callee_type_param_ids[j]).name_id;
                 Substitution {
                     from: ExpressionId::Name(add_name_expression(
                         state.registry,
@@ -320,7 +318,7 @@ fn get_type_of_call_dirty(
 }
 
 fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    let fun = state.registry.fun(fun_id).clone();
+    let fun = state.registry.get(fun_id).clone();
     // We call this "param arity" instead of simply "arity"
     // to convey the fact that it does **not** include the recursive
     // function.
@@ -339,7 +337,7 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
 
     let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
-        state.registry.add_forall_and_overwrite_its_id(Forall {
+        state.registry.add(Forall {
             id: dummy_id(),
             span: None,
             param_list_id: normalized_param_list_id,
@@ -350,8 +348,8 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     {
         let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
         let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
-        let shifted_fun = state.registry.fun(shifted_fun_id).clone();
-        let body_skipped_fun_id = state.registry.add_fun_and_overwrite_its_id(Fun {
+        let shifted_fun = state.registry.get(shifted_fun_id).clone();
+        let body_skipped_fun_id = state.registry.add(Fun {
             skip_type_checking_body: true,
             ..shifted_fun
         });
@@ -404,7 +402,7 @@ fn get_type_of_match_dirty(
     coercion_target_id: Option<NormalFormId>,
     match_id: NodeId<Match>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    let match_ = state.registry.match_(match_id).clone();
+    let match_ = state.registry.get(match_id).clone();
     let matchee_type_id = get_type_of_expression_dirty(state, None, match_.matchee_id)?;
     let matchee_type = if let Some(t) = try_as_normal_form_adt_expression(state, matchee_type_id) {
         t
@@ -422,7 +420,7 @@ fn get_type_of_match_dirty(
         match_.case_list_id,
     ).map_err(Tainted::new)?;
 
-    let case_ids = state.registry.match_case_list(match_.case_list_id).to_vec();
+    let case_ids = state.registry.get_list(match_.case_list_id).to_vec();
     let mut first_case_type_id = None;
     for case_id in case_ids {
         let case_type_id = get_type_of_match_case_dirty(
@@ -435,7 +433,7 @@ fn get_type_of_match_dirty(
         )?;
         if let Some(first_case_type_id) = first_case_type_id {
             if !is_left_type_assignable_to_right_type(state, case_type_id, first_case_type_id) {
-                let case = state.registry.match_case(case_id);
+                let case = state.registry.get(case_id);
                 return tainted_err(TypeCheckError::TypeMismatch {
                     expression_id: case.output_id,
                     expected_type_id: first_case_type_id,
@@ -465,7 +463,7 @@ fn get_type_of_match_case_dirty(
     matchee_type_id: NormalFormId,
     matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    let case = state.registry.match_case(case_id).clone();
+    let case = state.registry.get(case_id).clone();
     let case_arity = case.param_list_id.len;
     let (parameterized_matchee_id, parameterized_matchee_type_id) =
         add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
@@ -532,15 +530,14 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
     case_id: NodeId<MatchCase>,
     matchee_type: NormalFormAdtExpression,
 ) -> Result<WithPushWarning<(NormalFormId, NormalFormId)>, Tainted<TypeCheckError>> {
-    let case = state.registry.match_case(case_id).clone();
+    let case = state.registry.get(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
     let variant_type_id = state.context.get_type(variant_dbi, state.registry);
     let fully_qualified_variant_name_component_ids: Vec<NodeId<Identifier>> = {
-        let matchee_type_name = state.registry.name_expression(matchee_type.type_name_id);
+        let matchee_type_name = state.registry.get(matchee_type.type_name_id);
         let matchee_type_name_component_ids = state
-            .registry
-            .identifier_list(matchee_type_name.component_list_id)
+            .registry.get_list(matchee_type_name.component_list_id)
             .to_vec();
         matchee_type_name_component_ids
             .into_iter()
@@ -549,7 +546,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
     };
     match variant_type_id.raw() {
         ExpressionId::Forall(normalized_forall_id) => {
-            let normalized_forall = state.registry.forall(normalized_forall_id).clone();
+            let normalized_forall = state.registry.get(normalized_forall_id).clone();
             let expected_case_param_arity = normalized_forall.param_list_id.len;
             if case.param_list_id.len != expected_case_param_arity {
                 return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
@@ -560,11 +557,10 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
             }
 
             let normalized_param_ids = state
-                .registry
-                .param_list(normalized_forall.param_list_id)
+                .registry.get_list(normalized_forall.param_list_id)
                 .to_vec();
             for &normalized_param_id in &normalized_param_ids {
-                let normalized_param = state.registry.param(normalized_param_id);
+                let normalized_param = state.registry.get(normalized_param_id);
                 let param_type_id = NormalFormId::unchecked_new(normalized_param.type_id);
                 state.context.push(ContextEntry {
                     type_id: param_type_id,
@@ -579,7 +575,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 ));
-                let case_param_ids = state.registry.identifier_list(case.param_list_id).to_vec();
+                let case_param_ids = state.registry.get_list(case.param_list_id).to_vec();
                 let arg_ids = case_param_ids
                     .iter()
                     .copied()
@@ -592,9 +588,9 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                         ))
                     })
                     .collect();
-                let arg_list_id = state.registry.add_expression_list(arg_ids);
+                let arg_list_id = state.registry.add_list(arg_ids);
                 let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
-                    state.registry.add_call_and_overwrite_its_id(Call {
+                    state.registry.add(Call {
                         id: dummy_id(),
                         span: None,
                         callee_id,
@@ -657,7 +653,7 @@ fn get_type_of_forall_dirty(
     state: &mut State,
     forall_id: NodeId<Forall>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    let forall = state.registry.forall(forall_id).clone();
+    let forall = state.registry.get(forall_id).clone();
     let _param_list_id = normalize_params_and_leave_params_in_context_dirty(state, forall.param_list_id)??;
 
     let output_type_id = get_type_of_expression_dirty(state, None, forall.output_id)?;
@@ -677,7 +673,7 @@ fn get_type_of_check_expression_dirty(
     check_id: NodeId<Check>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     add_check_expression_warnings(state, coercion_target_id, check_id).map_err(Tainted::new)?;
-    let check = state.registry.check(check_id).clone();
+    let check = state.registry.get(check_id).clone();
     get_type_of_expression_dirty(state, coercion_target_id, check.output_id)
 }
 
@@ -697,8 +693,8 @@ fn get_check_expression_warnings(
     check_id: NodeId<Check>,
 ) -> Vec<TypeCheckWarning> {
     let assertion_ids = {
-        let check = state.registry.check(check_id);
-        state.registry.check_assertion_list(check.assertion_list_id).to_vec()
+        let check = state.registry.get(check_id);
+        state.registry.get_list(check.assertion_list_id).to_vec()
     };
     assertion_ids
         .into_iter()
@@ -713,7 +709,7 @@ fn get_check_assertion_warnings(
     coercion_target_id: Option<NormalFormId>,
     assertion_id: NodeId<CheckAssertion>,
 ) -> Vec<TypeCheckWarning> {
-    let assertion = state.registry.check_assertion(assertion_id).clone();
+    let assertion = state.registry.get(assertion_id).clone();
     match assertion.kind {
         CheckAssertionKind::Type => get_type_assertion_warnings(state, coercion_target_id, assertion).into_iter().map(TypeCheckWarning::TypeAssertion).collect(),
         CheckAssertionKind::NormalForm => get_normal_form_assertion_warnings(state, coercion_target_id, assertion),

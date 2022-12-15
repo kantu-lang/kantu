@@ -1,6 +1,7 @@
 use std::{
     convert::TryFrom,
     iter::IntoIterator,
+    num::NonZeroUsize,
     ops::{Index, IndexMut, Range},
 };
 
@@ -29,8 +30,16 @@ impl<T> NonEmptyVec<T> {
         &self.raw
     }
 
+    pub fn raw_mut(&mut self) -> &mut [T] {
+        &mut self.raw
+    }
+
     pub fn len(&self) -> usize {
         self.raw.len()
+    }
+
+    pub fn non_zero_len(&self) -> NonZeroUsize {
+        NonZeroUsize::new(self.len()).unwrap()
     }
 
     pub const fn is_empty(&self) -> bool {
@@ -39,6 +48,14 @@ impl<T> NonEmptyVec<T> {
 
     pub fn push(&mut self, value: T) {
         self.raw.push(value);
+    }
+
+    pub fn append(&mut self, other: &mut Vec<T>) {
+        self.raw.append(other);
+    }
+
+    pub fn extend(&mut self, other: impl IntoIterator<Item = T>) {
+        self.raw.extend(other);
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &T> {
@@ -100,6 +117,12 @@ impl<T> NonEmptyVec<T> {
     pub fn into_popped(mut self) -> (T, Vec<T>) {
         let last = self.raw.pop().unwrap();
         (last, self.raw)
+    }
+
+    pub fn into_mapped(self, f: impl FnMut(T) -> T) -> NonEmptyVec<T> {
+        NonEmptyVec {
+            raw: self.raw.into_iter().map(f).collect(),
+        }
     }
 }
 

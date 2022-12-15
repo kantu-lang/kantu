@@ -1,7 +1,7 @@
 use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
-    node_registry::{ListId, NodeId},
+    node_registry::{NodeId, NonEmptyListId},
     simplified_ast as unbound, FileId, TextSpan,
 };
 
@@ -10,7 +10,7 @@ pub struct File {
     pub span: Option<TextSpan>,
     pub file_id: FileId,
     pub id: NodeId<Self>,
-    pub item_list_id: ListId<FileItemNodeId>,
+    pub item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
 }
 
 pub use crate::data::node_registry::FileItemNodeId;
@@ -20,12 +20,14 @@ pub struct TypeStatement {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
-    pub param_list_id: ListId<NodeId<Param>>,
-    pub variant_list_id: ListId<NodeId<Variant>>,
+    pub param_list_id: Option<NonEmptyParamListId>,
+    pub variant_list_id: Option<NonEmptyListId<NodeId<Variant>>>,
 }
 
+pub use crate::data::node_registry::NonEmptyParamListId;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Param {
+pub struct UnlabeledParam {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub is_dashed: bool,
@@ -34,11 +36,23 @@ pub struct Param {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LabeledParam {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+    pub label_id: ParamLabelId,
+    pub is_dashed: bool,
+    pub name_id: NodeId<Identifier>,
+    pub type_id: ExpressionId,
+}
+
+pub use crate::data::node_registry::ParamLabelId;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Variant {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
-    pub param_list_id: ListId<NodeId<Param>>,
+    pub param_list_id: Option<NonEmptyParamListId>,
     pub return_type_id: ExpressionId,
 }
 
@@ -56,7 +70,7 @@ pub type ExpressionId = crate::data::node_registry::ExpressionId;
 pub struct NameExpression {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub component_list_id: ListId<NodeId<Identifier>>,
+    pub component_list_id: NonEmptyListId<NodeId<Identifier>>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
 }
@@ -79,7 +93,7 @@ pub struct Call {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
-    pub arg_list_id: ListId<ExpressionId>,
+    pub arg_list_id: NonEmptyListId<ExpressionId>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -87,7 +101,7 @@ pub struct Fun {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub name_id: NodeId<Identifier>,
-    pub param_list_id: ListId<NodeId<Param>>,
+    pub param_list_id: NonEmptyParamListId,
     pub return_type_id: ExpressionId,
     pub body_id: ExpressionId,
     /// This is used by the type checker to
@@ -103,7 +117,7 @@ pub struct Match {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub matchee_id: ExpressionId,
-    pub case_list_id: ListId<NodeId<MatchCase>>,
+    pub case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -111,7 +125,7 @@ pub struct MatchCase {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<Identifier>,
-    pub param_list_id: ListId<NodeId<Identifier>>,
+    pub param_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
     pub output_id: ExpressionId,
 }
 
@@ -119,7 +133,7 @@ pub struct MatchCase {
 pub struct Forall {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub param_list_id: ListId<NodeId<Param>>,
+    pub param_list_id: NonEmptyParamListId,
     pub output_id: ExpressionId,
 }
 
@@ -127,7 +141,7 @@ pub struct Forall {
 pub struct Check {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub assertion_list_id: ListId<NodeId<CheckAssertion>>,
+    pub assertion_list_id: NonEmptyListId<NodeId<CheckAssertion>>,
     pub output_id: ExpressionId,
 }
 

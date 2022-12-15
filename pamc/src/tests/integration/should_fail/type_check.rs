@@ -14,7 +14,7 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
         .unwrap();
     let mut registry = NodeRegistry::empty();
     let file_id = lighten_file(&mut registry, file);
-    let file = registry.file(file_id);
+    let file = registry.get(file_id);
 
     let file_id = validate_variant_return_types_in_file(&registry, file)
         .expect("Variant return type validation failed");
@@ -454,7 +454,7 @@ mod missing_match_case {
     fn expect_missing_match_case_error(src: &str, expected_variant_name: &IdentifierName) {
         expect_type_check_error(src, |registry, err| match err {
             TypeCheckError::MissingMatchCase { variant_name_id } => {
-                let actual_variant_name = &registry.identifier(variant_name_id).name;
+                let actual_variant_name = &registry.get(variant_name_id).name;
                 assert_eq!(expected_variant_name, actual_variant_name);
             }
             _ => panic!("Unexpected error: {:#?}", err),

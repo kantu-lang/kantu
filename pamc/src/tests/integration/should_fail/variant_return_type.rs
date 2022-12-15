@@ -14,7 +14,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
         .unwrap();
     let mut registry = NodeRegistry::empty();
     let file_id = lighten_file(&mut registry, file);
-    let file = registry.file(file_id);
+    let file = registry.get(file_id);
     let err = validate_variant_return_types_in_file(&registry, file)
         .expect_err("Variant return type validation unexpectedly succeeded");
     let illegal_variant_return_type = registry.expression_ref(err.0);
@@ -74,7 +74,7 @@ fn foreign_non_nullary_type() {
     );
     expect_type_arg_extraction_error(src, |return_type, registry| match return_type {
         ExpressionRef::Call(call) => {
-            let arg_ids = registry.expression_list(call.arg_list_id);
+            let arg_ids = registry.get_list(call.arg_list_id);
             assert_eq!(arg_ids.len(), 1);
             let callee = registry.expression_ref(call.callee_id);
             match callee {

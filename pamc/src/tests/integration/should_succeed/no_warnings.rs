@@ -108,7 +108,7 @@ fn expect_success_with_no_warnings(src: &str) {
         .unwrap();
     let mut registry = NodeRegistry::empty();
     let file_id = lighten_file(&mut registry, file);
-    let file = registry.file(file_id);
+    let file = registry.get(file_id);
     let file_id = validate_variant_return_types_in_file(&registry, file)
         .expect("Variant return type validation failed");
     let file_id = validate_fun_recursion_in_file(&mut registry, file_id)

@@ -17,8 +17,8 @@ fn generate_code_for_file(
     file_id: NodeId<light::File>,
 ) -> Result<File, CompileToJavaScriptError> {
     let mut context = Context::new();
-    let file = registry.file(file_id);
-    let item_ids = registry.file_item_list(file.item_list_id);
+    let file = registry.get(file_id);
+    let item_ids = registry.get_list(file.item_list_id);
     let items = {
         let mut out = vec![];
         out.extend(generate_code_for_type1_and_type0_without_adding_to_context());
@@ -120,8 +120,8 @@ fn generate_code_for_type_statement(
     context: &mut Context,
     type_id: NodeId<light::TypeStatement>,
 ) -> Result<Vec<FileItem>, CompileToJavaScriptError> {
-    let type_ = registry.type_statement(type_id);
-    let variant_ids = registry.variant_list(type_.variant_list_id);
+    let type_ = registry.get(type_id);
+    let variant_ids = registry.get_list(type_.variant_list_id);
     let mut out = Vec::with_capacity(variant_ids.len() + 1);
 
     let type_constructor = generate_code_for_type_constructor(registry, context, type_id)?;
@@ -146,15 +146,15 @@ fn generate_code_for_type_constructor(
     context: &mut Context,
     type_id: NodeId<light::TypeStatement>,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
-    let type_ = registry.type_statement(type_id);
+    let type_ = registry.get(type_id);
 
     let param_js_names: Vec<ValidJsIdentifierName> = {
-        let type_param_ids = registry.param_list(type_.param_list_id);
+        let type_param_ids = registry.get_list(type_.param_list_id);
         let param_js_names = type_param_ids
             .iter()
             .map(|id| {
-                let param = registry.param(*id);
-                let param_name = &registry.identifier(param.name_id).name;
+                let param = registry.get(*id);
+                let param_name = &registry.get(param.name_id).name;
                 context.try_push_name(param_name.js_name());
                 let param_js_name = context.js_name(DbIndex(0));
                 param_js_name
@@ -164,7 +164,7 @@ fn generate_code_for_type_constructor(
         param_js_names
     };
 
-    let type_name = &registry.identifier(type_.name_id).name;
+    let type_name = &registry.get(type_.name_id).name;
     context.try_push_name(type_name.js_name());
     let type_js_name = context.js_name(DbIndex(0));
 
@@ -205,16 +205,16 @@ fn generate_code_for_variant_constructor(
     variant_id: NodeId<light::Variant>,
     type_constructor_js_name: &ValidJsIdentifierName,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
-    let variant = registry.variant(variant_id);
+    let variant = registry.get(variant_id);
     let arity = variant.param_list_id.len;
 
     let param_js_names: Vec<ValidJsIdentifierName> = {
-        let type_param_ids = registry.param_list(variant.param_list_id);
+        let type_param_ids = registry.get_list(variant.param_list_id);
         let param_js_names = type_param_ids
             .iter()
             .map(|id| {
-                let param = registry.param(*id);
-                let param_name = &registry.identifier(param.name_id).name;
+                let param = registry.get(*id);
+                let param_name = &registry.get(param.name_id).name;
                 context.try_push_name(param_name.js_name());
                 let param_js_name = context.js_name(DbIndex(0));
                 param_js_name
@@ -230,7 +230,7 @@ fn generate_code_for_variant_constructor(
             // (at the time of writing, the type checker isn't complete,
             // so we don't have that information during code generation).
             // Later, we can fix this.
-            unescaped: registry.identifier(variant.name_id).name.js_name().0,
+            unescaped: registry.get(variant.name_id).name.js_name().0,
         }));
         items.extend(
             param_js_names
@@ -242,7 +242,7 @@ fn generate_code_for_variant_constructor(
 
     context.pop_n(arity);
 
-    let variant_name = &registry.identifier(variant.name_id).name;
+    let variant_name = &registry.get(variant.name_id).name;
     context.try_push_name(ValidJsIdentifierName(format!(
         "{}_{}",
         &type_constructor_js_name.0,
@@ -266,11 +266,11 @@ fn generate_code_for_let_statement(
     context: &mut Context,
     let_id: NodeId<light::LetStatement>,
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
-    let let_statement = registry.let_statement(let_id);
+    let let_statement = registry.get(let_id);
 
     let value = generate_code_for_expression(registry, context, let_statement.value_id)?;
 
-    let let_statement_name = &registry.identifier(let_statement.name_id).name;
+    let let_statement_name = &registry.get(let_statement.name_id).name;
     context.try_push_name(let_statement_name.js_name());
     let let_statement_js_name = context.js_name(DbIndex(0));
     Ok(ConstStatement {
@@ -313,7 +313,7 @@ fn generate_code_for_call(
 ) -> Result<Expression, CompileToJavaScriptError> {
     let callee = generate_code_for_expression(registry, context, call.callee_id)?;
     let args = {
-        let arg_ids = registry.expression_list(call.arg_list_id);
+        let arg_ids = registry.get_list(call.arg_list_id);
         arg_ids
             .iter()
             .map(|arg_id| generate_code_for_expression(registry, context, *arg_id))
@@ -329,18 +329,18 @@ fn generate_code_for_fun(
 ) -> Result<Expression, CompileToJavaScriptError> {
     let param_arity = fun.param_list_id.len;
     let param_js_names = registry
-        .param_list(fun.param_list_id)
+        .get_list(fun.param_list_id)
         .iter()
         .map(|id| {
-            let param = registry.param(*id);
-            let param_name = &registry.identifier(param.name_id).name;
+            let param = registry.get(*id);
+            let param_name = &registry.get(param.name_id).name;
             context.try_push_name(param_name.js_name());
             let param_js_name = context.js_name(DbIndex(0));
             param_js_name
         })
         .collect();
     let fun_js_name = {
-        let fun_name = &registry.identifier(fun.name_id).name;
+        let fun_name = &registry.get(fun.name_id).name;
         context.try_push_name(fun_name.js_name());
         context.js_name(DbIndex(0))
     };
@@ -363,10 +363,10 @@ fn generate_code_for_match(
 
     let matchee = generate_code_for_expression(registry, context, match_.matchee_id)?;
     let cases = registry
-        .match_case_list(match_.case_list_id)
+        .get_list(match_.case_list_id)
         .iter()
         .map(|case_id| {
-            let case = registry.match_case(*case_id);
+            let case = registry.get(*case_id);
             generate_code_for_match_case(registry, context, case, &matchee_temp_name)
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -388,7 +388,7 @@ fn generate_code_for_match_case(
     matchee_js_name: &ValidJsIdentifierName,
 ) -> Result<IfStatement, CompileToJavaScriptError> {
     let condition = {
-        let case_js_name = registry.identifier(case.variant_name_id).name.js_name();
+        let case_js_name = registry.get(case.variant_name_id).name.js_name();
         Expression::BinaryOp(Box::new(BinaryOp {
             left: Expression::BinaryOp(Box::new(BinaryOp {
                 left: Expression::Identifier(matchee_js_name.clone()),
@@ -407,12 +407,12 @@ fn generate_code_for_match_case(
         let mut body = Vec::with_capacity(arity + 1);
 
         for (param_index, param_id) in registry
-            .identifier_list(case.param_list_id)
+            .get_list(case.param_list_id)
             .iter()
             .copied()
             .enumerate()
         {
-            let param_name = &registry.identifier(param_id).name;
+            let param_name = &registry.get(param_id).name;
             context.try_push_name(param_name.js_name());
             let param_js_name = context.js_name(DbIndex(0));
             let field_index = i32::try_from(1 + param_index)

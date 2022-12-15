@@ -38,11 +38,11 @@ fn component_identifier_names(
     registry: &NodeRegistry,
     name_id: NodeId<NameExpression>,
 ) -> Vec<IdentifierName> {
-    let name = registry.name_expression(name_id);
+    let name = registry.get(name_id);
     registry
-        .identifier_list(name.component_list_id)
+        .get_list(name.component_list_id)
         .iter()
-        .map(|component_id| registry.identifier(*component_id).name.clone())
+        .map(|component_id| registry.get(*component_id).name.clone())
         .collect()
 }
 
