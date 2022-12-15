@@ -32,7 +32,7 @@ impl Accept for UnfinishedMatchCase {
                         *self = UnfinishedMatchCase::AwaitingOutput(
                             dot_token.clone(),
                             variant_name.clone(),
-                            vec![],
+                            None,
                         );
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
                             UnfinishedDelimitedExpression::Empty,
@@ -88,18 +88,17 @@ impl Accept for UnfinishedMatchCase {
                             AcceptResult::Error(ParseError::UnexpectedToken(token))
                         }
                     }
-                    TokenKind::RParen => {
-                        if params.len() == 0 {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
-                        } else {
+                    TokenKind::RParen => match NonEmptyVec::try_from(params.clone()) {
+                        Ok(params) => {
                             *self = UnfinishedMatchCase::AwaitingOutput(
                                 dot_token.clone(),
                                 variant_name.clone(),
-                                params.clone(),
+                                Some(params),
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                    }
+                        Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    },
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 other_item => unexpected_finished_item(&other_item),

@@ -1,6 +1,6 @@
 use crate::data::{
     bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
-    simplified_ast as unbound, FileId, TextSpan,
+    non_empty_vec::NonEmptyVec, simplified_ast as unbound, FileId, TextSpan,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -29,12 +29,18 @@ impl FileItem {
 pub struct TypeStatement {
     pub span: Option<TextSpan>,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: Option<NonEmptyParamVec>,
     pub variants: Vec<Variant>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Param {
+pub enum NonEmptyParamVec {
+    Unlabeled(NonEmptyVec<UnlabeledParam>),
+    Labeled(NonEmptyVec<LabeledParam>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UnlabeledParam {
     pub span: Option<TextSpan>,
     pub is_dashed: bool,
     pub name: Identifier,
@@ -42,10 +48,21 @@ pub struct Param {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledParam {
+    pub span: Option<TextSpan>,
+    pub label: ParamLabel,
+    pub is_dashed: bool,
+    pub name: Identifier,
+    pub type_: Expression,
+}
+
+pub use crate::data::simplified_ast::ParamLabel;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
     pub span: Option<TextSpan>,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: Option<NonEmptyParamVec>,
     pub return_type: Expression,
 }
 
@@ -82,7 +99,7 @@ impl Expression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     pub span: Option<TextSpan>,
-    pub components: Vec<Identifier>,
+    pub components: NonEmptyVec<Identifier>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
 }
@@ -118,14 +135,14 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: Option<TextSpan>,
     pub callee: Expression,
-    pub args: Vec<Expression>,
+    pub args: NonEmptyVec<Expression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
     pub span: Option<TextSpan>,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: NonEmptyParamVec,
     pub return_type: Expression,
     pub body: Expression,
     /// This is used by the type checker to
@@ -154,14 +171,14 @@ pub struct MatchCase {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: Option<TextSpan>,
-    pub params: Vec<Param>,
+    pub params: NonEmptyParamVec,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: Option<TextSpan>,
-    pub assertions: Vec<CheckAssertion>,
+    pub assertions: NonEmptyVec<CheckAssertion>,
     pub output: Expression,
 }
 

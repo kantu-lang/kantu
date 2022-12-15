@@ -1,13 +1,13 @@
-use crate::data::{FileId, TextSpan};
+use crate::data::{non_empty_vec::NonEmptyVec, FileId, TextSpan};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
     pub span: TextSpan,
     pub id: FileId,
     pub items: Vec<FileItem>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
     Type(TypeStatement),
     Let(LetStatement),
@@ -22,15 +22,15 @@ impl FileItem {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: Option<NonEmptyVec<Param>>,
     pub variants: Vec<Variant>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Param {
     pub span: TextSpan,
     pub label: Option<ParamLabel>,
@@ -39,28 +39,28 @@ pub struct Param {
     pub type_: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ParamLabel {
     Implicit,
     Explicit(Identifier),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: Option<NonEmptyVec<Param>>,
     pub return_type: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
     pub span: TextSpan,
     pub name: Identifier,
     pub value: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
     Identifier(Identifier),
     Dot(Box<Dot>),
@@ -103,59 +103,59 @@ pub enum ReservedIdentifierName {
     Underscore,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Dot {
     pub span: TextSpan,
     pub left: Expression,
     pub right: Identifier,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
     pub span: TextSpan,
     pub callee: Expression,
-    pub args: Vec<Expression>,
+    pub args: NonEmptyVec<Expression>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: NonEmptyVec<Param>,
     pub return_type: Expression,
     pub body: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Match {
     pub span: TextSpan,
     pub matchee: Expression,
     pub cases: Vec<MatchCase>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MatchCase {
     pub span: TextSpan,
     pub variant_name: Identifier,
-    pub params: Vec<Identifier>,
+    pub params: Option<NonEmptyVec<Identifier>>,
     pub output: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: TextSpan,
-    pub params: Vec<Param>,
+    pub params: NonEmptyVec<Param>,
     pub output: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: TextSpan,
-    pub assertions: Vec<CheckAssertion>,
+    pub assertions: NonEmptyVec<CheckAssertion>,
     pub output: Expression,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CheckAssertion {
     pub span: TextSpan,
     pub kind: CheckAssertionKind,
@@ -169,7 +169,7 @@ pub enum CheckAssertionKind {
     NormalForm,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum GoalKwOrExpression {
     GoalKw { span: TextSpan },
     Expression(Expression),
@@ -184,7 +184,7 @@ impl GoalKwOrExpression {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum QuestionMarkOrExpression {
     QuestionMark { span: TextSpan },
     Expression(Expression),

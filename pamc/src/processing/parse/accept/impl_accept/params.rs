@@ -59,23 +59,25 @@ impl Accept for UnfinishedParams {
                     ))
                 }
                 TokenKind::RParen => {
-                    if self.params.is_empty() || self.pending_dash.is_some() {
+                    if self.pending_dash.is_some() {
                         AcceptResult::Error(ParseError::UnexpectedToken(token))
                     } else {
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
-                            self.first_token.clone(),
-                            self.params.clone(),
-                        ))
+                        match NonEmptyVec::try_from(self.params.clone()) {
+                            Ok(params) => AcceptResult::PopAndContinueReducing(
+                                FinishedStackItem::Params(self.first_token.clone(), params),
+                            ),
+                            Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                        }
                     }
                 }
                 _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
             },
             FinishedStackItem::Param(_, param, end_delimiter) => {
-                self.params.push(param);
+                let params = NonEmptyVec::from_pushed(self.params.clone(), param);
                 match end_delimiter.raw().kind {
                     TokenKind::Comma => AcceptResult::ContinueToNextToken,
                     TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::Params(self.first_token.clone(), self.params.clone()),
+                        FinishedStackItem::Params(self.first_token.clone(), params),
                     ),
                     _other_end_delimiter => {
                         AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
