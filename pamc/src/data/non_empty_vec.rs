@@ -125,6 +125,12 @@ impl<T> NonEmptyVec<T> {
         }
     }
 
+    pub fn enumerate_into_mapped<U>(self, f: impl FnMut((usize, T)) -> U) -> NonEmptyVec<U> {
+        NonEmptyVec {
+            raw: self.raw.into_iter().enumerate().map(f).collect(),
+        }
+    }
+
     pub fn try_into_mapped<U, E>(
         self,
         f: impl FnMut(T) -> Result<U, E>,

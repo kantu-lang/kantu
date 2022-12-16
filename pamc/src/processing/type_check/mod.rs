@@ -3,6 +3,7 @@ use crate::data::{
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    non_empty_vec::OptionalNonEmptyVecLen,
 };
 
 use eval::*;
