@@ -8,6 +8,9 @@ impl Accept for UnfinishedParams {
                     if self.pending_dash.is_some() {
                         // A tilde can never come after a dash.
                         AcceptResult::Error(ParseError::UnexpectedToken(token))
+                    } else if self.pending_tilde.is_some() {
+                        // Double tildes are forbidden.
+                        AcceptResult::Error(ParseError::UnexpectedToken(token))
                     } else {
                         self.pending_tilde = Some(token);
                         AcceptResult::ContinueToNextToken
@@ -74,6 +77,7 @@ impl Accept for UnfinishedParams {
             },
             FinishedStackItem::Param(_, param, end_delimiter) => {
                 let params = NonEmptyVec::from_pushed(self.params.clone(), param);
+                self.params = params.to_vec();
                 match end_delimiter.raw().kind {
                     TokenKind::Comma => AcceptResult::ContinueToNextToken,
                     TokenKind::RParen => AcceptResult::PopAndContinueReducing(
