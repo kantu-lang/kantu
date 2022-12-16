@@ -164,6 +164,24 @@ impl<T> IntoIterator for NonEmptyVec<T> {
     }
 }
 
+impl<'a, T> IntoIterator for &'a NonEmptyVec<T> {
+    type Item = &'a T;
+    type IntoIter = std::slice::Iter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.raw.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut NonEmptyVec<T> {
+    type Item = &'a mut T;
+    type IntoIter = std::slice::IterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.raw.iter_mut()
+    }
+}
+
 impl<T> Index<usize> for NonEmptyVec<T> {
     type Output = T;
 

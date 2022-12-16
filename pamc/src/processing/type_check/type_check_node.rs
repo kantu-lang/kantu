@@ -568,7 +568,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     expected: expected_case_param_arity.get(),
                     actual: 0,
                 });
-            }
+            };
             if case_param_list_id.len != expected_case_param_arity {
                 return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
                     case_id,
@@ -577,12 +577,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                 });
             }
 
-            let normalized_param_ids = state
-                .registry.get_list(normalized_forall.param_list_id)
-                .to_vec();
-            for &normalized_param_id in &normalized_param_ids {
-                let normalized_param = state.registry.get(normalized_param_id);
-                let param_type_id = NormalFormId::unchecked_new(normalized_param.type_id);
+            let param_type_ids = get_param_type_ids(state, normalized_forall.param_list_id)
+                // This is safe because every param type of a normal form Forall
+                // is also a normal form itself.
+                .into_mapped(NormalFormId::unchecked_new);
+            for &param_type_id in &param_type_ids {
                 state.context.push(ContextEntry {
                     type_id: param_type_id,
                     definition: ContextEntryDefinition::Uninterpreted,
