@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::{
     data::{unsimplified_ast::*, FileId},
     processing::{lex::lex, parse::parse},
@@ -64,9 +66,27 @@ fn dot3() {
 #[test]
 fn call() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/call.x.pht");
-    expect_expression(src, |expression| match expression {
-        Expression::Call(_) => {}
-        other => panic!("Unexpected expression {:?}", other),
+    expect_expression(src, |expression| {
+        match &expression {
+            Expression::Call(call) => {
+                assert_eq!(3, call.args.len());
+                match (&call.callee, call.args.deref()) {
+                    (
+                        Expression::Dot(callee),
+                        [Expression::Identifier(arg0), Expression::Dot(arg1), Expression::Identifier(arg2)],
+                    ) => {
+                        assert_eq!(IdentifierName::Standard("b".to_string()), callee.right.name);
+                        assert_eq!(IdentifierName::Standard("c".to_string()), arg0.name);
+                        assert_eq!(IdentifierName::Standard("e".to_string()), arg1.right.name);
+                        assert_eq!(IdentifierName::Standard("f".to_string()), arg2.name);
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
+        panic!("Unexpected expression {:?}", expression);
     });
 }
 
