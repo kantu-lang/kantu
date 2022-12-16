@@ -1,6 +1,6 @@
 use crate::data::{
     light_ast::*,
-    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
     TextSpan,
 };
 
@@ -558,7 +558,7 @@ impl NodeRegistry {
             .map(|list| T::subregistry_mut(self).add(list))
     }
 
-    pub fn get_list<T>(&self, id: NonEmptyListId<T>) -> &[T]
+    pub fn get_list<T>(&self, id: NonEmptyListId<T>) -> NonEmptySlice<'_, T>
     where
         T: RegisterableList + Clone + Eq + Hash,
     {
@@ -570,7 +570,7 @@ impl NodeRegistry {
         T: RegisterableList + Clone + Eq + Hash,
     {
         if let Some(id) = id {
-            self.get_list(id)
+            self.get_list(id).into()
         } else {
             &[]
         }
@@ -855,8 +855,8 @@ mod list_subregistry {
     }
 
     impl<T> ListSubregistry<T> {
-        pub fn get(&self, id: NonEmptyListId<T>) -> &[T] {
-            &self.flattened_items[id.start..(id.start + id.len.get())]
+        pub fn get(&self, id: NonEmptyListId<T>) -> NonEmptySlice<'_, T> {
+            NonEmptySlice::new(&self.flattened_items, id.start, id.len)
         }
     }
 

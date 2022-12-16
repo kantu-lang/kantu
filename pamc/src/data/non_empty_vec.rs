@@ -247,3 +247,95 @@ impl<T> OptionalNonEmptyVecLen for Option<NonEmptyVec<T>> {
         self.as_ref().map(|v| v.len()).unwrap_or(0)
     }
 }
+
+impl<T> NonEmptyVec<T> {
+    pub fn as_non_empty_slice(&self) -> NonEmptySlice<'_, T> {
+        NonEmptySlice { raw: &self.raw }
+    }
+
+    pub fn as_non_empty_mut(&self) -> NonEmptySliceMut<'_, T> {
+        NonEmptySliceMut { raw: &mut self.raw }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct NonEmptySlice<'a, T> {
+    raw: &'a [T],
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+pub struct NonEmptySliceMut<'a, T> {
+    raw: &'a mut [T],
+}
+
+impl<'a, T> Deref for NonEmptySlice<'a, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.raw
+    }
+}
+
+impl<'a, T> Deref for NonEmptySliceMut<'a, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.raw
+    }
+}
+
+impl<'a, T> DerefMut for NonEmptySliceMut<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.raw
+    }
+}
+
+impl<'a, T> NonEmptySlice<'a, T> {
+    pub fn new(slice: &'a [T], start: usize, len: NonZeroUsize) -> Self {
+        Self {
+            raw: &slice[start..start + len.get()],
+        }
+    }
+}
+
+impl<'a, T> NonEmptySliceMut<'a, T> {
+    pub fn new(slice: &'a mut [T], start: usize, len: NonZeroUsize) -> Self {
+        Self {
+            raw: &mut slice[start..start + len.get()],
+        }
+    }
+}
+
+impl<'a, T> From<NonEmptySlice<'a, T>> for &'a [T] {
+    fn from(value: NonEmptySlice<'a, T>) -> Self {
+        value.raw
+    }
+}
+
+impl<'a, T> From<NonEmptySliceMut<'a, T>> for &'a mut [T] {
+    fn from(value: NonEmptySliceMut<'a, T>) -> Self {
+        value.raw
+    }
+}
+
+impl<'a, T> NonEmptySlice<'a, T> {
+    pub fn to_non_empty_vec(&self) -> NonEmptyVec<T>
+    where
+        T: Clone,
+    {
+        NonEmptyVec {
+            raw: self.raw.to_vec(),
+        }
+    }
+}
+
+impl<'a, T> NonEmptySliceMut<'a, T> {
+    pub fn to_non_empty_vec(&self) -> NonEmptyVec<T>
+    where
+        T: Clone,
+    {
+        NonEmptyVec {
+            raw: self.raw.to_vec(),
+        }
+    }
+}

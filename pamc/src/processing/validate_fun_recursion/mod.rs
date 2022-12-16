@@ -76,7 +76,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<NodeId<TypeStatement>, TaintedIllegalFunRecursionError> {
     let type_statement = registry.get(type_statement_id).clone();
-    let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
+    let param_list_id = validate_fun_recursion_in_optional_params_and_leave_in_context_dirty(
         context,
         registry,
         type_statement.param_list_id,
@@ -109,7 +109,7 @@ fn validate_fun_recursion_in_variant_dirty(
 ) -> Result<NodeId<Variant>, TaintedIllegalFunRecursionError> {
     let variant = registry.get(variant_id).clone();
     let arity = variant.param_list_id.len();
-    let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
+    let param_list_id = validate_fun_recursion_in_optional_params_and_leave_in_context_dirty(
         context,
         registry,
         variant.param_list_id,
@@ -321,28 +321,49 @@ fn validate_fun_recursion_in_fun_dirty(
     let return_type_id =
         validate_fun_recursion_in_expression_dirty(context, registry, fun.return_type_id)?;
 
-    let reference_restriction = {
-        let param_ids = registry.get_list(fun.param_list_id);
-        let decreasing_param_position = param_ids.iter().position(|param_id| {
-            let param = registry.get(*param_id);
-            param.is_dashed
-        });
-        match decreasing_param_position {
-            Some(param_position) => {
-                let superstruct_db_index = DbIndex(param_ids.len() - param_position - 1);
-                let superstruct_db_level = context.index_to_level(superstruct_db_index);
-                ReferenceRestriction::MustCallWithSubstruct {
-                    superstruct_db_level,
-                    arg_position: param_position,
+    let reference_restriction = match fun.param_list_id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            let decreasing_param_position = param_ids.iter().position(|param_id| {
+                let param = registry.get(*param_id);
+                param.is_dashed
+            });
+            match decreasing_param_position {
+                Some(param_position) => {
+                    let superstruct_db_index = DbIndex(param_ids.len() - param_position - 1);
+                    let superstruct_db_level = context.index_to_level(superstruct_db_index);
+                    ReferenceRestriction::MustCallWithSubstruct {
+                        superstruct_db_level,
+                        arg_position: param_position,
+                    }
                 }
+                None => ReferenceRestriction::CannotCall,
             }
-            None => ReferenceRestriction::CannotCall,
+        }
+        NonEmptyParamListId::Labeled(param_list_id) => {
+            // TODO: We should use label instead of index.
+            let param_ids = registry.get_list(param_list_id);
+            let decreasing_param_position = param_ids.iter().position(|param_id| {
+                let param = registry.get(*param_id);
+                param.is_dashed
+            });
+            match decreasing_param_position {
+                Some(param_position) => {
+                    let superstruct_db_index = DbIndex(param_ids.len() - param_position - 1);
+                    let superstruct_db_level = context.index_to_level(superstruct_db_index);
+                    ReferenceRestriction::MustCallWithSubstruct {
+                        superstruct_db_level,
+                        arg_position: param_position,
+                    }
+                }
+                None => ReferenceRestriction::CannotCall,
+            }
         }
     };
 
     context.push(ContextEntry::Fun(reference_restriction))?;
     let body_id = validate_fun_recursion_in_expression_dirty(context, registry, fun.body_id)?;
-    context.pop_n(param_list_id.len + 1);
+    context.pop_n(param_list_id.len() + 1);
 
     Ok(registry.add(Fun {
         id: dummy_id(),
@@ -355,29 +376,92 @@ fn validate_fun_recursion_in_fun_dirty(
     }))
 }
 
+fn validate_fun_recursion_in_optional_params_and_leave_in_context_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_list_id: Option<NonEmptyParamListId>,
+) -> Result<Option<NonEmptyParamListId>, TaintedIllegalFunRecursionError> {
+    param_list_id
+        .map(|param_list_id| {
+            validate_fun_recursion_in_params_and_leave_in_context_dirty(
+                context,
+                registry,
+                param_list_id,
+            )
+        })
+        .transpose()
+}
+
 fn validate_fun_recursion_in_params_and_leave_in_context_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Result<ListId<NodeId<Param>>, TaintedIllegalFunRecursionError> {
+    param_list_id: NonEmptyParamListId,
+) -> Result<NonEmptyParamListId, TaintedIllegalFunRecursionError> {
+    Ok(match param_list_id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => NonEmptyParamListId::Unlabeled(
+            validate_fun_recursion_in_unlabeled_params_and_leave_in_context_dirty(
+                context,
+                registry,
+                param_list_id,
+            )?,
+        ),
+        NonEmptyParamListId::Labeled(param_list_id) => NonEmptyParamListId::Labeled(
+            validate_fun_recursion_in_labeled_params_and_leave_in_context_dirty(
+                context,
+                registry,
+                param_list_id,
+            )?,
+        ),
+    })
+}
+
+fn validate_fun_recursion_in_unlabeled_params_and_leave_in_context_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> Result<NonEmptyListId<NodeId<UnlabeledParam>>, TaintedIllegalFunRecursionError> {
     let param_ids = registry
         .get_list(param_list_id)
-        .to_vec()
-        .into_iter()
-        .map(|param_id| -> Result<_, TaintedIllegalFunRecursionError> {
+        .to_non_empty_vec()
+        .try_into_mapped(|param_id| -> Result<_, TaintedIllegalFunRecursionError> {
             let param = registry.get(param_id).clone();
             let type_id =
                 validate_fun_recursion_in_expression_dirty(context, registry, param.type_id)?;
             context.push(ContextEntry::NoInformation)?;
-            Ok(registry.add(Param {
+            Ok(registry.add(UnlabeledParam {
                 id: dummy_id(),
                 span: param.span,
                 name_id: param.name_id,
                 type_id,
                 is_dashed: param.is_dashed,
             }))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+        })?;
+
+    Ok(registry.add_list(param_ids))
+}
+
+fn validate_fun_recursion_in_labeled_params_and_leave_in_context_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> Result<NonEmptyListId<NodeId<LabeledParam>>, TaintedIllegalFunRecursionError> {
+    let param_ids = registry
+        .get_list(param_list_id)
+        .to_non_empty_vec()
+        .try_into_mapped(|param_id| -> Result<_, TaintedIllegalFunRecursionError> {
+            let param = registry.get(param_id).clone();
+            let type_id =
+                validate_fun_recursion_in_expression_dirty(context, registry, param.type_id)?;
+            context.push(ContextEntry::NoInformation)?;
+            Ok(registry.add(LabeledParam {
+                id: dummy_id(),
+                span: param.span,
+                label_id: param.label_id,
+                name_id: param.name_id,
+                type_id,
+                is_dashed: param.is_dashed,
+            }))
+        })?;
 
     Ok(registry.add_list(param_ids))
 }
@@ -399,14 +483,14 @@ fn validate_fun_recursion_in_match_dirty(
     };
 
     let case_ids = registry
-        .get_list(match_.case_list_id)
+        .get_possibly_empty_list(match_.case_list_id)
         .to_vec()
         .into_iter()
         .map(|case_id| {
             validate_fun_recursion_in_match_case_dirty(context, registry, case_id, matchee_db_index)
         })
         .collect::<Result<Vec<_>, _>>()?;
-    let case_list_id = registry.add_list(case_ids);
+    let case_list_id = registry.add_possibly_empty_list(case_ids);
 
     Ok(registry.add(Match {
         id: dummy_id(),
@@ -423,7 +507,7 @@ fn validate_fun_recursion_in_match_case_dirty(
     matchee_db_index: Option<DbIndex>,
 ) -> Result<NodeId<MatchCase>, TaintedIllegalFunRecursionError> {
     let case = registry.get(case_id).clone();
-    let case_arity = case.param_list_id.len;
+    let case_arity = case.param_list_id.len();
 
     if let Some(matchee_db_index) = matchee_db_index {
         let matchee_db_level = context.index_to_level(matchee_db_index);
@@ -460,7 +544,7 @@ fn validate_fun_recursion_in_forall_dirty(
     forall_id: NodeId<Forall>,
 ) -> Result<NodeId<Forall>, TaintedIllegalFunRecursionError> {
     let forall = registry.get(forall_id).clone();
-    let arity = forall.param_list_id.len;
+    let arity = forall.param_list_id.len();
 
     let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
         context,
@@ -502,16 +586,15 @@ fn validate_fun_recursion_in_check_dirty(
 fn validate_fun_recursion_in_check_assertions_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    id: ListId<NodeId<CheckAssertion>>,
-) -> Result<ListId<NodeId<CheckAssertion>>, TaintedIllegalFunRecursionError> {
-    let assertion_ids = registry
-        .get_list(id)
-        .to_vec()
-        .into_iter()
-        .map(|assertion_id| {
-            validate_fun_recursion_in_check_assertion_dirty(context, registry, assertion_id)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    id: NonEmptyListId<NodeId<CheckAssertion>>,
+) -> Result<NonEmptyListId<NodeId<CheckAssertion>>, TaintedIllegalFunRecursionError> {
+    let assertion_ids =
+        registry
+            .get_list(id)
+            .to_non_empty_vec()
+            .try_into_mapped(|assertion_id| {
+                validate_fun_recursion_in_check_assertion_dirty(context, registry, assertion_id)
+            })?;
     Ok(registry.add_list(assertion_ids))
 }
 
