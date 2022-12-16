@@ -13,27 +13,51 @@ fn expect_expression(src: &str, panicker: impl Fn(Expression)) {
 #[test]
 fn dot1() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot1.x.pht");
-    expect_expression(src, |expression| match expression {
-        Expression::Identifier(_) => {}
-        other => panic!("Unexpected expression {:?}", other),
+    expect_expression(src, |expression| match &expression {
+        Expression::Identifier(name) => {
+            assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
+        }
+        _ => panic!("Unexpected expression {:?}", expression),
     });
 }
 
 #[test]
 fn dot2() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot2.x.pht");
-    expect_expression(src, |expression| match expression {
-        Expression::Dot(_) => {}
-        other => panic!("Unexpected expression {:?}", other),
+    expect_expression(src, |expression| match &expression {
+        Expression::Dot(dot) => {
+            assert_eq!(&IdentifierName::Standard("b".to_string()), &dot.right.name);
+            match &dot.left {
+                Expression::Identifier(name) => {
+                    assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
+                }
+                _ => panic!("Unexpected expression {:?}", expression),
+            }
+        }
+        _ => panic!("Unexpected expression {:?}", expression),
     });
 }
 
 #[test]
 fn dot3() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot3.x.pht");
-    expect_expression(src, |expression| match expression {
-        Expression::Dot(_) => {}
-        other => panic!("Unexpected expression {:?}", other),
+    expect_expression(src, |expression| match &expression {
+        Expression::Dot(dot) => {
+            assert_eq!(&IdentifierName::Standard("c".to_string()), &dot.right.name);
+            match &dot.left {
+                Expression::Dot(left) => {
+                    assert_eq!(&IdentifierName::Standard("b".to_string()), &dot.right.name);
+                    match &left.left {
+                        Expression::Identifier(name) => {
+                            assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
+                        }
+                        _ => panic!("Unexpected expression {:?}", expression),
+                    }
+                }
+                _ => panic!("Unexpected expression {:?}", expression),
+            }
+        }
+        _ => panic!("Unexpected expression {:?}", expression),
     });
 }
 
