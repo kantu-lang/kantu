@@ -120,7 +120,7 @@ pub(super) fn is_left_type_assignable_to_right_type(
 
 fn is_term_equal_to_a_trivially_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
     if let Some(adt) = try_as_normal_form_adt_expression(state, term_id) {
-        adt.variant_name_list_id.len == 0
+        adt.variant_name_list_id.len() == 0
     } else {
         false
     }
@@ -367,54 +367,11 @@ fn is_left_inclusive_subterm_of_right(
         ExpressionId::Fun(right_id) => {
             let right = state.registry.get(right_id).clone();
 
-            let (is_left_inclusive_subterm_of_right_param, right_param_arity) = match right
-                .param_list_id
-            {
-                NonEmptyParamListId::Unlabeled(param_list_id) => {
-                    let right_param_ids = state.registry.get_list(param_list_id).to_vec();
-                    let is_left_inclusive_subterm_of_right_param = right_param_ids
-                        .iter()
-                        .copied()
-                        .enumerate()
-                        .any(|(right_param_index, right_param_id)| {
-                            let shifted_left = left.upshift(right_param_index, state.registry);
-                            let right_param_type_id = state.registry.get(right_param_id).type_id;
-                            is_left_inclusive_subterm_of_right(
-                                state,
-                                shifted_left,
-                                right_param_type_id,
-                            )
-                        });
-                    (
-                        is_left_inclusive_subterm_of_right_param,
-                        right_param_ids.len(),
-                    )
-                }
-                NonEmptyParamListId::Labeled(param_list_id) => {
-                    let right_param_ids = state.registry.get_list(param_list_id).to_vec();
-                    let is_left_inclusive_subterm_of_right_param = right_param_ids
-                        .iter()
-                        .copied()
-                        .enumerate()
-                        .any(|(right_param_index, right_param_id)| {
-                            let shifted_left = left.upshift(right_param_index, state.registry);
-                            let right_param_type_id = state.registry.get(right_param_id).type_id;
-                            is_left_inclusive_subterm_of_right(
-                                state,
-                                shifted_left,
-                                right_param_type_id,
-                            )
-                        });
-                    (
-                        is_left_inclusive_subterm_of_right_param,
-                        right_param_ids.len(),
-                    )
-                }
-            };
-
-            if is_left_inclusive_subterm_of_right_param {
+            if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
                 return true;
             }
+
+            let right_param_arity = right.param_list_id.len();
 
             {
                 let shifted_left = left.upshift(right_param_arity, state.registry);
@@ -444,7 +401,7 @@ fn is_left_inclusive_subterm_of_right(
                 .get_possibly_empty_list(right.case_list_id)
                 .to_vec();
             if right_case_ids.iter().any(|&right_case_id| {
-                let case_arity = state.registry.get(right_case_id).param_list_id.len;
+                let case_arity = state.registry.get(right_case_id).param_list_id.len();
                 let shifted_left = left.upshift(case_arity, state.registry);
                 let right_case_output_id = state.registry.get(right_case_id).output_id;
                 is_left_inclusive_subterm_of_right(state, shifted_left, right_case_output_id)
@@ -457,19 +414,14 @@ fn is_left_inclusive_subterm_of_right(
         ExpressionId::Forall(right_id) => {
             let right = state.registry.get(right_id).clone();
 
-            let right_param_ids = state.registry.get_list(right.param_list_id).to_vec();
-            if right_param_ids.iter().copied().enumerate().any(
-                |(right_param_index, right_param_id)| {
-                    let shifted_left = left.upshift(right_param_index, state.registry);
-                    let right_param_type_id = state.registry.get(right_param_id).type_id;
-                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
-                },
-            ) {
+            if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
                 return true;
             }
 
+            let right_param_arity = right.param_list_id.len();
+
             {
-                let shifted_left = left.upshift(right.param_list_id.len, state.registry);
+                let shifted_left = left.upshift(right_param_arity, state.registry);
                 if is_left_inclusive_subterm_of_right(state, shifted_left, right.output_id) {
                     return true;
                 }
@@ -489,6 +441,35 @@ fn is_left_inclusive_subterm_of_right(
             }
 
             false
+        }
+    }
+}
+
+fn is_left_subterm_of_any_right_param_type(
+    state: &mut State,
+    left: ExpressionId,
+    right: NonEmptyParamListId,
+) -> bool {
+    match right {
+        NonEmptyParamListId::Unlabeled(param_list_id) => {
+            let right_param_ids = state.registry.get_list(param_list_id).to_vec();
+            right_param_ids.iter().copied().enumerate().any(
+                |(right_param_index, right_param_id)| {
+                    let shifted_left = left.upshift(right_param_index, state.registry);
+                    let right_param_type_id = state.registry.get(right_param_id).type_id;
+                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
+                },
+            )
+        }
+        NonEmptyParamListId::Labeled(param_list_id) => {
+            let right_param_ids = state.registry.get_list(param_list_id).to_vec();
+            right_param_ids.iter().copied().enumerate().any(
+                |(right_param_index, right_param_id)| {
+                    let shifted_left = left.upshift(right_param_index, state.registry);
+                    let right_param_type_id = state.registry.get(right_param_id).type_id;
+                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
+                },
+            )
         }
     }
 }
@@ -525,16 +506,10 @@ fn is_left_inclusive_subterm_of_any_right_assertion(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PossibleArgListId {
-    Nullary,
-    Some(ListId<ExpressionId>),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NormalFormAdtExpression {
     pub type_name_id: NodeId<NameExpression>,
-    pub variant_name_list_id: ListId<NodeId<Identifier>>,
-    pub arg_list_id: PossibleArgListId,
+    pub variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    pub arg_list_id: Option<NonEmptyListId<ExpressionId>>,
 }
 
 /// If the provided expression is has an ADT constructor at
@@ -554,7 +529,7 @@ pub(super) fn try_as_normal_form_adt_expression(
                 } => Some(NormalFormAdtExpression {
                     type_name_id: name_id,
                     variant_name_list_id,
-                    arg_list_id: PossibleArgListId::Nullary,
+                    arg_list_id: None,
                 }),
                 _ => None,
             }
@@ -571,7 +546,7 @@ pub(super) fn try_as_normal_form_adt_expression(
                         } => Some(NormalFormAdtExpression {
                             type_name_id: name_id,
                             variant_name_list_id: variant_name_list_id,
-                            arg_list_id: PossibleArgListId::Some(call.arg_list_id),
+                            arg_list_id: Some(call.arg_list_id),
                         }),
                         _ => None,
                     }
@@ -590,15 +565,13 @@ pub(super) fn try_as_normal_form_adt_expression(
 pub(super) fn try_as_variant_expression(
     state: &mut State,
     expression_id: ExpressionId,
-) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
+) -> Option<(NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>)> {
     match expression_id {
         ExpressionId::Name(name_id) => {
             let db_index = state.registry.get(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
             match definition {
-                ContextEntryDefinition::Variant { name_id } => {
-                    Some((name_id, PossibleArgListId::Nullary))
-                }
+                ContextEntryDefinition::Variant { name_id } => Some((name_id, None)),
                 _ => None,
             }
         }
@@ -610,7 +583,7 @@ pub(super) fn try_as_variant_expression(
                     let definition = state.context.get_definition(db_index, state.registry);
                     match definition {
                         ContextEntryDefinition::Variant { name_id } => {
-                            Some((name_id, PossibleArgListId::Some(call.arg_list_id)))
+                            Some((name_id, Some(call.arg_list_id)))
                         }
                         _ => None,
                     }
@@ -791,14 +764,8 @@ fn expand_dynamic_adt_substitution_shallow(
         return DynamicSubstitutionExpansionResult::Exploded;
     }
 
-    let left_args = match left.arg_list_id {
-        PossibleArgListId::Some(id) => state.registry.get_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
-    let right_args = match right.arg_list_id {
-        PossibleArgListId::Some(id) => state.registry.get_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
+    let left_args = state.registry.get_possibly_empty_list(left.arg_list_id);
+    let right_args = state.registry.get_possibly_empty_list(right.arg_list_id);
     assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
     let arg_substitutions = left_args
         .iter()
@@ -818,8 +785,8 @@ fn expand_dynamic_adt_substitution_shallow(
 
 fn expand_dynamic_normal_form_variant_substitution_shallow(
     state: &mut State,
-    left: (NodeId<Identifier>, PossibleArgListId),
-    right: (NodeId<Identifier>, PossibleArgListId),
+    left: (NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>),
+    right: (NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>),
 ) -> DynamicSubstitutionExpansionResult {
     // We only need to compare name (rather than DB index) because
     // `left` and `right` are assumed to have the same type, and
@@ -831,14 +798,9 @@ fn expand_dynamic_normal_form_variant_substitution_shallow(
         return DynamicSubstitutionExpansionResult::Exploded;
     }
 
-    let left_args = match left.1 {
-        PossibleArgListId::Some(id) => state.registry.get_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
-    let right_args = match right.1 {
-        PossibleArgListId::Some(id) => state.registry.get_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
+    let left_args = state.registry.get_possibly_empty_list(left.1);
+    let right_args = state.registry.get_possibly_empty_list(right.1);
+
     assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
     let arg_substitutions = left_args
         .iter()
@@ -993,31 +955,62 @@ fn min_db_index_in_fun_relative_to_cutoff(
     cutoff: usize,
 ) -> MinDbIndex {
     let fun = registry.get(id);
-    let param_ids = registry.get_list(fun.param_list_id);
-    let param_types_min = param_ids
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(param_index, param_id)| {
-            let param = registry.get(param_id);
-            min_db_index_in_expression_relative_to_cutoff(
-                registry,
-                param.type_id,
-                cutoff + param_index,
-            )
-        })
-        .min();
+
+    let param_types_min =
+        min_db_index_in_params_relative_to_cutoff(registry, fun.param_list_id, cutoff);
     let return_type_min = min_db_index_in_expression_relative_to_cutoff(
         registry,
         fun.return_type_id,
-        cutoff + param_ids.len(),
+        cutoff + fun.param_list_id.len(),
     );
     let body_min = min_db_index_in_expression_relative_to_cutoff(
         registry,
         fun.body_id,
-        cutoff + param_ids.len() + 1,
+        cutoff + fun.param_list_id.len() + 1,
     );
-    min_or_first(return_type_min.min(body_min), param_types_min)
+    return_type_min.min(body_min).min(param_types_min)
+}
+
+fn min_db_index_in_params_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NonEmptyParamListId,
+    cutoff: usize,
+) -> MinDbIndex {
+    let opt_min = match id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            param_ids
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(param_index, param_id)| {
+                    let param = registry.get(param_id);
+                    min_db_index_in_expression_relative_to_cutoff(
+                        registry,
+                        param.type_id,
+                        cutoff + param_index,
+                    )
+                })
+                .min()
+        }
+        NonEmptyParamListId::Labeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            param_ids
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(param_index, param_id)| {
+                    let param = registry.get(param_id);
+                    min_db_index_in_expression_relative_to_cutoff(
+                        registry,
+                        param.type_id,
+                        cutoff + param_index,
+                    )
+                })
+                .min()
+        }
+    };
+    opt_min.unwrap_or(MinDbIndex::Infinity)
 }
 
 fn min_db_index_in_match_relative_to_cutoff(
@@ -1028,7 +1021,7 @@ fn min_db_index_in_match_relative_to_cutoff(
     let match_ = registry.get(id);
     let matchee_min =
         min_db_index_in_expression_relative_to_cutoff(registry, match_.matchee_id, cutoff);
-    let case_ids = registry.get_list(match_.case_list_id);
+    let case_ids = registry.get_possibly_empty_list(match_.case_list_id);
     let case_outputs_min = case_ids
         .iter()
         .map(|case_id| {
@@ -1036,7 +1029,7 @@ fn min_db_index_in_match_relative_to_cutoff(
             min_db_index_in_expression_relative_to_cutoff(
                 registry,
                 case.output_id,
-                cutoff + case.param_list_id.len,
+                cutoff + case.param_list_id.len(),
             )
         })
         .min();
@@ -1049,26 +1042,14 @@ fn min_db_index_in_forall_relative_to_cutoff(
     cutoff: usize,
 ) -> MinDbIndex {
     let forall = registry.get(id);
-    let param_ids = registry.get_list(forall.param_list_id);
-    let param_types_min = param_ids
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(param_index, param_id)| {
-            let param = registry.get(param_id);
-            min_db_index_in_expression_relative_to_cutoff(
-                registry,
-                param.type_id,
-                cutoff + param_index,
-            )
-        })
-        .min();
+    let param_types_min =
+        min_db_index_in_params_relative_to_cutoff(registry, forall.param_list_id, cutoff);
     let output_min = min_db_index_in_expression_relative_to_cutoff(
         registry,
         forall.output_id,
-        cutoff + param_ids.len(),
+        cutoff + forall.param_list_id.len(),
     );
-    min_or_first(output_min, param_types_min)
+    output_min.min(param_types_min)
 }
 
 fn min_db_index_in_check_relative_to_cutoff(
