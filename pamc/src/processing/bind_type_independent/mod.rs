@@ -324,7 +324,7 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
             })
         })
         .transpose()?
-        .option_to_vec();
+        .into_vec();
     let output = bind_expression_dirty(context, case.output)?;
 
     context.pop_n(arity);

@@ -188,12 +188,12 @@ impl<T> DerefMut for NonEmptyVec<T> {
 
 pub trait OptionalNonEmptyVecToVec {
     type Output;
-    fn option_to_vec(self) -> Vec<Self::Output>;
+    fn into_vec(self) -> Vec<Self::Output>;
 }
 
 impl<T> OptionalNonEmptyVecToVec for Option<NonEmptyVec<T>> {
     type Output = T;
-    fn option_to_vec(self) -> Vec<T> {
+    fn into_vec(self) -> Vec<T> {
         self.map_or_else(Vec::new, Vec::from)
     }
 }
@@ -337,5 +337,51 @@ impl<'a, T> NonEmptySliceMut<'a, T> {
         NonEmptyVec {
             raw: self.raw.to_vec(),
         }
+    }
+}
+
+impl<'a, T> NonEmptySlice<'a, T> {
+    pub fn to_mapped<U>(&self, f: impl FnMut(&T) -> U) -> NonEmptyVec<U>
+    where
+        T: Clone,
+    {
+        NonEmptyVec {
+            raw: self.raw.iter().map(f).collect(),
+        }
+    }
+
+    pub fn try_to_mapped<U, E>(
+        &self,
+        f: impl FnMut(&T) -> Result<U, E>,
+    ) -> Result<NonEmptyVec<U>, E>
+    where
+        T: Clone,
+    {
+        Ok(NonEmptyVec {
+            raw: self.raw.iter().map(f).collect::<Result<_, _>>()?,
+        })
+    }
+}
+
+impl<'a, T> NonEmptySliceMut<'a, T> {
+    pub fn to_mapped<U>(&self, f: impl FnMut(&T) -> U) -> NonEmptyVec<U>
+    where
+        T: Clone,
+    {
+        NonEmptyVec {
+            raw: self.raw.iter().map(f).collect(),
+        }
+    }
+
+    pub fn try_to_mapped<U, E>(
+        &self,
+        f: impl FnMut(&T) -> Result<U, E>,
+    ) -> Result<NonEmptyVec<U>, E>
+    where
+        T: Clone,
+    {
+        Ok(NonEmptyVec {
+            raw: self.raw.iter().map(f).collect::<Result<_, _>>()?,
+        })
     }
 }
