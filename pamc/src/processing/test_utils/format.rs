@@ -99,12 +99,7 @@ pub fn format_fun(fun: &Fun, indent_level: usize, options: &FormatOptions) -> St
     } else {
         "".to_string()
     };
-    let params = fun
-        .params
-        .iter()
-        .map(|arg| format!("{}{},", &i1, format_param(arg, indent_level, options)))
-        .collect::<Vec<_>>()
-        .join("\n");
+    let params = format_params(&fun.params, indent_level + 1, options);
     let return_type = format_expression(&fun.return_type, indent_level + 1, options);
     let body = format_expression(&fun.body, indent_level + 1, options);
     format!(
@@ -120,9 +115,67 @@ pub fn format_fun(fun: &Fun, indent_level: usize, options: &FormatOptions) -> St
     )
 }
 
-pub fn format_param(param: &Param, indent_level: usize, options: &FormatOptions) -> String {
+pub fn format_params(
+    params: &NonEmptyParamVec,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    let i0 = indent(indent_level, options);
+
+    match params {
+        NonEmptyParamVec::Unlabeled(params) => params
+            .iter()
+            .map(|param| {
+                format!(
+                    "{}{},",
+                    &i0,
+                    format_unlabeled_param(param, indent_level, options)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+        NonEmptyParamVec::Labeled(params) => params
+            .iter()
+            .map(|param| {
+                format!(
+                    "{}{},",
+                    &i0,
+                    format_labeled_param(param, indent_level, options)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+    }
+}
+
+pub fn format_unlabeled_param(
+    param: &UnlabeledParam,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    let is_dashed = if param.is_dashed { "-" } else { "" };
     format!(
-        "{}: {}",
+        "{}{}: {}",
+        is_dashed,
+        format_ident(&param.name),
+        format_expression(&param.type_, indent_level, options)
+    )
+}
+
+pub fn format_labeled_param(
+    param: &LabeledParam,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    let explicit_label = match &param.label {
+        ParamLabel::Explicit(ident) => format_ident(ident),
+        ParamLabel::Implicit => "".to_string(),
+    };
+    let is_dashed = if param.is_dashed { "-" } else { "" };
+    format!(
+        "{}~{}{}: {}",
+        explicit_label,
+        is_dashed,
         format_ident(&param.name),
         format_expression(&param.type_, indent_level, options)
     )
@@ -197,12 +250,7 @@ fn try_oneline(s: &str, indent_level: usize, options: &FormatOptions) -> String 
 pub fn format_forall(forall: &Forall, indent_level: usize, options: &FormatOptions) -> String {
     let i0 = indent(indent_level, options);
     let i1 = indent(indent_level + 1, options);
-    let params = forall
-        .params
-        .iter()
-        .map(|param| format!("{}{}", &i1, format_param(param, indent_level, options)))
-        .collect::<Vec<_>>()
-        .join("\n");
+    let params = format_params(&forall.params, indent_level + 1, options);
     let output = format_expression(&forall.output, indent_level + 1, options);
     format!(
         "forall (\n{}\n{}) {{\n{}{}\n{}}}",
