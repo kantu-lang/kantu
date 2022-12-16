@@ -186,7 +186,7 @@ pub(super) fn normalize_unlabeled_params_and_leave_params_in_context_dirty(
     let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
     let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
         |&param_id| -> Result<NodeId<UnlabeledParam>, Tainted<TypeCheckError>> {
-            type_check_param_dirty(state, param_id)??;
+            type_check_unlabeled_param_dirty(state, param_id)??;
             let type_id: ExpressionId = state
                 .context
                 .get_type(DbIndex(0), state.registry)
@@ -217,7 +217,7 @@ pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
     let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
     let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
         |&param_id| -> Result<NodeId<LabeledParam>, Tainted<TypeCheckError>> {
-            type_check_param_dirty(state, param_id)??;
+            type_check_labeled_param_dirty(state, param_id)??;
             let type_id: ExpressionId = state
                 .context
                 .get_type(DbIndex(0), state.registry)

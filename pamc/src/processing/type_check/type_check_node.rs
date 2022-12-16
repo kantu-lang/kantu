@@ -113,6 +113,23 @@ pub(super) fn type_check_unlabeled_param_dirty(
     }))
 }
 
+pub(super) fn type_check_labeled_param_dirty(
+    state: &mut State,
+    param_id: NodeId<LabeledParam>,
+) -> Result<PushWarning, Tainted<TypeCheckError>> {
+    let param = state.registry.get(param_id).clone();
+    let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
+    if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
+        return tainted_err(TypeCheckError::IllegalTypeExpression(param.type_id));
+    }
+
+    let normalized_type_id = evaluate_well_typed_expression(state, param.type_id);
+    Ok(state.context.push(ContextEntry {
+        type_id: normalized_type_id,
+        definition: ContextEntryDefinition::Uninterpreted,
+    }))
+}
+
 fn type_check_type_variant_dirty(
     state: &mut State,
     variant_id: NodeId<Variant>,
