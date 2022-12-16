@@ -1,6 +1,7 @@
 use crate::data::{
     light_ast::*,
     node_registry::{NodeId, NodeRegistry},
+    non_empty_vec::OptionalNonEmptyVecLen,
     variant_return_type_validation_result::*,
 };
 
@@ -38,7 +39,7 @@ pub fn validate_variant_return_types_in_file(
     registry: &NodeRegistry,
     file: &File,
 ) -> Result<VariantReturnTypesValidated<NodeId<File>>, IllegalVariantReturnTypeError> {
-    let item_ids = registry.get_list(file.item_list_id);
+    let item_ids = registry.get_possibly_empty_list(file.item_list_id);
     for item_id in item_ids {
         if let FileItemNodeId::Type(type_id) = item_id {
             let type_statement = registry.get(*type_id);
@@ -52,7 +53,7 @@ fn validate_variant_return_types_in_type_statement(
     registry: &NodeRegistry,
     type_statement: &TypeStatement,
 ) -> Result<(), IllegalVariantReturnTypeError> {
-    let variant_ids = registry.get_list(type_statement.variant_list_id);
+    let variant_ids = registry.get_possibly_empty_list(type_statement.variant_list_id);
     for (variant_index, variant_id) in variant_ids.iter().copied().enumerate() {
         let variant = registry.get(variant_id);
         validate_return_type_of_variant(registry, variant, variant_index)?;
@@ -74,7 +75,7 @@ fn validate_return_type_of_variant(
             usize,
         ),
     ) -> Result<(), IllegalVariantReturnTypeError> {
-        let adjusted_type_statement_db_index = DbIndex(variant_index + variant.param_list_id.len);
+        let adjusted_type_statement_db_index = DbIndex(variant_index + variant.param_list_id.len());
         let return_db_index = registry.get(return_type_name_id).db_index;
         if adjusted_type_statement_db_index == return_db_index {
             Ok(())
