@@ -26,40 +26,18 @@ impl Accept for UnfinishedParams {
                     }
                 }
                 TokenKind::StandardIdentifier => {
-                    let name = Identifier {
+                    let name_or_label = Identifier {
                         span: span_single(file_id, &token),
                         name: IdentifierName::Standard(token.content.clone()),
                     };
-                    let is_tilded = self.pending_tilde.is_some();
-                    let is_dashed = self.pending_dash.is_some();
-                    let pending_dash = self.pending_dash.take();
-                    AcceptResult::Push(UnfinishedStackItem::Param(
-                        UnfinishedParam::NoExplicitLabel {
-                            first_token: pending_dash.unwrap_or(token),
-                            is_tilded,
-                            is_dashed,
-                            is_dash_allowed: self.maximum_dashed_params_allowed > 0 || is_dashed,
-                            name_or_label: name,
-                        },
-                    ))
+                    self.push_unfinished_param(name_or_label, token)
                 }
                 TokenKind::Underscore => {
-                    let name = Identifier {
+                    let name_or_label = Identifier {
                         span: span_single(file_id, &token),
                         name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                     };
-                    let is_tilded = self.pending_tilde.is_some();
-                    let is_dashed = self.pending_dash.is_some();
-                    let pending_dash = self.pending_dash.take();
-                    AcceptResult::Push(UnfinishedStackItem::Param(
-                        UnfinishedParam::NoExplicitLabel {
-                            first_token: pending_dash.unwrap_or(token),
-                            is_tilded,
-                            is_dashed,
-                            is_dash_allowed: self.maximum_dashed_params_allowed > 0 || is_dashed,
-                            name_or_label: name,
-                        },
-                    ))
+                    self.push_unfinished_param(name_or_label, token)
                 }
                 TokenKind::RParen => {
                     if self.pending_dash.is_some() {
@@ -90,5 +68,28 @@ impl Accept for UnfinishedParams {
             }
             other_item => unexpected_finished_item(&other_item),
         }
+    }
+}
+
+impl UnfinishedParams {
+    fn push_unfinished_param(
+        &mut self,
+        name_or_label: Identifier,
+        name_or_label_token: Token,
+    ) -> AcceptResult {
+        let pending_tilde = self.pending_tilde.take();
+        let pending_dash = self.pending_dash.take();
+        let is_tilded = pending_tilde.is_some();
+        let is_dashed = pending_dash.is_some();
+        AcceptResult::Push(UnfinishedStackItem::Param(
+            UnfinishedParam::NoExplicitLabel {
+                first_token: pending_tilde
+                    .unwrap_or_else(|| pending_dash.unwrap_or_else(|| name_or_label_token)),
+                is_tilded,
+                is_dashed,
+                is_dash_allowed: self.maximum_dashed_params_allowed > 0 || is_dashed,
+                name_or_label,
+            },
+        ))
     }
 }

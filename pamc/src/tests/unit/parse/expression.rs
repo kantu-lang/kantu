@@ -46,7 +46,7 @@ fn dot3() {
             assert_eq!(&IdentifierName::Standard("c".to_string()), &dot.right.name);
             match &dot.left {
                 Expression::Dot(left) => {
-                    assert_eq!(&IdentifierName::Standard("b".to_string()), &dot.right.name);
+                    assert_eq!(&IdentifierName::Standard("b".to_string()), &left.right.name);
                     match &left.left {
                         Expression::Identifier(name) => {
                             assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
