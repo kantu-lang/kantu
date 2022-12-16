@@ -60,7 +60,7 @@ fn simplify_params(
     unsimplified: NonEmptyVec<ust::Param>,
 ) -> Result<NonEmptyParamVec, SimplifyAstError> {
     let hetero_err = SimplifyAstError::HeterogeneousParams(unsimplified.clone());
-    let (last, remaining) = unsimplified.into_popped();
+    let (remaining, last) = unsimplified.into_popped();
     if let Some(label) = last.label {
         let last = LabeledParam {
             span: last.span,

@@ -69,13 +69,9 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
     fn register_normalized_nonsubstituted_fun(
         registry: &mut NodeRegistry,
         normalized_callee_id: NormalFormId,
-        normalized_arg_ids: &[NormalFormId],
+        normalized_arg_ids: NonEmptySlice<NormalFormId>,
     ) -> EvalResult {
-        let normalized_arg_ids = normalized_arg_ids
-            .iter()
-            .copied()
-            .map(NormalFormId::raw)
-            .collect();
+        let normalized_arg_ids = normalized_arg_ids.to_mapped(|id| NormalFormId::raw(*id));
         let normalized_arg_list_id = registry.add_list(normalized_arg_ids);
         let normalized_call_id = registry
             .add(Call {
@@ -110,9 +106,9 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
         }
     };
 
-    let normalized_arg_ids: Vec<NormalFormId> = {
-        let arg_ids = state.registry.get_list(call.arg_list_id).to_vec();
-        let args_eval_result = eval_all(state, &arg_ids);
+    let normalized_arg_ids: NonEmptyVec<NormalFormId> = {
+        let arg_ids = state.registry.get_list(call.arg_list_id).to_non_empty_vec();
+        let args_eval_result = eval_all(state, arg_ids.as_non_empty_slice());
         match args_eval_result {
             Ok(normalized_arg_ids) => normalized_arg_ids,
             Err((arg_ids_best_attempt, err)) => {
@@ -139,26 +135,26 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
                 return register_normalized_nonsubstituted_fun(
                     state.registry,
                     normalized_callee_id,
-                    &normalized_arg_ids,
+                    normalized_arg_ids.as_non_empty_slice(),
                 );
             }
 
             let fun = state.registry.get(fun_id).clone();
-            let param_ids = state.registry.get_list(fun.param_list_id).to_vec();
-            let arity = param_ids.len();
+            let param_name_ids = get_param_name_ids(state, fun.param_list_id);
+            let param_arity = fun.param_list_id.len();
             let shifted_normalized_arg_ids = normalized_arg_ids
                 .into_iter()
-                .map(|arg_id| arg_id.upshift(arity + 1, state.registry))
+                .map(|arg_id| arg_id.upshift(param_arity + 1, state.registry))
                 .collect::<Vec<_>>();
             let substitutions = {
                 let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
-                    fun_id.upshift(arity + 1, state.registry),
+                    fun_id.upshift(param_arity + 1, state.registry),
                 ));
                 const FUN_DB_INDEX: DbIndex = DbIndex(0);
                 vec![Substitution {
                     from: ExpressionId::Name(add_name_expression(
                         state.registry,
-                        vec![fun.name_id],
+                        NonEmptyVec::singleton(fun.name_id),
                         FUN_DB_INDEX,
                     )),
                     to: shifted_fun_id.raw(),
@@ -166,17 +162,19 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             }
             .into_iter()
             .chain(
-                param_ids
+                param_name_ids
                     .iter()
                     .copied()
                     .zip(shifted_normalized_arg_ids.iter().copied())
                     .enumerate()
-                    .map(|(arg_index, (param_id, arg_id))| {
-                        let param_name_id = state.registry.get(param_id).name_id;
-                        let db_index = DbIndex(arity - arg_index);
-                        let name = NormalFormId::unchecked_new(ExpressionId::Name(
-                            add_name_expression(state.registry, vec![param_name_id], db_index),
-                        ));
+                    .map(|(arg_index, (param_name_id, arg_id))| {
+                        let db_index = DbIndex(param_arity - arg_index);
+                        let name =
+                            NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                                state.registry,
+                                NonEmptyVec::singleton(param_name_id),
+                                db_index,
+                            )));
                         Substitution {
                             from: name.raw(),
                             to: arg_id.raw(),
@@ -188,23 +186,20 @@ fn evaluate_possibly_ill_typed_call(state: &mut State, call_id: NodeId<Call>) ->
             let body_id = fun
                 .body_id
                 .subst_all(&substitutions, &mut state.without_context());
-            let shifted_body_id = body_id.downshift(arity + 1, state.registry);
+            let shifted_body_id = body_id.downshift(param_arity + 1, state.registry);
             evaluate_possibly_ill_typed_expression(state, shifted_body_id)
         }
         ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
             register_normalized_nonsubstituted_fun(
                 state.registry,
                 normalized_callee_id,
-                &normalized_arg_ids,
+                normalized_arg_ids.as_non_empty_slice(),
             )
         }
         ExpressionId::Forall(_) => {
-            let normalized_arg_list_id = state.registry.add_list(
-                normalized_arg_ids
-                    .into_iter()
-                    .map(NormalFormId::raw)
-                    .collect(),
-            );
+            let normalized_arg_list_id = state
+                .registry
+                .add_list(normalized_arg_ids.into_mapped(NormalFormId::raw));
             let best_attempt_id = ExpressionId::Call(
                 state
                     .registry
@@ -230,15 +225,7 @@ fn can_fun_be_applied(
     normalized_arg_ids: &[NormalFormId],
 ) -> bool {
     let param_list_id = state.registry.get(fun_id).param_list_id;
-    let decreasing_param_index = state
-        .registry
-        .get_list(param_list_id)
-        .iter()
-        .copied()
-        .position(|param_id| {
-            let param = state.registry.get(param_id);
-            param.is_dashed
-        });
+    let decreasing_param_index = get_decreasing_param_index(state, param_list_id);
     let decreasing_param_index = if let Some(i) = decreasing_param_index {
         i
     } else {
@@ -249,6 +236,45 @@ fn can_fun_be_applied(
 
     let decreasing_arg_id = normalized_arg_ids[decreasing_param_index];
     is_variant_expression(state, decreasing_arg_id)
+}
+
+fn get_decreasing_param_index(state: &State, param_list_id: NonEmptyParamListId) -> Option<usize> {
+    match param_list_id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => state
+            .registry
+            .get_list(param_list_id)
+            .iter()
+            .copied()
+            .position(|param_id| {
+                let param = state.registry.get(param_id);
+                param.is_dashed
+            }),
+        NonEmptyParamListId::Labeled(param_list_id) => state
+            .registry
+            .get_list(param_list_id)
+            .iter()
+            .copied()
+            .position(|param_id| {
+                let param = state.registry.get(param_id);
+                param.is_dashed
+            }),
+    }
+}
+
+fn get_param_name_ids(
+    state: &State,
+    param_list_id: NonEmptyParamListId,
+) -> NonEmptyVec<NodeId<Identifier>> {
+    match param_list_id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => state
+            .registry
+            .get_list(param_list_id)
+            .to_mapped(|&param_id| state.registry.get(param_id).name_id),
+        NonEmptyParamListId::Labeled(param_list_id) => state
+            .registry
+            .get_list(param_list_id)
+            .to_mapped(|&param_id| state.registry.get(param_id).name_id),
+    }
 }
 
 fn evaluate_possibly_ill_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> EvalResult {
@@ -300,7 +326,7 @@ fn evaluate_possibly_ill_typed_fun_dirty(
                 return tainted_err((best_attempt_id, err));
             }
         };
-    state.context.pop_n(fun.param_list_id.len);
+    state.context.pop_n(fun.param_list_id.len());
 
     Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
         state
@@ -318,7 +344,14 @@ fn evaluate_possibly_ill_typed_fun_dirty(
     )))
 }
 
-impl From<Tainted<Infallible>> for Tainted<(ListId<NodeId<Param>>, EvalError)> {
+impl From<Tainted<Infallible>> for Tainted<(NonEmptyParamListId, EvalError)> {
+    fn from(impossible: Tainted<Infallible>) -> Self {
+        #[allow(unreachable_code)]
+        match Infallible::from(impossible) {}
+    }
+}
+
+impl<T> From<Tainted<Infallible>> for Tainted<(NonEmptyListId<T>, EvalError)> {
     fn from(impossible: Tainted<Infallible>) -> Self {
         #[allow(unreachable_code)]
         match Infallible::from(impossible) {}
@@ -327,17 +360,79 @@ impl From<Tainted<Infallible>> for Tainted<(ListId<NodeId<Param>>, EvalError)> {
 
 fn normalize_params_as_much_as_possible_and_leave_in_context(
     state: &mut State,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Result<ListId<NodeId<Param>>, Tainted<(ListId<NodeId<Param>>, EvalError)>> {
-    let mut normalized_param_ids = Vec::with_capacity(param_list_id.len);
-    let param_ids = state.registry.get_list(param_list_id).to_vec();
-    for (index, param_id) in param_ids.iter().copied().enumerate() {
+    param_list_id: NonEmptyParamListId,
+) -> Result<NonEmptyParamListId, Tainted<(NonEmptyParamListId, EvalError)>> {
+    Ok(match param_list_id {
+        NonEmptyParamListId::Unlabeled(id) => NonEmptyParamListId::Unlabeled(
+            normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(state, id)
+                .map_err(|tainted| {
+                    tainted.map(|(best_attempt_param_list_id, err)| {
+                        (
+                            NonEmptyParamListId::Unlabeled(best_attempt_param_list_id),
+                            err,
+                        )
+                    })
+                })?,
+        ),
+        NonEmptyParamListId::Labeled(id) => NonEmptyParamListId::Labeled(
+            normalize_labeled_params_as_much_as_possible_and_leave_in_context(state, id).map_err(
+                |tainted| {
+                    tainted.map(|(best_attempt_param_list_id, err)| {
+                        (
+                            NonEmptyParamListId::Labeled(best_attempt_param_list_id),
+                            err,
+                        )
+                    })
+                },
+            )?,
+        ),
+    })
+}
+
+fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> Result<
+    NonEmptyListId<NodeId<UnlabeledParam>>,
+    Tainted<(NonEmptyListId<NodeId<UnlabeledParam>>, EvalError)>,
+> {
+    let (&first_param_id, remaining_param_ids) = state.registry.get_list(param_list_id).to_cons();
+    let normalized_first_param_id = {
+        let first_param = state.registry.get(first_param_id).clone();
+        let param_type_eval_res =
+            evaluate_possibly_ill_typed_expression(state, first_param.type_id);
+        match param_type_eval_res {
+            Ok(normalized_param_type_id) => state.registry.add(UnlabeledParam {
+                id: dummy_id(),
+                span: None,
+                is_dashed: first_param.is_dashed,
+                name_id: first_param.name_id,
+                type_id: normalized_param_type_id.raw(),
+            }),
+            Err((first_param_type_best_attempt, err)) => {
+                let first_param_best_attempt_id = state.registry.add(UnlabeledParam {
+                    id: dummy_id(),
+                    span: None,
+                    is_dashed: first_param.is_dashed,
+                    name_id: first_param.name_id,
+                    type_id: first_param_type_best_attempt,
+                });
+                let mut best_attempt = NonEmptyVec::singleton(first_param_best_attempt_id);
+                best_attempt.extend(remaining_param_ids.iter().copied());
+                return tainted_err((state.registry.add_list(best_attempt), err));
+            }
+        }
+    };
+    let mut normalized_param_ids = NonEmptyVec::singleton(normalized_first_param_id);
+    let remaining_param_ids = remaining_param_ids.to_vec();
+    for (index_in_remaining_param_ids, param_id) in remaining_param_ids.iter().copied().enumerate()
+    {
         let param = state.registry.get(param_id).clone();
         let param_type_eval_res = evaluate_possibly_ill_typed_expression(state, param.type_id);
 
         match param_type_eval_res {
             Ok(normalized_param_type_id) => {
-                normalized_param_ids.push(state.registry.add(Param {
+                normalized_param_ids.push(state.registry.add(UnlabeledParam {
                     id: dummy_id(),
                     span: None,
                     is_dashed: param.is_dashed,
@@ -350,14 +445,97 @@ fn normalize_params_as_much_as_possible_and_leave_in_context(
                 })?;
             }
             Err((param_type_best_attempt, err)) => {
-                normalized_param_ids.push(state.registry.add(Param {
+                normalized_param_ids.push(state.registry.add(UnlabeledParam {
                     id: dummy_id(),
                     span: None,
                     is_dashed: param.is_dashed,
                     name_id: param.name_id,
                     type_id: param_type_best_attempt,
                 }));
-                normalized_param_ids.extend(param_ids[index + 1..].iter().copied());
+                normalized_param_ids.extend(
+                    remaining_param_ids[index_in_remaining_param_ids + 1..]
+                        .iter()
+                        .copied(),
+                );
+                return tainted_err((state.registry.add_list(normalized_param_ids), err));
+            }
+        }
+    }
+    Ok(state.registry.add_list(normalized_param_ids))
+}
+
+fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> Result<
+    NonEmptyListId<NodeId<LabeledParam>>,
+    Tainted<(NonEmptyListId<NodeId<LabeledParam>>, EvalError)>,
+> {
+    let (&first_param_id, remaining_param_ids) = state.registry.get_list(param_list_id).to_cons();
+    let normalized_first_param_id = {
+        let first_param = state.registry.get(first_param_id).clone();
+        let param_type_eval_res =
+            evaluate_possibly_ill_typed_expression(state, first_param.type_id);
+        match param_type_eval_res {
+            Ok(normalized_param_type_id) => state.registry.add(LabeledParam {
+                id: dummy_id(),
+                span: None,
+                label_id: first_param.label_id,
+                is_dashed: first_param.is_dashed,
+                name_id: first_param.name_id,
+                type_id: normalized_param_type_id.raw(),
+            }),
+            Err((first_param_type_best_attempt, err)) => {
+                let first_param_best_attempt_id = state.registry.add(LabeledParam {
+                    id: dummy_id(),
+                    span: None,
+                    label_id: first_param.label_id,
+                    is_dashed: first_param.is_dashed,
+                    name_id: first_param.name_id,
+                    type_id: first_param_type_best_attempt,
+                });
+                let mut best_attempt = NonEmptyVec::singleton(first_param_best_attempt_id);
+                best_attempt.extend(remaining_param_ids.iter().copied());
+                return tainted_err((state.registry.add_list(best_attempt), err));
+            }
+        }
+    };
+    let mut normalized_param_ids = NonEmptyVec::singleton(normalized_first_param_id);
+    let remaining_param_ids = remaining_param_ids.to_vec();
+    for (index_in_remaining_param_ids, param_id) in remaining_param_ids.iter().copied().enumerate()
+    {
+        let param = state.registry.get(param_id).clone();
+        let param_type_eval_res = evaluate_possibly_ill_typed_expression(state, param.type_id);
+
+        match param_type_eval_res {
+            Ok(normalized_param_type_id) => {
+                normalized_param_ids.push(state.registry.add(LabeledParam {
+                    id: dummy_id(),
+                    span: None,
+                    label_id: param.label_id,
+                    is_dashed: param.is_dashed,
+                    name_id: param.name_id,
+                    type_id: normalized_param_type_id.raw(),
+                }));
+                state.context.push(ContextEntry {
+                    type_id: normalized_param_type_id,
+                    definition: ContextEntryDefinition::Uninterpreted,
+                })?;
+            }
+            Err((param_type_best_attempt, err)) => {
+                normalized_param_ids.push(state.registry.add(LabeledParam {
+                    id: dummy_id(),
+                    span: None,
+                    label_id: param.label_id,
+                    is_dashed: param.is_dashed,
+                    name_id: param.name_id,
+                    type_id: param_type_best_attempt,
+                }));
+                normalized_param_ids.extend(
+                    remaining_param_ids[index_in_remaining_param_ids + 1..]
+                        .iter()
+                        .copied(),
+                );
                 return tainted_err((state.registry.add_list(normalized_param_ids), err));
             }
         }
@@ -402,15 +580,13 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
 
     let case_id = state
         .registry
-        .get_list(match_.case_list_id)
+        .get_possibly_empty_list(match_.case_list_id)
         .iter()
         .find(|case_id| {
             let case = state.registry.get(**case_id);
             let case_variant_name: &IdentifierName = &state.registry.get(case.variant_name_id).name;
-            let matchee_variant_name: &IdentifierName = &state
-                .registry
-                .identifier(normalized_matchee_variant_name_id)
-                .name;
+            let matchee_variant_name: &IdentifierName =
+                &state.registry.get(normalized_matchee_variant_name_id).name;
             case_variant_name == matchee_variant_name
         })
         .copied();
@@ -435,9 +611,12 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
     let case = state.registry.get(case_id).clone();
 
     match normalized_matchee_arg_list_id {
-        PossibleArgListId::Nullary => evaluate_possibly_ill_typed_expression(state, case.output_id),
-        PossibleArgListId::Some(normalized_matchee_arg_list_id) => {
-            let case_param_ids = state.registry.get_list(case.param_list_id).to_vec();
+        None => evaluate_possibly_ill_typed_expression(state, case.output_id),
+        Some(normalized_matchee_arg_list_id) => {
+            let case_param_ids = state
+                .registry
+                .get_possibly_empty_list(case.param_list_id)
+                .to_vec();
             let case_arity = case_param_ids.len();
             let matchee_arg_ids = state
                 .registry
@@ -457,7 +636,7 @@ fn evaluate_possibly_ill_typed_match(state: &mut State, match_id: NodeId<Match>)
                     Substitution {
                         from: ExpressionId::Name(add_name_expression(
                             state.registry,
-                            vec![param_id],
+                            NonEmptyVec::singleton(param_id),
                             db_index,
                         )),
                         to: shifted_arg_id.raw(),
@@ -523,7 +702,7 @@ fn evaluate_possibly_ill_typed_forall_dirty(
             return tainted_err((best_attempt_id, err));
         }
     };
-    state.context.pop_n(forall.param_list_id.len);
+    state.context.pop_n(forall.param_list_id.len());
 
     Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
         state
@@ -545,20 +724,26 @@ fn evaluate_possibly_ill_typed_check(state: &mut State, check_id: NodeId<Check>)
 
 fn eval_all(
     state: &mut State,
-    ids: &[ExpressionId],
-) -> Result<Vec<NormalFormId>, (Vec<ExpressionId>, EvalError)> {
-    let mut nfids = Vec::new();
-    for (index, id) in ids.iter().copied().enumerate() {
+    original_ids: NonEmptySlice<ExpressionId>,
+) -> Result<NonEmptyVec<NormalFormId>, (NonEmptyVec<ExpressionId>, EvalError)> {
+    let (&first_id, remaining_ids) = original_ids.to_cons();
+    let normalized_first_id = match evaluate_possibly_ill_typed_expression(state, first_id) {
+        Ok(id) => id,
+        Err((first_id_best_attempt, err)) => {
+            let mut best_attempt = NonEmptyVec::singleton(first_id_best_attempt);
+            best_attempt.extend(remaining_ids.iter().copied());
+            return Err((best_attempt, err));
+        }
+    };
+    let mut nfids = NonEmptyVec::singleton(normalized_first_id);
+    for (index_in_remaining_ids, id) in remaining_ids.iter().copied().enumerate() {
         let eval_res = evaluate_possibly_ill_typed_expression(state, id);
         let nfid = match eval_res {
             Ok(nfid) => nfid,
             Err((best_attempt_id, err)) => {
-                let best_attempt: Vec<ExpressionId> = nfids
-                    .into_iter()
-                    .map(NormalFormId::raw)
-                    .chain(std::iter::once(best_attempt_id))
-                    .chain(ids[index + 1..].iter().copied())
-                    .collect();
+                let mut best_attempt = nfids.into_mapped(NormalFormId::raw);
+                best_attempt.push(best_attempt_id);
+                best_attempt.extend(remaining_ids[index_in_remaining_ids + 1..].iter().copied());
                 return Err((best_attempt, err));
             }
         };

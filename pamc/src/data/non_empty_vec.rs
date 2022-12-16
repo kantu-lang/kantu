@@ -114,9 +114,9 @@ impl<T> NonEmptyVec<T> {
         self.raw.split_at_mut(index)
     }
 
-    pub fn into_popped(mut self) -> (T, Vec<T>) {
+    pub fn into_popped(mut self) -> (Vec<T>, T) {
         let last = self.raw.pop().unwrap();
-        (last, self.raw)
+        (self.raw, last)
     }
 
     pub fn into_mapped<U>(self, f: impl FnMut(T) -> U) -> NonEmptyVec<U> {
@@ -347,6 +347,36 @@ impl<'a, T> NonEmptySlice<'a, T> {
             raw: self.raw.to_vec(),
         }
     }
+
+    pub fn to_mapped<U>(&self, f: impl FnMut(&T) -> U) -> NonEmptyVec<U>
+    where
+        T: Clone,
+    {
+        NonEmptyVec {
+            raw: self.raw.iter().map(f).collect(),
+        }
+    }
+
+    pub fn try_to_mapped<U, E>(
+        &self,
+        f: impl FnMut(&T) -> Result<U, E>,
+    ) -> Result<NonEmptyVec<U>, E>
+    where
+        T: Clone,
+    {
+        Ok(NonEmptyVec {
+            raw: self.raw.iter().map(f).collect::<Result<_, _>>()?,
+        })
+    }
+
+    pub fn to_popped(&self) -> (&[T], &T) {
+        let last_index = self.len() - 1;
+        (&self[..last_index], &self[last_index])
+    }
+
+    pub fn to_cons(&self) -> (&T, &[T]) {
+        (&self[0], &self[1..])
+    }
 }
 
 impl<'a, T> NonEmptySliceMut<'a, T> {
@@ -358,9 +388,7 @@ impl<'a, T> NonEmptySliceMut<'a, T> {
             raw: self.raw.to_vec(),
         }
     }
-}
 
-impl<'a, T> NonEmptySlice<'a, T> {
     pub fn to_mapped<U>(&self, f: impl FnMut(&T) -> U) -> NonEmptyVec<U>
     where
         T: Clone,
@@ -381,27 +409,22 @@ impl<'a, T> NonEmptySlice<'a, T> {
             raw: self.raw.iter().map(f).collect::<Result<_, _>>()?,
         })
     }
-}
 
-impl<'a, T> NonEmptySliceMut<'a, T> {
-    pub fn to_mapped<U>(&self, f: impl FnMut(&T) -> U) -> NonEmptyVec<U>
-    where
-        T: Clone,
-    {
-        NonEmptyVec {
-            raw: self.raw.iter().map(f).collect(),
-        }
+    pub fn to_popped(&self) -> (&[T], &T) {
+        let last_index = self.len() - 1;
+        (&self[..last_index], &self[last_index])
     }
 
-    pub fn try_to_mapped<U, E>(
-        &self,
-        f: impl FnMut(&T) -> Result<U, E>,
-    ) -> Result<NonEmptyVec<U>, E>
-    where
-        T: Clone,
-    {
-        Ok(NonEmptyVec {
-            raw: self.raw.iter().map(f).collect::<Result<_, _>>()?,
-        })
+    pub fn to_popped_mut(&mut self) -> (&mut [T], &mut T) {
+        let last_index = self.len() - 1;
+        (&mut self[..last_index], &mut self[last_index])
+    }
+
+    pub fn to_cons(&self) -> (&T, &[T]) {
+        (&self[0], &self[1..])
+    }
+
+    pub fn to_cons_mut(&mut self) -> (&mut T, &mut [T]) {
+        (&mut self[0], &mut self[1..])
     }
 }
