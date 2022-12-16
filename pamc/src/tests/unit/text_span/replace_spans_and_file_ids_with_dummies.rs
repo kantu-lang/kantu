@@ -215,7 +215,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Check {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<CheckAssertion> {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         self.into_mapped(CheckAssertion::replace_spans_and_file_ids_with_dummies)
     }
 }
