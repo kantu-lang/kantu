@@ -396,7 +396,9 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
     NonEmptyListId<NodeId<UnlabeledParam>>,
     Tainted<(NonEmptyListId<NodeId<UnlabeledParam>>, EvalError)>,
 > {
-    let (&first_param_id, remaining_param_ids) = state.registry.get_list(param_list_id).to_cons();
+    let param_ids = state.registry.get_list(param_list_id);
+    let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
+    let remaining_param_ids = remaining_param_ids.to_vec();
     let normalized_first_param_id = {
         let first_param = state.registry.get(first_param_id).clone();
         let param_type_eval_res =
@@ -471,7 +473,9 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     NonEmptyListId<NodeId<LabeledParam>>,
     Tainted<(NonEmptyListId<NodeId<LabeledParam>>, EvalError)>,
 > {
-    let (&first_param_id, remaining_param_ids) = state.registry.get_list(param_list_id).to_cons();
+    let param_ids = state.registry.get_list(param_list_id);
+    let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
+    let remaining_param_ids = remaining_param_ids.to_vec();
     let normalized_first_param_id = {
         let first_param = state.registry.get(first_param_id).clone();
         let param_type_eval_res =
