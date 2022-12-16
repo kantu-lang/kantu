@@ -1484,3 +1484,35 @@ fn get_labeled_param_type_ids(
             param.type_id
         })
 }
+
+pub(super) fn get_names_and_types_of_params(
+    state: &State,
+    param_list_id: NonEmptyParamListId,
+) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    match param_list_id {
+        NonEmptyParamListId::Unlabeled(id) => get_names_and_types_of_unlabeled_params(state, id),
+        NonEmptyParamListId::Labeled(id) => get_names_and_types_of_labeled_params(state, id),
+    }
+}
+
+pub(super) fn get_names_and_types_of_unlabeled_params(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    let param_ids = state.registry.get_list(param_list_id);
+    param_ids.map_to_unzipped(|param_id| {
+        let param = state.registry.get(*param_id);
+        (param.name_id, param.type_id)
+    })
+}
+
+pub(super) fn get_names_and_types_of_labeled_params(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    let param_ids = state.registry.get_list(param_list_id);
+    param_ids.map_to_unzipped(|param_id| {
+        let param = state.registry.get(*param_id);
+        (param.name_id, param.type_id)
+    })
+}

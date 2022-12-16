@@ -291,7 +291,7 @@ impl<T> NonEmptyVec<T> {
         NonEmptySlice { raw: &self.raw }
     }
 
-    pub fn as_non_empty_mut(&self) -> NonEmptySliceMut<'_, T> {
+    pub fn as_non_empty_mut(&mut self) -> NonEmptySliceMut<'_, T> {
         NonEmptySliceMut { raw: &mut self.raw }
     }
 }
@@ -387,6 +387,34 @@ impl<'a, T> NonEmptySlice<'a, T> {
         })
     }
 
+    pub fn enumerate_to_mapped<U>(&self, f: impl FnMut((usize, &T)) -> U) -> NonEmptyVec<U> {
+        NonEmptyVec {
+            raw: self.raw.iter().enumerate().map(f).collect(),
+        }
+    }
+
+    pub fn try_enumerate_to_mapped<U, E>(
+        &self,
+        f: impl FnMut((usize, &T)) -> Result<U, E>,
+    ) -> Result<NonEmptyVec<U>, E> {
+        Ok(NonEmptyVec {
+            raw: self
+                .raw
+                .iter()
+                .enumerate()
+                .map(f)
+                .collect::<Result<_, _>>()?,
+        })
+    }
+
+    pub fn map_to_unzipped<U, V>(
+        &self,
+        f: impl FnMut(&T) -> (U, V),
+    ) -> (NonEmptyVec<U>, NonEmptyVec<V>) {
+        let (u, v) = self.raw.iter().map(f).unzip();
+        (NonEmptyVec { raw: u }, NonEmptyVec { raw: v })
+    }
+
     pub fn to_popped(&self) -> (&[T], &T) {
         let last_index = self.len() - 1;
         (&self[..last_index], &self[last_index])
@@ -435,7 +463,8 @@ impl<'a, T> NonEmptySliceMut<'a, T> {
 
     pub fn to_popped_mut(&mut self) -> (&mut [T], &mut T) {
         let last_index = self.len() - 1;
-        (&mut self[..last_index], &mut self[last_index])
+        let (remaining, singleton_last) = self.split_at_mut(last_index);
+        (remaining, &mut singleton_last[0])
     }
 
     pub fn to_cons(&self) -> (&T, &[T]) {
@@ -443,6 +472,27 @@ impl<'a, T> NonEmptySliceMut<'a, T> {
     }
 
     pub fn to_cons_mut(&mut self) -> (&mut T, &mut [T]) {
-        (&mut self[0], &mut self[1..])
+        let (singleton_car, cdr) = self.split_at_mut(1);
+        (&mut singleton_car[0], cdr)
+    }
+
+    pub fn enumerate_to_mapped<U>(&self, f: impl FnMut((usize, &T)) -> U) -> NonEmptyVec<U> {
+        NonEmptyVec {
+            raw: self.raw.iter().enumerate().map(f).collect(),
+        }
+    }
+
+    pub fn try_enumerate_to_mapped<U, E>(
+        &self,
+        f: impl FnMut((usize, &T)) -> Result<U, E>,
+    ) -> Result<NonEmptyVec<U>, E> {
+        Ok(NonEmptyVec {
+            raw: self
+                .raw
+                .iter()
+                .enumerate()
+                .map(f)
+                .collect::<Result<_, _>>()?,
+        })
     }
 }

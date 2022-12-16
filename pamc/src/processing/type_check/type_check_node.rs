@@ -245,13 +245,10 @@ fn get_type_of_call_dirty(
     // We use the params of the callee _type_ rather than the params of the
     // callee itself, since the callee type is a normal form, which guarantees
     // that its params are normal forms.
-    let callee_type_param_ids = state
-        .registry.get_list(callee_type.param_list_id)
-        .to_vec();
     {
-        let expected_arity = callee_type_param_ids.len();
+        let expected_arity = callee_type.param_list_id.len();
         let actual_arity = arg_ids.len();
-        if callee_type_param_ids.len() != arg_ids.len() {
+        if expected_arity != actual_arity {
             return tainted_err(TypeCheckError::WrongNumberOfArguments {
                 call_id: call_id,
                 expected: expected_arity,
@@ -259,24 +256,25 @@ fn get_type_of_call_dirty(
             });
         }
     }
-    for (i, callee_type_param_id) in callee_type_param_ids
+    
+    let (callee_type_param_name_ids, callee_type_param_type_ids) = get_names_and_types_of_params(state, callee_type.param_list_id);
+    for (i, callee_type_param_type_id) in callee_type_param_type_ids
         .iter()
         .copied()
         .enumerate()
     {
         let substituted_param_type_id = {
-            let callee_type_param = state.registry.get(callee_type_param_id);
             // This is safe because the param is the param of a normal
             // form Forall node, which guarantees that its type is a
             // normal form.
-            let unsubstituted = NormalFormId::unchecked_new(callee_type_param.type_id);
+            let unsubstituted = NormalFormId::unchecked_new(callee_type_param_type_id);
             let substitutions: Vec<Substitution> = normalized_arg_ids[..i]
                 .iter()
                 .copied()
                 .enumerate()
                 .map(|(j, normalized_arg_id)| {
                     let db_index = DbIndex(i - j - 1);
-                    let param_name_id = state.registry.get(callee_type_param_ids[j]).name_id;
+                    let param_name_id = callee_type_param_name_ids[j];
                     Substitution {
                         from: ExpressionId::Name(add_name_expression(
                             state.registry,
@@ -307,14 +305,14 @@ fn get_type_of_call_dirty(
 
     let substituted_output_id = {
         let unsubstituted = NormalFormId::unchecked_new(callee_type.output_id);
-        let arity = callee_type_param_ids.len();
+        let arity = callee_type.param_list_id.len();
         let substitutions: Vec<Substitution> = normalized_arg_ids
             .iter()
             .copied()
             .enumerate()
             .map(|(j, normalized_arg_id)| {
                 let db_index = DbIndex(arity - j - 1);
-                let param_name_id = state.registry.get(callee_type_param_ids[j]).name_id;
+                let param_name_id = callee_type_param_name_ids[j];
                 Substitution {
                     from: ExpressionId::Name(add_name_expression(
                         state.registry,
@@ -596,12 +594,14 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     shifted_variant_dbi,
                 ));
                 let case_param_ids = state.registry.get_list(case_param_list_id).to_non_empty_vec();
+                let case_param_arity = case_param_ids.len();
                 let arg_ids = case_param_ids
-                    .enumerate_into_mapped(|(index, case_param_id)| {
+                    .as_non_empty_slice()
+                    .enumerate_to_mapped(|(index, &case_param_id)| {
                         ExpressionId::Name(add_name_expression(
                             state.registry,
                             NonEmptyVec::singleton(case_param_id),
-                            DbIndex(case_param_ids.len() - index - 1),
+                            DbIndex(case_param_arity - index - 1),
                         ))
                     });
                 let arg_list_id = state.registry.add_list(arg_ids);
