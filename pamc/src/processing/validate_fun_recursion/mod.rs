@@ -1,7 +1,8 @@
 use crate::data::{
     fun_recursion_validation_result::*,
     light_ast::*,
-    node_registry::{ListId, NodeId, NodeRegistry},
+    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    non_empty_vec::OptionalNonEmptyVecLen,
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
 
@@ -27,12 +28,12 @@ pub fn validate_fun_recursion_in_file(
     let file = registry.get(file_id).clone();
     let mut context = Context::new();
     let item_ids = registry
-        .get_list(file.item_list_id)
+        .get_possibly_empty_list(file.item_list_id)
         .to_vec()
         .into_iter()
         .map(|item_id| validate_fun_recursion_in_file_item(&mut context, registry, item_id))
         .collect::<Result<Vec<_>, _>>()?;
-    let item_list_id = registry.add_list(item_ids);
+    let item_list_id = registry.add_possibly_empty_list(item_ids);
     Ok(FunRecursionValidated::unchecked_new(registry.add(File {
         id: dummy_id(),
         span: file.span,
@@ -80,17 +81,17 @@ fn validate_fun_recursion_in_type_statement_dirty(
         registry,
         type_statement.param_list_id,
     )?;
-    context.pop_n(type_statement.param_list_id.len);
+    context.pop_n(type_statement.param_list_id.len());
 
     context.push(ContextEntry::NoInformation)?;
 
     let variant_ids = registry
-        .get_list(type_statement.variant_list_id)
+        .get_possibly_empty_list(type_statement.variant_list_id)
         .to_vec()
         .into_iter()
         .map(|variant_id| validate_fun_recursion_in_variant_dirty(context, registry, variant_id))
         .collect::<Result<Vec<_>, _>>()?;
-    let variant_list_id = registry.add_list(variant_ids);
+    let variant_list_id = registry.add_possibly_empty_list(variant_ids);
 
     Ok(registry.add(TypeStatement {
         id: dummy_id(),
@@ -107,7 +108,7 @@ fn validate_fun_recursion_in_variant_dirty(
     variant_id: NodeId<Variant>,
 ) -> Result<NodeId<Variant>, TaintedIllegalFunRecursionError> {
     let variant = registry.get(variant_id).clone();
-    let arity = variant.param_list_id.len;
+    let arity = variant.param_list_id.len();
     let param_list_id = validate_fun_recursion_in_params_and_leave_in_context_dirty(
         context,
         registry,
@@ -235,10 +236,10 @@ fn validate_fun_recursion_in_call_dirty(
 
     let arg_ids = registry
         .get_list(call.arg_list_id)
-        .to_vec()
-        .into_iter()
-        .map(|arg_id| validate_fun_recursion_in_expression_dirty(context, registry, arg_id))
-        .collect::<Result<Vec<_>, _>>()?;
+        .to_non_empty_vec()
+        .try_into_mapped(|arg_id| {
+            validate_fun_recursion_in_expression_dirty(context, registry, arg_id)
+        })?;
     let arg_list_id = registry.add_list(arg_ids);
 
     Ok(registry.add(Call {
