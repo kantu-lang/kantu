@@ -50,7 +50,59 @@ fn call() {
 fn fun() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/fun.x.pht");
     expect_expression(src, |expression| match expression {
-        Expression::Fun(_) => {}
+        Expression::Fun(fun) => {
+            assert_eq!(IdentifierName::Standard("x".to_string()), fun.name.name);
+
+            assert_eq!(2, fun.params.len());
+
+            assert_eq!(
+                IdentifierName::Standard("a".to_string()),
+                fun.params[0].name.name
+            );
+            assert!(fun.params[0].is_dashed);
+            assert_eq!(None, fun.params[0].label);
+
+            assert_eq!(
+                IdentifierName::Standard("b".to_string()),
+                fun.params[1].name.name
+            );
+            assert!(!fun.params[1].is_dashed);
+            assert_eq!(None, fun.params[1].label);
+        }
+        other => panic!("Unexpected expression {:?}", other),
+    });
+}
+
+#[test]
+fn labeled_fun() {
+    let src =
+        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_fun.x.pht");
+    expect_expression(src, |expression| match expression {
+        Expression::Fun(fun) => {
+            assert_eq!(IdentifierName::Standard("x".to_string()), fun.name.name);
+
+            assert_eq!(2, fun.params.len());
+
+            assert_eq!(
+                IdentifierName::Standard("a".to_string()),
+                fun.params[0].name.name
+            );
+            assert!(fun.params[0].is_dashed);
+            assert_eq!(Some(ParamLabel::Implicit), fun.params[0].label);
+
+            assert_eq!(
+                IdentifierName::Standard("b".to_string()),
+                fun.params[1].name.name
+            );
+            assert!(!fun.params[1].is_dashed);
+            assert_eq!(
+                Some(&IdentifierName::Standard("bar".to_string())),
+                fun.params[1].label.as_ref().and_then(|label| match label {
+                    ParamLabel::Explicit(name) => Some(&name.name),
+                    ParamLabel::Implicit => None,
+                })
+            );
+        }
         other => panic!("Unexpected expression {:?}", other),
     });
 }
