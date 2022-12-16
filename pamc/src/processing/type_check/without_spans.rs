@@ -4,29 +4,82 @@ pub trait WithoutSpans {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self;
 }
 
-impl WithoutSpans for ListId<NodeId<Param>> {
+impl<T> WithoutSpans for Option<T>
+where
+    T: WithoutSpans,
+{
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.get_list(self).to_vec();
-        let new = original
-            .into_iter()
-            .map(|id| id.without_spans(registry))
-            .collect();
+        self.map(|id| id.without_spans(registry))
+    }
+}
+
+impl WithoutSpans for NonEmptyParamListId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            NonEmptyParamListId::Unlabeled(id) => {
+                NonEmptyParamListId::Unlabeled(id.without_spans(registry))
+            }
+            NonEmptyParamListId::Labeled(id) => {
+                NonEmptyParamListId::Labeled(id.without_spans(registry))
+            }
+        }
+    }
+}
+
+impl WithoutSpans for NonEmptyListId<NodeId<UnlabeledParam>> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
     }
 }
 
-impl WithoutSpans for NodeId<Param> {
+impl WithoutSpans for NodeId<UnlabeledParam> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let name_id = original.name_id.without_spans(registry);
         let type_id = original.type_id.without_spans(registry);
-        registry.add(Param {
+        registry.add(UnlabeledParam {
             id: dummy_id(),
             span: None,
             is_dashed: original.is_dashed,
             name_id,
             type_id,
         })
+    }
+}
+
+impl WithoutSpans for NonEmptyListId<NodeId<LabeledParam>> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
+        registry.add_list(new)
+    }
+}
+
+impl WithoutSpans for NodeId<LabeledParam> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.get(self).clone();
+        let label_id = original.label_id.without_spans(registry);
+        let name_id = original.name_id.without_spans(registry);
+        let type_id = original.type_id.without_spans(registry);
+        registry.add(LabeledParam {
+            id: dummy_id(),
+            span: None,
+            label_id,
+            is_dashed: original.is_dashed,
+            name_id,
+            type_id,
+        })
+    }
+}
+
+impl WithoutSpans for ParamLabelId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            ParamLabelId::Implicit => ParamLabelId::Implicit,
+            ParamLabelId::Explicit(id) => ParamLabelId::Explicit(id.without_spans(registry)),
+        }
     }
 }
 
@@ -73,13 +126,10 @@ impl WithoutSpans for NodeId<NameExpression> {
     }
 }
 
-impl WithoutSpans for ListId<NodeId<Identifier>> {
+impl WithoutSpans for NonEmptyListId<NodeId<Identifier>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.get_list(self).to_vec();
-        let new = original
-            .into_iter()
-            .map(|id| id.without_spans(registry))
-            .collect();
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
     }
 }
@@ -98,13 +148,10 @@ impl WithoutSpans for NodeId<Call> {
     }
 }
 
-impl WithoutSpans for ListId<ExpressionId> {
+impl WithoutSpans for NonEmptyListId<ExpressionId> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.get_list(self).to_vec();
-        let new = original
-            .into_iter()
-            .map(|id| id.without_spans(registry))
-            .collect();
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
     }
 }
@@ -142,13 +189,10 @@ impl WithoutSpans for NodeId<Match> {
     }
 }
 
-impl WithoutSpans for ListId<NodeId<MatchCase>> {
+impl WithoutSpans for NonEmptyListId<NodeId<MatchCase>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.get_list(self).to_vec();
-        let new = original
-            .into_iter()
-            .map(|id| id.without_spans(registry))
-            .collect();
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
     }
 }
@@ -185,10 +229,10 @@ impl WithoutSpans for NodeId<Forall> {
 
 impl WithoutSpans for NodeId<Check> {
     fn without_spans(self, check: &mut NodeRegistry) -> Self {
-        let original = check.check(self).clone();
+        let original = check.get(self).clone();
         let assertion_list_id = original.assertion_list_id.without_spans(check);
         let output_id = original.output_id.without_spans(check);
-        check.add_check_and_overwrite_its_id(Check {
+        check.add(Check {
             id: dummy_id(),
             span: None,
             assertion_list_id,
@@ -197,13 +241,10 @@ impl WithoutSpans for NodeId<Check> {
     }
 }
 
-impl WithoutSpans for ListId<NodeId<CheckAssertion>> {
+impl WithoutSpans for NonEmptyListId<NodeId<CheckAssertion>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
-        let original = registry.get_list(self).to_vec();
-        let new = original
-            .into_iter()
-            .map(|id| id.without_spans(registry))
-            .collect();
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
     }
 }

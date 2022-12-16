@@ -2,7 +2,7 @@ use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
-    node_registry::{ListId, NodeId, NodeRegistry},
+    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
 };
 
 use eval::*;
