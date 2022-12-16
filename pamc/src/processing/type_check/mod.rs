@@ -4,6 +4,7 @@ use crate::data::{
     node_equality_checker::NodeEqualityChecker,
     node_registry::{NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    TextSpan,
 };
 
 use eval::*;

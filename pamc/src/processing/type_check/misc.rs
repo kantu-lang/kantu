@@ -71,14 +71,26 @@ pub fn dummy_id<T>() -> NodeId<T> {
     NodeId::new(0)
 }
 
-impl Forall {
-    pub fn collapse_if_nullary(self, registry: &mut NodeRegistry) -> ExpressionId {
-        // TODO: Unreachable
-        if self.param_list_id.len() == 0 {
-            self.output_id
-        } else {
-            let forall_id = registry.add(self);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PossiblyNullaryForall {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+    pub param_list_id: Option<NonEmptyParamListId>,
+    pub output_id: ExpressionId,
+}
+
+impl PossiblyNullaryForall {
+    pub fn into_id(self, registry: &mut NodeRegistry) -> ExpressionId {
+        if let Some(param_list_id) = self.param_list_id {
+            let forall_id = registry.add(Forall {
+                id: dummy_id(),
+                span: self.span,
+                param_list_id,
+                output_id: self.output_id,
+            });
             ExpressionId::Forall(forall_id)
+        } else {
+            self.output_id
         }
     }
 }
@@ -139,6 +151,17 @@ impl<T> SafeUnwrap<T> for Result<T, Infallible> {
             Ok(x) => x,
             Err(impossible) => match impossible {},
         }
+    }
+}
+
+pub(super) fn normalize_optional_params_and_leave_params_in_context_dirty(
+    state: &mut State,
+    id: Option<NonEmptyParamListId>,
+) -> Result<WithPushWarning<Option<NonEmptyParamListId>>, Tainted<TypeCheckError>> {
+    if let Some(id) = id {
+        Ok(normalize_params_and_leave_params_in_context_dirty(state, id)?.map(Some))
+    } else {
+        Ok(with_push_warning(None))
     }
 }
 

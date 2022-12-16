@@ -28,7 +28,7 @@ fn type_check_file(state: &mut State, file_id: NodeId<File>) -> Result<(), TypeC
 
 fn type_check_file_dirty(state: &mut State, file_id: NodeId<File>) -> Result<(), Tainted<TypeCheckError>> {
     let file = state.registry.get(file_id);
-    let items = state.registry.get_list(file.item_list_id).to_vec();
+    let items = state.registry.get_possibly_empty_list(file.item_list_id).to_vec();
     for &item_id in &items {
         type_check_file_item_dirty(state, item_id)??;
     }
@@ -51,7 +51,7 @@ fn type_check_type_statement_dirty(
 
     let type_statement = state.registry.get(type_statement_id);
     let variant_ids = state
-        .registry.get_list(type_statement.variant_list_id)
+        .registry.get_possibly_empty_list(type_statement.variant_list_id)
         .to_vec();
     for variant_id in variant_ids {
         type_check_type_variant_dirty(state, variant_id)??;
@@ -65,28 +65,28 @@ fn type_check_type_constructor_dirty(
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let type_statement = state.registry.get(type_statement_id).clone();
-    let arity = type_statement.param_list_id.len;
+    let arity = type_statement.param_list_id.len();
     let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context_dirty(state, type_statement.param_list_id)??;
+    normalize_optional_params_and_leave_params_in_context_dirty(state, type_statement.param_list_id)??;
     let type_constructor_type_id = NormalFormId::unchecked_new(
-        Forall {
+        PossiblyNullaryForall {
             id: dummy_id(),
             span: None,
             param_list_id: normalized_param_list_id,
             output_id: type0_expression(state).raw(),
         }
-        .collapse_if_nullary(state.registry)
+        .into_id(state.registry)
         .without_spans(state.registry),
     );
     state.context.pop_n(arity);
 
     let variant_name_list_id = {
-        let variant_ids = state.registry.get_list(type_statement.variant_list_id);
-        let variant_name_ids = variant_ids
+        let variant_ids = state.registry.get_possibly_empty_list(type_statement.variant_list_id);
+        let variant_name_ids: Vec<_> = variant_ids
             .iter()
             .map(|&variant_id| state.registry.get(variant_id).name_id)
             .collect();
-        state.registry.add_list(variant_name_ids)
+        state.registry.add_possibly_empty_list(variant_name_ids)
     };
     Ok(state.context.push(ContextEntry {
         type_id: type_constructor_type_id,
@@ -96,9 +96,9 @@ fn type_check_type_constructor_dirty(
     }))
 }
 
-pub(super) fn type_check_param_dirty(
+pub(super) fn type_check_unlabeled_param_dirty(
     state: &mut State,
-    param_id: NodeId<Param>,
+    param_id: NodeId<UnlabeledParam>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let param = state.registry.get(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
@@ -118,19 +118,19 @@ fn type_check_type_variant_dirty(
     variant_id: NodeId<Variant>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let variant = state.registry.get(variant_id).clone();
-    let arity = variant.param_list_id.len;
+    let arity = variant.param_list_id.len();
     let normalized_param_list_id =
-        normalize_params_and_leave_params_in_context_dirty(state, variant.param_list_id)??;
+        normalize_optional_params_and_leave_params_in_context_dirty(state, variant.param_list_id)??;
     type_check_expression_dirty(state, None, variant.return_type_id)?;
     let return_type_id = evaluate_well_typed_expression(state, variant.return_type_id);
     let type_id = NormalFormId::unchecked_new(
-        Forall {
+        PossiblyNullaryForall {
             id: dummy_id(),
             span: None,
             param_list_id: normalized_param_list_id,
             output_id: return_type_id.raw(),
         }
-        .collapse_if_nullary(state.registry)
+        .into_id(state.registry)
         .without_spans(state.registry),
     );
     state.context.pop_n(arity);
