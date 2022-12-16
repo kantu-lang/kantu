@@ -20,11 +20,11 @@ impl NormalFormId {
 pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
     let name_id = add_name_expression_and_overwrite_component_ids(
         state.registry,
-        vec![Identifier {
+        NonEmptyVec::singleton(Identifier {
             id: dummy_id(),
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
             span: None,
-        }],
+        }),
         state.context.type0_dbi(),
     );
     NormalFormId::unchecked_new(ExpressionId::Name(name_id))
@@ -32,23 +32,14 @@ pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
 
 pub fn add_name_expression_and_overwrite_component_ids(
     registry: &mut NodeRegistry,
-    components: Vec<Identifier>,
+    components: NonEmptyVec<Identifier>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
-    let first_span = components
-        .first()
-        .expect("components should be non-empty")
-        .span;
-    let last_span = components
-        .last()
-        .expect("components should be non-empty")
-        .span;
+    let first_span = components.first().span;
+    let last_span = components.last().span;
     let span = first_span
         .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
-    let component_ids = components
-        .into_iter()
-        .map(|component| registry.add(component))
-        .collect();
+    let component_ids = components.into_mapped(|component| registry.add(component));
     let component_list_id = registry.add_list(component_ids);
     registry.add(NameExpression {
         id: dummy_id(),
@@ -60,23 +51,11 @@ pub fn add_name_expression_and_overwrite_component_ids(
 
 pub fn add_name_expression(
     registry: &mut NodeRegistry,
-    component_ids: Vec<NodeId<Identifier>>,
+    component_ids: NonEmptyVec<NodeId<Identifier>>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
-    let first_span = registry
-        .identifier(
-            *component_ids
-                .first()
-                .expect("components should be non-empty"),
-        )
-        .span;
-    let last_span = registry
-        .identifier(
-            *component_ids
-                .last()
-                .expect("components should be non-empty"),
-        )
-        .span;
+    let first_span = registry.get(*component_ids.first()).span;
+    let last_span = registry.get(*component_ids.last()).span;
     let span = first_span
         .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
     let component_list_id = registry.add_list(component_ids);
@@ -94,7 +73,8 @@ pub fn dummy_id<T>() -> NodeId<T> {
 
 impl Forall {
     pub fn collapse_if_nullary(self, registry: &mut NodeRegistry) -> ExpressionId {
-        if self.param_list_id.len == 0 {
+        // TODO: Unreachable
+        if self.param_list_id.len() == 0 {
             self.output_id
         } else {
             let forall_id = registry.add(self);
@@ -164,43 +144,85 @@ impl<T> SafeUnwrap<T> for Result<T, Infallible> {
 
 pub(super) fn normalize_params_and_leave_params_in_context_dirty(
     state: &mut State,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Result<WithPushWarning<ListId<NodeId<Param>>>, Tainted<TypeCheckError>> {
-    let param_ids = state.registry.get_list(param_list_id).to_vec();
-    let normalized_ids = param_ids
-        .iter()
-        .copied()
-        .map(
-            |param_id| -> Result<NodeId<Param>, Tainted<TypeCheckError>> {
-                type_check_param_dirty(state, param_id)??;
-                let type_id: ExpressionId = state
-                    .context
-                    .get_type(DbIndex(0), state.registry)
-                    .downshift(1, state.registry)
-                    .raw();
-                let old_param = state.registry.get(param_id);
-                let normalized_param_with_dummy_id = Param {
-                    id: dummy_id(),
-                    span: None,
-                    is_dashed: old_param.is_dashed,
-                    name_id: old_param.name_id,
-                    type_id,
-                };
-                let normalized_id = state
-                    .registry
-                    .add(normalized_param_with_dummy_id)
-                    .without_spans(state.registry);
-                Ok(normalized_id)
-            },
-        )
-        .collect::<Result<Vec<_>, _>>()?;
+    id: NonEmptyParamListId,
+) -> Result<WithPushWarning<NonEmptyParamListId>, Tainted<TypeCheckError>> {
+    Ok(with_push_warning(match id {
+        NonEmptyParamListId::Unlabeled(id) => NonEmptyParamListId::Unlabeled(
+            normalize_unlabeled_params_and_leave_params_in_context_dirty(state, id)??,
+        ),
+        NonEmptyParamListId::Labeled(id) => NonEmptyParamListId::Labeled(
+            normalize_labeled_params_and_leave_params_in_context_dirty(state, id)??,
+        ),
+    }))
+}
+
+pub(super) fn normalize_unlabeled_params_and_leave_params_in_context_dirty(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> Result<WithPushWarning<NonEmptyListId<NodeId<UnlabeledParam>>>, Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
+    let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
+        |&param_id| -> Result<NodeId<UnlabeledParam>, Tainted<TypeCheckError>> {
+            type_check_param_dirty(state, param_id)??;
+            let type_id: ExpressionId = state
+                .context
+                .get_type(DbIndex(0), state.registry)
+                .downshift(1, state.registry)
+                .raw();
+            let old_param = state.registry.get(param_id);
+            let normalized_param_with_dummy_id = UnlabeledParam {
+                id: dummy_id(),
+                span: None,
+                is_dashed: old_param.is_dashed,
+                name_id: old_param.name_id,
+                type_id,
+            };
+            let normalized_id = state
+                .registry
+                .add(normalized_param_with_dummy_id)
+                .without_spans(state.registry);
+            Ok(normalized_id)
+        },
+    )?;
+    Ok(with_push_warning(state.registry.add_list(normalized_ids)))
+}
+
+pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> Result<WithPushWarning<NonEmptyListId<NodeId<LabeledParam>>>, Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
+    let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
+        |&param_id| -> Result<NodeId<LabeledParam>, Tainted<TypeCheckError>> {
+            type_check_param_dirty(state, param_id)??;
+            let type_id: ExpressionId = state
+                .context
+                .get_type(DbIndex(0), state.registry)
+                .downshift(1, state.registry)
+                .raw();
+            let old_param = state.registry.get(param_id);
+            let normalized_param_with_dummy_id = LabeledParam {
+                id: dummy_id(),
+                span: None,
+                label_id: old_param.label_id,
+                is_dashed: old_param.is_dashed,
+                name_id: old_param.name_id,
+                type_id,
+            };
+            let normalized_id = state
+                .registry
+                .add(normalized_param_with_dummy_id)
+                .without_spans(state.registry);
+            Ok(normalized_id)
+        },
+    )?;
     Ok(with_push_warning(state.registry.add_list(normalized_ids)))
 }
 
 pub fn verify_variant_to_case_bijection(
     registry: &NodeRegistry,
-    variant_name_list_id: ListId<NodeId<Identifier>>,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
     verify_there_are_no_duplicate_cases(registry, case_list_id)?;
     verify_that_every_variant_has_a_case(registry, variant_name_list_id, case_list_id)?;
@@ -210,11 +232,11 @@ pub fn verify_variant_to_case_bijection(
 
 fn verify_there_are_no_duplicate_cases(
     registry: &NodeRegistry,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
-    let mut visited_cases: Vec<NodeId<MatchCase>> = Vec::with_capacity(case_list_id.len);
+    let mut visited_cases: Vec<NodeId<MatchCase>> = Vec::with_capacity(case_list_id.len());
 
-    let case_ids = registry.get_list(case_list_id);
+    let case_ids = registry.get_possibly_empty_list(case_list_id);
 
     for &case_id in case_ids {
         let case = registry.get(case_id);
@@ -243,11 +265,11 @@ fn verify_there_are_no_duplicate_cases(
 
 fn verify_that_every_variant_has_a_case(
     registry: &NodeRegistry,
-    variant_name_list_id: ListId<NodeId<Identifier>>,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
-    let variant_name_ids = registry.get_list(variant_name_list_id);
-    let case_ids = registry.get_list(case_list_id);
+    let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
+    let case_ids = registry.get_possibly_empty_list(case_list_id);
 
     for &variant_name_id in variant_name_ids {
         let variant_name = &registry.get(variant_name_id).name;
@@ -264,11 +286,11 @@ fn verify_that_every_variant_has_a_case(
 
 fn verify_that_every_case_has_a_variant(
     registry: &NodeRegistry,
-    variant_name_list_id: ListId<NodeId<Identifier>>,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
-    let variant_name_ids = registry.get_list(variant_name_list_id);
-    let case_ids = registry.get_list(case_list_id);
+    let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
+    let case_ids = registry.get_possibly_empty_list(case_list_id);
 
     for &case_id in case_ids {
         let case = registry.get(case_id);
@@ -288,10 +310,7 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
     adt_expression: NormalFormAdtExpression,
     target_variant_name_id: NodeId<Identifier>,
 ) -> DbIndex {
-    let type_dbi = state
-        .registry
-        .name_expression(adt_expression.type_name_id)
-        .db_index;
+    let type_dbi = state.registry.get(adt_expression.type_name_id).db_index;
     let variant_name_list_id = match state.context.get_definition(type_dbi, state.registry) {
         ContextEntryDefinition::Adt {
             variant_name_list_id,
@@ -302,7 +321,7 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
     let target_variant_name = &state.registry.get(target_variant_name_id).name;
     let variant_index = state
         .registry
-        .get_list(variant_name_list_id)
+        .get_possibly_empty_list(variant_name_list_id)
         .iter()
         .position(|&variant_name_id| {
             let variant_name = &state.registry.get(variant_name_id).name;
@@ -348,26 +367,64 @@ fn is_left_inclusive_subterm_of_right(
         ExpressionId::Fun(right_id) => {
             let right = state.registry.get(right_id).clone();
 
-            let right_param_ids = state.registry.get_list(right.param_list_id).to_vec();
-            if right_param_ids.iter().copied().enumerate().any(
-                |(right_param_index, right_param_id)| {
-                    let shifted_left = left.upshift(right_param_index, state.registry);
-                    let right_param_type_id = state.registry.get(right_param_id).type_id;
-                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
-                },
-            ) {
+            let (is_left_inclusive_subterm_of_right_param, right_param_arity) = match right
+                .param_list_id
+            {
+                NonEmptyParamListId::Unlabeled(param_list_id) => {
+                    let right_param_ids = state.registry.get_list(param_list_id).to_vec();
+                    let is_left_inclusive_subterm_of_right_param = right_param_ids
+                        .iter()
+                        .copied()
+                        .enumerate()
+                        .any(|(right_param_index, right_param_id)| {
+                            let shifted_left = left.upshift(right_param_index, state.registry);
+                            let right_param_type_id = state.registry.get(right_param_id).type_id;
+                            is_left_inclusive_subterm_of_right(
+                                state,
+                                shifted_left,
+                                right_param_type_id,
+                            )
+                        });
+                    (
+                        is_left_inclusive_subterm_of_right_param,
+                        right_param_ids.len(),
+                    )
+                }
+                NonEmptyParamListId::Labeled(param_list_id) => {
+                    let right_param_ids = state.registry.get_list(param_list_id).to_vec();
+                    let is_left_inclusive_subterm_of_right_param = right_param_ids
+                        .iter()
+                        .copied()
+                        .enumerate()
+                        .any(|(right_param_index, right_param_id)| {
+                            let shifted_left = left.upshift(right_param_index, state.registry);
+                            let right_param_type_id = state.registry.get(right_param_id).type_id;
+                            is_left_inclusive_subterm_of_right(
+                                state,
+                                shifted_left,
+                                right_param_type_id,
+                            )
+                        });
+                    (
+                        is_left_inclusive_subterm_of_right_param,
+                        right_param_ids.len(),
+                    )
+                }
+            };
+
+            if is_left_inclusive_subterm_of_right_param {
                 return true;
             }
 
             {
-                let shifted_left = left.upshift(right_param_ids.len(), state.registry);
+                let shifted_left = left.upshift(right_param_arity, state.registry);
                 if is_left_inclusive_subterm_of_right(state, shifted_left, right.return_type_id) {
                     return true;
                 }
             }
 
             {
-                let shifted_left = left.upshift(right_param_ids.len() + 1, state.registry);
+                let shifted_left = left.upshift(right_param_arity + 1, state.registry);
                 if is_left_inclusive_subterm_of_right(state, shifted_left, right.body_id) {
                     return true;
                 }
@@ -382,7 +439,10 @@ fn is_left_inclusive_subterm_of_right(
                 return true;
             }
 
-            let right_case_ids = state.registry.get_list(right.case_list_id).to_vec();
+            let right_case_ids = state
+                .registry
+                .get_possibly_empty_list(right.case_list_id)
+                .to_vec();
             if right_case_ids.iter().any(|&right_case_id| {
                 let case_arity = state.registry.get(right_case_id).param_list_id.len;
                 let shifted_left = left.upshift(case_arity, state.registry);
