@@ -166,7 +166,7 @@ fn bind_labeled_param_dirty(
     let name = create_name_and_add_to_scope(context, param.name)?;
     Ok(LabeledParam {
         span: Some(param.span),
-        label: param.label,
+        label: param.label.into(),
         is_dashed: param.is_dashed,
         name,
         type_,

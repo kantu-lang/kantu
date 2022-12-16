@@ -9,12 +9,12 @@ fn dummy_id<T>() -> NodeId<T> {
 }
 
 pub fn lighten_file(registry: &mut NodeRegistry, unregistered: heavy::File) -> NodeId<File> {
-    let item_ids = unregistered
+    let item_ids: Vec<_> = unregistered
         .items
         .into_iter()
         .map(|unregistered| register_file_item(registry, unregistered))
         .collect();
-    let item_list_id = registry.add_list(item_ids);
+    let item_list_id = registry.add_possibly_empty_list(item_ids);
     registry.add(File {
         id: dummy_id(),
         span: unregistered.span,
@@ -42,18 +42,13 @@ pub fn register_type_statement(
     unregistered: heavy::TypeStatement,
 ) -> NodeId<TypeStatement> {
     let name_id = register_identifier(registry, unregistered.name);
-    let param_ids = unregistered
-        .params
-        .into_iter()
-        .map(|unregistered| register_param(registry, unregistered))
-        .collect();
-    let param_list_id = registry.add_list(param_ids);
-    let variant_ids = unregistered
+    let param_list_id = register_optional_params(registry, unregistered.params);
+    let variant_ids: Vec<_> = unregistered
         .variants
         .into_iter()
         .map(|unregistered_variant| register_variant(registry, unregistered_variant))
         .collect();
-    let variant_list_id = registry.add_list(variant_ids);
+    let variant_list_id = registry.add_possibly_empty_list(variant_ids);
     registry.add(TypeStatement {
         id: dummy_id(),
         span: unregistered.span,
@@ -74,10 +69,40 @@ pub fn register_identifier(
     })
 }
 
-pub fn register_param(registry: &mut NodeRegistry, unregistered: heavy::Param) -> NodeId<Param> {
+pub fn register_optional_params(
+    registry: &mut NodeRegistry,
+    unregistered: Option<heavy::NonEmptyParamVec>,
+) -> Option<NonEmptyParamListId> {
+    unregistered.map(|unregistered| register_params(registry, unregistered))
+}
+
+pub fn register_params(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::NonEmptyParamVec,
+) -> NonEmptyParamListId {
+    match unregistered {
+        heavy::NonEmptyParamVec::Unlabeled(unregistered) => {
+            let param_ids = unregistered
+                .into_mapped(|unregistered| register_unlabeled_param(registry, unregistered));
+            let param_list_id = registry.add_list(param_ids);
+            NonEmptyParamListId::Unlabeled(param_list_id)
+        }
+        heavy::NonEmptyParamVec::Labeled(unregistered) => {
+            let param_ids = unregistered
+                .into_mapped(|unregistered| register_labeled_param(registry, unregistered));
+            let param_list_id = registry.add_list(param_ids);
+            NonEmptyParamListId::Labeled(param_list_id)
+        }
+    }
+}
+
+pub fn register_unlabeled_param(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::UnlabeledParam,
+) -> NodeId<UnlabeledParam> {
     let name_id = register_identifier(registry, unregistered.name);
     let type_id = register_expression(registry, unregistered.type_);
-    registry.add(Param {
+    registry.add(UnlabeledParam {
         id: dummy_id(),
         span: unregistered.span,
         is_dashed: unregistered.is_dashed,
@@ -86,17 +111,41 @@ pub fn register_param(registry: &mut NodeRegistry, unregistered: heavy::Param) -
     })
 }
 
+pub fn register_labeled_param(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::LabeledParam,
+) -> NodeId<LabeledParam> {
+    let label_id = register_label(registry, unregistered.label);
+    let name_id = register_identifier(registry, unregistered.name);
+    let type_id = register_expression(registry, unregistered.type_);
+    registry.add(LabeledParam {
+        id: dummy_id(),
+        span: unregistered.span,
+        label_id,
+        is_dashed: unregistered.is_dashed,
+        name_id,
+        type_id,
+    })
+}
+
+pub fn register_label(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::ParamLabel,
+) -> ParamLabelId {
+    match unregistered {
+        heavy::ParamLabel::Implicit => ParamLabelId::Implicit,
+        heavy::ParamLabel::Explicit(unregistered) => {
+            ParamLabelId::Explicit(register_identifier(registry, unregistered))
+        }
+    }
+}
+
 pub fn register_variant(
     registry: &mut NodeRegistry,
     unregistered: heavy::Variant,
 ) -> NodeId<Variant> {
     let name_id = register_identifier(registry, unregistered.name);
-    let param_ids = unregistered
-        .params
-        .into_iter()
-        .map(|unregistered| register_param(registry, unregistered))
-        .collect();
-    let param_list_id = registry.add_list(param_ids);
+    let param_list_id = register_optional_params(registry, unregistered.params);
     let return_type_id = register_expression(registry, unregistered.return_type);
     registry.add(Variant {
         id: dummy_id(),
@@ -159,9 +208,7 @@ pub fn register_name_expression(
 ) -> NodeId<NameExpression> {
     let component_ids = unregistered
         .components
-        .into_iter()
-        .map(|unregistered| register_identifier(registry, unregistered))
-        .collect();
+        .into_mapped(|unregistered| register_identifier(registry, unregistered));
     let component_list_id = registry.add_list(component_ids);
     registry.add(NameExpression {
         id: dummy_id(),
@@ -175,9 +222,7 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> 
     let callee_id = register_expression(registry, unregistered.callee);
     let arg_ids = unregistered
         .args
-        .into_iter()
-        .map(|unregistered| register_expression(registry, unregistered))
-        .collect();
+        .into_mapped(|unregistered| register_expression(registry, unregistered));
     let arg_list_id = registry.add_list(arg_ids);
     registry.add(Call {
         id: dummy_id(),
@@ -189,12 +234,7 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> 
 
 pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> NodeId<Fun> {
     let name_id = register_identifier(registry, unregistered.name);
-    let param_ids = unregistered
-        .params
-        .into_iter()
-        .map(|unregistered| register_param(registry, unregistered))
-        .collect();
-    let param_list_id = registry.add_list(param_ids);
+    let param_list_id = register_params(registry, unregistered.params);
     let return_type_id = register_expression(registry, unregistered.return_type);
     let body_id = register_expression(registry, unregistered.body);
     let skip_type_checking_body = unregistered.skip_type_checking_body;
@@ -211,12 +251,12 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> No
 
 pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -> NodeId<Match> {
     let matchee_id = register_expression(registry, unregistered.matchee);
-    let case_ids = unregistered
+    let case_ids: Vec<_> = unregistered
         .cases
         .into_iter()
         .map(|unregistered| register_match_case(registry, unregistered))
         .collect();
-    let case_list_id = registry.add_list(case_ids);
+    let case_list_id = registry.add_possibly_empty_list(case_ids);
     registry.add(Match {
         id: dummy_id(),
         span: unregistered.span,
@@ -226,12 +266,7 @@ pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -
 }
 
 pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall) -> NodeId<Forall> {
-    let param_ids = unregistered
-        .params
-        .into_iter()
-        .map(|unregistered| register_param(registry, unregistered))
-        .collect();
-    let param_list_id = registry.add_list(param_ids);
+    let param_list_id = register_params(registry, unregistered.params);
     let output_id = register_expression(registry, unregistered.output);
     registry.add(Forall {
         id: dummy_id(),
@@ -244,9 +279,7 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall)
 pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -> NodeId<Check> {
     let assertion_ids = unregistered
         .assertions
-        .into_iter()
-        .map(|unregistered| register_check_assertion(registry, unregistered))
-        .collect();
+        .into_mapped(|unregistered| register_check_assertion(registry, unregistered));
     let assertion_list_id = registry.add_list(assertion_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add(Check {
@@ -365,12 +398,12 @@ pub fn register_match_case(
     unregistered: heavy::MatchCase,
 ) -> NodeId<MatchCase> {
     let variant_name_id = register_identifier(registry, unregistered.variant_name);
-    let param_ids = unregistered
+    let param_ids: Vec<_> = unregistered
         .params
         .into_iter()
         .map(|unregistered| register_identifier(registry, unregistered))
         .collect();
-    let param_list_id = registry.add_list(param_ids);
+    let param_list_id = registry.add_possibly_empty_list(param_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add(MatchCase {
         id: dummy_id(),

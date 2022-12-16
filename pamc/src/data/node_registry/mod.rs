@@ -185,7 +185,8 @@ impl NodeRegistry {
 }
 
 // TODO: Move
-use registerable_node::*;
+
+pub use registerable_node::RegisterableNode;
 mod registerable_node {
     use super::*;
 
@@ -548,6 +549,15 @@ impl NodeRegistry {
         T::subregistry_mut(self).add(list)
     }
 
+    pub fn add_possibly_empty_list<T, L>(&mut self, list: L) -> Option<NonEmptyListId<T>>
+    where
+        T: RegisterableList + Clone + Eq + Hash,
+        L: IntoOptionalNonEmptyVec<T>,
+    {
+        list.into_optional_non_empty_vec()
+            .map(|list| T::subregistry_mut(self).add(list))
+    }
+
     pub fn get_list<T>(&self, id: NonEmptyListId<T>) -> &[T]
     where
         T: RegisterableList + Clone + Eq + Hash,
@@ -567,8 +577,24 @@ impl NodeRegistry {
     }
 }
 
+pub trait IntoOptionalNonEmptyVec<T> {
+    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>>;
+}
+
+impl<T> IntoOptionalNonEmptyVec<T> for Option<NonEmptyVec<T>> {
+    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>> {
+        self
+    }
+}
+
+impl<T> IntoOptionalNonEmptyVec<T> for Vec<T> {
+    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>> {
+        NonEmptyVec::try_from(self).ok()
+    }
+}
+
 // TODO: Move
-use registerable_list::*;
+pub use registerable_list::RegisterableList;
 mod registerable_list {
     use super::*;
 

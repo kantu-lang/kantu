@@ -65,7 +65,20 @@ pub struct LabeledParam {
     pub type_: Expression,
 }
 
-pub use crate::data::simplified_ast::ParamLabel;
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ParamLabel {
+    Implicit,
+    Explicit(Identifier),
+}
+
+impl From<unbound::ParamLabel> for ParamLabel {
+    fn from(label: unbound::ParamLabel) -> Self {
+        match label {
+            unbound::ParamLabel::Implicit => ParamLabel::Implicit,
+            unbound::ParamLabel::Explicit(name) => ParamLabel::Explicit(name.into()),
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
