@@ -79,6 +79,7 @@ fn call() {
                         assert_eq!(IdentifierName::Standard("c".to_string()), arg0.name);
                         assert_eq!(IdentifierName::Standard("e".to_string()), arg1.right.name);
                         assert_eq!(IdentifierName::Standard("f".to_string()), arg2.name);
+                        return;
                     }
                     _ => {}
                 }

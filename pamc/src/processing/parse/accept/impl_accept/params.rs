@@ -53,19 +53,22 @@ impl Accept for UnfinishedParams {
                 }
                 _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
             },
-            FinishedStackItem::Param(_, param, end_delimiter) => {
-                let params = NonEmptyVec::from_pushed(self.params.clone(), param);
-                self.params = params.to_vec();
-                match end_delimiter.raw().kind {
-                    TokenKind::Comma => AcceptResult::ContinueToNextToken,
-                    TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::Params(self.first_token.clone(), params),
-                    ),
-                    _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
-                    }
+            FinishedStackItem::Param(_, param, end_delimiter) => match end_delimiter.raw().kind {
+                TokenKind::Comma => {
+                    self.params.push(param);
+                    AcceptResult::ContinueToNextToken
                 }
-            }
+                TokenKind::RParen => {
+                    let params = NonEmptyVec::from_pushed(self.params.clone(), param);
+                    AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
+                        self.first_token.clone(),
+                        params,
+                    ))
+                }
+                _other_end_delimiter => {
+                    AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
+                }
+            },
             other_item => unexpected_finished_item(&other_item),
         }
     }
