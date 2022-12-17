@@ -61,16 +61,12 @@ mod labeled_params {
         });
     }
 
-    // TODO
-    #[ignore]
     #[test]
     fn explicit_underscore_label() {
         let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_underscore_label.ph");
         expect_underscore_label_params_error(src);
     }
 
-    // TODO
-    #[ignore]
     #[test]
     fn implicit_underscore_label() {
         let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/implicit_underscore_label.ph");

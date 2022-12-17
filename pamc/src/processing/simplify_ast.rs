@@ -62,6 +62,9 @@ fn simplify_params(
 ) -> Result<NonEmptyParamVec, SimplifyAstError> {
     let hetero_err = SimplifyAstError::HeterogeneousParams(unsimplified.clone());
     let (remaining, last) = unsimplified.into_popped();
+
+    validate_param_label(&last)?;
+
     if let Some(label) = last.label {
         let last = LabeledParam {
             span: last.span,
@@ -149,14 +152,15 @@ fn validate_param_label(param: &ust::Param) -> Result<(), SimplifyAstError> {
     let Some(label) = &param.label else {
         return Ok(());
     };
-    match label {
-        ParamLabel::Implicit => Ok(()),
-        ParamLabel::Explicit(label) => match &label.name {
-            IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
-                Err(SimplifyAstError::UnderscoreParamLabel(param.clone()))
-            }
-            _ => Ok(()),
-        },
+    let label: &ust::Identifier = match label {
+        ParamLabel::Implicit => &param.name,
+        ParamLabel::Explicit(label) => label,
+    };
+    match &label.name {
+        IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
+            Err(SimplifyAstError::UnderscoreParamLabel(param.clone()))
+        }
+        _ => Ok(()),
     }
 }
 
