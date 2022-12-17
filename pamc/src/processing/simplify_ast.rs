@@ -9,6 +9,7 @@ use crate::data::{
 pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
     HeterogeneousParams(NonEmptyVec<ust::Param>),
+    UnderscoreLabel(ust::Param),
 }
 
 pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> {
