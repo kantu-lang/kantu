@@ -101,12 +101,14 @@ pub(super) fn type_check_unlabeled_param_dirty(
     param_id: NodeId<UnlabeledParam>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let param = state.registry.get(param_id).clone();
+    println!("check_unlabeled_name: {:?}", &state.registry.get(param.name_id).name);
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
         return tainted_err(TypeCheckError::IllegalTypeExpression(param.type_id));
     }
 
     let normalized_type_id = evaluate_well_typed_expression(state, param.type_id);
+    println!(">>pushing.check_unlabeled_name: {:?}", &state.registry.get(param.name_id).name);
     Ok(state.context.push(ContextEntry {
         type_id: normalized_type_id,
         definition: ContextEntryDefinition::Uninterpreted,
@@ -341,8 +343,10 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     // even though `f` is also added to the context as a third entry
     // (to enable recursion).
     let param_arity = fun.param_list_id.len();
+    println!("context_len.A = {}", state.context.len());
     let normalized_param_list_id =
         normalize_params_and_leave_params_in_context_dirty(state, fun.param_list_id)??;
+    println!("context_len.B = {}", state.context.len());
     {
         let return_type_type_id = get_type_of_expression_dirty(state, None, fun.return_type_id)?;
         if !is_term_equal_to_type0_or_type1(state, return_type_type_id) {
@@ -350,6 +354,8 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
         }
     }
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
+
+    println!("context_len.B2 = {}", state.context.len());
 
     let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
         state.registry.add(Forall {
@@ -368,15 +374,20 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
             skip_type_checking_body: true,
             ..shifted_fun
         });
+        println!("context_len.B3 = {}", state.context.len());
         let normalized_fun_id =
             evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
+        println!("context_len.B4 = {}", state.context.len());
         state.context.push(ContextEntry {
             type_id: shifted_fun_type_id,
             definition: ContextEntryDefinition::Alias {
                 value_id: normalized_fun_id,
             },
         })?;
+        println!("context_len.B5 = {}", state.context.len());
     }
+
+    println!("context_len.C = {}", state.context.len());
 
     // We need to upshift the return type by one level before comparing it
     // to the body type, to account for the fact that the function has been
@@ -390,6 +401,7 @@ fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<Norma
     let normalized_return_type_id = ();
 
     if !fun.skip_type_checking_body {
+        println!("context({})={:#?}", fun.param_list_id.len(), state.context);
         let normalized_body_type_id = get_type_of_expression_dirty(
             state,
             Some(normalized_return_type_id_relative_to_body),

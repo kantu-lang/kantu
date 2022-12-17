@@ -519,7 +519,21 @@ mod ambiguous_output_type {
                     expected_ambiguous_match_case_src,
                 );
             }
-            _ => panic!("Unexpected error: {:#?}", err),
+            _ => {
+                if let TypeCheckError::NonAdtMatchee {
+                    matchee_id,
+                    type_id,
+                } = &err
+                {
+                    println!("matchee = {}", crate::processing::test_utils::format::format_expression_with_default_options(
+                        &expand_expression(registry, *matchee_id),
+                    ));
+                    println!("type = {}", crate::processing::test_utils::format::format_expression_with_default_options(
+                        &expand_expression(registry, type_id.raw()),
+                    ));
+                }
+                panic!("Unexpected error: {:#?}", err)
+            }
         });
     }
 

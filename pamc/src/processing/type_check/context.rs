@@ -183,6 +183,11 @@ where
     match result {
         Ok(ok) => Ok(ok),
         Err(err) => {
+            println!(
+                "untainting. truncating from {} to {}",
+                state.context.len(),
+                original_context_len
+            );
             state.context.truncate(original_context_len);
             state.substitution_context.truncate(original_scontext_len);
             Err(err.0)
