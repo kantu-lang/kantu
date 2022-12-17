@@ -26,13 +26,13 @@ fn illegal_dot_lhs() {
     });
 }
 
-// TODO: Fix after we updater simplifier
-#[ignore]
 #[test]
 fn explicitly_labeled_before_unlabeled_param() {
     let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_before_unlabeled.ph");
-    expect_simplification_error(src, |err| match err {
-        other_err => panic!("Unexpected error: {:#?}", other_err),
+    expect_simplification_error(src, |err| {
+        if !matches!(&err, SimplifyAstError::HeterogeneousParams(_)) {
+            panic!("Unexpected error: {:#?}", err);
+        }
     });
 }
 
