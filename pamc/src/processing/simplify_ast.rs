@@ -9,7 +9,7 @@ use crate::data::{
 pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
     HeterogeneousParams(NonEmptyVec<ust::Param>),
-    UnderscoreLabel(ust::Param),
+    UnderscoreParamLabel(ust::Param),
 }
 
 pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> {
@@ -112,6 +112,8 @@ fn simplify_param_but_require_label(
     unsimplified: ust::Param,
     hetero_err: &SimplifyAstError,
 ) -> Result<LabeledParam, SimplifyAstError> {
+    validate_param_label(&unsimplified)?;
+
     if let Some(label) = unsimplified.label {
         Ok(LabeledParam {
             span: unsimplified.span,
@@ -129,6 +131,8 @@ fn simplify_param_but_forbid_label(
     unsimplified: ust::Param,
     hetero_err: &SimplifyAstError,
 ) -> Result<UnlabeledParam, SimplifyAstError> {
+    validate_param_label(&unsimplified)?;
+
     if let Some(_) = unsimplified.label {
         Err(hetero_err.clone())
     } else {
@@ -138,6 +142,21 @@ fn simplify_param_but_forbid_label(
             name: unsimplified.name,
             type_: simplify_expression(unsimplified.type_)?,
         })
+    }
+}
+
+fn validate_param_label(param: &ust::Param) -> Result<(), SimplifyAstError> {
+    let Some(label) = &param.label else {
+        return Ok(());
+    };
+    match label {
+        ParamLabel::Implicit => Ok(()),
+        ParamLabel::Explicit(label) => match &label.name {
+            IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
+                Err(SimplifyAstError::UnderscoreParamLabel(param.clone()))
+            }
+            _ => Ok(()),
+        },
     }
 }
 

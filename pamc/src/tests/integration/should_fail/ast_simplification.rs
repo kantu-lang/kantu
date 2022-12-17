@@ -6,7 +6,7 @@ fn expect_simplification_error(src: &str, panicker: impl Fn(SimplifyAstError)) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
-    let err = simplify_file(file).expect_err("AST Simplification unexpectedly succeded");
+    let err = simplify_file(file).expect_err("AST Simplification unexpectedly succeeded");
     panicker(err);
 }
 
@@ -61,7 +61,7 @@ mod labeled_params {
         });
     }
 
-    // TODO: Fix
+    // TODO
     #[ignore]
     #[test]
     fn explicit_underscore_label() {
@@ -69,7 +69,7 @@ mod labeled_params {
         expect_underscore_label_params_error(src);
     }
 
-    // TODO: Fix
+    // TODO
     #[ignore]
     #[test]
     fn implicit_underscore_label() {
@@ -79,7 +79,7 @@ mod labeled_params {
 
     fn expect_underscore_label_params_error(src: &str) {
         expect_simplification_error(src, |err| {
-            if !matches!(&err, SimplifyAstError::UnderscoreLabel(_)) {
+            if !matches!(&err, SimplifyAstError::UnderscoreParamLabel(_)) {
                 panic!("Unexpected error: {:#?}", err);
             }
         });
