@@ -31,25 +31,25 @@ mod labeled_params {
 
     #[test]
     fn explicitly_labeled_before_unlabeled_param() {
-        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_before_unlabeled.ph");
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/heterogeneous/explicit_before_unlabeled.ph");
         expect_heterogeneous_params_error(src);
     }
 
     #[test]
     fn implicit_before_unlabeled() {
-        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/implicit_before_unlabeled.ph");
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/heterogeneous/implicit_before_unlabeled.ph");
         expect_heterogeneous_params_error(src);
     }
 
     #[test]
     fn unlabeled_before_explicit() {
-        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/unlabeled_before_explicit.ph");
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/heterogeneous/unlabeled_before_explicit.ph");
         expect_heterogeneous_params_error(src);
     }
 
     #[test]
     fn unlabeled_before_implicit() {
-        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/unlabeled_before_implicit.ph");
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/heterogeneous/unlabeled_before_implicit.ph");
         expect_heterogeneous_params_error(src);
     }
 
@@ -63,13 +63,13 @@ mod labeled_params {
 
     #[test]
     fn explicit_underscore_label() {
-        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_underscore_label.ph");
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/underscore_label/explicit_underscore_label.ph");
         expect_underscore_label_params_error(src);
     }
 
     #[test]
     fn implicit_underscore_label() {
-        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/implicit_underscore_label.ph");
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/underscore_label/implicit_underscore_label.ph");
         expect_underscore_label_params_error(src);
     }
 
