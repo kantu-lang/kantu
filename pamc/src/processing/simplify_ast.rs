@@ -10,6 +10,7 @@ pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
     HeterogeneousParams(NonEmptyVec<ust::Param>),
     UnderscoreParamLabel(ust::Param),
+    DuplicateParamLabel(ust::Param, ust::Param),
 }
 
 pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> {
@@ -149,14 +150,10 @@ fn simplify_param_but_forbid_label(
 }
 
 fn validate_param_label(param: &ust::Param) -> Result<(), SimplifyAstError> {
-    let Some(label) = &param.label else {
+    let Some(label_name) = param.label_name() else {
         return Ok(());
     };
-    let label: &ust::Identifier = match label {
-        ParamLabel::Implicit => &param.name,
-        ParamLabel::Explicit(label) => label,
-    };
-    match &label.name {
+    match label_name {
         IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
             Err(SimplifyAstError::UnderscoreParamLabel(param.clone()))
         }
