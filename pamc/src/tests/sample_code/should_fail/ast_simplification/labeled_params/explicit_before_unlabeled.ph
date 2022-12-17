@@ -3,6 +3,6 @@ type Nat {
     .S(n: Nat): Nat,
 }
 
-let f = fun (yellow~y: Nat, x: Nat): Nat {
+let f = fun _(yellow~y: Nat, x: Nat): Nat {
     Nat.O
 };
