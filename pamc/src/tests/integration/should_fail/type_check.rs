@@ -113,7 +113,7 @@ mod illegal_callee {
     #[test]
     fn forall() {
         let src = include_str!("../../sample_code/should_fail/type_check/illegal_callee/forall.ph");
-        expect_illegal_callee_error(src, "forall(T: Type) { Type }");
+        expect_illegal_callee_error(src, "forall(T: Type,) { Type }");
     }
 
     #[test]

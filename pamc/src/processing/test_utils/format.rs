@@ -283,7 +283,7 @@ pub fn format_check_assertions(
                 format_check_assertion(assertion, indent_level + 1, options)
             ))
             .collect::<Vec<_>>()
-            .join(","),
+            .join(""),
         i0
     )
 }
