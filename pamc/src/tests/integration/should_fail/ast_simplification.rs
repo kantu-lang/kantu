@@ -73,6 +73,12 @@ mod labeled_params {
         expect_underscore_label_params_error(src);
     }
 
+    #[test]
+    fn second_label_is_underscore() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/underscore_label/second_label_is_underscore.ph");
+        expect_underscore_label_params_error(src);
+    }
+
     fn expect_underscore_label_params_error(src: &str) {
         expect_simplification_error(src, |err| {
             if !matches!(&err, SimplifyAstError::UnderscoreParamLabel(_)) {
