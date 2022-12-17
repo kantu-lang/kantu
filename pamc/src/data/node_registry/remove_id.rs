@@ -3,8 +3,8 @@ use crate::data::{
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{
-        GoalKwOrPossiblyInvalidExpressionId, ListId, NodeId,
-        QuestionMarkOrPossiblyInvalidExpressionId,
+        GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyListId, NonEmptyParamListId,
+        ParamLabelId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
     simplified_ast as unbound, FileId, TextSpan,
 };
@@ -33,7 +33,7 @@ pub trait AddId {
 pub struct File {
     pub span: Option<TextSpan>,
     pub file_id: FileId,
-    pub item_list_id: ListId<FileItemNodeId>,
+    pub item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
 }
 impl RemoveId for with_id::File {
     type Output = File;
@@ -63,8 +63,8 @@ pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
 pub struct TypeStatement {
     pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
-    pub param_list_id: ListId<NodeId<with_id::Param>>,
-    pub variant_list_id: ListId<NodeId<with_id::Variant>>,
+    pub param_list_id: Option<NonEmptyParamListId>,
+    pub variant_list_id: Option<NonEmptyListId<NodeId<with_id::Variant>>>,
 }
 impl RemoveId for with_id::TypeStatement {
     type Output = TypeStatement;
@@ -91,16 +91,16 @@ impl AddId for TypeStatement {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Param {
+pub struct UnlabeledParam {
     pub span: Option<TextSpan>,
     pub is_dashed: bool,
     pub name_id: NodeId<with_id::Identifier>,
     pub type_id: ExpressionId,
 }
-impl RemoveId for with_id::Param {
-    type Output = Param;
+impl RemoveId for with_id::UnlabeledParam {
+    type Output = UnlabeledParam;
     fn remove_id(&self) -> Self::Output {
-        Param {
+        UnlabeledParam {
             span: self.span,
             is_dashed: self.is_dashed,
             name_id: self.name_id,
@@ -108,12 +108,46 @@ impl RemoveId for with_id::Param {
         }
     }
 }
-impl AddId for Param {
-    type Output = with_id::Param;
+impl AddId for UnlabeledParam {
+    type Output = with_id::UnlabeledParam;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::Param {
+        with_id::UnlabeledParam {
             id,
             span: self.span,
+            is_dashed: self.is_dashed,
+            name_id: self.name_id,
+            type_id: self.type_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledParam {
+    pub span: Option<TextSpan>,
+    pub label_id: ParamLabelId,
+    pub is_dashed: bool,
+    pub name_id: NodeId<with_id::Identifier>,
+    pub type_id: ExpressionId,
+}
+impl RemoveId for with_id::LabeledParam {
+    type Output = LabeledParam;
+    fn remove_id(&self) -> Self::Output {
+        LabeledParam {
+            span: self.span,
+            label_id: self.label_id,
+            is_dashed: self.is_dashed,
+            name_id: self.name_id,
+            type_id: self.type_id,
+        }
+    }
+}
+impl AddId for LabeledParam {
+    type Output = with_id::LabeledParam;
+    fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
+        with_id::LabeledParam {
+            id,
+            span: self.span,
+            label_id: self.label_id,
             is_dashed: self.is_dashed,
             name_id: self.name_id,
             type_id: self.type_id,
@@ -125,7 +159,7 @@ impl AddId for Param {
 pub struct Variant {
     pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
-    pub param_list_id: ListId<NodeId<with_id::Param>>,
+    pub param_list_id: Option<NonEmptyParamListId>,
     pub return_type_id: ExpressionId,
 }
 impl RemoveId for with_id::Variant {
@@ -185,7 +219,7 @@ pub type ExpressionId = crate::data::node_registry::ExpressionId;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     pub span: Option<TextSpan>,
-    pub component_list_id: ListId<NodeId<with_id::Identifier>>,
+    pub component_list_id: NonEmptyListId<NodeId<with_id::Identifier>>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
 }
@@ -249,7 +283,7 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
-    pub arg_list_id: ListId<ExpressionId>,
+    pub arg_list_id: NonEmptyListId<ExpressionId>,
 }
 impl RemoveId for with_id::Call {
     type Output = Call;
@@ -277,7 +311,7 @@ impl AddId for Call {
 pub struct Fun {
     pub span: Option<TextSpan>,
     pub name_id: NodeId<with_id::Identifier>,
-    pub param_list_id: ListId<NodeId<with_id::Param>>,
+    pub param_list_id: NonEmptyParamListId,
     pub return_type_id: ExpressionId,
     pub body_id: ExpressionId,
     pub skip_type_checking_body: bool,
@@ -314,7 +348,7 @@ impl AddId for Fun {
 pub struct Match {
     pub span: Option<TextSpan>,
     pub matchee_id: ExpressionId,
-    pub case_list_id: ListId<NodeId<with_id::MatchCase>>,
+    pub case_list_id: Option<NonEmptyListId<NodeId<with_id::MatchCase>>>,
 }
 impl RemoveId for with_id::Match {
     type Output = Match;
@@ -342,7 +376,7 @@ impl AddId for Match {
 pub struct MatchCase {
     pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<with_id::Identifier>,
-    pub param_list_id: ListId<NodeId<with_id::Identifier>>,
+    pub param_list_id: Option<NonEmptyListId<NodeId<with_id::Identifier>>>,
     pub output_id: ExpressionId,
 }
 impl RemoveId for with_id::MatchCase {
@@ -371,7 +405,7 @@ impl AddId for MatchCase {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: Option<TextSpan>,
-    pub param_list_id: ListId<NodeId<with_id::Param>>,
+    pub param_list_id: NonEmptyParamListId,
     pub output_id: ExpressionId,
 }
 impl RemoveId for with_id::Forall {
@@ -399,7 +433,7 @@ impl AddId for Forall {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: Option<TextSpan>,
-    pub assertion_list_id: ListId<NodeId<with_id::CheckAssertion>>,
+    pub assertion_list_id: NonEmptyListId<NodeId<with_id::CheckAssertion>>,
     pub output_id: ExpressionId,
 }
 impl RemoveId for with_id::Check {

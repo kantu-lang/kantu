@@ -8,6 +8,9 @@ impl Accept for UnfinishedParams {
                     if self.pending_dash.is_some() {
                         // A tilde can never come after a dash.
                         AcceptResult::Error(ParseError::UnexpectedToken(token))
+                    } else if self.pending_tilde.is_some() {
+                        // Double tildes are forbidden.
+                        AcceptResult::Error(ParseError::UnexpectedToken(token))
                     } else {
                         self.pending_tilde = Some(token);
                         AcceptResult::ContinueToNextToken
@@ -23,66 +26,73 @@ impl Accept for UnfinishedParams {
                     }
                 }
                 TokenKind::StandardIdentifier => {
-                    let name = Identifier {
+                    let name_or_label = Identifier {
                         span: span_single(file_id, &token),
                         name: IdentifierName::Standard(token.content.clone()),
                     };
-                    let is_tilded = self.pending_tilde.is_some();
-                    let is_dashed = self.pending_dash.is_some();
-                    let pending_dash = self.pending_dash.take();
-                    AcceptResult::Push(UnfinishedStackItem::Param(
-                        UnfinishedParam::NoExplicitLabel {
-                            first_token: pending_dash.unwrap_or(token),
-                            is_tilded,
-                            is_dashed,
-                            is_dash_allowed: self.maximum_dashed_params_allowed > 0 || is_dashed,
-                            name_or_label: name,
-                        },
-                    ))
+                    self.push_unfinished_param(name_or_label, token)
                 }
                 TokenKind::Underscore => {
-                    let name = Identifier {
+                    let name_or_label = Identifier {
                         span: span_single(file_id, &token),
                         name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                     };
-                    let is_tilded = self.pending_tilde.is_some();
-                    let is_dashed = self.pending_dash.is_some();
-                    let pending_dash = self.pending_dash.take();
-                    AcceptResult::Push(UnfinishedStackItem::Param(
-                        UnfinishedParam::NoExplicitLabel {
-                            first_token: pending_dash.unwrap_or(token),
-                            is_tilded,
-                            is_dashed,
-                            is_dash_allowed: self.maximum_dashed_params_allowed > 0 || is_dashed,
-                            name_or_label: name,
-                        },
-                    ))
+                    self.push_unfinished_param(name_or_label, token)
                 }
                 TokenKind::RParen => {
-                    if self.params.is_empty() || self.pending_dash.is_some() {
+                    if self.pending_dash.is_some() {
                         AcceptResult::Error(ParseError::UnexpectedToken(token))
                     } else {
-                        AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
-                            self.first_token.clone(),
-                            self.params.clone(),
-                        ))
+                        match NonEmptyVec::try_from(self.params.clone()) {
+                            Ok(params) => AcceptResult::PopAndContinueReducing(
+                                FinishedStackItem::Params(self.first_token.clone(), params),
+                            ),
+                            Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                        }
                     }
                 }
                 _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
             },
-            FinishedStackItem::Param(_, param, end_delimiter) => {
-                self.params.push(param);
-                match end_delimiter.raw().kind {
-                    TokenKind::Comma => AcceptResult::ContinueToNextToken,
-                    TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::Params(self.first_token.clone(), self.params.clone()),
-                    ),
-                    _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
-                    }
+            FinishedStackItem::Param(_, param, end_delimiter) => match end_delimiter.raw().kind {
+                TokenKind::Comma => {
+                    self.params.push(param);
+                    AcceptResult::ContinueToNextToken
                 }
-            }
+                TokenKind::RParen => {
+                    let params = NonEmptyVec::from_pushed(self.params.clone(), param);
+                    AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
+                        self.first_token.clone(),
+                        params,
+                    ))
+                }
+                _other_end_delimiter => {
+                    AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
+                }
+            },
             other_item => unexpected_finished_item(&other_item),
         }
+    }
+}
+
+impl UnfinishedParams {
+    fn push_unfinished_param(
+        &mut self,
+        name_or_label: Identifier,
+        name_or_label_token: Token,
+    ) -> AcceptResult {
+        let pending_tilde = self.pending_tilde.take();
+        let pending_dash = self.pending_dash.take();
+        let is_tilded = pending_tilde.is_some();
+        let is_dashed = pending_dash.is_some();
+        AcceptResult::Push(UnfinishedStackItem::Param(
+            UnfinishedParam::NoExplicitLabel {
+                first_token: pending_tilde
+                    .unwrap_or_else(|| pending_dash.unwrap_or_else(|| name_or_label_token)),
+                is_tilded,
+                is_dashed,
+                is_dash_allowed: self.maximum_dashed_params_allowed > 0 || is_dashed,
+                name_or_label,
+            },
+        ))
     }
 }

@@ -32,7 +32,7 @@ impl Accept for UnfinishedTypeStatement {
                         *self = UnfinishedTypeStatement::Variants(
                             type_kw.clone(),
                             name.clone(),
-                            vec![],
+                            None,
                             vec![],
                         );
                         AcceptResult::ContinueToNextToken
@@ -40,7 +40,11 @@ impl Accept for UnfinishedTypeStatement {
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
-                    *self = UnfinishedTypeStatement::Params(type_kw.clone(), name.clone(), params);
+                    *self = UnfinishedTypeStatement::Params(
+                        type_kw.clone(),
+                        name.clone(),
+                        Some(params),
+                    );
                     AcceptResult::ContinueToNextToken
                 }
                 other_item => unexpected_finished_item(&other_item),

@@ -171,7 +171,7 @@ impl Parse for Variant {
 
     fn initial_stack(_: FileId, _: Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::Type(
-            UnfinishedTypeStatement::Variants(dummy_token(), dummy_identifier(), vec![], vec![]),
+            UnfinishedTypeStatement::Variants(dummy_token(), dummy_identifier(), None, vec![]),
         )]
     }
 

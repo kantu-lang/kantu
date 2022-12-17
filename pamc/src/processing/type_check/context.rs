@@ -56,7 +56,7 @@ pub enum ContextEntryDefinition {
     },
     /// Algebraic data type
     Adt {
-        variant_name_list_id: ListId<NodeId<Identifier>>,
+        variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
     },
     Variant {
         name_id: NodeId<Identifier>,
@@ -76,11 +76,11 @@ impl Context {
             let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
-                    vec![Identifier {
+                    NonEmptyVec::singleton(Identifier {
                         id: dummy_id(),
                         name: IdentifierName::Standard("Type2".to_owned()),
                         span: None,
-                    }],
+                    }),
                     DbIndex(0),
                 ),
             ));
@@ -93,11 +93,11 @@ impl Context {
             let type0_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
-                    vec![Identifier {
+                    NonEmptyVec::singleton(Identifier {
                         id: dummy_id(),
                         name: IdentifierName::Standard("Type1".to_owned()),
                         span: None,
-                    }],
+                    }),
                     DbIndex(0),
                 ),
             ));
@@ -183,6 +183,11 @@ where
     match result {
         Ok(ok) => Ok(ok),
         Err(err) => {
+            println!(
+                "untainting. truncating from {} to {}",
+                state.context.len(),
+                original_context_len
+            );
             state.context.truncate(original_context_len);
             state.substitution_context.truncate(original_scontext_len);
             Err(err.0)

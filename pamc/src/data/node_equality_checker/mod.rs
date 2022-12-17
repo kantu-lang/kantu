@@ -1,6 +1,6 @@
 use crate::data::{
     light_ast::*,
-    node_registry::{ListId, NodeId, NodeRegistry},
+    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
 };
 
 use std::{fmt::Debug, hash::Hash};
@@ -77,8 +77,8 @@ pub trait GetIndexInSubregistry: Copy + Eq + Hash {
 
 #[derive(Clone, Debug)]
 pub struct StrippedRegistry {
-    expression_lists: Subregistry<ListId<ExpressionId>>,
-    match_case_lists: Subregistry<ListId<NodeId<MatchCase>>>,
+    expression_lists: Subregistry<NonEmptyListId<ExpressionId>>,
+    match_case_lists: Subregistry<NonEmptyListId<NodeId<MatchCase>>>,
     match_cases: Subregistry<NodeId<MatchCase>>,
     identifier_names: Subregistry<NodeId<Identifier>>,
 

@@ -32,8 +32,8 @@ pub struct UnfinishedFile {
 pub enum UnfinishedTypeStatement {
     Keyword(Token),
     Name(Token, Identifier),
-    Params(Token, Identifier, Vec<Param>),
-    Variants(Token, Identifier, Vec<Param>, Vec<Variant>),
+    Params(Token, Identifier, Option<NonEmptyVec<Param>>),
+    Variants(Token, Identifier, Option<NonEmptyVec<Param>>, Vec<Variant>),
 }
 
 #[derive(Clone, Debug)]
@@ -78,7 +78,7 @@ pub enum UnfinishedParam {
 pub enum UnfinishedVariant {
     Dot(Token),
     Name(Token, Identifier),
-    Params(Token, Identifier, Vec<Param>),
+    Params(Token, Identifier, Option<NonEmptyVec<Param>>),
 }
 
 #[derive(Clone, Debug)]
@@ -91,8 +91,8 @@ pub enum UnfinishedDelimitedExpression {
 pub enum UnfinishedFun {
     Keyword(Token),
     Name(Token, Identifier),
-    Params(Token, Identifier, Vec<Param>),
-    ReturnType(Token, Identifier, Vec<Param>, Expression),
+    Params(Token, Identifier, NonEmptyVec<Param>),
+    ReturnType(Token, Identifier, NonEmptyVec<Param>, Expression),
 }
 
 #[derive(Clone, Debug)]
@@ -104,13 +104,13 @@ pub enum UnfinishedMatch {
 #[derive(Clone, Debug)]
 pub enum UnfinishedForall {
     Keyword(Token),
-    Params(Token, Vec<Param>),
+    Params(Token, NonEmptyVec<Param>),
 }
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedCheck {
     Keyword(Token),
-    Assertions(Token, Vec<CheckAssertion>),
+    Assertions(Token, NonEmptyVec<CheckAssertion>),
 }
 
 #[derive(Clone, Debug)]
@@ -156,7 +156,7 @@ pub enum UnfinishedMatchCase {
     Dot(Token),
     VariantName(Token, Identifier),
     ParamsInProgress(Token, Identifier, Vec<Identifier>, CurrentlyHasEndingComma),
-    AwaitingOutput(Token, Identifier, Vec<Identifier>),
+    AwaitingOutput(Token, Identifier, Option<NonEmptyVec<Identifier>>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

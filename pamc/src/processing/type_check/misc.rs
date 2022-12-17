@@ -20,11 +20,11 @@ impl NormalFormId {
 pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
     let name_id = add_name_expression_and_overwrite_component_ids(
         state.registry,
-        vec![Identifier {
+        NonEmptyVec::singleton(Identifier {
             id: dummy_id(),
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
             span: None,
-        }],
+        }),
         state.context.type0_dbi(),
     );
     NormalFormId::unchecked_new(ExpressionId::Name(name_id))
@@ -32,25 +32,16 @@ pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
 
 pub fn add_name_expression_and_overwrite_component_ids(
     registry: &mut NodeRegistry,
-    components: Vec<Identifier>,
+    components: NonEmptyVec<Identifier>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
-    let first_span = components
-        .first()
-        .expect("components should be non-empty")
-        .span;
-    let last_span = components
-        .last()
-        .expect("components should be non-empty")
-        .span;
+    let first_span = components.first().span;
+    let last_span = components.last().span;
     let span = first_span
         .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
-    let component_ids = components
-        .into_iter()
-        .map(|component| registry.add_identifier_and_overwrite_its_id(component))
-        .collect();
-    let component_list_id = registry.add_identifier_list(component_ids);
-    registry.add_name_expression_and_overwrite_its_id(NameExpression {
+    let component_ids = components.into_mapped(|component| registry.add(component));
+    let component_list_id = registry.add_list(component_ids);
+    registry.add(NameExpression {
         id: dummy_id(),
         span,
         component_list_id,
@@ -60,27 +51,15 @@ pub fn add_name_expression_and_overwrite_component_ids(
 
 pub fn add_name_expression(
     registry: &mut NodeRegistry,
-    component_ids: Vec<NodeId<Identifier>>,
+    component_ids: NonEmptyVec<NodeId<Identifier>>,
     db_index: DbIndex,
 ) -> NodeId<NameExpression> {
-    let first_span = registry
-        .identifier(
-            *component_ids
-                .first()
-                .expect("components should be non-empty"),
-        )
-        .span;
-    let last_span = registry
-        .identifier(
-            *component_ids
-                .last()
-                .expect("components should be non-empty"),
-        )
-        .span;
+    let first_span = registry.get(*component_ids.first()).span;
+    let last_span = registry.get(*component_ids.last()).span;
     let span = first_span
         .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
-    let component_list_id = registry.add_identifier_list(component_ids);
-    registry.add_name_expression_and_overwrite_its_id(NameExpression {
+    let component_list_id = registry.add_list(component_ids);
+    registry.add(NameExpression {
         id: dummy_id(),
         span,
         component_list_id,
@@ -92,20 +71,33 @@ pub fn dummy_id<T>() -> NodeId<T> {
     NodeId::new(0)
 }
 
-impl Forall {
-    pub fn collapse_if_nullary(self, registry: &mut NodeRegistry) -> ExpressionId {
-        if self.param_list_id.len == 0 {
-            self.output_id
-        } else {
-            let forall_id = registry.add_forall_and_overwrite_its_id(self);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PossiblyNullaryForall {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+    pub param_list_id: Option<NonEmptyParamListId>,
+    pub output_id: ExpressionId,
+}
+
+impl PossiblyNullaryForall {
+    pub fn into_id(self, registry: &mut NodeRegistry) -> ExpressionId {
+        if let Some(param_list_id) = self.param_list_id {
+            let forall_id = registry.add(Forall {
+                id: dummy_id(),
+                span: self.span,
+                param_list_id,
+                output_id: self.output_id,
+            });
             ExpressionId::Forall(forall_id)
+        } else {
+            self.output_id
         }
     }
 }
 
 pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId) -> bool {
     if let ExpressionId::Name(name_id) = term.raw() {
-        let name = state.registry.name_expression(name_id);
+        let name = state.registry.get(name_id);
         let i = name.db_index;
         i == state.context.type0_dbi() || i == state.context.type1_dbi()
     } else {
@@ -140,7 +132,7 @@ pub(super) fn is_left_type_assignable_to_right_type(
 
 fn is_term_equal_to_a_trivially_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
     if let Some(adt) = try_as_normal_form_adt_expression(state, term_id) {
-        adt.variant_name_list_id.len == 0
+        adt.variant_name_list_id.len() == 0
     } else {
         false
     }
@@ -162,47 +154,98 @@ impl<T> SafeUnwrap<T> for Result<T, Infallible> {
     }
 }
 
+pub(super) fn normalize_optional_params_and_leave_params_in_context_dirty(
+    state: &mut State,
+    id: Option<NonEmptyParamListId>,
+) -> Result<WithPushWarning<Option<NonEmptyParamListId>>, Tainted<TypeCheckError>> {
+    if let Some(id) = id {
+        Ok(normalize_params_and_leave_params_in_context_dirty(state, id)?.map(Some))
+    } else {
+        Ok(with_push_warning(None))
+    }
+}
+
 pub(super) fn normalize_params_and_leave_params_in_context_dirty(
     state: &mut State,
-    param_list_id: ListId<NodeId<Param>>,
-) -> Result<WithPushWarning<ListId<NodeId<Param>>>, Tainted<TypeCheckError>> {
-    let param_ids = state.registry.param_list(param_list_id).to_vec();
-    let normalized_ids = param_ids
-        .iter()
-        .copied()
-        .map(
-            |param_id| -> Result<NodeId<Param>, Tainted<TypeCheckError>> {
-                type_check_param_dirty(state, param_id)??;
-                let type_id: ExpressionId = state
-                    .context
-                    .get_type(DbIndex(0), state.registry)
-                    .downshift(1, state.registry)
-                    .raw();
-                let old_param = state.registry.param(param_id);
-                let normalized_param_with_dummy_id = Param {
-                    id: dummy_id(),
-                    span: None,
-                    is_dashed: old_param.is_dashed,
-                    name_id: old_param.name_id,
-                    type_id,
-                };
-                let normalized_id = state
-                    .registry
-                    .add_param_and_overwrite_its_id(normalized_param_with_dummy_id)
-                    .without_spans(state.registry);
-                Ok(normalized_id)
-            },
-        )
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(with_push_warning(
-        state.registry.add_param_list(normalized_ids),
-    ))
+    id: NonEmptyParamListId,
+) -> Result<WithPushWarning<NonEmptyParamListId>, Tainted<TypeCheckError>> {
+    Ok(with_push_warning(match id {
+        NonEmptyParamListId::Unlabeled(id) => NonEmptyParamListId::Unlabeled(
+            normalize_unlabeled_params_and_leave_params_in_context_dirty(state, id)??,
+        ),
+        NonEmptyParamListId::Labeled(id) => NonEmptyParamListId::Labeled(
+            normalize_labeled_params_and_leave_params_in_context_dirty(state, id)??,
+        ),
+    }))
+}
+
+pub(super) fn normalize_unlabeled_params_and_leave_params_in_context_dirty(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> Result<WithPushWarning<NonEmptyListId<NodeId<UnlabeledParam>>>, Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
+    let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
+        |&param_id| -> Result<NodeId<UnlabeledParam>, Tainted<TypeCheckError>> {
+            type_check_unlabeled_param_dirty(state, param_id)??;
+            let type_id: ExpressionId = state
+                .context
+                .get_type(DbIndex(0), state.registry)
+                .downshift(1, state.registry)
+                .raw();
+            let old_param = state.registry.get(param_id);
+            let normalized_param_with_dummy_id = UnlabeledParam {
+                id: dummy_id(),
+                span: None,
+                is_dashed: old_param.is_dashed,
+                name_id: old_param.name_id,
+                type_id,
+            };
+            let normalized_id = state
+                .registry
+                .add(normalized_param_with_dummy_id)
+                .without_spans(state.registry);
+            Ok(normalized_id)
+        },
+    )?;
+    Ok(with_push_warning(state.registry.add_list(normalized_ids)))
+}
+
+pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> Result<WithPushWarning<NonEmptyListId<NodeId<LabeledParam>>>, Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
+    let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
+        |&param_id| -> Result<NodeId<LabeledParam>, Tainted<TypeCheckError>> {
+            type_check_labeled_param_dirty(state, param_id)??;
+            let type_id: ExpressionId = state
+                .context
+                .get_type(DbIndex(0), state.registry)
+                .downshift(1, state.registry)
+                .raw();
+            let old_param = state.registry.get(param_id);
+            let normalized_param_with_dummy_id = LabeledParam {
+                id: dummy_id(),
+                span: None,
+                label_id: old_param.label_id,
+                is_dashed: old_param.is_dashed,
+                name_id: old_param.name_id,
+                type_id,
+            };
+            let normalized_id = state
+                .registry
+                .add(normalized_param_with_dummy_id)
+                .without_spans(state.registry);
+            Ok(normalized_id)
+        },
+    )?;
+    Ok(with_push_warning(state.registry.add_list(normalized_ids)))
 }
 
 pub fn verify_variant_to_case_bijection(
     registry: &NodeRegistry,
-    variant_name_list_id: ListId<NodeId<Identifier>>,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
     verify_there_are_no_duplicate_cases(registry, case_list_id)?;
     verify_that_every_variant_has_a_case(registry, variant_name_list_id, case_list_id)?;
@@ -212,22 +255,21 @@ pub fn verify_variant_to_case_bijection(
 
 fn verify_there_are_no_duplicate_cases(
     registry: &NodeRegistry,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
-    let mut visited_cases: Vec<NodeId<MatchCase>> = Vec::with_capacity(case_list_id.len);
+    let mut visited_cases: Vec<NodeId<MatchCase>> = Vec::with_capacity(case_list_id.len());
 
-    let case_ids = registry.match_case_list(case_list_id);
+    let case_ids = registry.get_possibly_empty_list(case_list_id);
 
     for &case_id in case_ids {
-        let case = registry.match_case(case_id);
-        let case_variant_name = &registry.identifier(case.variant_name_id).name;
+        let case = registry.get(case_id);
+        let case_variant_name = &registry.get(case.variant_name_id).name;
 
         if let Some(existing_case_id) = visited_cases
             .iter()
             .find(|&&existing_case_id| {
-                let existing_case = registry.match_case(existing_case_id);
-                let existing_case_variant_name =
-                    &registry.identifier(existing_case.variant_name_id).name;
+                let existing_case = registry.get(existing_case_id);
+                let existing_case_variant_name = &registry.get(existing_case.variant_name_id).name;
                 existing_case_variant_name == case_variant_name
             })
             .copied()
@@ -246,17 +288,17 @@ fn verify_there_are_no_duplicate_cases(
 
 fn verify_that_every_variant_has_a_case(
     registry: &NodeRegistry,
-    variant_name_list_id: ListId<NodeId<Identifier>>,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
-    let variant_name_ids = registry.identifier_list(variant_name_list_id);
-    let case_ids = registry.match_case_list(case_list_id);
+    let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
+    let case_ids = registry.get_possibly_empty_list(case_list_id);
 
     for &variant_name_id in variant_name_ids {
-        let variant_name = &registry.identifier(variant_name_id).name;
+        let variant_name = &registry.get(variant_name_id).name;
         if !case_ids.iter().any(|&case_id| {
-            let case = registry.match_case(case_id);
-            let case_variant_name = &registry.identifier(case.variant_name_id).name;
+            let case = registry.get(case_id);
+            let case_variant_name = &registry.get(case.variant_name_id).name;
             case_variant_name == variant_name
         }) {
             return Err(TypeCheckError::MissingMatchCase { variant_name_id });
@@ -267,17 +309,17 @@ fn verify_that_every_variant_has_a_case(
 
 fn verify_that_every_case_has_a_variant(
     registry: &NodeRegistry,
-    variant_name_list_id: ListId<NodeId<Identifier>>,
-    case_list_id: ListId<NodeId<MatchCase>>,
+    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
-    let variant_name_ids = registry.identifier_list(variant_name_list_id);
-    let case_ids = registry.match_case_list(case_list_id);
+    let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
+    let case_ids = registry.get_possibly_empty_list(case_list_id);
 
     for &case_id in case_ids {
-        let case = registry.match_case(case_id);
-        let case_variant_name = &registry.identifier(case.variant_name_id).name;
+        let case = registry.get(case_id);
+        let case_variant_name = &registry.get(case.variant_name_id).name;
         if !variant_name_ids.iter().any(|&variant_name_id| {
-            let variant_name = &registry.identifier(variant_name_id).name;
+            let variant_name = &registry.get(variant_name_id).name;
             case_variant_name == variant_name
         }) {
             return Err(TypeCheckError::ExtraneousMatchCase { case_id });
@@ -291,10 +333,7 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
     adt_expression: NormalFormAdtExpression,
     target_variant_name_id: NodeId<Identifier>,
 ) -> DbIndex {
-    let type_dbi = state
-        .registry
-        .name_expression(adt_expression.type_name_id)
-        .db_index;
+    let type_dbi = state.registry.get(adt_expression.type_name_id).db_index;
     let variant_name_list_id = match state.context.get_definition(type_dbi, state.registry) {
         ContextEntryDefinition::Adt {
             variant_name_list_id,
@@ -302,13 +341,13 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
         _ => panic!("An ADT's NameExpression should always point to an ADT definition"),
     };
 
-    let target_variant_name = &state.registry.identifier(target_variant_name_id).name;
+    let target_variant_name = &state.registry.get(target_variant_name_id).name;
     let variant_index = state
         .registry
-        .identifier_list(variant_name_list_id)
+        .get_possibly_empty_list(variant_name_list_id)
         .iter()
         .position(|&variant_name_id| {
-            let variant_name = &state.registry.identifier(variant_name_id).name;
+            let variant_name = &state.registry.get(variant_name_id).name;
             variant_name == target_variant_name
         })
         .expect("The target variant name should always be found in the ADT's variant name list");
@@ -332,13 +371,13 @@ fn is_left_inclusive_subterm_of_right(
             false
         }
         ExpressionId::Call(right_id) => {
-            let right = state.registry.call(right_id).clone();
+            let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_right(state, left, right.callee_id) {
                 return true;
             }
 
-            let right_arg_ids = state.registry.expression_list(right.arg_list_id).to_vec();
+            let right_arg_ids = state.registry.get_list(right.arg_list_id).to_vec();
             if right_arg_ids
                 .iter()
                 .any(|&right_arg_id| is_left_inclusive_subterm_of_right(state, left, right_arg_id))
@@ -349,28 +388,23 @@ fn is_left_inclusive_subterm_of_right(
             false
         }
         ExpressionId::Fun(right_id) => {
-            let right = state.registry.fun(right_id).clone();
+            let right = state.registry.get(right_id).clone();
 
-            let right_param_ids = state.registry.param_list(right.param_list_id).to_vec();
-            if right_param_ids.iter().copied().enumerate().any(
-                |(right_param_index, right_param_id)| {
-                    let shifted_left = left.upshift(right_param_index, state.registry);
-                    let right_param_type_id = state.registry.param(right_param_id).type_id;
-                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
-                },
-            ) {
+            if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
                 return true;
             }
 
+            let right_param_arity = right.param_list_id.len();
+
             {
-                let shifted_left = left.upshift(right_param_ids.len(), state.registry);
+                let shifted_left = left.upshift(right_param_arity, state.registry);
                 if is_left_inclusive_subterm_of_right(state, shifted_left, right.return_type_id) {
                     return true;
                 }
             }
 
             {
-                let shifted_left = left.upshift(right_param_ids.len() + 1, state.registry);
+                let shifted_left = left.upshift(right_param_arity + 1, state.registry);
                 if is_left_inclusive_subterm_of_right(state, shifted_left, right.body_id) {
                     return true;
                 }
@@ -379,17 +413,20 @@ fn is_left_inclusive_subterm_of_right(
             false
         }
         ExpressionId::Match(right_id) => {
-            let right = state.registry.match_(right_id).clone();
+            let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_right(state, left, right.matchee_id) {
                 return true;
             }
 
-            let right_case_ids = state.registry.match_case_list(right.case_list_id).to_vec();
+            let right_case_ids = state
+                .registry
+                .get_possibly_empty_list(right.case_list_id)
+                .to_vec();
             if right_case_ids.iter().any(|&right_case_id| {
-                let case_arity = state.registry.match_case(right_case_id).param_list_id.len;
+                let case_arity = state.registry.get(right_case_id).param_list_id.len();
                 let shifted_left = left.upshift(case_arity, state.registry);
-                let right_case_output_id = state.registry.match_case(right_case_id).output_id;
+                let right_case_output_id = state.registry.get(right_case_id).output_id;
                 is_left_inclusive_subterm_of_right(state, shifted_left, right_case_output_id)
             }) {
                 return true;
@@ -398,21 +435,16 @@ fn is_left_inclusive_subterm_of_right(
             false
         }
         ExpressionId::Forall(right_id) => {
-            let right = state.registry.forall(right_id).clone();
+            let right = state.registry.get(right_id).clone();
 
-            let right_param_ids = state.registry.param_list(right.param_list_id).to_vec();
-            if right_param_ids.iter().copied().enumerate().any(
-                |(right_param_index, right_param_id)| {
-                    let shifted_left = left.upshift(right_param_index, state.registry);
-                    let right_param_type_id = state.registry.param(right_param_id).type_id;
-                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
-                },
-            ) {
+            if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
                 return true;
             }
 
+            let right_param_arity = right.param_list_id.len();
+
             {
-                let shifted_left = left.upshift(right.param_list_id.len, state.registry);
+                let shifted_left = left.upshift(right_param_arity, state.registry);
                 if is_left_inclusive_subterm_of_right(state, shifted_left, right.output_id) {
                     return true;
                 }
@@ -421,7 +453,7 @@ fn is_left_inclusive_subterm_of_right(
             false
         }
         ExpressionId::Check(right_id) => {
-            let right = state.registry.check(right_id).clone();
+            let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_any_right_assertion(state, left, right_id) {
                 return true;
@@ -436,18 +468,44 @@ fn is_left_inclusive_subterm_of_right(
     }
 }
 
+fn is_left_subterm_of_any_right_param_type(
+    state: &mut State,
+    left: ExpressionId,
+    right: NonEmptyParamListId,
+) -> bool {
+    match right {
+        NonEmptyParamListId::Unlabeled(param_list_id) => {
+            let right_param_ids = state.registry.get_list(param_list_id).to_vec();
+            right_param_ids.iter().copied().enumerate().any(
+                |(right_param_index, right_param_id)| {
+                    let shifted_left = left.upshift(right_param_index, state.registry);
+                    let right_param_type_id = state.registry.get(right_param_id).type_id;
+                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
+                },
+            )
+        }
+        NonEmptyParamListId::Labeled(param_list_id) => {
+            let right_param_ids = state.registry.get_list(param_list_id).to_vec();
+            right_param_ids.iter().copied().enumerate().any(
+                |(right_param_index, right_param_id)| {
+                    let shifted_left = left.upshift(right_param_index, state.registry);
+                    let right_param_type_id = state.registry.get(right_param_id).type_id;
+                    is_left_inclusive_subterm_of_right(state, shifted_left, right_param_type_id)
+                },
+            )
+        }
+    }
+}
+
 fn is_left_inclusive_subterm_of_any_right_assertion(
     state: &mut State,
     left: ExpressionId,
     right: NodeId<Check>,
 ) -> bool {
-    let right = state.registry.check(right).clone();
-    let right_assertion_ids = state
-        .registry
-        .check_assertion_list(right.assertion_list_id)
-        .to_vec();
+    let right = state.registry.get(right).clone();
+    let right_assertion_ids = state.registry.get_list(right.assertion_list_id).to_vec();
     right_assertion_ids.into_iter().any(|right_assertion_id| {
-        let assertion = state.registry.check_assertion(right_assertion_id).clone();
+        let assertion = state.registry.get(right_assertion_id).clone();
         if let GoalKwOrPossiblyInvalidExpressionId::Expression(
             PossiblyInvalidExpressionId::Valid(assertion_left_id),
         ) = assertion.left_id
@@ -471,16 +529,10 @@ fn is_left_inclusive_subterm_of_any_right_assertion(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PossibleArgListId {
-    Nullary,
-    Some(ListId<ExpressionId>),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NormalFormAdtExpression {
     pub type_name_id: NodeId<NameExpression>,
-    pub variant_name_list_id: ListId<NodeId<Identifier>>,
-    pub arg_list_id: PossibleArgListId,
+    pub variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    pub arg_list_id: Option<NonEmptyListId<ExpressionId>>,
 }
 
 /// If the provided expression is has an ADT constructor at
@@ -492,7 +544,7 @@ pub(super) fn try_as_normal_form_adt_expression(
 ) -> Option<NormalFormAdtExpression> {
     match expression_id.raw() {
         ExpressionId::Name(name_id) => {
-            let db_index = state.registry.name_expression(name_id).db_index;
+            let db_index = state.registry.get(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
             match definition {
                 ContextEntryDefinition::Adt {
@@ -500,16 +552,16 @@ pub(super) fn try_as_normal_form_adt_expression(
                 } => Some(NormalFormAdtExpression {
                     type_name_id: name_id,
                     variant_name_list_id,
-                    arg_list_id: PossibleArgListId::Nullary,
+                    arg_list_id: None,
                 }),
                 _ => None,
             }
         }
         ExpressionId::Call(call_id) => {
-            let call = state.registry.call(call_id).clone();
+            let call = state.registry.get(call_id).clone();
             match call.callee_id {
                 ExpressionId::Name(name_id) => {
-                    let db_index = state.registry.name_expression(name_id).db_index;
+                    let db_index = state.registry.get(name_id).db_index;
                     let definition = state.context.get_definition(db_index, state.registry);
                     match definition {
                         ContextEntryDefinition::Adt {
@@ -517,7 +569,7 @@ pub(super) fn try_as_normal_form_adt_expression(
                         } => Some(NormalFormAdtExpression {
                             type_name_id: name_id,
                             variant_name_list_id: variant_name_list_id,
-                            arg_list_id: PossibleArgListId::Some(call.arg_list_id),
+                            arg_list_id: Some(call.arg_list_id),
                         }),
                         _ => None,
                     }
@@ -536,27 +588,25 @@ pub(super) fn try_as_normal_form_adt_expression(
 pub(super) fn try_as_variant_expression(
     state: &mut State,
     expression_id: ExpressionId,
-) -> Option<(NodeId<Identifier>, PossibleArgListId)> {
+) -> Option<(NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>)> {
     match expression_id {
         ExpressionId::Name(name_id) => {
-            let db_index = state.registry.name_expression(name_id).db_index;
+            let db_index = state.registry.get(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
             match definition {
-                ContextEntryDefinition::Variant { name_id } => {
-                    Some((name_id, PossibleArgListId::Nullary))
-                }
+                ContextEntryDefinition::Variant { name_id } => Some((name_id, None)),
                 _ => None,
             }
         }
         ExpressionId::Call(call_id) => {
-            let call = state.registry.call(call_id).clone();
+            let call = state.registry.get(call_id).clone();
             match call.callee_id {
                 ExpressionId::Name(name_id) => {
-                    let db_index = state.registry.name_expression(name_id).db_index;
+                    let db_index = state.registry.get(name_id).db_index;
                     let definition = state.context.get_definition(db_index, state.registry);
                     match definition {
                         ContextEntryDefinition::Variant { name_id } => {
-                            Some((name_id, PossibleArgListId::Some(call.arg_list_id)))
+                            Some((name_id, Some(call.arg_list_id)))
                         }
                         _ => None,
                     }
@@ -731,20 +781,14 @@ fn expand_dynamic_adt_substitution_shallow(
     left: NormalFormAdtExpression,
     right: NormalFormAdtExpression,
 ) -> DynamicSubstitutionExpansionResult {
-    let left_db_index = state.registry.name_expression(left.type_name_id).db_index;
-    let right_db_index = state.registry.name_expression(right.type_name_id).db_index;
+    let left_db_index = state.registry.get(left.type_name_id).db_index;
+    let right_db_index = state.registry.get(right.type_name_id).db_index;
     if left_db_index != right_db_index {
         return DynamicSubstitutionExpansionResult::Exploded;
     }
 
-    let left_args = match left.arg_list_id {
-        PossibleArgListId::Some(id) => state.registry.expression_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
-    let right_args = match right.arg_list_id {
-        PossibleArgListId::Some(id) => state.registry.expression_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
+    let left_args = state.registry.get_possibly_empty_list(left.arg_list_id);
+    let right_args = state.registry.get_possibly_empty_list(right.arg_list_id);
     assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
     let arg_substitutions = left_args
         .iter()
@@ -764,27 +808,22 @@ fn expand_dynamic_adt_substitution_shallow(
 
 fn expand_dynamic_normal_form_variant_substitution_shallow(
     state: &mut State,
-    left: (NodeId<Identifier>, PossibleArgListId),
-    right: (NodeId<Identifier>, PossibleArgListId),
+    left: (NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>),
+    right: (NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>),
 ) -> DynamicSubstitutionExpansionResult {
     // We only need to compare name (rather than DB index) because
     // `left` and `right` are assumed to have the same type, and
     // every type can only have at most one variant associated with
     // a given name.
-    let left_name = &state.registry.identifier(left.0).name;
-    let right_name = &state.registry.identifier(right.0).name;
+    let left_name = &state.registry.get(left.0).name;
+    let right_name = &state.registry.get(right.0).name;
     if left_name != right_name {
         return DynamicSubstitutionExpansionResult::Exploded;
     }
 
-    let left_args = match left.1 {
-        PossibleArgListId::Some(id) => state.registry.expression_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
-    let right_args = match right.1 {
-        PossibleArgListId::Some(id) => state.registry.expression_list(id),
-        PossibleArgListId::Nullary => &[],
-    };
+    let left_args = state.registry.get_possibly_empty_list(left.1);
+    let right_args = state.registry.get_possibly_empty_list(right.1);
+
     assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
     let arg_substitutions = left_args
         .iter()
@@ -910,7 +949,7 @@ fn min_db_index_in_name_relative_to_cutoff(
     id: NodeId<NameExpression>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let original = registry.name_expression(id).db_index;
+    let original = registry.get(id).db_index;
     match original.0.checked_sub(cutoff) {
         Some(relative) => MinDbIndex::Some(DbIndex(relative)),
         None => MinDbIndex::Infinity,
@@ -922,10 +961,10 @@ fn min_db_index_in_call_relative_to_cutoff(
     id: NodeId<Call>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let call = registry.call(id);
+    let call = registry.get(id);
     let callee_min =
         min_db_index_in_expression_relative_to_cutoff(registry, call.callee_id, cutoff);
-    let arg_ids = registry.expression_list(call.arg_list_id);
+    let arg_ids = registry.get_list(call.arg_list_id);
     let args_min = arg_ids
         .iter()
         .map(|&arg_id| min_db_index_in_expression_relative_to_cutoff(registry, arg_id, cutoff))
@@ -938,32 +977,63 @@ fn min_db_index_in_fun_relative_to_cutoff(
     id: NodeId<Fun>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let fun = registry.fun(id);
-    let param_ids = registry.param_list(fun.param_list_id);
-    let param_types_min = param_ids
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(param_index, param_id)| {
-            let param = registry.param(param_id);
-            min_db_index_in_expression_relative_to_cutoff(
-                registry,
-                param.type_id,
-                cutoff + param_index,
-            )
-        })
-        .min();
+    let fun = registry.get(id);
+
+    let param_types_min =
+        min_db_index_in_params_relative_to_cutoff(registry, fun.param_list_id, cutoff);
     let return_type_min = min_db_index_in_expression_relative_to_cutoff(
         registry,
         fun.return_type_id,
-        cutoff + param_ids.len(),
+        cutoff + fun.param_list_id.len(),
     );
     let body_min = min_db_index_in_expression_relative_to_cutoff(
         registry,
         fun.body_id,
-        cutoff + param_ids.len() + 1,
+        cutoff + fun.param_list_id.len() + 1,
     );
-    min_or_first(return_type_min.min(body_min), param_types_min)
+    return_type_min.min(body_min).min(param_types_min)
+}
+
+fn min_db_index_in_params_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: NonEmptyParamListId,
+    cutoff: usize,
+) -> MinDbIndex {
+    let opt_min = match id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            param_ids
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(param_index, param_id)| {
+                    let param = registry.get(param_id);
+                    min_db_index_in_expression_relative_to_cutoff(
+                        registry,
+                        param.type_id,
+                        cutoff + param_index,
+                    )
+                })
+                .min()
+        }
+        NonEmptyParamListId::Labeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            param_ids
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(param_index, param_id)| {
+                    let param = registry.get(param_id);
+                    min_db_index_in_expression_relative_to_cutoff(
+                        registry,
+                        param.type_id,
+                        cutoff + param_index,
+                    )
+                })
+                .min()
+        }
+    };
+    opt_min.unwrap_or(MinDbIndex::Infinity)
 }
 
 fn min_db_index_in_match_relative_to_cutoff(
@@ -971,18 +1041,18 @@ fn min_db_index_in_match_relative_to_cutoff(
     id: NodeId<Match>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let match_ = registry.match_(id);
+    let match_ = registry.get(id);
     let matchee_min =
         min_db_index_in_expression_relative_to_cutoff(registry, match_.matchee_id, cutoff);
-    let case_ids = registry.match_case_list(match_.case_list_id);
+    let case_ids = registry.get_possibly_empty_list(match_.case_list_id);
     let case_outputs_min = case_ids
         .iter()
         .map(|case_id| {
-            let case = registry.match_case(*case_id);
+            let case = registry.get(*case_id);
             min_db_index_in_expression_relative_to_cutoff(
                 registry,
                 case.output_id,
-                cutoff + case.param_list_id.len,
+                cutoff + case.param_list_id.len(),
             )
         })
         .min();
@@ -994,27 +1064,15 @@ fn min_db_index_in_forall_relative_to_cutoff(
     id: NodeId<Forall>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let forall = registry.forall(id);
-    let param_ids = registry.param_list(forall.param_list_id);
-    let param_types_min = param_ids
-        .iter()
-        .copied()
-        .enumerate()
-        .map(|(param_index, param_id)| {
-            let param = registry.param(param_id);
-            min_db_index_in_expression_relative_to_cutoff(
-                registry,
-                param.type_id,
-                cutoff + param_index,
-            )
-        })
-        .min();
+    let forall = registry.get(id);
+    let param_types_min =
+        min_db_index_in_params_relative_to_cutoff(registry, forall.param_list_id, cutoff);
     let output_min = min_db_index_in_expression_relative_to_cutoff(
         registry,
         forall.output_id,
-        cutoff + param_ids.len(),
+        cutoff + forall.param_list_id.len(),
     );
-    min_or_first(output_min, param_types_min)
+    output_min.min(param_types_min)
 }
 
 fn min_db_index_in_check_relative_to_cutoff(
@@ -1022,9 +1080,9 @@ fn min_db_index_in_check_relative_to_cutoff(
     id: NodeId<Check>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let check = registry.check(id).clone();
+    let check = registry.get(id).clone();
     let assertions_min = registry
-        .check_assertion_list(check.assertion_list_id)
+        .get_list(check.assertion_list_id)
         .iter()
         .copied()
         .map(|assertion_id| {
@@ -1041,7 +1099,7 @@ fn min_db_index_in_check_assertion_relative_to_cutoff(
     id: NodeId<CheckAssertion>,
     cutoff: usize,
 ) -> MinDbIndex {
-    let assertion = registry.check_assertion(id);
+    let assertion = registry.get(id);
     let left_min = min_db_index_in_goal_kw_or_expression_relative_to_cutoff(
         registry,
         assertion.left_id,
@@ -1389,4 +1447,72 @@ where
         *self = self.map(f);
         *self
     }
+}
+
+pub(super) fn get_param_type_ids(
+    state: &State,
+    param_list_id: NonEmptyParamListId,
+) -> NonEmptyVec<ExpressionId> {
+    match param_list_id {
+        NonEmptyParamListId::Unlabeled(id) => get_unlabeled_param_type_ids(state, id),
+        NonEmptyParamListId::Labeled(id) => get_labeled_param_type_ids(state, id),
+    }
+}
+
+fn get_unlabeled_param_type_ids(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> NonEmptyVec<ExpressionId> {
+    state
+        .registry
+        .get_list(param_list_id)
+        .to_mapped(|&param_id| {
+            let param = state.registry.get(param_id);
+            param.type_id
+        })
+}
+
+fn get_labeled_param_type_ids(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> NonEmptyVec<ExpressionId> {
+    state
+        .registry
+        .get_list(param_list_id)
+        .to_mapped(|&param_id| {
+            let param = state.registry.get(param_id);
+            param.type_id
+        })
+}
+
+pub(super) fn get_names_and_types_of_params(
+    state: &State,
+    param_list_id: NonEmptyParamListId,
+) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    match param_list_id {
+        NonEmptyParamListId::Unlabeled(id) => get_names_and_types_of_unlabeled_params(state, id),
+        NonEmptyParamListId::Labeled(id) => get_names_and_types_of_labeled_params(state, id),
+    }
+}
+
+pub(super) fn get_names_and_types_of_unlabeled_params(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    let param_ids = state.registry.get_list(param_list_id);
+    param_ids.map_to_unzipped(|param_id| {
+        let param = state.registry.get(*param_id);
+        (param.name_id, param.type_id)
+    })
+}
+
+pub(super) fn get_names_and_types_of_labeled_params(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    let param_ids = state.registry.get_list(param_list_id);
+    param_ids.map_to_unzipped(|param_id| {
+        let param = state.registry.get(*param_id);
+        (param.name_id, param.type_id)
+    })
 }

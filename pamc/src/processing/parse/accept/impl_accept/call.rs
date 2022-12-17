@@ -4,23 +4,28 @@ impl Accept for UnfinishedCall {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match item {
             FinishedStackItem::DelimitedExpression(_, arg, end_delimiter) => {
-                self.args.push(arg);
                 match end_delimiter.raw().kind {
-                    TokenKind::Comma => AcceptResult::ContinueToNextToken,
-                    TokenKind::RParen => AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::UndelimitedExpression(
-                            self.first_token.clone(),
-                            Expression::Call(Box::new(Call {
-                                span: span_range_including_end(
-                                    file_id,
-                                    &self.first_token,
-                                    end_delimiter.raw(),
-                                ),
-                                callee: self.callee.clone(),
-                                args: self.args.clone(),
-                            })),
-                        ),
-                    ),
+                    TokenKind::Comma => {
+                        self.args.push(arg);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    TokenKind::RParen => {
+                        let args = NonEmptyVec::from_pushed(self.args.clone(), arg);
+                        AcceptResult::PopAndContinueReducing(
+                            FinishedStackItem::UndelimitedExpression(
+                                self.first_token.clone(),
+                                Expression::Call(Box::new(Call {
+                                    span: span_range_including_end(
+                                        file_id,
+                                        &self.first_token,
+                                        end_delimiter.raw(),
+                                    ),
+                                    callee: self.callee.clone(),
+                                    args,
+                                })),
+                            ),
+                        )
+                    }
                     _other_end_delimiter => {
                         AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
                     }
@@ -39,16 +44,19 @@ impl Accept for UnfinishedCall {
                     ),
                     FinishedStackItem::Token(token),
                 ),
-                TokenKind::RParen => {
-                    AcceptResult::PopAndContinueReducing(FinishedStackItem::UndelimitedExpression(
-                        self.first_token.clone(),
-                        Expression::Call(Box::new(Call {
-                            span: span_range_including_end(file_id, &self.first_token, &token),
-                            callee: self.callee.clone(),
-                            args: self.args.clone(),
-                        })),
-                    ))
-                }
+                TokenKind::RParen => match NonEmptyVec::try_from(self.args.clone()) {
+                    Ok(args) => AcceptResult::PopAndContinueReducing(
+                        FinishedStackItem::UndelimitedExpression(
+                            self.first_token.clone(),
+                            Expression::Call(Box::new(Call {
+                                span: span_range_including_end(file_id, &self.first_token, &token),
+                                callee: self.callee.clone(),
+                                args,
+                            })),
+                        ),
+                    ),
+                    Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                },
                 _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
             },
             other_item => unexpected_finished_item(&other_item),

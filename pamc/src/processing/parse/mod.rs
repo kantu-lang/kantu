@@ -1,4 +1,5 @@
 use crate::data::{
+    non_empty_vec::NonEmptyVec,
     token::{Token, TokenKind},
     unsimplified_ast::*,
     FileId, TextSpan,

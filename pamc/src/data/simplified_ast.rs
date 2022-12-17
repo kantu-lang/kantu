@@ -1,4 +1,7 @@
-use crate::data::{FileId, TextSpan};
+use crate::data::{
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    FileId, TextSpan,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
@@ -26,12 +29,33 @@ impl FileItem {
 pub struct TypeStatement {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: Option<NonEmptyParamVec>,
     pub variants: Vec<Variant>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Param {
+pub enum NonEmptyParamVec {
+    Unlabeled(NonEmptyVec<UnlabeledParam>),
+    Labeled(NonEmptyVec<LabeledParam>),
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyParamVec> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.len()).unwrap_or(0)
+    }
+}
+
+impl NonEmptyParamVec {
+    pub fn len(&self) -> usize {
+        match self {
+            NonEmptyParamVec::Unlabeled(vec) => vec.len(),
+            NonEmptyParamVec::Labeled(vec) => vec.len(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UnlabeledParam {
     pub span: TextSpan,
     pub is_dashed: bool,
     pub name: Identifier,
@@ -39,10 +63,21 @@ pub struct Param {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledParam {
+    pub span: TextSpan,
+    pub label: ParamLabel,
+    pub is_dashed: bool,
+    pub name: Identifier,
+    pub type_: Expression,
+}
+
+pub use crate::data::unsimplified_ast::ParamLabel;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: Option<NonEmptyParamVec>,
     pub return_type: Expression,
 }
 
@@ -79,7 +114,7 @@ impl Expression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     pub span: TextSpan,
-    pub components: Vec<Identifier>,
+    pub components: NonEmptyVec<Identifier>,
 }
 
 pub use crate::data::unsimplified_ast::Identifier;
@@ -92,14 +127,14 @@ pub use crate::data::unsimplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: TextSpan,
     pub callee: Expression,
-    pub args: Vec<Expression>,
+    pub args: NonEmptyVec<Expression>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Vec<Param>,
+    pub params: NonEmptyParamVec,
     pub return_type: Expression,
     pub body: Expression,
 }
@@ -115,21 +150,21 @@ pub struct Match {
 pub struct MatchCase {
     pub span: TextSpan,
     pub variant_name: Identifier,
-    pub params: Vec<Identifier>,
+    pub params: Option<NonEmptyVec<Identifier>>,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: TextSpan,
-    pub params: Vec<Param>,
+    pub params: NonEmptyParamVec,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: TextSpan,
-    pub assertions: Vec<CheckAssertion>,
+    pub assertions: NonEmptyVec<CheckAssertion>,
     pub output: Expression,
 }
 

@@ -1,0 +1,1 @@
+fun x(~-a: A, bar~b: B): C { d }

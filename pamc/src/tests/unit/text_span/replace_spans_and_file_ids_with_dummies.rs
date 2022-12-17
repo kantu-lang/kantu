@@ -6,6 +6,15 @@ pub trait ReplaceSpansAndFileIdsWithDummies {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self;
 }
 
+impl<T> ReplaceSpansAndFileIdsWithDummies for Option<T>
+where
+    T: ReplaceSpansAndFileIdsWithDummies,
+{
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.map(T::replace_spans_and_file_ids_with_dummies)
+    }
+}
+
 impl ReplaceSpansAndFileIdsWithDummies for File {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
@@ -34,17 +43,19 @@ impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
         self.span = dummy_span();
 
         self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.params = self
-            .params
-            .into_iter()
-            .map(Param::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        self.params = self.params.replace_spans_and_file_ids_with_dummies();
         self.variants = self
             .variants
             .into_iter()
             .map(Variant::replace_spans_and_file_ids_with_dummies)
             .collect();
         self
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Param> {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.into_mapped(Param::replace_spans_and_file_ids_with_dummies)
     }
 }
 
@@ -63,11 +74,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Variant {
         self.span = dummy_span();
 
         self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.params = self
-            .params
-            .into_iter()
-            .map(Param::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        self.params = self.params.replace_spans_and_file_ids_with_dummies();
         self.return_type = self.return_type.replace_spans_and_file_ids_with_dummies();
         self
     }
@@ -133,12 +140,14 @@ impl ReplaceSpansAndFileIdsWithDummies for Call {
         self.span = dummy_span();
 
         self.callee = self.callee.replace_spans_and_file_ids_with_dummies();
-        self.args = self
-            .args
-            .into_iter()
-            .map(Expression::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        self.args = self.args.replace_spans_and_file_ids_with_dummies();
         self
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Expression> {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.into_mapped(Expression::replace_spans_and_file_ids_with_dummies)
     }
 }
 
@@ -147,11 +156,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Fun {
         self.span = dummy_span();
 
         self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.params = self
-            .params
-            .into_iter()
-            .map(Param::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        self.params = self.params.replace_spans_and_file_ids_with_dummies();
         self.return_type = self.return_type.replace_spans_and_file_ids_with_dummies();
         self.body = self.body.replace_spans_and_file_ids_with_dummies();
         self
@@ -177,13 +182,15 @@ impl ReplaceSpansAndFileIdsWithDummies for MatchCase {
         self.span = dummy_span();
 
         self.variant_name = self.variant_name.replace_spans_and_file_ids_with_dummies();
-        self.params = self
-            .params
-            .into_iter()
-            .map(|param| param.replace_spans_and_file_ids_with_dummies())
-            .collect();
+        self.params = self.params.replace_spans_and_file_ids_with_dummies();
         self.output = self.output.replace_spans_and_file_ids_with_dummies();
         self
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Identifier> {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.into_mapped(Identifier::replace_spans_and_file_ids_with_dummies)
     }
 }
 
@@ -191,11 +198,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Forall {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
 
-        self.params = self
-            .params
-            .into_iter()
-            .map(|param| param.replace_spans_and_file_ids_with_dummies())
-            .collect();
+        self.params = self.params.replace_spans_and_file_ids_with_dummies();
         self.output = self.output.replace_spans_and_file_ids_with_dummies();
         self
     }
@@ -205,13 +208,15 @@ impl ReplaceSpansAndFileIdsWithDummies for Check {
     fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
         self.span = dummy_span();
 
-        self.assertions = self
-            .assertions
-            .into_iter()
-            .map(CheckAssertion::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        self.assertions = self.assertions.replace_spans_and_file_ids_with_dummies();
         self.output = self.output.replace_spans_and_file_ids_with_dummies();
         self
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<CheckAssertion> {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.into_mapped(CheckAssertion::replace_spans_and_file_ids_with_dummies)
     }
 }
 

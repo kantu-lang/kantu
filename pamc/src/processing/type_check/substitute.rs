@@ -44,6 +44,21 @@ pub(super) trait SubstituteWithoutRemovingSpans {
     ) -> Self::Output;
 }
 
+impl<T> SubstituteWithoutRemovingSpans for Option<T>
+where
+    T: SubstituteWithoutRemovingSpans<Output = T>,
+{
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self {
+        self.map(|x| x.subst_without_removing_spans(substitution, state))
+    }
+}
+
 impl SubstituteWithoutRemovingSpans for ExpressionId {
     type Output = Self;
 
@@ -117,14 +132,14 @@ impl SubstituteWithoutRemovingSpans for NodeId<Call> {
             return top_level.0;
         }
 
-        let call = state.registry.call(self).clone();
+        let call = state.registry.get(self).clone();
         let substituted_callee_id = call
             .callee_id
             .subst_without_removing_spans(substitution, state);
         let substituted_arg_list_id = call
             .arg_list_id
             .subst_without_removing_spans(substitution, state);
-        ExpressionId::Call(state.registry.add_call_and_overwrite_its_id(Call {
+        ExpressionId::Call(state.registry.add(Call {
             id: dummy_id(),
             span: None,
             callee_id: substituted_callee_id,
@@ -133,7 +148,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Call> {
     }
 }
 
-impl SubstituteWithoutRemovingSpans for ListId<ExpressionId> {
+impl SubstituteWithoutRemovingSpans for NonEmptyListId<ExpressionId> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -143,12 +158,10 @@ impl SubstituteWithoutRemovingSpans for ListId<ExpressionId> {
     ) -> Self::Output {
         let new_ids = state
             .registry
-            .expression_list(self)
-            .to_vec()
-            .into_iter()
-            .map(|id| id.subst_without_removing_spans(substitution, state))
-            .collect();
-        state.registry.add_expression_list(new_ids)
+            .get_list(self)
+            .to_non_empty_vec()
+            .into_mapped(|id| id.subst_without_removing_spans(substitution, state));
+        state.registry.add_list(new_ids)
     }
 }
 
@@ -165,19 +178,19 @@ impl SubstituteWithoutRemovingSpans for NodeId<Fun> {
             return top_level.0;
         }
 
-        let fun = state.registry.fun(self).clone();
+        let fun = state.registry.get(self).clone();
         let substituted_param_list_id = fun
             .param_list_id
             .subst_without_removing_spans(substitution, state);
         let substituted_return_type_id = fun.return_type_id.subst_without_removing_spans(
-            substitution.upshift(fun.param_list_id.len, state.registry),
+            substitution.upshift(fun.param_list_id.len(), state.registry),
             state,
         );
         let substituted_body_id = fun.body_id.subst_without_removing_spans(
-            substitution.upshift(fun.param_list_id.len + 1, state.registry),
+            substitution.upshift(fun.param_list_id.len() + 1, state.registry),
             state,
         );
-        ExpressionId::Fun(state.registry.add_fun_and_overwrite_its_id(Fun {
+        ExpressionId::Fun(state.registry.add(Fun {
             id: dummy_id(),
             span: None,
             name_id: fun.name_id,
@@ -189,7 +202,26 @@ impl SubstituteWithoutRemovingSpans for NodeId<Fun> {
     }
 }
 
-impl SubstituteWithoutRemovingSpans for ListId<NodeId<Param>> {
+impl SubstituteWithoutRemovingSpans for NonEmptyParamListId {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        match self {
+            NonEmptyParamListId::Unlabeled(id) => {
+                NonEmptyParamListId::Unlabeled(id.subst_without_removing_spans(substitution, state))
+            }
+            NonEmptyParamListId::Labeled(id) => {
+                NonEmptyParamListId::Labeled(id.subst_without_removing_spans(substitution, state))
+            }
+        }
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for NonEmptyListId<NodeId<UnlabeledParam>> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -199,33 +231,72 @@ impl SubstituteWithoutRemovingSpans for ListId<NodeId<Param>> {
     ) -> Self::Output {
         let new_ids = state
             .registry
-            .param_list(self)
-            .to_vec()
-            .into_iter()
-            .enumerate()
-            .map(|(index, id)| {
+            .get_list(self)
+            .to_non_empty_vec()
+            .enumerate_into_mapped(|(index, id)| {
                 id.subst_without_removing_spans(substitution.upshift(index, state.registry), state)
-            })
-            .collect();
-        state.registry.add_param_list(new_ids)
+            });
+        state.registry.add_list(new_ids)
     }
 }
 
-impl SubstituteWithoutRemovingSpans for NodeId<Param> {
-    type Output = NodeId<Param>;
+impl SubstituteWithoutRemovingSpans for NodeId<UnlabeledParam> {
+    type Output = NodeId<UnlabeledParam>;
 
     fn subst_without_removing_spans(
         self,
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        let param = state.registry.param(self).clone();
+        let param = state.registry.get(self).clone();
         let substituted_type_id = param
             .type_id
             .subst_without_removing_spans(substitution, state);
-        state.registry.add_param_and_overwrite_its_id(Param {
+        state.registry.add(UnlabeledParam {
             id: dummy_id(),
             span: None,
+            is_dashed: param.is_dashed,
+            name_id: param.name_id,
+            type_id: substituted_type_id,
+        })
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for NonEmptyListId<NodeId<LabeledParam>> {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        let new_ids = state
+            .registry
+            .get_list(self)
+            .to_non_empty_vec()
+            .enumerate_into_mapped(|(index, id)| {
+                id.subst_without_removing_spans(substitution.upshift(index, state.registry), state)
+            });
+        state.registry.add_list(new_ids)
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for NodeId<LabeledParam> {
+    type Output = NodeId<LabeledParam>;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        let param = state.registry.get(self).clone();
+        let substituted_type_id = param
+            .type_id
+            .subst_without_removing_spans(substitution, state);
+        state.registry.add(LabeledParam {
+            id: dummy_id(),
+            span: None,
+            label_id: param.label_id,
             is_dashed: param.is_dashed,
             name_id: param.name_id,
             type_id: substituted_type_id,
@@ -247,7 +318,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Match> {
             return top_level.0;
         }
 
-        let match_ = state.registry.match_(self).clone();
+        let match_ = state.registry.get(self).clone();
         let substituted_matchee_id = match_
             .matchee_id
             .subst_without_removing_spans(substitution, state);
@@ -255,7 +326,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Match> {
             .case_list_id
             .subst_without_removing_spans(substitution, state);
 
-        ExpressionId::Match(state.registry.add_match_and_overwrite_its_id(Match {
+        ExpressionId::Match(state.registry.add(Match {
             id: dummy_id(),
             span: None,
             matchee_id: substituted_matchee_id,
@@ -264,7 +335,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Match> {
     }
 }
 
-impl SubstituteWithoutRemovingSpans for ListId<NodeId<MatchCase>> {
+impl SubstituteWithoutRemovingSpans for NonEmptyListId<NodeId<MatchCase>> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -274,12 +345,10 @@ impl SubstituteWithoutRemovingSpans for ListId<NodeId<MatchCase>> {
     ) -> Self::Output {
         let new_ids = state
             .registry
-            .match_case_list(self)
-            .to_vec()
-            .into_iter()
-            .map(|id| id.subst_without_removing_spans(substitution, state))
-            .collect();
-        state.registry.add_match_case_list(new_ids)
+            .get_list(self)
+            .to_non_empty_vec()
+            .into_mapped(|id| id.subst_without_removing_spans(substitution, state));
+        state.registry.add_list(new_ids)
     }
 }
 
@@ -291,20 +360,18 @@ impl SubstituteWithoutRemovingSpans for NodeId<MatchCase> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        let case = state.registry.match_case(self).clone();
+        let case = state.registry.get(self).clone();
         let substituted_output_id = case.output_id.subst_without_removing_spans(
-            substitution.upshift(case.param_list_id.len, state.registry),
+            substitution.upshift(case.param_list_id.len(), state.registry),
             state,
         );
-        state
-            .registry
-            .add_match_case_and_overwrite_its_id(MatchCase {
-                id: dummy_id(),
-                span: None,
-                variant_name_id: case.variant_name_id,
-                param_list_id: case.param_list_id,
-                output_id: substituted_output_id,
-            })
+        state.registry.add(MatchCase {
+            id: dummy_id(),
+            span: None,
+            variant_name_id: case.variant_name_id,
+            param_list_id: case.param_list_id,
+            output_id: substituted_output_id,
+        })
     }
 }
 
@@ -322,16 +389,16 @@ impl SubstituteWithoutRemovingSpans for NodeId<Forall> {
             return top_level.0;
         }
 
-        let forall = state.registry.forall(self).clone();
+        let forall = state.registry.get(self).clone();
         let substituted_param_list_id = forall
             .param_list_id
             .subst_without_removing_spans(substitution, state);
         let substituted_output_id = forall.output_id.subst_without_removing_spans(
-            substitution.upshift(forall.param_list_id.len, state.registry),
+            substitution.upshift(forall.param_list_id.len(), state.registry),
             state,
         );
 
-        ExpressionId::Forall(state.registry.add_forall_and_overwrite_its_id(Forall {
+        ExpressionId::Forall(state.registry.add(Forall {
             id: dummy_id(),
             span: None,
             param_list_id: substituted_param_list_id,
@@ -354,7 +421,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
             return top_level.0;
         }
 
-        let check = state.registry.check(self).clone();
+        let check = state.registry.get(self).clone();
         let substituted_assertion_list_id = check
             .assertion_list_id
             .subst_without_removing_spans(substitution, state);
@@ -362,7 +429,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
             .output_id
             .subst_without_removing_spans(substitution, state);
 
-        ExpressionId::Check(state.registry.add_check_and_overwrite_its_id(Check {
+        ExpressionId::Check(state.registry.add(Check {
             id: dummy_id(),
             span: None,
             assertion_list_id: substituted_assertion_list_id,
@@ -371,7 +438,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
     }
 }
 
-impl SubstituteWithoutRemovingSpans for ListId<NodeId<CheckAssertion>> {
+impl SubstituteWithoutRemovingSpans for NonEmptyListId<NodeId<CheckAssertion>> {
     type Output = Self;
 
     fn subst_without_removing_spans(
@@ -381,12 +448,10 @@ impl SubstituteWithoutRemovingSpans for ListId<NodeId<CheckAssertion>> {
     ) -> Self::Output {
         let new_ids = state
             .registry
-            .check_assertion_list(self)
-            .to_vec()
-            .into_iter()
-            .map(|id| id.subst_without_removing_spans(substitution, state))
-            .collect();
-        state.registry.add_check_assertion_list(new_ids)
+            .get_list(self)
+            .to_non_empty_vec()
+            .into_mapped(|id| id.subst_without_removing_spans(substitution, state));
+        state.registry.add_list(new_ids)
     }
 }
 
@@ -398,22 +463,20 @@ impl SubstituteWithoutRemovingSpans for NodeId<CheckAssertion> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        let original = state.registry.check_assertion(self).clone();
+        let original = state.registry.get(self).clone();
         let substituted_left_id = original
             .left_id
             .subst_without_removing_spans(substitution, state);
         let substituted_right_id = original
             .right_id
             .subst_without_removing_spans(substitution, state);
-        state
-            .registry
-            .add_check_assertion_and_overwrite_its_id(CheckAssertion {
-                id: dummy_id(),
-                span: None,
-                kind: original.kind,
-                left_id: substituted_left_id,
-                right_id: substituted_right_id,
-            })
+        state.registry.add(CheckAssertion {
+            id: dummy_id(),
+            span: None,
+            kind: original.kind,
+            left_id: substituted_left_id,
+            right_id: substituted_right_id,
+        })
     }
 }
 

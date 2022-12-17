@@ -2,7 +2,7 @@ use super::*;
 
 use std::iter::FromIterator;
 
-impl GetIndexInSubregistry for ListId<ExpressionId> {
+impl GetIndexInSubregistry for NonEmptyListId<ExpressionId> {
     type Stripped = Vec<ExpressionSemanticId>;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -11,14 +11,14 @@ impl GetIndexInSubregistry for ListId<ExpressionId> {
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         registry
-            .expression_list(self)
+            .get_list(self)
             .iter()
             .copied()
             .map(|id| id.into_semantic_id(registry, sreg))
             .collect()
     }
 }
-impl IntoSemanticId for ListId<ExpressionId> {
+impl IntoSemanticId for NonEmptyListId<ExpressionId> {
     type Output = SemanticId<Vec<ExpressionSemanticId>>;
 
     fn into_semantic_id(
@@ -56,7 +56,7 @@ impl IntoSemanticId for ExpressionId {
             ExpressionId::Check(id) => {
                 // Since check annotations carry no semantic meaning,
                 // we can look exclusively at the `output`.
-                let check = registry.check(id);
+                let check = registry.get(id);
                 check.output_id.into_semantic_id(registry, sreg)
             }
         }
@@ -98,7 +98,7 @@ impl GetIndexInSubregistry for NodeId<NameExpression> {
     }
 
     fn strip(self, registry: &NodeRegistry, _sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let name = registry.name_expression(self);
+        let name = registry.get(self);
         stripped::NameExpression {
             db_index: name.db_index,
         }
@@ -125,7 +125,7 @@ impl GetIndexInSubregistry for NodeId<Call> {
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let call = registry.call(self);
+        let call = registry.get(self);
         stripped::Call {
             callee_id: call.callee_id.into_semantic_id(registry, sreg),
             arg_list_id: call.arg_list_id.into_semantic_id(registry, sreg),
@@ -153,26 +153,46 @@ impl GetIndexInSubregistry for NodeId<Fun> {
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let fun = registry.fun(self);
+        let fun = registry.get(self);
         stripped::Fun {
-            param_type_list_id: expression_ids_to_expression_vec_semantic_id(
-                registry
-                    .param_list(fun.param_list_id)
+            param_type_list_id: match fun.param_list_id {
+                NonEmptyParamListId::Unlabeled(param_list_id) => {
+                    expression_ids_to_expression_vec_semantic_id(
+                        registry.get_list(param_list_id).iter().map(|param_id| {
+                            let param = registry.get(*param_id);
+                            param.type_id
+                        }),
+                        registry,
+                        sreg,
+                    )
+                }
+                NonEmptyParamListId::Labeled(param_list_id) => {
+                    expression_ids_to_expression_vec_semantic_id(
+                        registry.get_list(param_list_id).iter().map(|param_id| {
+                            let param = registry.get(*param_id);
+                            param.type_id
+                        }),
+                        registry,
+                        sreg,
+                    )
+                }
+            },
+            dash_index: match fun.param_list_id {
+                NonEmptyParamListId::Unlabeled(param_list_id) => registry
+                    .get_list(param_list_id)
                     .iter()
-                    .map(|param_id| {
-                        let param = registry.param(*param_id);
-                        param.type_id
+                    .position(|param_id| {
+                        let param = registry.get(*param_id);
+                        param.is_dashed
                     }),
-                registry,
-                sreg,
-            ),
-            dash_index: registry
-                .param_list(fun.param_list_id)
-                .iter()
-                .position(|param_id| {
-                    let param = registry.param(*param_id);
-                    param.is_dashed
-                }),
+                NonEmptyParamListId::Labeled(param_list_id) => registry
+                    .get_list(param_list_id)
+                    .iter()
+                    .position(|param_id| {
+                        let param = registry.get(*param_id);
+                        param.is_dashed
+                    }),
+            },
             return_type_id: fun.return_type_id.into_semantic_id(registry, sreg),
             body_id: fun.body_id.into_semantic_id(registry, sreg),
         }
@@ -199,10 +219,12 @@ impl GetIndexInSubregistry for NodeId<Match> {
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let match_ = registry.match_(self);
+        let match_ = registry.get(self);
         stripped::Match {
             matchee_id: match_.matchee_id.into_semantic_id(registry, sreg),
-            case_list_id: match_.case_list_id.into_semantic_id(registry, sreg),
+            case_list_id: match_
+                .case_list_id
+                .map(|case_list_id| case_list_id.into_semantic_id(registry, sreg)),
         }
     }
 }
@@ -219,7 +241,7 @@ impl IntoSemanticId for NodeId<Match> {
     }
 }
 
-impl GetIndexInSubregistry for ListId<NodeId<MatchCase>> {
+impl GetIndexInSubregistry for NonEmptyListId<NodeId<MatchCase>> {
     type Stripped = MatchCaseSemanticIdSet;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -227,14 +249,14 @@ impl GetIndexInSubregistry for ListId<NodeId<MatchCase>> {
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let case_ids = registry.match_case_list(self);
+        let case_ids = registry.get_list(self);
         case_ids
             .iter()
             .map(|case_id| case_id.into_semantic_id(registry, sreg))
             .collect()
     }
 }
-impl IntoSemanticId for ListId<NodeId<MatchCase>> {
+impl IntoSemanticId for NonEmptyListId<NodeId<MatchCase>> {
     type Output = SemanticId<stripped::Set<SemanticId<stripped::MatchCase>>>;
 
     fn into_semantic_id(
@@ -271,7 +293,7 @@ impl GetIndexInSubregistry for NodeId<MatchCase> {
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let case = registry.match_case(self);
+        let case = registry.get(self);
         stripped::MatchCase {
             variant_name_id: case.variant_name_id.into_semantic_id(registry, sreg),
             output_id: case.output_id.into_semantic_id(registry, sreg),
@@ -299,7 +321,7 @@ impl GetIndexInSubregistry for NodeId<Identifier> {
     }
 
     fn strip(self, registry: &NodeRegistry, _sreg: &mut StrippedRegistry) -> Self::Stripped {
-        registry.identifier(self).name.clone()
+        registry.get(self).name.clone()
     }
 }
 impl IntoSemanticId for NodeId<Identifier> {
@@ -323,19 +345,30 @@ impl GetIndexInSubregistry for NodeId<Forall> {
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let forall = registry.forall(self);
+        let forall = registry.get(self);
         stripped::Forall {
-            param_type_list_id: expression_ids_to_expression_vec_semantic_id(
-                registry
-                    .param_list(forall.param_list_id)
-                    .iter()
-                    .map(|param_id| {
-                        let param = registry.param(*param_id);
-                        param.type_id
-                    }),
-                registry,
-                sreg,
-            ),
+            param_type_list_id: match forall.param_list_id {
+                NonEmptyParamListId::Unlabeled(param_list_id) => {
+                    expression_ids_to_expression_vec_semantic_id(
+                        registry.get_list(param_list_id).iter().map(|param_id| {
+                            let param = registry.get(*param_id);
+                            param.type_id
+                        }),
+                        registry,
+                        sreg,
+                    )
+                }
+                NonEmptyParamListId::Labeled(param_list_id) => {
+                    expression_ids_to_expression_vec_semantic_id(
+                        registry.get_list(param_list_id).iter().map(|param_id| {
+                            let param = registry.get(*param_id);
+                            param.type_id
+                        }),
+                        registry,
+                        sreg,
+                    )
+                }
+            },
             output_id: forall.output_id.into_semantic_id(registry, sreg),
         }
     }

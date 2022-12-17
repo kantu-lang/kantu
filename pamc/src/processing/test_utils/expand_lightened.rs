@@ -1,14 +1,16 @@
 use crate::data::{
     bound_ast::*,
-    light_ast as light,
+    light_ast::{self as light, ParamLabelId},
     node_registry::{
-        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, ListId, NodeId,
-        NodeRegistry, PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
+        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, NodeId,
+        NodeRegistry, NonEmptyListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
+        QuestionMarkOrPossiblyInvalidExpressionId,
     },
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecToVec},
 };
 
 pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
-    let light = registry.file(id);
+    let light = registry.get(id);
     let items = expand_file_item_list(registry, light.item_list_id);
     File {
         id: light.file_id,
@@ -17,9 +19,12 @@ pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
     }
 }
 
-pub fn expand_file_item_list(registry: &NodeRegistry, id: ListId<FileItemNodeId>) -> Vec<FileItem> {
+pub fn expand_file_item_list(
+    registry: &NodeRegistry,
+    id: Option<NonEmptyListId<FileItemNodeId>>,
+) -> Vec<FileItem> {
     registry
-        .file_item_list(id)
+        .get_possibly_empty_list(id)
         .iter()
         .map(|item_id| expand_file_item(registry, *item_id))
         .collect()
@@ -36,10 +41,10 @@ pub fn expand_type_statement(
     registry: &NodeRegistry,
     id: NodeId<light::TypeStatement>,
 ) -> TypeStatement {
-    let light = registry.type_statement(id);
+    let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
-    let params = expand_param_list(registry, light.param_list_id);
-    let variants = expand_variant_list(registry, light.variant_list_id);
+    let params = expand_possibly_empty_param_list(registry, light.param_list_id);
+    let variants = expand_possibly_empty_variant_list(registry, light.variant_list_id).into_vec();
     TypeStatement {
         span: light.span,
         name,
@@ -49,26 +54,48 @@ pub fn expand_type_statement(
 }
 
 pub fn expand_identifier(registry: &NodeRegistry, id: NodeId<light::Identifier>) -> Identifier {
-    let light = registry.identifier(id);
+    let light = registry.get(id);
     Identifier {
         span: light.span,
         name: light.name.clone(),
     }
 }
 
-pub fn expand_param_list(registry: &NodeRegistry, id: ListId<NodeId<light::Param>>) -> Vec<Param> {
-    registry
-        .param_list(id)
-        .iter()
-        .map(|param_id| expand_param(registry, *param_id))
-        .collect()
+pub fn expand_possibly_empty_param_list(
+    registry: &NodeRegistry,
+    id: Option<NonEmptyParamListId>,
+) -> Option<NonEmptyParamVec> {
+    id.map(|id| expand_param_list(registry, id))
 }
 
-pub fn expand_param(registry: &NodeRegistry, id: NodeId<light::Param>) -> Param {
-    let light = registry.param(id);
+pub fn expand_param_list(registry: &NodeRegistry, id: NonEmptyParamListId) -> NonEmptyParamVec {
+    match id {
+        NonEmptyParamListId::Unlabeled(id) => {
+            NonEmptyParamVec::Unlabeled(expand_unlabeled_param_list(registry, id))
+        }
+        NonEmptyParamListId::Labeled(id) => {
+            NonEmptyParamVec::Labeled(expand_labeled_param_list(registry, id))
+        }
+    }
+}
+
+pub fn expand_unlabeled_param_list(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<NodeId<light::UnlabeledParam>>,
+) -> NonEmptyVec<UnlabeledParam> {
+    registry
+        .get_list(id)
+        .to_mapped(|param_id| expand_unlabeled_param(registry, *param_id))
+}
+
+pub fn expand_unlabeled_param(
+    registry: &NodeRegistry,
+    id: NodeId<light::UnlabeledParam>,
+) -> UnlabeledParam {
+    let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
     let type_ = expand_expression(registry, light.type_id);
-    Param {
+    UnlabeledParam {
         span: light.span,
         is_dashed: light.is_dashed,
         name,
@@ -76,21 +103,59 @@ pub fn expand_param(registry: &NodeRegistry, id: NodeId<light::Param>) -> Param 
     }
 }
 
+pub fn expand_labeled_param_list(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<NodeId<light::LabeledParam>>,
+) -> NonEmptyVec<LabeledParam> {
+    registry
+        .get_list(id)
+        .to_mapped(|param_id| expand_labeled_param(registry, *param_id))
+}
+
+pub fn expand_labeled_param(
+    registry: &NodeRegistry,
+    id: NodeId<light::LabeledParam>,
+) -> LabeledParam {
+    let light = registry.get(id);
+    let label = expand_label(registry, light.label_id);
+    let name = expand_identifier(registry, light.name_id);
+    let type_ = expand_expression(registry, light.type_id);
+    LabeledParam {
+        span: light.span,
+        label,
+        is_dashed: light.is_dashed,
+        name,
+        type_,
+    }
+}
+
+pub fn expand_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLabel {
+    match id {
+        ParamLabelId::Implicit => ParamLabel::Implicit,
+        ParamLabelId::Explicit(id) => ParamLabel::Explicit(expand_identifier(registry, id)),
+    }
+}
+
+pub fn expand_possibly_empty_variant_list(
+    registry: &NodeRegistry,
+    id: Option<NonEmptyListId<NodeId<light::Variant>>>,
+) -> Option<NonEmptyVec<Variant>> {
+    id.map(|id| expand_variant_list(registry, id))
+}
+
 pub fn expand_variant_list(
     registry: &NodeRegistry,
-    id: ListId<NodeId<light::Variant>>,
-) -> Vec<Variant> {
+    id: NonEmptyListId<NodeId<light::Variant>>,
+) -> NonEmptyVec<Variant> {
     registry
-        .variant_list(id)
-        .iter()
-        .map(|variant_id| expand_variant(registry, *variant_id))
-        .collect()
+        .get_list(id)
+        .to_mapped(|variant_id| expand_variant(registry, *variant_id))
 }
 
 pub fn expand_variant(registry: &NodeRegistry, id: NodeId<light::Variant>) -> Variant {
-    let light = registry.variant(id);
+    let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
-    let params = expand_param_list(registry, light.param_list_id);
+    let params = expand_possibly_empty_param_list(registry, light.param_list_id);
     let return_type = expand_expression(registry, light.return_type_id);
     Variant {
         span: light.span,
@@ -104,7 +169,7 @@ pub fn expand_let_statement(
     registry: &NodeRegistry,
     id: NodeId<light::LetStatement>,
 ) -> LetStatement {
-    let light = registry.let_statement(id);
+    let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
     let value = expand_expression(registry, light.value_id);
     LetStatement {
@@ -131,7 +196,7 @@ pub fn expand_name_expression(
     registry: &NodeRegistry,
     id: NodeId<light::NameExpression>,
 ) -> NameExpression {
-    let light = registry.name_expression(id);
+    let light = registry.get(id);
     let components = expand_identifier_list(registry, light.component_list_id);
     NameExpression {
         span: light.span,
@@ -142,17 +207,15 @@ pub fn expand_name_expression(
 
 pub fn expand_identifier_list(
     registry: &NodeRegistry,
-    id: ListId<NodeId<light::Identifier>>,
-) -> Vec<Identifier> {
+    id: NonEmptyListId<NodeId<light::Identifier>>,
+) -> NonEmptyVec<Identifier> {
     registry
-        .identifier_list(id)
-        .iter()
-        .map(|id| expand_identifier(registry, *id))
-        .collect()
+        .get_list(id)
+        .to_mapped(|id| expand_identifier(registry, *id))
 }
 
 pub fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
-    let light = registry.call(id);
+    let light = registry.get(id);
     let callee = expand_expression(registry, light.callee_id);
     let args = expand_expression_list(registry, light.arg_list_id);
     Call {
@@ -164,17 +227,15 @@ pub fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
 
 pub fn expand_expression_list(
     registry: &NodeRegistry,
-    id: ListId<light::ExpressionId>,
-) -> Vec<Expression> {
+    id: NonEmptyListId<light::ExpressionId>,
+) -> NonEmptyVec<Expression> {
     registry
-        .expression_list(id)
-        .iter()
-        .map(|id| expand_expression(registry, *id))
-        .collect()
+        .get_list(id)
+        .to_mapped(|id| expand_expression(registry, *id))
 }
 
 pub fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
-    let light = registry.fun(id);
+    let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
     let params = expand_param_list(registry, light.param_list_id);
     let return_type = expand_expression(registry, light.return_type_id);
@@ -191,9 +252,9 @@ pub fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
 }
 
 pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match {
-    let light = registry.match_(id);
+    let light = registry.get(id);
     let matchee = expand_expression(registry, light.matchee_id);
-    let cases = expand_match_case_list(registry, light.case_list_id);
+    let cases = expand_possibly_empty_match_case_list(registry, light.case_list_id).into_vec();
     Match {
         span: light.span,
         matchee,
@@ -201,21 +262,26 @@ pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match 
     }
 }
 
+pub fn expand_possibly_empty_match_case_list(
+    registry: &NodeRegistry,
+    id: Option<NonEmptyListId<NodeId<light::MatchCase>>>,
+) -> Option<NonEmptyVec<MatchCase>> {
+    id.map(|id| expand_match_case_list(registry, id))
+}
+
 pub fn expand_match_case_list(
     registry: &NodeRegistry,
-    id: ListId<NodeId<light::MatchCase>>,
-) -> Vec<MatchCase> {
+    id: NonEmptyListId<NodeId<light::MatchCase>>,
+) -> NonEmptyVec<MatchCase> {
     registry
-        .match_case_list(id)
-        .iter()
-        .map(|case_id| expand_match_case(registry, *case_id))
-        .collect()
+        .get_list(id)
+        .to_mapped(|case_id| expand_match_case(registry, *case_id))
 }
 
 pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> MatchCase {
-    let light = registry.match_case(id);
+    let light = registry.get(id);
     let variant_name = expand_identifier(registry, light.variant_name_id);
-    let params = expand_identifier_list(registry, light.param_list_id);
+    let params = expand_possibly_empty_identifier_list(registry, light.param_list_id).into_vec();
     let output = expand_expression(registry, light.output_id);
     MatchCase {
         span: light.span,
@@ -225,8 +291,15 @@ pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) 
     }
 }
 
+pub fn expand_possibly_empty_identifier_list(
+    registry: &NodeRegistry,
+    id: Option<NonEmptyListId<NodeId<light::Identifier>>>,
+) -> Option<NonEmptyVec<Identifier>> {
+    id.map(|id| expand_identifier_list(registry, id))
+}
+
 pub fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Forall {
-    let light = registry.forall(id);
+    let light = registry.get(id);
     let params = expand_param_list(registry, light.param_list_id);
     let output = expand_expression(registry, light.output_id);
     Forall {
@@ -237,7 +310,7 @@ pub fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Fora
 }
 
 pub fn expand_check(registry: &NodeRegistry, id: NodeId<light::Check>) -> Check {
-    let light = registry.check(id);
+    let light = registry.get(id);
     let assertions = expand_check_assertion_list(registry, light.assertion_list_id);
     let output = expand_expression(registry, light.output_id);
     Check {
@@ -249,20 +322,18 @@ pub fn expand_check(registry: &NodeRegistry, id: NodeId<light::Check>) -> Check 
 
 pub fn expand_check_assertion_list(
     registry: &NodeRegistry,
-    id: ListId<NodeId<light::CheckAssertion>>,
-) -> Vec<CheckAssertion> {
+    id: NonEmptyListId<NodeId<light::CheckAssertion>>,
+) -> NonEmptyVec<CheckAssertion> {
     registry
-        .check_assertion_list(id)
-        .iter()
-        .map(|id| expand_check_assertion(registry, *id))
-        .collect()
+        .get_list(id)
+        .to_mapped(|id| expand_check_assertion(registry, *id))
 }
 
 pub fn expand_check_assertion(
     registry: &NodeRegistry,
     id: NodeId<light::CheckAssertion>,
 ) -> CheckAssertion {
-    let light = registry.check_assertion(id);
+    let light = registry.get(id);
     let left = expand_goal_kw_or_expression(registry, light.left_id);
     let right = expand_question_mark_or_possibly_invalid_expression(registry, light.right_id);
     CheckAssertion {
@@ -337,7 +408,7 @@ pub fn expand_symbolically_invalid_expression(
     registry: &NodeRegistry,
     id: NodeId<light::SymbolicallyInvalidExpression>,
 ) -> SymbolicallyInvalidExpression {
-    let light = registry.symbolically_invalid_expression(id);
+    let light = registry.get(id);
     let expression = light.expression.clone();
     let error = light.error.clone();
     SymbolicallyInvalidExpression {
@@ -351,7 +422,7 @@ pub fn expand_illegal_fun_recursion_expression(
     registry: &NodeRegistry,
     id: NodeId<light::IllegalFunRecursionExpression>,
 ) -> IllegalFunRecursionExpression {
-    let light = registry.illegal_fun_recursion_expression(id);
+    let light = registry.get(id);
     let expression = expand_expression(registry, light.expression_id);
     let error = light.error.clone();
     IllegalFunRecursionExpression {

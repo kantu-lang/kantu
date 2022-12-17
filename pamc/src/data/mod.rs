@@ -4,6 +4,7 @@ pub mod fun_recursion_validation_result;
 pub mod light_ast;
 pub mod node_equality_checker;
 pub mod node_registry;
+pub mod non_empty_vec;
 pub mod simplified_ast;
 pub mod token;
 pub mod unsimplified_ast;

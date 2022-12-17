@@ -1,6 +1,7 @@
 use crate::data::{
     bind_error::*,
     bound_ast::*,
+    non_empty_vec::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
 };
@@ -78,11 +79,7 @@ fn bind_type_statement_dirty(
 ) -> Result<TypeStatement, BindError> {
     let params = {
         let arity = type_statement.params.len();
-        let out = type_statement
-            .params
-            .into_iter()
-            .map(|param| bind_param(context, param))
-            .collect::<Result<Vec<_>, BindError>>()?;
+        let out = bind_optional_params(context, type_statement.params)?;
         context.pop_n(arity);
         out
     };
@@ -110,15 +107,66 @@ fn bind_type_statement_dirty(
     })
 }
 
-fn bind_param(context: &mut Context, param: ub::Param) -> Result<Param, BindError> {
-    untaint_err(context, param, bind_param_dirty)
+fn bind_optional_params(
+    context: &mut Context,
+    params: Option<ub::NonEmptyParamVec>,
+) -> Result<Option<NonEmptyParamVec>, BindError> {
+    params
+        .map(|params| bind_params(context, params))
+        .transpose()
 }
 
-fn bind_param_dirty(context: &mut Context, param: ub::Param) -> Result<Param, BindError> {
+fn bind_params(
+    context: &mut Context,
+    params: ub::NonEmptyParamVec,
+) -> Result<NonEmptyParamVec, BindError> {
+    Ok(match params {
+        ub::NonEmptyParamVec::Unlabeled(params) => NonEmptyParamVec::Unlabeled(
+            params.try_into_mapped(|param| bind_unlabeled_param(context, param))?,
+        ),
+        ub::NonEmptyParamVec::Labeled(params) => NonEmptyParamVec::Labeled(
+            params.try_into_mapped(|param| bind_labeled_param(context, param))?,
+        ),
+    })
+}
+
+fn bind_unlabeled_param(
+    context: &mut Context,
+    param: ub::UnlabeledParam,
+) -> Result<UnlabeledParam, BindError> {
+    untaint_err(context, param, bind_unlabeled_param_dirty)
+}
+
+fn bind_unlabeled_param_dirty(
+    context: &mut Context,
+    param: ub::UnlabeledParam,
+) -> Result<UnlabeledParam, BindError> {
     let type_ = bind_expression(context, param.type_)?;
     let name = create_name_and_add_to_scope(context, param.name)?;
-    Ok(Param {
+    Ok(UnlabeledParam {
         span: Some(param.span),
+        is_dashed: param.is_dashed,
+        name,
+        type_,
+    })
+}
+
+fn bind_labeled_param(
+    context: &mut Context,
+    param: ub::LabeledParam,
+) -> Result<LabeledParam, BindError> {
+    untaint_err(context, param, bind_labeled_param_dirty)
+}
+
+fn bind_labeled_param_dirty(
+    context: &mut Context,
+    param: ub::LabeledParam,
+) -> Result<LabeledParam, BindError> {
+    let type_ = bind_expression(context, param.type_)?;
+    let name = create_name_and_add_to_scope(context, param.name)?;
+    Ok(LabeledParam {
+        span: Some(param.span),
+        label: param.label.into(),
         is_dashed: param.is_dashed,
         name,
         type_,
@@ -142,11 +190,7 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
     (variant, type_name): (ub::Variant, &IdentifierName),
 ) -> Result<Variant, BindError> {
     let arity = variant.params.len();
-    let params = variant
-        .params
-        .into_iter()
-        .map(|param| bind_param(context, param))
-        .collect::<Result<Vec<_>, BindError>>()?;
+    let params = bind_optional_params(context, variant.params)?;
     let return_type = bind_expression(context, variant.return_type)?;
     context.pop_n(arity);
 
@@ -214,7 +258,7 @@ fn bind_name_expression_dirty(
     let db_index = context.get_db_index(&name.components)?;
     Ok(Expression::Name(NameExpression {
         span: Some(name.span),
-        components: name.components.into_iter().map(Into::into).collect(),
+        components: name.components.into_mapped(Into::into),
         db_index,
     }))
 }
@@ -226,9 +270,7 @@ fn bind_call_expression_dirty(
     let callee = bind_expression_dirty(context, call.callee)?;
     let args = call
         .args
-        .into_iter()
-        .map(|arg| bind_expression_dirty(context, arg))
-        .collect::<Result<Vec<_>, BindError>>()?;
+        .try_into_mapped(|arg| bind_expression_dirty(context, arg))?;
     Ok(Expression::Call(Box::new(Call {
         span: Some(call.span),
         callee,
@@ -238,11 +280,7 @@ fn bind_call_expression_dirty(
 
 fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError> {
     let param_arity = fun.params.len();
-    let params = fun
-        .params
-        .into_iter()
-        .map(|param| bind_param(context, param))
-        .collect::<Result<Vec<_>, BindError>>()?;
+    let params = bind_params(context, fun.params)?;
     let return_type = bind_expression_dirty(context, fun.return_type)?;
 
     let name = create_name_and_add_to_scope(context, fun.name)?;
@@ -280,9 +318,13 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
     let variant_name = case.variant_name.into();
     let params = case
         .params
-        .into_iter()
-        .map(|param| -> Result<_, BindError> { Ok(create_name_and_add_to_scope(context, param)?) })
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(|param| {
+            param.try_into_mapped(|param| -> Result<_, BindError> {
+                Ok(create_name_and_add_to_scope(context, param)?)
+            })
+        })
+        .transpose()?
+        .into_vec();
     let output = bind_expression_dirty(context, case.output)?;
 
     context.pop_n(arity);
@@ -296,11 +338,7 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
 
 fn bind_forall_dirty(context: &mut Context, forall: ub::Forall) -> Result<Expression, BindError> {
     let arity = forall.params.len();
-    let params = forall
-        .params
-        .into_iter()
-        .map(|param| bind_param(context, param))
-        .collect::<Result<Vec<_>, BindError>>()?;
+    let params = bind_params(context, forall.params)?;
     let output = bind_expression_dirty(context, forall.output)?;
     let forall = Expression::Forall(Box::new(Forall {
         span: Some(forall.span),
@@ -315,9 +353,7 @@ fn bind_forall_dirty(context: &mut Context, forall: ub::Forall) -> Result<Expres
 fn bind_check_dirty(context: &mut Context, check: ub::Check) -> Result<Expression, BindError> {
     let assertions = check
         .assertions
-        .into_iter()
-        .map(|param| bind_check_assertion_dirty(context, param))
-        .collect::<Result<Vec<_>, BindError>>()?;
+        .try_into_mapped(|param| bind_check_assertion_dirty(context, param))?;
     let output = bind_expression_dirty(context, check.output)?;
     Ok(Expression::Check(Box::new(Check {
         span: Some(check.span),

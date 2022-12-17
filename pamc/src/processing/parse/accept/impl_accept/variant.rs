@@ -29,7 +29,7 @@ impl Accept for UnfinishedVariant {
                         }))
                     }
                     TokenKind::Colon => {
-                        *self = UnfinishedVariant::Params(dot.clone(), name.clone(), vec![]);
+                        *self = UnfinishedVariant::Params(dot.clone(), name.clone(), None);
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
                             UnfinishedDelimitedExpression::Empty,
                         ))
@@ -37,7 +37,7 @@ impl Accept for UnfinishedVariant {
                     _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
-                    *self = UnfinishedVariant::Params(dot.clone(), name.clone(), params);
+                    *self = UnfinishedVariant::Params(dot.clone(), name.clone(), Some(params));
                     AcceptResult::ContinueToNextToken
                 }
                 other_item => unexpected_finished_item(&other_item),

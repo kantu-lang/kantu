@@ -28,7 +28,7 @@ pub struct Match {
     /// the order of the arms is insignificant.
     /// For example, `match x { .A => y, .B => y }` is the same as
     /// `match x { .B => y, .A => y }`.
-    pub case_list_id: SemanticId<Set<SemanticId<MatchCase>>>,
+    pub case_list_id: Option<SemanticId<Set<SemanticId<MatchCase>>>>,
 }
 
 /// An unconstructable dummy type we created just to pass to `SemanticId`.

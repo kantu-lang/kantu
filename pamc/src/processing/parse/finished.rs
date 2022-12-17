@@ -16,7 +16,7 @@ pub enum FinishedStackItem {
     Params(
         /// First token ("(")
         Token,
-        Vec<Param>,
+        NonEmptyVec<Param>,
     ),
     Param(
         /// First token
@@ -50,7 +50,7 @@ pub enum FinishedStackItem {
     CheckAssertions(
         /// First token (".")
         Token,
-        Vec<CheckAssertion>,
+        NonEmptyVec<CheckAssertion>,
     ),
     CheckAssertion(
         /// First token (".")
