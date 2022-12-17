@@ -166,7 +166,7 @@ fn get_decreasing_param_index(state: &State, param_list_id: NonEmptyParamListId)
                 let param = state.registry.get(param_id);
                 param.is_dashed
             }),
-        NonEmptyParamListId::Labeled(param_list_id) => state
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => state
             .registry
             .get_list(param_list_id)
             .iter()
@@ -187,7 +187,7 @@ fn get_param_name_ids(
             .registry
             .get_list(param_list_id)
             .to_mapped(|&param_id| state.registry.get(param_id).name_id),
-        NonEmptyParamListId::Labeled(param_list_id) => state
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => state
             .registry
             .get_list(param_list_id)
             .to_mapped(|&param_id| state.registry.get(param_id).name_id),
@@ -237,7 +237,7 @@ fn normalize_params_as_much_as_possible_and_leave_in_context(
         NonEmptyParamListId::Unlabeled(id) => {
             normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(state, id)
         }
-        NonEmptyParamListId::Labeled(id) => {
+        NonEmptyParamListId::UniquelyLabeled(id) => {
             normalize_labeled_params_as_much_as_possible_and_leave_in_context(state, id)
         }
     }
@@ -328,7 +328,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
             definition: ContextEntryDefinition::Uninterpreted,
         })?;
     }
-    with_push_warning(NonEmptyParamListId::Labeled(
+    with_push_warning(NonEmptyParamListId::UniquelyLabeled(
         state.registry.add_list(normalized_param_ids),
     ))
 }

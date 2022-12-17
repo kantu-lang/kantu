@@ -166,7 +166,7 @@ impl GetIndexInSubregistry for NodeId<Fun> {
                         sreg,
                     )
                 }
-                NonEmptyParamListId::Labeled(param_list_id) => {
+                NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
                     expression_ids_to_expression_vec_semantic_id(
                         registry.get_list(param_list_id).iter().map(|param_id| {
                             let param = registry.get(*param_id);
@@ -185,7 +185,7 @@ impl GetIndexInSubregistry for NodeId<Fun> {
                         let param = registry.get(*param_id);
                         param.is_dashed
                     }),
-                NonEmptyParamListId::Labeled(param_list_id) => registry
+                NonEmptyParamListId::UniquelyLabeled(param_list_id) => registry
                     .get_list(param_list_id)
                     .iter()
                     .position(|param_id| {
@@ -358,7 +358,7 @@ impl GetIndexInSubregistry for NodeId<Forall> {
                         sreg,
                     )
                 }
-                NonEmptyParamListId::Labeled(param_list_id) => {
+                NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
                     expression_ids_to_expression_vec_semantic_id(
                         registry.get_list(param_list_id).iter().map(|param_id| {
                             let param = registry.get(*param_id);

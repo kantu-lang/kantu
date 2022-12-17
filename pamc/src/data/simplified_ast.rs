@@ -36,7 +36,7 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamVec {
     Unlabeled(NonEmptyVec<UnlabeledParam>),
-    Labeled(NonEmptyVec<LabeledParam>),
+    UniquelyLabeled(NonEmptyVec<LabeledParam>),
 }
 
 impl OptionalNonEmptyVecLen for Option<NonEmptyParamVec> {
@@ -49,7 +49,7 @@ impl NonEmptyParamVec {
     pub fn len(&self) -> usize {
         match self {
             NonEmptyParamVec::Unlabeled(vec) => vec.len(),
-            NonEmptyParamVec::Labeled(vec) => vec.len(),
+            NonEmptyParamVec::UniquelyLabeled(vec) => vec.len(),
         }
     }
 }

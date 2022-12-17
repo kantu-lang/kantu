@@ -77,7 +77,7 @@ fn simplify_params(
             type_: simplify_expression(last.type_)?,
         };
         let remaining = simplify_params_but_require_labels(remaining, &hetero_err)?;
-        Ok(NonEmptyParamVec::Labeled(NonEmptyVec::from_pushed(
+        Ok(NonEmptyParamVec::UniquelyLabeled(NonEmptyVec::from_pushed(
             remaining, last,
         )))
     } else {
