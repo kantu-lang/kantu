@@ -61,10 +61,12 @@ fn simplify_optional_params(
 fn simplify_params(
     unsimplified: NonEmptyVec<ust::Param>,
 ) -> Result<NonEmptyParamVec, SimplifyAstError> {
+    validate_there_are_no_duplicate_param_labels(&unsimplified)?;
+
     let hetero_err = SimplifyAstError::HeterogeneousParams(unsimplified.clone());
     let (remaining, last) = unsimplified.into_popped();
 
-    validate_param_label(&last)?;
+    validate_param_label_is_not_underscore(&last)?;
 
     if let Some(label) = last.label {
         let last = LabeledParam {
@@ -92,6 +94,26 @@ fn simplify_params(
     }
 }
 
+fn validate_there_are_no_duplicate_param_labels(
+    unsimplified: &[ust::Param],
+) -> Result<(), SimplifyAstError> {
+    use std::collections::HashMap;
+    let mut seen: HashMap<&IdentifierName, &ust::Param> = HashMap::new();
+    for param in unsimplified {
+        let Some(label_name) = param.label_name() else {
+            continue;
+        };
+        if let Some(existing_param_with_same_name) = seen.get(&label_name).copied() {
+            return Err(SimplifyAstError::DuplicateParamLabel(
+                param.clone(),
+                existing_param_with_same_name.clone(),
+            ));
+        }
+        seen.insert(label_name, param);
+    }
+    Ok(())
+}
+
 fn simplify_params_but_require_labels(
     unsimplified: Vec<ust::Param>,
     hetero_err: &SimplifyAstError,
@@ -116,7 +138,7 @@ fn simplify_param_but_require_label(
     unsimplified: ust::Param,
     hetero_err: &SimplifyAstError,
 ) -> Result<LabeledParam, SimplifyAstError> {
-    validate_param_label(&unsimplified)?;
+    validate_param_label_is_not_underscore(&unsimplified)?;
 
     if let Some(label) = unsimplified.label {
         Ok(LabeledParam {
@@ -135,7 +157,7 @@ fn simplify_param_but_forbid_label(
     unsimplified: ust::Param,
     hetero_err: &SimplifyAstError,
 ) -> Result<UnlabeledParam, SimplifyAstError> {
-    validate_param_label(&unsimplified)?;
+    validate_param_label_is_not_underscore(&unsimplified)?;
 
     if let Some(_) = unsimplified.label {
         Err(hetero_err.clone())
@@ -149,7 +171,7 @@ fn simplify_param_but_forbid_label(
     }
 }
 
-fn validate_param_label(param: &ust::Param) -> Result<(), SimplifyAstError> {
+fn validate_param_label_is_not_underscore(param: &ust::Param) -> Result<(), SimplifyAstError> {
     let Some(label_name) = param.label_name() else {
         return Ok(());
     };

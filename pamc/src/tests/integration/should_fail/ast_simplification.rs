@@ -98,32 +98,24 @@ mod labeled_params {
     mod duplicate_labels {
         use super::*;
 
-        // TODO: Fix
-        #[ignore]
         #[test]
         fn explicit() {
             let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/duplicate_labels/explicit.ph");
             expect_duplicate_label_params_error(src, "X");
         }
 
-        // TODO: Fix
-        #[ignore]
         #[test]
         fn implicit() {
             let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/duplicate_labels/implicit.ph");
             expect_duplicate_label_params_error(src, "z");
         }
 
-        // TODO: Fix
-        #[ignore]
         #[test]
         fn implicit_explicit() {
             let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/duplicate_labels/implicit_explicit.ph");
             expect_duplicate_label_params_error(src, "x");
         }
 
-        // TODO: Fix
-        #[ignore]
         #[test]
         fn explicit_implicit() {
             let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/duplicate_labels/explicit_implicit.ph");
