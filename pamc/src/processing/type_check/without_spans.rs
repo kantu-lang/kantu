@@ -19,8 +19,8 @@ impl WithoutSpans for NonEmptyParamListId {
             NonEmptyParamListId::Unlabeled(id) => {
                 NonEmptyParamListId::Unlabeled(id.without_spans(registry))
             }
-            NonEmptyParamListId::Labeled(id) => {
-                NonEmptyParamListId::Labeled(id.without_spans(registry))
+            NonEmptyParamListId::UniquelyLabeled(id) => {
+                NonEmptyParamListId::UniquelyLabeled(id.without_spans(registry))
             }
         }
     }

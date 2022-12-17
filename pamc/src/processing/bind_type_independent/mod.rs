@@ -124,7 +124,7 @@ fn bind_params(
         ub::NonEmptyParamVec::Unlabeled(params) => NonEmptyParamVec::Unlabeled(
             params.try_into_mapped(|param| bind_unlabeled_param(context, param))?,
         ),
-        ub::NonEmptyParamVec::Labeled(params) => NonEmptyParamVec::Labeled(
+        ub::NonEmptyParamVec::UniquelyLabeled(params) => NonEmptyParamVec::UniquelyLabeled(
             params.try_into_mapped(|param| bind_labeled_param(context, param))?,
         ),
     })

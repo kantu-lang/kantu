@@ -134,7 +134,7 @@ pub fn format_params(
             })
             .collect::<Vec<_>>()
             .join("\n"),
-        NonEmptyParamVec::Labeled(params) => params
+        NonEmptyParamVec::UniquelyLabeled(params) => params
             .iter()
             .map(|param| {
                 format!(

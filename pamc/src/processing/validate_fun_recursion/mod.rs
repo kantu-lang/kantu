@@ -340,7 +340,7 @@ fn validate_fun_recursion_in_fun_dirty(
                 None => ReferenceRestriction::CannotCall,
             }
         }
-        NonEmptyParamListId::Labeled(param_list_id) => {
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
             // TODO: We should use label instead of index.
             let param_ids = registry.get_list(param_list_id);
             let decreasing_param_position = param_ids.iter().position(|param_id| {
@@ -405,13 +405,15 @@ fn validate_fun_recursion_in_params_and_leave_in_context_dirty(
                 param_list_id,
             )?,
         ),
-        NonEmptyParamListId::Labeled(param_list_id) => NonEmptyParamListId::Labeled(
-            validate_fun_recursion_in_labeled_params_and_leave_in_context_dirty(
-                context,
-                registry,
-                param_list_id,
-            )?,
-        ),
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
+            NonEmptyParamListId::UniquelyLabeled(
+                validate_fun_recursion_in_labeled_params_and_leave_in_context_dirty(
+                    context,
+                    registry,
+                    param_list_id,
+                )?,
+            )
+        }
     })
 }
 

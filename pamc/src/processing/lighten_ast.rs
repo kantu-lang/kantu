@@ -87,11 +87,11 @@ pub fn register_params(
             let param_list_id = registry.add_list(param_ids);
             NonEmptyParamListId::Unlabeled(param_list_id)
         }
-        heavy::NonEmptyParamVec::Labeled(unregistered) => {
+        heavy::NonEmptyParamVec::UniquelyLabeled(unregistered) => {
             let param_ids = unregistered
                 .into_mapped(|unregistered| register_labeled_param(registry, unregistered));
             let param_list_id = registry.add_list(param_ids);
-            NonEmptyParamListId::Labeled(param_list_id)
+            NonEmptyParamListId::UniquelyLabeled(param_list_id)
         }
     }
 }

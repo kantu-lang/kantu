@@ -26,7 +26,7 @@ pub enum FileItemNodeId {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamListId {
     Unlabeled(NonEmptyListId<NodeId<UnlabeledParam>>),
-    Labeled(NonEmptyListId<NodeId<LabeledParam>>),
+    UniquelyLabeled(NonEmptyListId<NodeId<LabeledParam>>),
 }
 
 impl OptionalNonEmptyVecLen for Option<NonEmptyParamListId> {
@@ -43,7 +43,7 @@ impl NonEmptyParamListId {
     pub fn non_zero_len(&self) -> NonZeroUsize {
         match self {
             NonEmptyParamListId::Unlabeled(vec) => vec.len,
-            NonEmptyParamListId::Labeled(vec) => vec.len,
+            NonEmptyParamListId::UniquelyLabeled(vec) => vec.len,
         }
     }
 }

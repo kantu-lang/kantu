@@ -73,8 +73,8 @@ pub fn expand_param_list(registry: &NodeRegistry, id: NonEmptyParamListId) -> No
         NonEmptyParamListId::Unlabeled(id) => {
             NonEmptyParamVec::Unlabeled(expand_unlabeled_param_list(registry, id))
         }
-        NonEmptyParamListId::Labeled(id) => {
-            NonEmptyParamVec::Labeled(expand_labeled_param_list(registry, id))
+        NonEmptyParamListId::UniquelyLabeled(id) => {
+            NonEmptyParamVec::UniquelyLabeled(expand_labeled_param_list(registry, id))
         }
     }
 }

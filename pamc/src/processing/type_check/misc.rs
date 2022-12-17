@@ -173,7 +173,7 @@ pub(super) fn normalize_params_and_leave_params_in_context_dirty(
         NonEmptyParamListId::Unlabeled(id) => NonEmptyParamListId::Unlabeled(
             normalize_unlabeled_params_and_leave_params_in_context_dirty(state, id)??,
         ),
-        NonEmptyParamListId::Labeled(id) => NonEmptyParamListId::Labeled(
+        NonEmptyParamListId::UniquelyLabeled(id) => NonEmptyParamListId::UniquelyLabeled(
             normalize_labeled_params_and_leave_params_in_context_dirty(state, id)??,
         ),
     }))
@@ -484,7 +484,7 @@ fn is_left_subterm_of_any_right_param_type(
                 },
             )
         }
-        NonEmptyParamListId::Labeled(param_list_id) => {
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
             let right_param_ids = state.registry.get_list(param_list_id).to_vec();
             right_param_ids.iter().copied().enumerate().any(
                 |(right_param_index, right_param_id)| {
@@ -1016,7 +1016,7 @@ fn min_db_index_in_params_relative_to_cutoff(
                 })
                 .min()
         }
-        NonEmptyParamListId::Labeled(param_list_id) => {
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
             let param_ids = registry.get_list(param_list_id);
             param_ids
                 .iter()
@@ -1455,7 +1455,7 @@ pub(super) fn get_param_type_ids(
 ) -> NonEmptyVec<ExpressionId> {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(id) => get_unlabeled_param_type_ids(state, id),
-        NonEmptyParamListId::Labeled(id) => get_labeled_param_type_ids(state, id),
+        NonEmptyParamListId::UniquelyLabeled(id) => get_labeled_param_type_ids(state, id),
     }
 }
 
@@ -1491,7 +1491,9 @@ pub(super) fn get_names_and_types_of_params(
 ) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(id) => get_names_and_types_of_unlabeled_params(state, id),
-        NonEmptyParamListId::Labeled(id) => get_names_and_types_of_labeled_params(state, id),
+        NonEmptyParamListId::UniquelyLabeled(id) => {
+            get_names_and_types_of_labeled_params(state, id)
+        }
     }
 }
 

@@ -164,7 +164,7 @@ fn generate_code_for_type_constructor(
             context.pop_n(type_param_ids.len());
             param_js_names
         }
-        Some(NonEmptyParamListId::Labeled(param_list_id)) => {
+        Some(NonEmptyParamListId::UniquelyLabeled(param_list_id)) => {
             let type_param_ids = registry.get_list(param_list_id);
             let param_js_names = type_param_ids
                 .iter()
@@ -241,7 +241,7 @@ fn generate_code_for_variant_constructor(
                 .collect();
             param_js_names
         }
-        Some(NonEmptyParamListId::Labeled(param_list_id)) => {
+        Some(NonEmptyParamListId::UniquelyLabeled(param_list_id)) => {
             let type_param_ids = registry.get_list(param_list_id);
             let param_js_names = type_param_ids
                 .iter()
@@ -375,7 +375,7 @@ fn generate_code_for_fun(
                 param_js_name
             })
             .collect(),
-        NonEmptyParamListId::Labeled(param_list_id) => registry
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => registry
             .get_list(param_list_id)
             .iter()
             .map(|id| {

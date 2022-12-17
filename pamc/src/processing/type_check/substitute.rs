@@ -214,9 +214,9 @@ impl SubstituteWithoutRemovingSpans for NonEmptyParamListId {
             NonEmptyParamListId::Unlabeled(id) => {
                 NonEmptyParamListId::Unlabeled(id.subst_without_removing_spans(substitution, state))
             }
-            NonEmptyParamListId::Labeled(id) => {
-                NonEmptyParamListId::Labeled(id.subst_without_removing_spans(substitution, state))
-            }
+            NonEmptyParamListId::UniquelyLabeled(id) => NonEmptyParamListId::UniquelyLabeled(
+                id.subst_without_removing_spans(substitution, state),
+            ),
         }
     }
 }

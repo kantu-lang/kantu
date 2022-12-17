@@ -238,9 +238,9 @@ impl ShiftDbIndices for NonEmptyParamListId {
                 let shifted_id = id.try_shift_with_cutoff(f, cutoff, registry)?;
                 Ok(NonEmptyParamListId::Unlabeled(shifted_id))
             }
-            NonEmptyParamListId::Labeled(id) => {
+            NonEmptyParamListId::UniquelyLabeled(id) => {
                 let shifted_id = id.try_shift_with_cutoff(f, cutoff, registry)?;
-                Ok(NonEmptyParamListId::Labeled(shifted_id))
+                Ok(NonEmptyParamListId::UniquelyLabeled(shifted_id))
             }
         }
     }
