@@ -26,14 +26,62 @@ fn illegal_dot_lhs() {
     });
 }
 
-#[test]
-fn explicitly_labeled_before_unlabeled_param() {
-    let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_before_unlabeled.ph");
-    expect_simplification_error(src, |err| {
-        if !matches!(&err, SimplifyAstError::HeterogeneousParams(_)) {
-            panic!("Unexpected error: {:#?}", err);
-        }
-    });
-}
+mod labeled_params {
+    use super::*;
 
-// TODO: Add other test cases
+    #[test]
+    fn explicitly_labeled_before_unlabeled_param() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_before_unlabeled.ph");
+        expect_heterogeneous_params_error(src);
+    }
+
+    #[test]
+    fn implicit_before_unlabeled() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/implicit_before_unlabeled.ph");
+        expect_heterogeneous_params_error(src);
+    }
+
+    #[test]
+    fn unlabeled_before_explicit() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/unlabeled_before_explicit.ph");
+        expect_heterogeneous_params_error(src);
+    }
+
+    #[test]
+    fn unlabeled_before_implicit() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/unlabeled_before_implicit.ph");
+        expect_heterogeneous_params_error(src);
+    }
+
+    fn expect_heterogeneous_params_error(src: &str) {
+        expect_simplification_error(src, |err| {
+            if !matches!(&err, SimplifyAstError::HeterogeneousParams(_)) {
+                panic!("Unexpected error: {:#?}", err);
+            }
+        });
+    }
+
+    // TODO: Fix
+    #[ignore]
+    #[test]
+    fn explicit_underscore_label() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/explicit_underscore_label.ph");
+        expect_underscore_label_params_error(src);
+    }
+
+    // TODO: Fix
+    #[ignore]
+    #[test]
+    fn implicit_underscore_label() {
+        let src = include_str!("../../sample_code/should_fail/ast_simplification/labeled_params/implicit_underscore_label.ph");
+        expect_underscore_label_params_error(src);
+    }
+
+    fn expect_underscore_label_params_error(src: &str) {
+        expect_simplification_error(src, |err| {
+            if !matches!(&err, SimplifyAstError::UnderscoreLabel(_)) {
+                panic!("Unexpected error: {:#?}", err);
+            }
+        });
+    }
+}
