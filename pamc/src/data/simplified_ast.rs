@@ -127,7 +127,20 @@ pub use crate::data::unsimplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: TextSpan,
     pub callee: Expression,
-    pub args: NonEmptyVec<Expression>,
+    pub args: NonEmptyCallArgVec,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum NonEmptyCallArgVec {
+    Unlabeled(NonEmptyVec<Expression>),
+    UniquelyLabeled(NonEmptyVec<LabeledCallArg>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledCallArg {
+    pub span: TextSpan,
+    pub label: ParamLabel,
+    pub value: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

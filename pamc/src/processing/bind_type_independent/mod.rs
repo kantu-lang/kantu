@@ -268,9 +268,15 @@ fn bind_call_expression_dirty(
     call: ub::Call,
 ) -> Result<Expression, BindError> {
     let callee = bind_expression_dirty(context, call.callee)?;
-    let args = call
-        .args
-        .try_into_mapped(|arg| bind_expression_dirty(context, arg))?;
+    // TODO: Properly bind args
+    let args = match call.args {
+        ub::NonEmptyCallArgVec::Unlabeled(args) => {
+            args.try_into_mapped(|arg| bind_expression_dirty(context, arg))?
+        }
+        ub::NonEmptyCallArgVec::UniquelyLabeled(args) => {
+            args.try_into_mapped(|arg| bind_expression_dirty(context, arg.value))?
+        }
+    };
     Ok(Expression::Call(Box::new(Call {
         span: Some(call.span),
         callee,

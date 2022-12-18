@@ -9,9 +9,15 @@ use crate::data::{
 #[derive(Clone, Debug)]
 pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
+
     HeterogeneousParams(NonEmptyVec<ust::Param>),
     UnderscoreParamLabel(ust::Param),
     DuplicateParamLabel(ust::Param, ust::Param),
+
+    HeterogeneousCallArgs(NonEmptyVec<ust::CallArg>),
+    UnderscoreCallArgLabel(ust::CallArg),
+    DuplicateCallArgLabel(ust::CallArg, ust::CallArg),
+
     HeterogeneousMatchCaseParams(NonEmptyVec<ust::MatchCaseParam>),
     UnderscoreMatchCaseParamLabel(ust::MatchCaseParam),
     DuplicateMatchCaseParamLabel(ust::MatchCaseParam, ust::MatchCaseParam),
@@ -255,11 +261,119 @@ fn simplify_call(unsimplified: ust::Call) -> Result<Expression, SimplifyAstError
     Ok(Expression::Call(Box::new(Call {
         span: unsimplified.span,
         callee: simplify_expression(unsimplified.callee)?,
-        // TODO: Verify homogeneity of args
-        args: unsimplified
-            .args
-            .try_into_mapped(|arg| simplify_expression(arg.value))?,
+        args: simplify_call_args(unsimplified.args)?,
     })))
+}
+
+fn simplify_call_args(
+    unsimplified: NonEmptyVec<ust::CallArg>,
+) -> Result<NonEmptyCallArgVec, SimplifyAstError> {
+    validate_there_are_no_duplicate_call_arg_labels(&unsimplified)?;
+
+    let hetero_err = SimplifyAstError::HeterogeneousCallArgs(unsimplified.clone());
+    let (remaining, last) = unsimplified.into_popped();
+
+    validate_call_arg_label_is_not_underscore(&last)?;
+
+    if let Some(label) = last.label {
+        let last = LabeledCallArg {
+            span: last.span,
+            label,
+            value: simplify_expression(last.value)?,
+        };
+        let remaining = simplify_call_args_but_require_labels(remaining, &hetero_err)?;
+        Ok(NonEmptyCallArgVec::UniquelyLabeled(
+            NonEmptyVec::from_pushed(remaining, last),
+        ))
+    } else {
+        let last = simplify_expression(last.value)?;
+        let remaining = simplify_call_args_but_forbid_labels(remaining, &hetero_err)?;
+        Ok(NonEmptyCallArgVec::Unlabeled(NonEmptyVec::from_pushed(
+            remaining, last,
+        )))
+    }
+}
+
+fn validate_there_are_no_duplicate_call_arg_labels(
+    unsimplified: &[ust::CallArg],
+) -> Result<(), SimplifyAstError> {
+    use std::collections::HashMap;
+    let mut seen: HashMap<&IdentifierName, &ust::CallArg> = HashMap::new();
+    for param in unsimplified {
+        let Some(label_name) = param.label_name() else {
+            continue;
+        };
+        if let Some(existing_param_with_same_name) = seen.get(&label_name).copied() {
+            return Err(SimplifyAstError::DuplicateCallArgLabel(
+                param.clone(),
+                existing_param_with_same_name.clone(),
+            ));
+        }
+        seen.insert(label_name, param);
+    }
+    Ok(())
+}
+
+fn simplify_call_args_but_require_labels(
+    unsimplified: Vec<ust::CallArg>,
+    hetero_err: &SimplifyAstError,
+) -> Result<Vec<LabeledCallArg>, SimplifyAstError> {
+    unsimplified
+        .into_iter()
+        .map(|param| simplify_call_arg_but_require_label(param, hetero_err))
+        .collect()
+}
+
+fn simplify_call_args_but_forbid_labels(
+    unsimplified: Vec<ust::CallArg>,
+    hetero_err: &SimplifyAstError,
+) -> Result<Vec<Expression>, SimplifyAstError> {
+    unsimplified
+        .into_iter()
+        .map(|param| simplify_call_arg_but_forbid_label(param, hetero_err))
+        .collect()
+}
+
+fn simplify_call_arg_but_require_label(
+    unsimplified: ust::CallArg,
+    hetero_err: &SimplifyAstError,
+) -> Result<LabeledCallArg, SimplifyAstError> {
+    validate_call_arg_label_is_not_underscore(&unsimplified)?;
+
+    if let Some(label) = unsimplified.label {
+        Ok(LabeledCallArg {
+            span: unsimplified.span,
+            label,
+            value: simplify_expression(unsimplified.value)?,
+        })
+    } else {
+        Err(hetero_err.clone())
+    }
+}
+
+fn simplify_call_arg_but_forbid_label(
+    unsimplified: ust::CallArg,
+    hetero_err: &SimplifyAstError,
+) -> Result<Expression, SimplifyAstError> {
+    validate_call_arg_label_is_not_underscore(&unsimplified)?;
+
+    if let Some(_) = unsimplified.label {
+        Err(hetero_err.clone())
+    } else {
+        simplify_expression(unsimplified.value)
+    }
+}
+
+fn validate_call_arg_label_is_not_underscore(arg: &ust::CallArg) -> Result<(), SimplifyAstError> {
+    let Some(label_name) = arg.label_name() else {
+        return Ok(());
+    };
+    match label_name {
+        IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
+            Err(SimplifyAstError::UnderscoreCallArgLabel(arg.clone()))
+        }
+        _ => Ok(()),
+    }
 }
 
 fn simplify_fun(unsimplified: ust::Fun) -> Result<Expression, SimplifyAstError> {
