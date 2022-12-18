@@ -214,7 +214,6 @@ fn simplify_let_statement(
 
 fn simplify_expression(unsimplified: ust::Expression) -> Result<Expression, SimplifyAstError> {
     Ok(match unsimplified {
-        // identifier dot call fun match forall
         ust::Expression::Identifier(unsimplified) => simplify_identifier(unsimplified),
         ust::Expression::Dot(unsimplified) => simplify_dot(unsimplified)?,
         ust::Expression::Call(unsimplified) => simplify_call(*unsimplified)?,
