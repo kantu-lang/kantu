@@ -18,7 +18,7 @@ impl Accept for UnfinishedCheck {
                     AcceptResult::ContinueToNextToken
                 }
 
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedCheck::Assertions(check_kw, assertions) => match item {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::LCurly => {
@@ -40,7 +40,7 @@ impl Accept for UnfinishedCheck {
                     ))
                 }
 
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

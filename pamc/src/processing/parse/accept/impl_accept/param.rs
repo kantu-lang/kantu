@@ -26,10 +26,10 @@ impl Accept for UnfinishedParam {
                             };
                             AcceptResult::ContinueToNextToken
                         } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            AcceptResult::Error(ParseError::unexpected_token(token))
                         }
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
@@ -52,7 +52,7 @@ impl Accept for UnfinishedParam {
                         end_delimiter,
                     ))
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
             UnfinishedParam::ExplicitLabel {
@@ -65,7 +65,7 @@ impl Accept for UnfinishedParam {
                     TokenKind::Dash => {
                         let is_dash_forbidden = !*is_dash_allowed;
                         if *is_dashed || is_dash_forbidden {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            AcceptResult::Error(ParseError::unexpected_token(token))
                         } else {
                             *is_dashed = true;
                             AcceptResult::ContinueToNextToken
@@ -97,9 +97,9 @@ impl Accept for UnfinishedParam {
                         };
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
             UnfinishedParam::ExplicitLabelAndName {
@@ -114,7 +114,7 @@ impl Accept for UnfinishedParam {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Param(
@@ -133,7 +133,7 @@ impl Accept for UnfinishedParam {
                         end_delimiter,
                     ))
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

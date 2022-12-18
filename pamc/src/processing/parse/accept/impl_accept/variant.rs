@@ -13,9 +13,9 @@ impl Accept for UnfinishedVariant {
                         *self = UnfinishedVariant::Name(dot.clone(), name);
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedVariant::Name(dot, name) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -34,13 +34,13 @@ impl Accept for UnfinishedVariant {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
                     *self = UnfinishedVariant::Params(dot.clone(), name.clone(), Some(params));
                     AcceptResult::ContinueToNextToken
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedVariant::Params(dot, name, params) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -49,7 +49,7 @@ impl Accept for UnfinishedVariant {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Variant(
@@ -63,7 +63,7 @@ impl Accept for UnfinishedVariant {
                         end_delimiter,
                     ))
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

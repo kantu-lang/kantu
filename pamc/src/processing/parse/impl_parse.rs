@@ -5,257 +5,87 @@
 use super::*;
 
 impl Parse for File {
-    fn from_empty_str(file_id: FileId) -> Result<Self, ParseError> {
-        Ok(File {
-            span: TextSpan {
-                file_id,
-                start: 0,
-                end: 0,
-            },
-            id: file_id,
-            items: vec![],
-        })
-    }
-
-    fn initial_stack(_: FileId, first_token: Token) -> Vec<UnfinishedStackItem> {
+    fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::File(Box::new(UnfinishedFile {
-            first_token,
+            first_token: first_token.clone(),
             items: vec![],
         }))]
     }
 
-    fn finish(
-        file_id: FileId,
-        item: UnfinishedStackItem,
-        _: Vec<UnfinishedStackItem>,
-    ) -> Result<Self, ParseError> {
-        match item {
-            UnfinishedStackItem::File(file) => Ok(File {
-                span: TextSpan {
-                    file_id,
-                    start: file.items[0].span().start,
-                    end: file
-                        .items
-                        .last()
-                        .expect("File should have at least one item.")
-                        .span()
-                        .end,
-                },
-                id: file_id,
-                items: file.items,
-            }),
-            _ => Err(ParseError::UnexpectedEndOfInput),
+    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        match bottom_item {
+            FinishedStackItem::File(_, file) => Ok(file),
+            other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }
 }
 
 impl Parse for Expression {
-    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
-        Err(ParseError::UnexpectedEndOfInput)
-    }
-
-    fn initial_stack(_: FileId, _: Token) -> Vec<UnfinishedStackItem> {
+    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::UnfinishedDelimitedExpression(
             UnfinishedDelimitedExpression::Empty,
         )]
     }
 
-    fn before_handle_token(
-        _: FileId,
-        token: &Token,
-        stack: &[UnfinishedStackItem],
-    ) -> Result<(), ParseError> {
-        if stack.len() == 1 && ExpressionEndDelimiter::is_end_delimiter(token.kind) {
-            Err(ParseError::UnexpectedToken(token.clone()))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn finish(
-        _: FileId,
-        item: UnfinishedStackItem,
-        _: Vec<UnfinishedStackItem>,
-    ) -> Result<Self, ParseError> {
-        match item {
-            UnfinishedStackItem::UnfinishedDelimitedExpression(
-                UnfinishedDelimitedExpression::WaitingForEndDelimiter(_first_token, expression),
-            ) => Ok(expression),
-            _ => Err(ParseError::UnexpectedEndOfInput),
+    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        match bottom_item {
+            FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
+                if end_delimiter.raw().kind == TokenKind::Eoi {
+                    Ok(expression)
+                } else {
+                    Err(ParseError::unexpected_token(end_delimiter.into_raw()))
+                }
+            }
+            other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }
 }
 
 impl Parse for Param {
-    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
-        Err(ParseError::UnexpectedEndOfInput)
+    fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Param(todo!())]
     }
 
-    fn initial_stack(_: FileId, first_token: Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Params(UnfinishedParams {
-            first_token,
-            maximum_dashed_params_allowed: 1,
-            pending_tilde: None,
-            pending_dash: None,
-            params: vec![],
-        })]
-    }
-
-    fn before_handle_token(
-        _: FileId,
-        token: &Token,
-        stack: &[UnfinishedStackItem],
-    ) -> Result<(), ParseError> {
-        if let Some(UnfinishedStackItem::Params(params)) = stack.get(0) {
-            if params.params.is_empty() {
-                return Ok(());
+    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        match bottom_item {
+            FinishedStackItem::Param(_, param, end_delimiter) => {
+                if end_delimiter.raw().kind == TokenKind::Eoi {
+                    Ok(param)
+                } else {
+                    Err(ParseError::unexpected_token(end_delimiter.into_raw()))
+                }
             }
-        }
-        Err(ParseError::UnexpectedToken(token.clone()))
-    }
-
-    fn finish(
-        file_id: FileId,
-        item: UnfinishedStackItem,
-        mut remaining_stack: Vec<UnfinishedStackItem>,
-    ) -> Result<Self, ParseError> {
-        match (item, remaining_stack.pop()) {
-            (
-                UnfinishedStackItem::UnfinishedDelimitedExpression(
-                    UnfinishedDelimitedExpression::WaitingForEndDelimiter(_, param_type),
-                ),
-                Some(UnfinishedStackItem::Param(unfinished_param)),
-            ) => match unfinished_param {
-                UnfinishedParam::NoExplicitLabel {
-                    first_token: param_first_token,
-                    is_tilded: is_param_tilded,
-                    is_dashed: is_param_dashed,
-                    is_dash_allowed: _,
-                    name_or_label: param_name,
-                } => Ok(Param {
-                    span: span_single(file_id, &param_first_token)
-                        .inclusive_merge(param_type.span()),
-                    label: if is_param_tilded {
-                        Some(ParamLabel::Implicit)
-                    } else {
-                        None
-                    },
-                    is_dashed: is_param_dashed,
-                    name: param_name,
-                    type_: param_type,
-                }),
-                UnfinishedParam::ExplicitLabel { .. } => Err(ParseError::UnexpectedEndOfInput),
-                UnfinishedParam::ExplicitLabelAndName {
-                    first_token: param_first_token,
-                    is_dashed: is_param_dashed,
-                    label,
-                    name: param_name,
-                } => Ok(Param {
-                    span: span_single(file_id, &param_first_token)
-                        .inclusive_merge(param_type.span()),
-                    label: Some(ParamLabel::Explicit(label)),
-                    is_dashed: is_param_dashed,
-                    name: param_name,
-                    type_: param_type,
-                }),
-            },
-            _ => Err(ParseError::UnexpectedEndOfInput),
+            other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }
 }
 
 impl Parse for Variant {
-    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
-        Err(ParseError::UnexpectedEndOfInput)
+    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Variant(todo!())]
     }
 
-    fn initial_stack(_: FileId, _: Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Type(
-            UnfinishedTypeStatement::Variants(dummy_token(), dummy_identifier(), None, vec![]),
-        )]
-    }
-
-    fn before_handle_token(
-        _: FileId,
-        token: &Token,
-        stack: &[UnfinishedStackItem],
-    ) -> Result<(), ParseError> {
-        if let Some(UnfinishedStackItem::Type(UnfinishedTypeStatement::Variants(
-            _,
-            _,
-            _,
-            variants,
-        ))) = stack.get(0)
-        {
-            if variants.is_empty() {
-                return Ok(());
+    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        match bottom_item {
+            FinishedStackItem::Variant(_, variant, end_delimiter) => {
+                if end_delimiter.raw().kind == TokenKind::Eoi {
+                    Ok(variant)
+                } else {
+                    Err(ParseError::unexpected_token(end_delimiter.into_raw()))
+                }
             }
-        }
-        Err(ParseError::UnexpectedToken(token.clone()))
-    }
-
-    fn finish(
-        file_id: FileId,
-        item: UnfinishedStackItem,
-        mut remaining_stack: Vec<UnfinishedStackItem>,
-    ) -> Result<Self, ParseError> {
-        match (item, remaining_stack.pop()) {
-            (
-                UnfinishedStackItem::UnfinishedDelimitedExpression(
-                    UnfinishedDelimitedExpression::WaitingForEndDelimiter(_, return_type),
-                ),
-                Some(UnfinishedStackItem::Variant(UnfinishedVariant::Params(
-                    dot_token,
-                    name,
-                    params,
-                ))),
-            ) => Ok(Variant {
-                span: span_single(file_id, &dot_token).inclusive_merge(return_type.span()),
-                name,
-                params,
-                return_type,
-            }),
-            _ => Err(ParseError::UnexpectedEndOfInput),
+            other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }
 }
 
 impl Parse for FileItem {
-    fn from_empty_str(_: FileId) -> Result<Self, ParseError> {
-        Err(ParseError::UnexpectedEndOfInput)
+    fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
+        vec![todo!()]
     }
 
-    fn initial_stack(_: FileId, first_token: Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::File(Box::new(UnfinishedFile {
-            first_token: first_token,
-            items: vec![],
-        }))]
-    }
-
-    fn before_handle_token(
-        _: FileId,
-        token: &Token,
-        stack: &[UnfinishedStackItem],
-    ) -> Result<(), ParseError> {
-        if let Some(UnfinishedStackItem::File(file)) = stack.get(0) {
-            if file.items.is_empty() {
-                return Ok(());
-            }
-        }
-        Err(ParseError::UnexpectedToken(token.clone()))
-    }
-
-    fn finish(
-        _: FileId,
-        item: UnfinishedStackItem,
-        _: Vec<UnfinishedStackItem>,
-    ) -> Result<Self, ParseError> {
-        match item {
-            UnfinishedStackItem::File(file) if !file.items.is_empty() => {
-                Ok(file.items.into_iter().next().unwrap())
-            }
-            _ => Err(ParseError::UnexpectedEndOfInput),
-        }
+    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        todo!()
     }
 }
 

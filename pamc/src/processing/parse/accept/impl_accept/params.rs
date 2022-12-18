@@ -7,10 +7,10 @@ impl Accept for UnfinishedParams {
                 TokenKind::Tilde => {
                     if self.pending_dash.is_some() {
                         // A tilde can never come after a dash.
-                        AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        AcceptResult::Error(ParseError::unexpected_token(token))
                     } else if self.pending_tilde.is_some() {
                         // Double tildes are forbidden.
-                        AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        AcceptResult::Error(ParseError::unexpected_token(token))
                     } else {
                         self.pending_tilde = Some(token);
                         AcceptResult::ContinueToNextToken
@@ -18,7 +18,7 @@ impl Accept for UnfinishedParams {
                 }
                 TokenKind::Dash => {
                     if self.maximum_dashed_params_allowed == 0 || self.pending_dash.is_some() {
-                        AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        AcceptResult::Error(ParseError::unexpected_token(token))
                     } else {
                         self.maximum_dashed_params_allowed -= 1;
                         self.pending_dash = Some(token);
@@ -41,17 +41,17 @@ impl Accept for UnfinishedParams {
                 }
                 TokenKind::RParen => {
                     if self.pending_dash.is_some() {
-                        AcceptResult::Error(ParseError::UnexpectedToken(token))
+                        AcceptResult::Error(ParseError::unexpected_token(token))
                     } else {
                         match NonEmptyVec::try_from(self.params.clone()) {
                             Ok(params) => AcceptResult::PopAndContinueReducing(
                                 FinishedStackItem::Params(self.first_token.clone(), params),
                             ),
-                            Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                            Err(_) => AcceptResult::Error(ParseError::unexpected_token(token)),
                         }
                     }
                 }
-                _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
             },
             FinishedStackItem::Param(_, param, end_delimiter) => match end_delimiter.raw().kind {
                 TokenKind::Comma => {
@@ -66,10 +66,10 @@ impl Accept for UnfinishedParams {
                     ))
                 }
                 _other_end_delimiter => {
-                    AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
+                    AcceptResult::Error(ParseError::unexpected_token(end_delimiter.into_raw()))
                 }
             },
-            other_item => unexpected_finished_item(&other_item),
+            other_item => wrapped_unexpected_finished_item_err(&other_item),
         }
     }
 }

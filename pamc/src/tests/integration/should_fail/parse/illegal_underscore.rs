@@ -5,7 +5,7 @@ fn expect_underscore_parse_error(src: &str) {
     let tokens = lex(src).expect("Lexing failed");
     let err = parse_file(tokens, file_id).expect_err("Parsing unexpectedly succeeded");
     match err {
-        ParseError::UnexpectedToken(token) => {
+        ParseError::UnexpectedNonEoiToken(token) => {
             assert_eq!(token.kind, TokenKind::Underscore);
         }
         _ => panic!("Unexpected error: {:#?}", err),

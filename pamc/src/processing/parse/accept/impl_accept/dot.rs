@@ -18,9 +18,9 @@ impl Accept for UnfinishedDot {
                         })),
                     ))
                 }
-                _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
             },
-            other_item => unexpected_finished_item(&other_item),
+            other_item => wrapped_unexpected_finished_item_err(&other_item),
         }
     }
 }

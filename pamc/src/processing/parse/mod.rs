@@ -11,30 +11,26 @@ use crate::data::{
 // Or even encode hints into the error type
 // (e.g., "Nullary functions are not permitted.").
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ParseError {
-    UnexpectedToken(Token),
+    UnexpectedNonEoiToken(Token),
     UnexpectedEndOfInput,
 }
 
-pub trait Parse: Sized {
-    fn from_empty_str(file_id: FileId) -> Result<Self, ParseError>;
-
-    fn initial_stack(file_id: FileId, first_token: Token) -> Vec<UnfinishedStackItem>;
-
-    fn before_handle_token(
-        _file_id: FileId,
-        _token: &Token,
-        _stack: &[UnfinishedStackItem],
-    ) -> Result<(), ParseError> {
-        Ok(())
+impl ParseError {
+    pub fn unexpected_token(token: Token) -> Self {
+        if token.kind == TokenKind::Eoi {
+            ParseError::UnexpectedEndOfInput
+        } else {
+            ParseError::UnexpectedNonEoiToken(token)
+        }
     }
+}
 
-    fn finish(
-        file_id: FileId,
-        top_item: UnfinishedStackItem,
-        remaining_stack: Vec<UnfinishedStackItem>,
-    ) -> Result<Self, ParseError>;
+pub trait Parse: Sized {
+    fn initial_stack(file_id: FileId, first_token: &Token) -> Vec<UnfinishedStackItem>;
+
+    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError>;
 }
 
 pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseError> {
@@ -42,20 +38,18 @@ pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseErro
 }
 
 pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseError> {
-    let first_token = if let Some(t) = tokens.iter().find(is_not_whitespace_or_comment_ref) {
-        t.clone()
-    } else {
-        return T::from_empty_str(file_id);
-    };
+    let first_token = tokens.iter().find(is_not_whitespace_or_comment_ref).expect("There should be at least one meaningful (i.e., non-whitespace non-comment) token, even if it's an EOI token.");
     let mut stack: Vec<UnfinishedStackItem> = T::initial_stack(file_id, first_token);
 
     for token in tokens.into_iter().filter(is_not_whitespace_or_comment) {
-        T::before_handle_token(file_id, &token, &stack)?;
-        handle_token(token, &mut stack, file_id)?;
+        if let ReductionResult::ReductionComplete(finished_bottom_item) =
+            handle_token(token, &mut stack, file_id)?
+        {
+            return T::finish(file_id, finished_bottom_item);
+        }
     }
 
-    let top_unfinished = stack.pop().expect("Stack should never be empty");
-    T::finish(file_id, top_unfinished, stack)
+    Err(ParseError::UnexpectedEndOfInput)
 }
 
 fn is_not_whitespace_or_comment(token: &Token) -> bool {
@@ -69,14 +63,25 @@ fn is_not_whitespace_or_comment_ref(token: &&Token) -> bool {
     is_not_whitespace_or_comment(*token)
 }
 
+#[derive(Clone, Debug)]
+enum ReductionResult {
+    ReductionStillInProgress,
+    ReductionComplete(FinishedStackItem),
+}
+
+/// Returns if the stack ever becomes fully reduced
+/// (i.e., the last item is popped), then `Ok(Some(item))`
+/// is immediately returned (where `item` is the current `FinishedStackItem`).
 fn handle_token(
     token: Token,
     stack: &mut Vec<UnfinishedStackItem>,
     file_id: FileId,
-) -> Result<(), ParseError> {
+) -> Result<ReductionResult, ParseError> {
     let mut finished = FinishedStackItem::Token(token);
     while stack.len() >= 1 {
-        let top_unfinished = stack.last_mut().unwrap();
+        let Some(top_unfinished) = stack.last_mut() else {
+            return Ok(ReductionResult::ReductionComplete(finished));
+        };
         let accept_result = top_unfinished.accept(finished, file_id);
         match accept_result {
             AcceptResult::ContinueToNextToken => break,
@@ -102,7 +107,7 @@ fn handle_token(
             AcceptResult::Error(err) => return Err(err),
         }
     }
-    Ok(())
+    Ok(ReductionResult::ReductionStillInProgress)
 }
 
 fn span_single(file_id: FileId, token: &Token) -> TextSpan {
@@ -142,6 +147,11 @@ fn span_range_excluding_end(file_id: FileId, start: &Token, end: &Token) -> Text
         start,
         end,
     }
+}
+
+fn unexpected_finished_item_err(item: &FinishedStackItem) -> ParseError {
+    // TODO: This is sometimes _last_ token.
+    ParseError::unexpected_token(item.first_token().clone())
 }
 
 use unfinished::*;

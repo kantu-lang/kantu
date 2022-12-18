@@ -13,9 +13,9 @@ impl Accept for UnfinishedMatchCase {
                         *self = UnfinishedMatchCase::VariantName(dot_token.clone(), name);
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedMatchCase::VariantName(dot_token, variant_name) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -38,9 +38,9 @@ impl Accept for UnfinishedMatchCase {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedMatchCase::ParamsInProgress(
                 dot_token,
@@ -61,7 +61,7 @@ impl Accept for UnfinishedMatchCase {
                             currently_has_ending_comma.0 = false;
                             AcceptResult::ContinueToNextToken
                         } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            AcceptResult::Error(ParseError::unexpected_token(token))
                         }
                     }
                     TokenKind::Underscore => {
@@ -76,7 +76,7 @@ impl Accept for UnfinishedMatchCase {
                             currently_has_ending_comma.0 = false;
                             AcceptResult::ContinueToNextToken
                         } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            AcceptResult::Error(ParseError::unexpected_token(token))
                         }
                     }
                     TokenKind::Comma => {
@@ -85,7 +85,7 @@ impl Accept for UnfinishedMatchCase {
                             currently_has_ending_comma.0 = true;
                             AcceptResult::ContinueToNextToken
                         } else {
-                            AcceptResult::Error(ParseError::UnexpectedToken(token))
+                            AcceptResult::Error(ParseError::unexpected_token(token))
                         }
                     }
                     TokenKind::RParen => match NonEmptyVec::try_from(params.clone()) {
@@ -97,11 +97,11 @@ impl Accept for UnfinishedMatchCase {
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                        Err(_) => AcceptResult::Error(ParseError::unexpected_token(token)),
                     },
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedMatchCase::AwaitingOutput(dot_token, variant_name, params) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -110,7 +110,7 @@ impl Accept for UnfinishedMatchCase {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     match end_delimiter.raw().kind {
@@ -130,12 +130,12 @@ impl Accept for UnfinishedMatchCase {
                                 end_delimiter,
                             ))
                         }
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }
