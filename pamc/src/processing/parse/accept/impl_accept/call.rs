@@ -33,18 +33,6 @@ impl Accept for UnfinishedCall {
             }
 
             FinishedStackItem::Token(token) => match token.kind {
-                TokenKind::StandardIdentifier
-                | TokenKind::Underscore
-                | TokenKind::TypeTitleCase
-                | TokenKind::Fun
-                | TokenKind::Match
-                | TokenKind::Forall
-                | TokenKind::Check => AcceptResult::PushAndContinueReducingWithNewTop(
-                    UnfinishedStackItem::UnfinishedDelimitedCallArg(
-                        UnfinishedDelimitedCallArg::Empty,
-                    ),
-                    FinishedStackItem::Token(token),
-                ),
                 TokenKind::RParen => match NonEmptyVec::try_from(self.args.clone()) {
                     Ok(args) => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::UndelimitedExpression(
@@ -58,7 +46,12 @@ impl Accept for UnfinishedCall {
                     ),
                     Err(_) => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                _other_token_kind => AcceptResult::PushAndContinueReducingWithNewTop(
+                    UnfinishedStackItem::UnfinishedDelimitedCallArg(
+                        UnfinishedDelimitedCallArg::Empty,
+                    ),
+                    FinishedStackItem::Token(token),
+                ),
             },
             other_item => wrapped_unexpected_finished_item_err(&other_item),
         }

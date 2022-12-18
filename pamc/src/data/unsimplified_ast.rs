@@ -133,6 +133,18 @@ pub struct CallArg {
     pub value: Expression,
 }
 
+impl CallArg {
+    pub fn label_name(&self) -> Option<&IdentifierName> {
+        self.label.as_ref().map(|label| match label {
+            ArgLabel::Implicit => match &self.value {
+                Expression::Identifier(identifier) => &identifier.name,
+                _ => panic!("Implicit argument label must be an identifier"),
+            },
+            ArgLabel::Explicit(name) => &name.name,
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ArgLabel {
     Implicit,

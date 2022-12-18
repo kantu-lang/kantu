@@ -70,6 +70,8 @@ fn call() {
         match &expression {
             Expression::Call(call) => {
                 assert_eq!(3, call.args.len());
+                assert_eq!(None, call.args.iter().find(|arg| arg.label.is_some()));
+
                 match (
                     &call.callee,
                     call.args
@@ -86,6 +88,60 @@ fn call() {
                         assert_eq!(IdentifierName::Standard("c".to_string()), arg0.name);
                         assert_eq!(IdentifierName::Standard("e".to_string()), arg1.right.name);
                         assert_eq!(IdentifierName::Standard("f".to_string()), arg2.name);
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
+        panic!("Unexpected expression {:?}", expression);
+    });
+}
+
+#[test]
+fn labeled_call() {
+    let src =
+        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_call.x.pht");
+    expect_expression(src, |expression| {
+        match &expression {
+            Expression::Call(call) => {
+                assert_eq!(4, call.args.len());
+
+                let arg0 = &call.args[0];
+                let arg1 = &call.args[1];
+                let arg2 = &call.args[2];
+                let arg3 = &call.args[3];
+
+                match &call.callee {
+                    Expression::Dot(callee) => {
+                        assert_eq!(IdentifierName::Standard("b".to_string()), callee.right.name);
+
+                        assert_eq!(Some(ArgLabel::Implicit), arg0.label);
+                        assert_eq!(
+                            Some(&IdentifierName::Standard("c".to_string())),
+                            arg0.label_name()
+                        );
+
+                        assert!(matches!(arg1.label, Some(ArgLabel::Explicit(_))));
+                        assert_eq!(
+                            Some(&IdentifierName::Standard("e".to_string())),
+                            arg1.label_name()
+                        );
+
+                        assert_eq!(Some(ArgLabel::Implicit), arg0.label);
+                        assert_eq!(
+                            Some(&IdentifierName::Standard("f".to_string())),
+                            arg2.label_name()
+                        );
+
+                        assert!(matches!(arg3.label, Some(ArgLabel::Explicit(_))));
+                        assert_eq!(
+                            Some(&IdentifierName::Standard("g".to_string())),
+                            arg3.label_name()
+                        );
+
                         return;
                     }
                     _ => {}
