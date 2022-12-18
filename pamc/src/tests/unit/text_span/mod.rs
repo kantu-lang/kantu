@@ -92,3 +92,19 @@ fn optional_commas() {
     );
     verify_that_spans_are_correct(src);
 }
+
+#[test]
+fn labeled_params() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/labeled_params.ph"
+    );
+    verify_that_spans_are_correct(src);
+}
+
+#[test]
+fn labeled_call_args() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/labeled_call_args.ph"
+    );
+    verify_that_spans_are_correct(src);
+}

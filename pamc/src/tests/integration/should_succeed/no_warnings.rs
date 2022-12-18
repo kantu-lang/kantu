@@ -96,6 +96,14 @@ fn labeled_params() {
     expect_success_with_no_warnings(src);
 }
 
+#[test]
+fn labeled_call_args() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/labeled_call_args.ph"
+    );
+    expect_success_with_no_warnings(src);
+}
+
 fn expect_success_with_no_warnings(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
