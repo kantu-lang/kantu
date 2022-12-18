@@ -35,6 +35,7 @@ pub enum TokenKind {
     MultiLineComment,
 
     FatArrow,
+    TripleDot,
 
     Underscore,
 

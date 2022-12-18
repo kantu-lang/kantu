@@ -1,7 +1,5 @@
 use crate::data::token::{Token, TokenKind};
 
-use std::convert::TryFrom;
-
 #[derive(Clone, Debug)]
 pub enum LexError {
     UnexpectedEoi,
@@ -19,10 +17,10 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
     }
 
     if let Some(pending_token) = state.pending_token {
-        let Ok(token) = pending_token.try_into() else {
+        let Some(tokens) = try_as_is(pending_token) else {
             return Err(LexError::UnexpectedEoi);
         };
-        state.tokens.push(token);
+        state.tokens.extend(tokens);
         state.pending_token = None;
     }
 
@@ -56,6 +54,8 @@ struct PendingToken {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PendingTokenKind {
     Equal,
+    Dot,
+    DoubleDot,
     Identifier,
     Slash,
     SingleLineComment,
@@ -65,51 +65,83 @@ enum PendingTokenKind {
     },
 }
 
-impl TryFrom<PendingToken> for Token {
-    type Error = ();
-
-    fn try_from(pending_token: PendingToken) -> Result<Self, ()> {
-        let PendingToken {
+fn try_as_is(pending_token: PendingToken) -> Option<Vec<Token>> {
+    let PendingToken {
+        start_index,
+        content,
+        kind,
+    } = pending_token;
+    match kind {
+        PendingTokenKind::Equal => Some(vec![Token {
             start_index,
             content,
-            kind,
-        } = pending_token;
-        let kind = convert_pending_token_kind(kind, &content)?;
-        Ok(Token {
+            kind: TokenKind::Equal,
+        }]),
+        PendingTokenKind::Dot => Some(vec![Token {
             start_index,
             content,
-            kind,
-        })
-    }
-}
-
-fn convert_pending_token_kind(
-    pending_token_kind: PendingTokenKind,
-    content: &str,
-) -> Result<TokenKind, ()> {
-    match pending_token_kind {
-        PendingTokenKind::Equal => Ok(TokenKind::Equal),
-        PendingTokenKind::Identifier => Ok(if content == "_" {
-            TokenKind::Underscore
-        } else if let Some(kind) = get_token_kind_of_non_underscore_keyword(content) {
-            kind
-        } else {
-            TokenKind::StandardIdentifier
-        }),
-        PendingTokenKind::Slash => Ok(TokenKind::Slash),
-        PendingTokenKind::SingleLineComment => Ok(TokenKind::SingleLineComment),
+            kind: TokenKind::Dot,
+        }]),
+        PendingTokenKind::DoubleDot => Some(vec![
+            Token {
+                start_index,
+                content: ".".to_string(),
+                kind: TokenKind::Dot,
+            },
+            Token {
+                start_index: start_index + 1,
+                content: ".".to_string(),
+                kind: TokenKind::Dot,
+            },
+        ]),
+        PendingTokenKind::Identifier => {
+            if content == "_" {
+                Some(vec![Token {
+                    start_index,
+                    content,
+                    kind: TokenKind::Underscore,
+                }])
+            } else if let Some(kind) = get_token_kind_of_non_underscore_keyword(&content) {
+                Some(vec![Token {
+                    start_index,
+                    content,
+                    kind,
+                }])
+            } else {
+                Some(vec![Token {
+                    start_index,
+                    content,
+                    kind: TokenKind::StandardIdentifier,
+                }])
+            }
+        }
+        PendingTokenKind::Slash => Some(vec![Token {
+            start_index,
+            content,
+            kind: TokenKind::Slash,
+        }]),
+        PendingTokenKind::SingleLineComment => Some(vec![Token {
+            start_index,
+            content,
+            kind: TokenKind::SingleLineComment,
+        }]),
         PendingTokenKind::MultiLineComment {
             left_delimiter_count,
             ..
         } => {
             if left_delimiter_count == 0 {
-                Ok(TokenKind::MultiLineComment)
+                Some(vec![Token {
+                    start_index,
+                    content,
+                    kind: TokenKind::MultiLineComment,
+                }])
             } else {
-                Err(())
+                None
             }
         }
     }
 }
+
 fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> {
     match &mut state.pending_token {
         None => {
@@ -118,6 +150,13 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                     start_index: i,
                     content: c.into(),
                     kind: PendingTokenKind::Equal,
+                });
+                Ok(())
+            } else if c == '.' {
+                state.pending_token = Some(PendingToken {
+                    start_index: i,
+                    content: c.into(),
+                    kind: PendingTokenKind::Dot,
                 });
                 Ok(())
             } else if c == '/' {
@@ -165,10 +204,46 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                     state.pending_token = None;
                     Ok(())
                 } else {
-                    let Ok(token) = pending_token.clone().try_into() else {
+                    let Some(tokens) = try_as_is(pending_token.clone()) else {
                         return Err(LexError::UnexpectedCharacter(c));
                     };
-                    state.tokens.push(token);
+                    state.tokens.extend(tokens);
+                    state.pending_token = None;
+                    handle_char(state, c, i)
+                }
+            }
+
+            PendingTokenKind::Dot => {
+                if c == '.' {
+                    state.pending_token = Some(PendingToken {
+                        start_index: pending_token.start_index,
+                        content: "..".to_string(),
+                        kind: PendingTokenKind::DoubleDot,
+                    });
+                    Ok(())
+                } else {
+                    let Some(tokens) = try_as_is(pending_token.clone()) else {
+                        return Err(LexError::UnexpectedCharacter(c));
+                    };
+                    state.tokens.extend(tokens);
+                    state.pending_token = None;
+                    handle_char(state, c, i)
+                }
+            }
+
+            PendingTokenKind::DoubleDot => {
+                if c == '.' {
+                    state.tokens.push(Token {
+                        start_index: pending_token.start_index,
+                        content: "...".to_string(),
+                        kind: TokenKind::TripleDot,
+                    });
+                    Ok(())
+                } else {
+                    let Some(tokens) = try_as_is(pending_token.clone()) else {
+                        return Err(LexError::UnexpectedCharacter(c));
+                    };
+                    state.tokens.extend(tokens);
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
@@ -179,26 +254,26 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                     pending_token.content.push(c);
                     Ok(())
                 } else {
-                    state.tokens.push(
+                    state.tokens.extend(
                         if let Some(kind) =
                             get_token_kind_of_non_underscore_keyword(&pending_token.content)
                         {
-                            Token {
+                            vec![Token {
                                 start_index: pending_token.start_index,
                                 content: pending_token.content.clone(),
                                 kind,
-                            }
+                            }]
                         } else if pending_token.content == "_" {
-                            Token {
+                            vec![Token {
                                 start_index: pending_token.start_index,
                                 content: pending_token.content.clone(),
                                 kind: TokenKind::Underscore,
-                            }
+                            }]
                         } else {
-                            let Ok(token) = pending_token.clone().try_into() else {
+                            let Some(tokens) = try_as_is(pending_token.clone()) else {
                                 return Err(LexError::UnexpectedCharacter(c));
                             };
-                            token
+                            tokens
                         },
                     );
                     state.pending_token = None;
@@ -225,10 +300,10 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                     });
                     Ok(())
                 } else {
-                    let Ok(token) = pending_token.clone().try_into() else {
+                    let Some(tokens) = try_as_is(pending_token.clone()) else {
                         return Err(LexError::UnexpectedCharacter(c));
                     };
-                    state.tokens.push(token);
+                    state.tokens.extend(tokens);
                     state.pending_token = None;
                     handle_char(state, c, i)
                 }
