@@ -218,12 +218,20 @@ pub fn expand_identifier_list(
 pub fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
     let light = registry.get(id);
     let callee = expand_expression(registry, light.callee_id);
-    let args = expand_expression_list(registry, light.arg_list_id);
+    let args = expand_call_arg_list(registry, light.arg_list_id);
     Call {
         span: light.span,
         callee,
         args,
     }
+}
+
+pub fn expand_call_arg_list(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<light::ExpressionId>,
+) -> NonEmptyCallArgVec {
+    // TODO: Properly expand call arg
+    NonEmptyCallArgVec::Unlabeled(expand_expression_list(registry, id))
 }
 
 pub fn expand_expression_list(

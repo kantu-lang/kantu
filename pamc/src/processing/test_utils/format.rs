@@ -76,18 +76,35 @@ pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) ->
     };
     let i0 = indent(indent_level, options);
     let i1 = indent(indent_level + 1, options);
-    let args = call
-        .args
-        .iter()
-        .map(|arg| {
-            format!(
-                "{}{},",
-                &i1,
-                format_expression(arg, indent_level + 1, options)
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\n");
+    let args = match &call.args {
+        NonEmptyCallArgVec::Unlabeled(args) => args
+            .iter()
+            .map(|arg| {
+                format!(
+                    "{}{},",
+                    &i1,
+                    format_expression(arg, indent_level + 1, options)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+        NonEmptyCallArgVec::UniquelyLabeled(args) => args
+            .iter()
+            .map(|arg| {
+                let label = match &arg.label {
+                    ParamLabel::Implicit => ":".to_string(),
+                    ParamLabel::Explicit(label) => format!("{}: ", format_ident(label)),
+                };
+                format!(
+                    "{}{}{},",
+                    &i1,
+                    label,
+                    format_expression(&arg.value, indent_level + 1, options)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+    };
     format!("{}(\n{}\n{})", callee, args, &i0)
 }
 

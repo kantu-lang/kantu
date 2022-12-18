@@ -157,7 +157,29 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: Option<TextSpan>,
     pub callee: Expression,
-    pub args: NonEmptyVec<Expression>,
+    pub args: NonEmptyCallArgVec,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum NonEmptyCallArgVec {
+    Unlabeled(NonEmptyVec<Expression>),
+    UniquelyLabeled(NonEmptyVec<LabeledCallArg>),
+}
+
+impl NonEmptyCallArgVec {
+    pub fn len(&self) -> usize {
+        match self {
+            NonEmptyCallArgVec::Unlabeled(vec) => vec.len(),
+            NonEmptyCallArgVec::UniquelyLabeled(vec) => vec.len(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledCallArg {
+    pub span: Option<TextSpan>,
+    pub label: ParamLabel,
+    pub value: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

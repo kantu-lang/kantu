@@ -268,20 +268,38 @@ fn bind_call_expression_dirty(
     call: ub::Call,
 ) -> Result<Expression, BindError> {
     let callee = bind_expression_dirty(context, call.callee)?;
-    // TODO: Properly bind args
-    let args = match call.args {
-        ub::NonEmptyCallArgVec::Unlabeled(args) => {
-            args.try_into_mapped(|arg| bind_expression_dirty(context, arg))?
-        }
-        ub::NonEmptyCallArgVec::UniquelyLabeled(args) => {
-            args.try_into_mapped(|arg| bind_expression_dirty(context, arg.value))?
-        }
-    };
+    let args = bind_call_args(context, call.args)?;
     Ok(Expression::Call(Box::new(Call {
         span: Some(call.span),
         callee,
         args,
     })))
+}
+
+fn bind_call_args(
+    context: &mut Context,
+    args: ub::NonEmptyCallArgVec,
+) -> Result<NonEmptyCallArgVec, BindError> {
+    Ok(match args {
+        ub::NonEmptyCallArgVec::Unlabeled(args) => NonEmptyCallArgVec::Unlabeled(
+            args.try_into_mapped(|arg| bind_expression_dirty(context, arg))?,
+        ),
+        ub::NonEmptyCallArgVec::UniquelyLabeled(args) => NonEmptyCallArgVec::UniquelyLabeled(
+            args.try_into_mapped(|arg| bind_labeled_call_arg_dirty(context, arg))?,
+        ),
+    })
+}
+
+fn bind_labeled_call_arg_dirty(
+    context: &mut Context,
+    arg: ub::LabeledCallArg,
+) -> Result<LabeledCallArg, BindError> {
+    let value = bind_expression_dirty(context, arg.value)?;
+    Ok(LabeledCallArg {
+        span: Some(arg.span),
+        label: arg.label.into(),
+        value,
+    })
 }
 
 fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError> {
