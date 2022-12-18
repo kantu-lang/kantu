@@ -22,6 +22,7 @@ pub enum UnfinishedStackItem {
     Call(UnfinishedCall),
     MatchCase(UnfinishedMatchCase),
     MatchCaseParam(UnfinishedMatchCaseParam),
+    UnfinishedDelimitedTripleDot(UnfinishedDelimitedTripleDot),
 }
 
 #[derive(Clone, Debug)]
@@ -179,7 +180,12 @@ pub enum UnfinishedMatchCase {
     Dot(Token),
     VariantName(Token, Identifier),
     ParamsInProgress(Token, Identifier, Vec<MatchCaseParam>),
-    AwaitingOutput(Token, Identifier, Option<NonEmptyVec<MatchCaseParam>>),
+    AwaitingOutput {
+        dot_token: Token,
+        variant_name: Identifier,
+        params: Option<NonEmptyVec<MatchCaseParam>>,
+        triple_dot: Option<TextSpan>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -200,4 +206,10 @@ pub enum UnfinishedMatchCaseParam {
         label: Identifier,
         name: Identifier,
     },
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedTripleDot {
+    Empty,
+    WaitingForEndDelimiter(Token),
 }

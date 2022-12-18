@@ -6,6 +6,12 @@ pub trait ReplaceSpansAndFileIdsWithDummies {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self;
 }
 
+impl ReplaceSpansAndFileIdsWithDummies for TextSpan {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        dummy_span()
+    }
+}
+
 impl<T> ReplaceSpansAndFileIdsWithDummies for Option<T>
 where
     T: ReplaceSpansAndFileIdsWithDummies,
@@ -234,11 +240,13 @@ impl ReplaceSpansAndFileIdsWithDummies for MatchCase {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let variant_name = self.variant_name.replace_spans_and_file_ids_with_dummies();
         let params = self.params.replace_spans_and_file_ids_with_dummies();
+        let triple_dot = self.triple_dot.replace_spans_and_file_ids_with_dummies();
         let output = self.output.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
             variant_name,
             params,
+            triple_dot,
             output,
         }
     }

@@ -18,5 +18,6 @@ mod match_case;
 mod match_case_param;
 mod param;
 mod params;
+mod triple_dot;
 mod type_statement;
 mod variant;

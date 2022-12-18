@@ -166,6 +166,7 @@ pub struct MatchCase {
     pub span: TextSpan,
     pub variant_name: Identifier,
     pub params: Option<NonEmptyVec<MatchCaseParam>>,
+    pub triple_dot: Option<TextSpan>,
     pub output: Expression,
 }
 

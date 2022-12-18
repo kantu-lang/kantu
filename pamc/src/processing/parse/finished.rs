@@ -64,6 +64,11 @@ pub enum FinishedStackItem {
         MatchCaseParam,
         ExpressionEndDelimiter,
     ),
+    DelimitedTripleDot(
+        /// First (and only) token ("...")
+        Token,
+        ExpressionEndDelimiter,
+    ),
     CheckAssertions(
         /// First token ("(")
         Token,
@@ -141,6 +146,7 @@ impl FinishedStackItem {
             FinishedStackItem::DelimitedCallArg(token, _, _) => &token,
             FinishedStackItem::MatchCase(token, _, _) => &token,
             FinishedStackItem::MatchCaseParam(token, _, _) => &token,
+            FinishedStackItem::DelimitedTripleDot(token, _) => &token,
             FinishedStackItem::CheckAssertions(token, _) => &token,
             FinishedStackItem::CheckAssertion(token, _, _) => &token,
             FinishedStackItem::DelimitedGoalKwOrExpression(token, _, _) => &token,

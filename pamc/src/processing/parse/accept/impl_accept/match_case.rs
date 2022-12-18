@@ -28,11 +28,12 @@ impl Accept for UnfinishedMatchCase {
                         AcceptResult::ContinueToNextToken
                     }
                     TokenKind::FatArrow => {
-                        *self = UnfinishedMatchCase::AwaitingOutput(
-                            dot_token.clone(),
-                            variant_name.clone(),
-                            None,
-                        );
+                        *self = UnfinishedMatchCase::AwaitingOutput {
+                            dot_token: dot_token.clone(),
+                            variant_name: variant_name.clone(),
+                            params: None,
+                            triple_dot: None,
+                        };
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
                             UnfinishedDelimitedExpression::Empty,
                         ))
@@ -50,11 +51,30 @@ impl Accept for UnfinishedMatchCase {
                         }
                         TokenKind::RParen => {
                             let params = NonEmptyVec::from_pushed(params.clone(), param);
-                            *self = UnfinishedMatchCase::AwaitingOutput(
-                                dot_token.clone(),
-                                variant_name.clone(),
-                                Some(params),
-                            );
+                            *self = UnfinishedMatchCase::AwaitingOutput {
+                                dot_token: dot_token.clone(),
+                                variant_name: variant_name.clone(),
+                                params: Some(params),
+                                triple_dot: None,
+                            };
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _ => AcceptResult::Error(ParseError::unexpected_token(
+                            end_delimiter.into_raw(),
+                        )),
+                    }
+                }
+
+                FinishedStackItem::DelimitedTripleDot(triple_dot, end_delimiter) => {
+                    match end_delimiter.raw().kind {
+                        TokenKind::RParen => {
+                            let params = NonEmptyVec::try_from(params.clone()).ok();
+                            *self = UnfinishedMatchCase::AwaitingOutput {
+                                dot_token: dot_token.clone(),
+                                variant_name: variant_name.clone(),
+                                params,
+                                triple_dot: Some(span_single(file_id, &triple_dot)),
+                            };
                             AcceptResult::ContinueToNextToken
                         }
                         _ => AcceptResult::Error(ParseError::unexpected_token(
@@ -67,12 +87,22 @@ impl Accept for UnfinishedMatchCase {
                     let Ok(params) = NonEmptyVec::try_from(params.clone()) else {
                         return AcceptResult::Error(ParseError::unexpected_token(token));
                     };
-                    *self = UnfinishedMatchCase::AwaitingOutput(
-                        dot_token.clone(),
-                        variant_name.clone(),
-                        Some(params),
-                    );
+                    *self = UnfinishedMatchCase::AwaitingOutput {
+                        dot_token: dot_token.clone(),
+                        variant_name: variant_name.clone(),
+                        params: Some(params),
+                        triple_dot: None,
+                    };
                     AcceptResult::ContinueToNextToken
+                }
+
+                FinishedStackItem::Token(token) if token.kind == TokenKind::TripleDot => {
+                    AcceptResult::PushAndContinueReducingWithNewTop(
+                        UnfinishedStackItem::UnfinishedDelimitedTripleDot(
+                            UnfinishedDelimitedTripleDot::Empty,
+                        ),
+                        FinishedStackItem::Token(token),
+                    )
                 }
 
                 other_item => AcceptResult::PushAndContinueReducingWithNewTop(
@@ -80,7 +110,12 @@ impl Accept for UnfinishedMatchCase {
                     other_item,
                 ),
             },
-            UnfinishedMatchCase::AwaitingOutput(dot_token, variant_name, params) => match item {
+            UnfinishedMatchCase::AwaitingOutput {
+                dot_token,
+                variant_name,
+                params,
+                triple_dot,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::FatArrow => {
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -102,6 +137,7 @@ impl Accept for UnfinishedMatchCase {
                                     ),
                                     variant_name: variant_name.clone(),
                                     params: params.clone(),
+                                    triple_dot: triple_dot.clone(),
                                     output: expression,
                                 },
                                 end_delimiter,
