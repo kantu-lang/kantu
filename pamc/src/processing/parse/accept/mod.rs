@@ -14,8 +14,8 @@ pub enum AcceptResult {
     Error(ParseError),
 }
 
-fn unexpected_finished_item(item: &FinishedStackItem) -> AcceptResult {
-    AcceptResult::Error(ParseError::UnexpectedToken(item.first_token().clone()))
+fn wrapped_unexpected_finished_item_err(item: &FinishedStackItem) -> AcceptResult {
+    AcceptResult::Error(unexpected_finished_item_err(item))
 }
 
 impl Accept for UnfinishedStackItem {

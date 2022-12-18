@@ -21,9 +21,9 @@ impl Accept for UnfinishedFun {
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedFun::Name(fun_kw, name) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -36,13 +36,13 @@ impl Accept for UnfinishedFun {
                             params: vec![],
                         }))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
                     *self = UnfinishedFun::Params(fun_kw.clone(), name.clone(), params);
                     AcceptResult::ContinueToNextToken
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedFun::Params(fun_kw, name, params) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -51,7 +51,7 @@ impl Accept for UnfinishedFun {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     *self = UnfinishedFun::ReturnType(
@@ -66,12 +66,12 @@ impl Accept for UnfinishedFun {
                                 UnfinishedDelimitedExpression::Empty,
                             ))
                         }
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedFun::ReturnType(fun_kw, name, params, return_type) => match item {
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
@@ -92,12 +92,12 @@ impl Accept for UnfinishedFun {
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

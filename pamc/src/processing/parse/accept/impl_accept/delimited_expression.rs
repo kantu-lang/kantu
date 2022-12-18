@@ -50,7 +50,7 @@ impl Accept for UnfinishedDelimitedExpression {
                     TokenKind::Check => AcceptResult::Push(UnfinishedStackItem::Check(
                         UnfinishedCheck::Keyword(token),
                     )),
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::DelimitedExpression(
@@ -66,7 +66,7 @@ impl Accept for UnfinishedDelimitedExpression {
                     );
                     AcceptResult::ContinueToNextToken
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedDelimitedExpression::WaitingForEndDelimiter(first_token, expression) => {
                 match item {
@@ -108,11 +108,11 @@ impl Accept for UnfinishedDelimitedExpression {
                                 )
                             }
                             _other_token_kind => {
-                                AcceptResult::Error(ParseError::UnexpectedToken(token))
+                                AcceptResult::Error(ParseError::unexpected_token(token))
                             }
                         }
                     }
-                    other_item => unexpected_finished_item(&other_item),
+                    other_item => wrapped_unexpected_finished_item_err(&other_item),
                 }
             }
         }

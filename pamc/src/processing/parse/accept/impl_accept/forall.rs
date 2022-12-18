@@ -14,13 +14,13 @@ impl Accept for UnfinishedForall {
                             params: vec![],
                         }))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
                     *self = UnfinishedForall::Params(forall_kw.clone(), params);
                     AcceptResult::ContinueToNextToken
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedForall::Params(forall_kw, params) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -29,7 +29,7 @@ impl Accept for UnfinishedForall {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     match end_delimiter.raw().kind {
@@ -47,12 +47,12 @@ impl Accept for UnfinishedForall {
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

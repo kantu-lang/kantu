@@ -27,7 +27,7 @@ impl Accept for UnfinishedCall {
                         )
                     }
                     _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
+                        AcceptResult::Error(ParseError::unexpected_token(end_delimiter.into_raw()))
                     }
                 }
             }
@@ -55,11 +55,11 @@ impl Accept for UnfinishedCall {
                             })),
                         ),
                     ),
-                    Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    Err(_) => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
             },
-            other_item => unexpected_finished_item(&other_item),
+            other_item => wrapped_unexpected_finished_item_err(&other_item),
         }
     }
 }

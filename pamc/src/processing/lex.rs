@@ -26,6 +26,12 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
         state.pending_token = None;
     }
 
+    state.tokens.push(Token {
+        start_index: src.len(),
+        content: "".to_string(),
+        kind: TokenKind::Eoi,
+    });
+
     Ok(state.tokens)
 }
 

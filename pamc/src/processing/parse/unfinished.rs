@@ -30,6 +30,7 @@ pub struct UnfinishedFile {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedTypeStatement {
+    EmptyString,
     Keyword(Token),
     Name(Token, Identifier),
     Params(Token, Identifier, Option<NonEmptyVec<Param>>),
@@ -38,6 +39,7 @@ pub enum UnfinishedTypeStatement {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedLetStatement {
+    EmptyString,
     Keyword(Token),
     Name(Token, Identifier),
 }
@@ -53,7 +55,12 @@ pub struct UnfinishedParams {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedParam {
-    NoExplicitLabel {
+    NoIdentifier {
+        pending_tilde: Option<Token>,
+        pending_dash: Option<Token>,
+        is_dash_allowed: bool,
+    },
+    FirstIdentifier {
         first_token: Token,
         is_tilded: bool,
         is_dashed: bool,
@@ -76,6 +83,7 @@ pub enum UnfinishedParam {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedVariant {
+    EmptyString,
     Dot(Token),
     Name(Token, Identifier),
     Params(Token, Identifier, Option<NonEmptyVec<Param>>),

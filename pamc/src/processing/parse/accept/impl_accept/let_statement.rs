@@ -3,6 +3,16 @@ use super::*;
 impl Accept for UnfinishedLetStatement {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
+            UnfinishedLetStatement::EmptyString => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Let => {
+                        *self = UnfinishedLetStatement::Keyword(token);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
             UnfinishedLetStatement::Keyword(let_kw) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
@@ -13,9 +23,9 @@ impl Accept for UnfinishedLetStatement {
                         *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedLetStatement::Name(let_kw, name) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -24,7 +34,7 @@ impl Accept for UnfinishedLetStatement {
                             UnfinishedDelimitedExpression::Empty,
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                     match end_delimiter.raw().kind {
@@ -42,12 +52,12 @@ impl Accept for UnfinishedLetStatement {
                                 },
                             ))
                         }
-                        _ => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _ => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

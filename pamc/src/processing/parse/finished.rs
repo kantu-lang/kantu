@@ -3,6 +3,11 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum FinishedStackItem {
     Token(Token),
+    File(
+        /// First token
+        Token,
+        File,
+    ),
     Type(
         /// First token ("type")
         Token,
@@ -86,6 +91,7 @@ impl ExpressionEndDelimiter {
                 | TokenKind::LCurly
                 | TokenKind::RCurly
                 | TokenKind::RParen
+                | TokenKind::Eoi
         )
     }
 
@@ -112,6 +118,7 @@ impl FinishedStackItem {
     pub fn first_token(&self) -> &Token {
         match self {
             FinishedStackItem::Token(token) => &token,
+            FinishedStackItem::File(token, _) => &token,
             FinishedStackItem::Type(token, _) => &token,
             FinishedStackItem::Let(token, _) => &token,
             FinishedStackItem::Params(token, _) => &token,

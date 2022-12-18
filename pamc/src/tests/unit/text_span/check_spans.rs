@@ -58,10 +58,19 @@ impl DeepCheckChildSpans for File {
     }
 }
 
-impl ShallowCheckOwnSpan for FileItem {
+impl DeepCheckSpans for FileItem {
+    fn deep_check_spans(&self, src: &str) {
+        match self {
+            FileItem::Type(x) => x.deep_check_spans(src),
+            FileItem::Let(x) => x.deep_check_spans(src),
+        }
+    }
+}
+
+impl ShallowCheckOwnSpan for TypeStatement {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span()).expect("Span should be valid");
-        let reconstructed: FileItem = parse_str(spanned_src)
+        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
+        let reconstructed: Self = parse_str(spanned_src)
             .expect("Should be able to reconstruct a copy using the spanned slice.");
         assert_eq!(
             self.clone().replace_spans_and_file_ids_with_dummies(),
@@ -69,15 +78,6 @@ impl ShallowCheckOwnSpan for FileItem {
         );
     }
 }
-impl DeepCheckChildSpans for FileItem {
-    fn deep_check_child_spans(&self, src: &str) {
-        match self {
-            FileItem::Type(item) => item.deep_check_child_spans(src),
-            FileItem::Let(item) => item.deep_check_child_spans(src),
-        }
-    }
-}
-
 impl DeepCheckChildSpans for TypeStatement {
     fn deep_check_child_spans(&self, src: &str) {
         self.name.deep_check_spans(src);
@@ -166,6 +166,17 @@ impl DeepCheckChildSpans for Variant {
     }
 }
 
+impl ShallowCheckOwnSpan for LetStatement {
+    fn shallow_check_own_span(&self, src: &str) {
+        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
+        let reconstructed: Self = parse_str(spanned_src)
+            .expect("Should be able to reconstruct a copy using the spanned slice.");
+        assert_eq!(
+            self.clone().replace_spans_and_file_ids_with_dummies(),
+            reconstructed.replace_spans_and_file_ids_with_dummies()
+        );
+    }
+}
 impl DeepCheckChildSpans for LetStatement {
     fn deep_check_child_spans(&self, src: &str) {
         self.name.deep_check_spans(src);

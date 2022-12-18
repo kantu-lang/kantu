@@ -8,7 +8,7 @@ impl Accept for UnfinishedCheckAssertions {
                     Ok(assertions) => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::CheckAssertions(self.first_token.clone(), assertions),
                     ),
-                    Err(_) => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    Err(_) => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 _ => AcceptResult::PushAndContinueReducingWithNewTop(
                     UnfinishedStackItem::UnfinishedDelimitedGoalKwOrExpression(
@@ -38,7 +38,7 @@ impl Accept for UnfinishedCheckAssertions {
                     },
                 )),
                 _other_end_delimiter => {
-                    AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
+                    AcceptResult::Error(ParseError::unexpected_token(end_delimiter.into_raw()))
                 }
             },
 
@@ -57,12 +57,12 @@ impl Accept for UnfinishedCheckAssertions {
                         AcceptResult::ContinueToNextToken
                     }
                     _other_end_delimiter => {
-                        AcceptResult::Error(ParseError::UnexpectedToken(end_delimiter.into_raw()))
+                        AcceptResult::Error(ParseError::unexpected_token(end_delimiter.into_raw()))
                     }
                 }
             }
 
-            other_item => return unexpected_finished_item(&other_item),
+            other_item => return wrapped_unexpected_finished_item_err(&other_item),
         }
     }
 }

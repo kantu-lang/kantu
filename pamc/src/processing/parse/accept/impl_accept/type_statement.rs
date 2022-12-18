@@ -3,6 +3,16 @@ use super::*;
 impl Accept for UnfinishedTypeStatement {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
+            UnfinishedTypeStatement::EmptyString => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::TypeLowerCase => {
+                        *self = UnfinishedTypeStatement::Keyword(token);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
             UnfinishedTypeStatement::Keyword(type_kw) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
@@ -13,9 +23,9 @@ impl Accept for UnfinishedTypeStatement {
                         *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedTypeStatement::Name(type_kw, name) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -37,7 +47,7 @@ impl Accept for UnfinishedTypeStatement {
                         );
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
                     *self = UnfinishedTypeStatement::Params(
@@ -47,7 +57,7 @@ impl Accept for UnfinishedTypeStatement {
                     );
                     AcceptResult::ContinueToNextToken
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedTypeStatement::Params(type_kw, name, params) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -60,9 +70,9 @@ impl Accept for UnfinishedTypeStatement {
                         );
                         AcceptResult::ContinueToNextToken
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedTypeStatement::Variants(type_kw, name, params, variants) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -80,7 +90,7 @@ impl Accept for UnfinishedTypeStatement {
                             },
                         ))
                     }
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::Variant(_, variant, end_delimiter) => {
                     variants.push(variant);
@@ -101,12 +111,12 @@ impl Accept for UnfinishedTypeStatement {
                                 },
                             ))
                         }
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

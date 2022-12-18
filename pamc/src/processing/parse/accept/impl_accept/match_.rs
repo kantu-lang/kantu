@@ -10,12 +10,12 @@ impl Accept for UnfinishedMatch {
                             *self = UnfinishedMatch::Cases(match_kw.clone(), expression, vec![]);
                             AcceptResult::ContinueToNextToken
                         }
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
             UnfinishedMatch::Cases(match_kw, matchee, cases) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
@@ -32,7 +32,7 @@ impl Accept for UnfinishedMatch {
                             })),
                         ),
                     ),
-                    _other_token_kind => AcceptResult::Error(ParseError::UnexpectedToken(token)),
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::MatchCase(_, case, end_delimiter) => {
                     cases.push(case);
@@ -52,12 +52,12 @@ impl Accept for UnfinishedMatch {
                                 })),
                             ),
                         ),
-                        _other_end_delimiter => AcceptResult::Error(ParseError::UnexpectedToken(
+                        _other_end_delimiter => AcceptResult::Error(ParseError::unexpected_token(
                             end_delimiter.into_raw(),
                         )),
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

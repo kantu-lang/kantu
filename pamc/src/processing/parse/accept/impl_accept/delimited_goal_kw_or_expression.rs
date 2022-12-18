@@ -36,7 +36,7 @@ impl Accept for UnfinishedDelimitedGoalKwOrExpression {
                     let token = ExpressionEndDelimiter::try_new(token);
                     match token {
                         Err(original_token) => {
-                            AcceptResult::Error(ParseError::UnexpectedToken(original_token))
+                            AcceptResult::Error(ParseError::unexpected_token(original_token))
                         }
                         Ok(wrapped_token) => {
                             let goal_kw = GoalKwOrExpression::GoalKw {
@@ -53,7 +53,7 @@ impl Accept for UnfinishedDelimitedGoalKwOrExpression {
                         }
                     }
                 }
-                other_item => unexpected_finished_item(&other_item),
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
     }

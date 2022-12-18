@@ -7,6 +7,8 @@ pub struct Token {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TokenKind {
+    Eoi,
+
     Whitespace,
     StandardIdentifier,
 
