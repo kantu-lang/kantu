@@ -194,17 +194,6 @@ impl ReplaceSpansAndFileIdsWithDummies for CallArg {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for ArgLabel {
-    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        match self {
-            ArgLabel::Implicit => ArgLabel::Implicit,
-            ArgLabel::Explicit(label) => {
-                ArgLabel::Explicit(label.replace_spans_and_file_ids_with_dummies())
-            }
-        }
-    }
-}
-
 impl ReplaceSpansAndFileIdsWithDummies for Fun {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let name = self.name.replace_spans_and_file_ids_with_dummies();

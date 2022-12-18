@@ -57,7 +57,7 @@ impl Accept for UnfinishedDelimitedCallArg {
                                 CallArg {
                                     span: span_single(file_id, colon)
                                         .inclusive_merge(label_and_value.span),
-                                    label: Some(ArgLabel::Implicit),
+                                    label: Some(ParamLabel::Implicit),
                                     value: Expression::Identifier(label_and_value.clone()),
                                 },
                                 end_delimiter,
@@ -123,7 +123,7 @@ impl Accept for UnfinishedDelimitedCallArg {
                         first_token,
                         CallArg {
                             span: label.span.inclusive_merge(expression.span()),
-                            label: Some(ArgLabel::Explicit(label.clone())),
+                            label: Some(ParamLabel::Explicit(label.clone())),
                             value: expression,
                         },
                         end_delimiter,

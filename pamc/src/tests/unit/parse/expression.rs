@@ -118,25 +118,25 @@ fn labeled_call() {
                     Expression::Dot(callee) => {
                         assert_eq!(IdentifierName::Standard("b".to_string()), callee.right.name);
 
-                        assert_eq!(Some(ArgLabel::Implicit), arg0.label);
+                        assert_eq!(Some(ParamLabel::Implicit), arg0.label);
                         assert_eq!(
                             Some(&IdentifierName::Standard("c".to_string())),
                             arg0.label_name()
                         );
 
-                        assert!(matches!(arg1.label, Some(ArgLabel::Explicit(_))));
+                        assert!(matches!(arg1.label, Some(ParamLabel::Explicit(_))));
                         assert_eq!(
                             Some(&IdentifierName::Standard("e".to_string())),
                             arg1.label_name()
                         );
 
-                        assert_eq!(Some(ArgLabel::Implicit), arg0.label);
+                        assert_eq!(Some(ParamLabel::Implicit), arg0.label);
                         assert_eq!(
                             Some(&IdentifierName::Standard("f".to_string())),
                             arg2.label_name()
                         );
 
-                        assert!(matches!(arg3.label, Some(ArgLabel::Explicit(_))));
+                        assert!(matches!(arg3.label, Some(ParamLabel::Explicit(_))));
                         assert_eq!(
                             Some(&IdentifierName::Standard("g".to_string())),
                             arg3.label_name()

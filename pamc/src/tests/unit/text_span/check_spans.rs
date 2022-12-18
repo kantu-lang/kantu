@@ -244,7 +244,7 @@ impl ShallowCheckOwnSpan for CallArg {
 }
 impl DeepCheckChildSpans for CallArg {
     fn deep_check_child_spans(&self, src: &str) {
-        if let Some(ArgLabel::Explicit(label)) = &self.label {
+        if let Some(ParamLabel::Explicit(label)) = &self.label {
             label.deep_check_spans(src);
         }
         self.value.deep_check_spans(src);
