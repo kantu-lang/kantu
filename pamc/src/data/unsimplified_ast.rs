@@ -176,6 +176,15 @@ pub struct MatchCaseParam {
     pub name: Identifier,
 }
 
+impl MatchCaseParam {
+    pub fn label_name(&self) -> Option<&IdentifierName> {
+        self.label.as_ref().map(|label| match label {
+            ParamLabel::Implicit => &self.name.name,
+            ParamLabel::Explicit(name) => &name.name,
+        })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: TextSpan,

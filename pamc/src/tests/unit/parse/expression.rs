@@ -1,7 +1,11 @@
 use std::ops::Deref;
 
 use crate::{
-    data::{unsimplified_ast::*, FileId},
+    data::{
+        non_empty_vec::{OptionalNonEmptyToPossiblyEmpty, OptionalNonEmptyVecLen},
+        unsimplified_ast::*,
+        FileId,
+    },
     processing::{lex::lex, parse::parse},
 };
 
@@ -220,6 +224,126 @@ fn match_() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/match.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Match(_) => {}
+        other => panic!("Unexpected expression {:?}", other),
+    });
+}
+
+#[test]
+fn labeled_match() {
+    let src =
+        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_match.x.pht");
+    expect_expression(src, |expression| match expression {
+        Expression::Match(match_) => {
+            assert_eq!(12, match_.cases.len());
+
+            let case_a = &match_.cases[0];
+            assert_eq!(0, case_a.params.len());
+
+            let case_b = &match_.cases[1];
+            assert_eq!(1, case_b.params.len());
+
+            let case_c = &match_.cases[2];
+            assert_eq!(1, case_c.params.len());
+
+            let case_d = &match_.cases[3];
+            assert_eq!(2, case_d.params.len());
+            assert!(matches!(
+                case_d.params.to_possibly_empty()[0].label,
+                Some(ParamLabel::Implicit)
+            ));
+            assert_eq!(
+                Some(&IdentifierName::Standard("x'".to_string())),
+                case_d.params.to_possibly_empty()[0].label_name()
+            );
+            assert_eq!(
+                IdentifierName::Standard("x'".to_string()),
+                case_d.params.to_possibly_empty()[0].name.name
+            );
+            assert!(matches!(
+                case_d.params.to_possibly_empty()[1].label,
+                Some(ParamLabel::Implicit)
+            ));
+            assert_eq!(
+                Some(&IdentifierName::Standard("y'".to_string())),
+                case_d.params.to_possibly_empty()[1].label_name()
+            );
+            assert_eq!(
+                IdentifierName::Standard("y'".to_string()),
+                case_d.params.to_possibly_empty()[1].name.name
+            );
+
+            let case_e = &match_.cases[4];
+            assert_eq!(1, case_e.params.len());
+
+            let case_f = &match_.cases[5];
+            assert_eq!(2, case_f.params.len());
+            assert!(matches!(
+                case_f.params.to_possibly_empty()[0].label,
+                Some(ParamLabel::Explicit(_))
+            ));
+            assert_eq!(
+                Some(&IdentifierName::Standard("foo".to_string())),
+                case_f.params.to_possibly_empty()[0].label_name()
+            );
+            assert_eq!(
+                IdentifierName::Standard("x'".to_string()),
+                case_f.params.to_possibly_empty()[0].name.name
+            );
+            assert!(matches!(
+                case_f.params.to_possibly_empty()[1].label,
+                Some(ParamLabel::Explicit(_))
+            ));
+            assert_eq!(
+                Some(&IdentifierName::Standard("bar".to_string())),
+                case_f.params.to_possibly_empty()[1].label_name()
+            );
+            assert_eq!(
+                IdentifierName::Standard("y'".to_string()),
+                case_f.params.to_possibly_empty()[1].name.name
+            );
+
+            let case_g = &match_.cases[6];
+            assert_eq!(2, case_g.params.len());
+
+            let case_h = &match_.cases[7];
+            assert_eq!(2, case_h.params.len());
+
+            let case_i = &match_.cases[8];
+            assert_eq!(1, case_i.params.len());
+
+            let case_j = &match_.cases[9];
+            assert_eq!(2, case_j.params.len());
+
+            let case_k = &match_.cases[10];
+            assert_eq!(2, case_k.params.len());
+
+            let case_l = &match_.cases[11];
+            assert_eq!(2, case_l.params.len());
+            assert!(matches!(
+                case_l.params.to_possibly_empty()[0].label,
+                Some(ParamLabel::Explicit(_))
+            ));
+            assert_eq!(
+                Some(&IdentifierName::Standard("foo".to_string())),
+                case_l.params.to_possibly_empty()[0].label_name()
+            );
+            assert_eq!(
+                IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+                case_l.params.to_possibly_empty()[0].name.name
+            );
+            assert!(matches!(
+                case_l.params.to_possibly_empty()[1].label,
+                Some(ParamLabel::Implicit)
+            ));
+            assert_eq!(
+                Some(&IdentifierName::Standard("z".to_string())),
+                case_l.params.to_possibly_empty()[1].label_name()
+            );
+            assert_eq!(
+                IdentifierName::Standard("z".to_string()),
+                case_l.params.to_possibly_empty()[1].name.name
+            );
+        }
         other => panic!("Unexpected expression {:?}", other),
     });
 }

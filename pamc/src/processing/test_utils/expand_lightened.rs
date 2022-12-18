@@ -6,7 +6,7 @@ use crate::data::{
         NodeRegistry, NonEmptyListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
-    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecToVec},
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
 
 pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
@@ -44,7 +44,8 @@ pub fn expand_type_statement(
     let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
     let params = expand_possibly_empty_param_list(registry, light.param_list_id);
-    let variants = expand_possibly_empty_variant_list(registry, light.variant_list_id).into_vec();
+    let variants =
+        expand_possibly_empty_variant_list(registry, light.variant_list_id).into_possibly_empty();
     TypeStatement {
         span: light.span,
         name,
@@ -254,7 +255,8 @@ pub fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
 pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match {
     let light = registry.get(id);
     let matchee = expand_expression(registry, light.matchee_id);
-    let cases = expand_possibly_empty_match_case_list(registry, light.case_list_id).into_vec();
+    let cases =
+        expand_possibly_empty_match_case_list(registry, light.case_list_id).into_possibly_empty();
     Match {
         span: light.span,
         matchee,
@@ -281,7 +283,8 @@ pub fn expand_match_case_list(
 pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> MatchCase {
     let light = registry.get(id);
     let variant_name = expand_identifier(registry, light.variant_name_id);
-    let params = expand_possibly_empty_identifier_list(registry, light.param_list_id).into_vec();
+    let params =
+        expand_possibly_empty_identifier_list(registry, light.param_list_id).into_possibly_empty();
     let output = expand_expression(registry, light.output_id);
     MatchCase {
         span: light.span,

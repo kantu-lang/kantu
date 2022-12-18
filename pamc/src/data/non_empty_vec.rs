@@ -224,15 +224,45 @@ impl<T> DerefMut for NonEmptyVec<T> {
     }
 }
 
-pub trait OptionalNonEmptyVecToVec {
-    type Output;
-    fn into_vec(self) -> Vec<Self::Output>;
+pub trait OptionalNonEmptyToPossiblyEmpty {
+    type PossiblyEmptyOwned;
+    type PossiblyEmptyRef<'a>
+    where
+        Self: 'a;
+    type PossiblyEmptyMut<'a>
+    where
+        Self: 'a;
+
+    fn into_possibly_empty(self) -> Self::PossiblyEmptyOwned;
+
+    fn to_possibly_empty<'b>(&'b self) -> Self::PossiblyEmptyRef<'b>;
+
+    fn to_possibly_empty_mut<'b>(&'b mut self) -> Self::PossiblyEmptyMut<'b>;
 }
 
-impl<T> OptionalNonEmptyVecToVec for Option<NonEmptyVec<T>> {
-    type Output = T;
-    fn into_vec(self) -> Vec<T> {
+impl<T> OptionalNonEmptyToPossiblyEmpty for Option<NonEmptyVec<T>> {
+    type PossiblyEmptyOwned = Vec<T>;
+    type PossiblyEmptyRef<'a> = &'a [T] where
+    Self: 'a;
+    type PossiblyEmptyMut<'a> = &'a mut [T] where
+    Self: 'a;
+
+    fn into_possibly_empty(self) -> Vec<T> {
         self.map_or_else(Vec::new, Vec::from)
+    }
+
+    fn to_possibly_empty<'b>(&'b self) -> &'b [T] {
+        match self.as_ref() {
+            Some(v) => v.as_ref(),
+            None => &[],
+        }
+    }
+
+    fn to_possibly_empty_mut(&mut self) -> &mut [T] {
+        match self.as_mut() {
+            Some(v) => v.as_mut(),
+            None => &mut [],
+        }
     }
 }
 

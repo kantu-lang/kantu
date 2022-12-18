@@ -1,0 +1,14 @@
+match x {
+    .A => b,
+    .B(x') => c,
+    .C(:x') => x',
+    .D(:x', :y') => y',
+    .E(foo: x') => x',
+    .F(foo: x', bar: y') => y',
+    .G(:x', bar: y') => x',
+    .H(foo: x', :y') => x',
+    .I(foo: _) => x,
+    .J(foo: _, bar: _) => y,
+    .K(:z, foo: _) => x,
+    .L(foo: _, :z) => z,
+}
