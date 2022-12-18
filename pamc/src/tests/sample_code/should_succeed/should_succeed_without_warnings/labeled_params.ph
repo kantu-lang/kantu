@@ -16,23 +16,19 @@ let redness = fun _(~c: Color): Nat {
     }
 };
 
-// TODO: We will need to update this when we
-// add support for labeled arguments.
-let _1 = redness(Color.C(Nat.S(Nat.O), Nat.O, Nat.O));
+let _1 = redness(c: Color.C(Nat.S(Nat.O), Nat.O, Nat.O));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
-    // TODO: We will need to update this when we
-    // add support for labeled arguments.
-    f(c)
+    f(d: c)
+};
+
+let apply2 = fun _(c: Color, f: forall(c~_: Color) { Nat }): Nat {
+    f(:c)
 };
 
 type List(~T: Type) {
-    // TODO: We will need to update this when we
-    // add support for labeled arguments.
-    .Nil(U: Type): List(U),
-    // TODO: We will need to update this when we
-    // add support for labeled arguments.
-    .Cons(U: Type, car: U, cdr: List(U)): List(U),
+    .Nil(U: Type): List(T: U),
+    .Cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
 }
 
 let foo = fun foo_(xylophone~x: Nat, yodeler~-y: Nat): Nat {
