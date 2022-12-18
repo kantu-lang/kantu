@@ -177,4 +177,14 @@ fn forall() {
     });
 }
 
-// TODO: Test Check expressions
+#[test]
+fn check() {
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/check.x.pht");
+    expect_expression(src, |expression| match expression {
+        Expression::Check(check) => {
+            assert_eq!(3, check.assertions.len());
+            assert!(matches!(&check.output, Expression::Call(_)));
+        }
+        other => panic!("Unexpected expression {:?}", other),
+    });
+}

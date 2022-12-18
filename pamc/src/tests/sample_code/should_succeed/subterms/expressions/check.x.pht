@@ -1,0 +1,3 @@
+check (n: Nat, n = Nat.O, goal = Eq(Nat, n, n)) {
+    Eq.Refl(Nat, n)
+}
