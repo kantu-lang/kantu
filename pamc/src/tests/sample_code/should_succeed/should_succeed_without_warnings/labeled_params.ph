@@ -9,10 +9,7 @@ type Color {
 
 let redness = fun _(~c: Color): Nat {
     match c {
-        // TODO: We will need to update this
-        // when we add support for labeled
-        // match case params
-        .C(r, _, _) => r,
+        .C(:r, g: _, b: _) => r,
     }
 };
 
