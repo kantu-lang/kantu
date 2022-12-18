@@ -30,6 +30,7 @@ pub struct UnfinishedFile {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedTypeStatement {
+    EmptyString,
     Keyword(Token),
     Name(Token, Identifier),
     Params(Token, Identifier, Option<NonEmptyVec<Param>>),
@@ -38,6 +39,7 @@ pub enum UnfinishedTypeStatement {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedLetStatement {
+    EmptyString,
     Keyword(Token),
     Name(Token, Identifier),
 }

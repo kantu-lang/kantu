@@ -29,7 +29,7 @@ impl Parse for Expression {
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
-            FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
+            FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
                 if end_delimiter.raw().kind == TokenKind::Eoi {
                     Ok(expression)
                 } else {
@@ -42,7 +42,7 @@ impl Parse for Expression {
 }
 
 impl Parse for Param {
-    fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
+    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::Param(UnfinishedParam::NoIdentifier {
             pending_tilde: None,
             pending_dash: None,
@@ -83,31 +83,32 @@ impl Parse for Variant {
     }
 }
 
-impl Parse for FileItem {
-    fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
-        vec![todo!()]
+impl Parse for TypeStatement {
+    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Type(
+            UnfinishedTypeStatement::EmptyString,
+        )]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
-        todo!()
+        match bottom_item {
+            FinishedStackItem::Type(_, type_statement) => Ok(type_statement),
+            other_item => Err(unexpected_finished_item_err(&other_item)),
+        }
     }
 }
 
-fn dummy_token() -> Token {
-    Token {
-        start_index: 0,
-        content: "_".to_string(),
-        kind: TokenKind::Underscore,
+impl Parse for LetStatement {
+    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Let(
+            UnfinishedLetStatement::EmptyString,
+        )]
     }
-}
 
-fn dummy_identifier() -> Identifier {
-    Identifier {
-        span: TextSpan {
-            file_id: FileId(0),
-            start: 0,
-            end: 1,
-        },
-        name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        match bottom_item {
+            FinishedStackItem::Let(_, let_statement) => Ok(let_statement),
+            other_item => Err(unexpected_finished_item_err(&other_item)),
+        }
     }
 }

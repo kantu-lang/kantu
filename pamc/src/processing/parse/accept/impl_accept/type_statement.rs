@@ -3,6 +3,16 @@ use super::*;
 impl Accept for UnfinishedTypeStatement {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
+            UnfinishedTypeStatement::EmptyString => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::TypeLowerCase => {
+                        *self = UnfinishedTypeStatement::Keyword(token);
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
             UnfinishedTypeStatement::Keyword(type_kw) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
