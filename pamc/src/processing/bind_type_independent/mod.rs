@@ -316,12 +316,21 @@ fn bind_match_dirty(context: &mut Context, match_: ub::Match) -> Result<Expressi
 fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCase, BindError> {
     let arity = case.params.len();
     let variant_name = case.variant_name.into();
+    // TODO: Properly bind params (this is just a placeholder)
     let params = case
         .params
-        .map(|param| {
-            param.try_into_mapped(|param| -> Result<_, BindError> {
-                Ok(create_name_and_add_to_scope(context, param)?)
-            })
+        .map(|params| match params {
+            ub::NonEmptyMatchCaseParamVec::Unlabeled(params) => {
+                params.try_into_mapped(|param| -> Result<_, BindError> {
+                    Ok(create_name_and_add_to_scope(context, param)?)
+                })
+            }
+            ub::NonEmptyMatchCaseParamVec::UniquelyLabeled {
+                params,
+                triple_dot: _,
+            } => params.try_into_mapped(|param| -> Result<_, BindError> {
+                Ok(create_name_and_add_to_scope(context, param.name)?)
+            }),
         })
         .transpose()?
         .into_possibly_empty();

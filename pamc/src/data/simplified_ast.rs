@@ -150,8 +150,42 @@ pub struct Match {
 pub struct MatchCase {
     pub span: TextSpan,
     pub variant_name: Identifier,
-    pub params: Option<NonEmptyVec<Identifier>>,
+    pub params: Option<NonEmptyMatchCaseParamVec>,
     pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum NonEmptyMatchCaseParamVec {
+    Unlabeled(NonEmptyVec<Identifier>),
+    UniquelyLabeled {
+        params: NonEmptyVec<LabeledMatchCaseParam>,
+        triple_dot: Option<TextSpan>,
+    },
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamVec> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.len()).unwrap_or(0)
+    }
+}
+
+impl NonEmptyMatchCaseParamVec {
+    pub fn len(&self) -> usize {
+        match self {
+            NonEmptyMatchCaseParamVec::Unlabeled(vec) => vec.len(),
+            NonEmptyMatchCaseParamVec::UniquelyLabeled {
+                params,
+                triple_dot: _,
+            } => params.len(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledMatchCaseParam {
+    pub span: TextSpan,
+    pub label: ParamLabel,
+    pub name: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

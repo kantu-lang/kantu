@@ -3,6 +3,7 @@ use crate::data::{
     simplified_ast::*,
     // `ust` stands for "unsimplified syntax tree".
     unsimplified_ast as ust,
+    TextSpan,
 };
 
 #[derive(Clone, Debug)]
@@ -11,6 +12,9 @@ pub enum SimplifyAstError {
     HeterogeneousParams(NonEmptyVec<ust::Param>),
     UnderscoreParamLabel(ust::Param),
     DuplicateParamLabel(ust::Param, ust::Param),
+    HeterogeneousMatchCaseParams(NonEmptyVec<ust::MatchCaseParam>),
+    UnderscoreMatchCaseParamLabel(ust::MatchCaseParam),
+    DuplicateMatchCaseParamLabel(ust::MatchCaseParam, ust::MatchCaseParam),
 }
 
 pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> {
@@ -280,13 +284,133 @@ fn simplify_match_case(unsimplified: ust::MatchCase) -> Result<MatchCase, Simpli
     Ok(MatchCase {
         span: unsimplified.span,
         variant_name: unsimplified.variant_name,
-        params:
-        // TODO: Actually simplify params
-        unsimplified
-            .params
-            .map(|params| params.into_mapped(|param| param.name)),
+        params: simplify_optional_match_case_params(unsimplified.params, unsimplified.triple_dot)?,
         output: simplify_expression(unsimplified.output)?,
     })
+}
+
+fn simplify_optional_match_case_params(
+    unsimplified: Option<NonEmptyVec<ust::MatchCaseParam>>,
+    triple_dot: Option<TextSpan>,
+) -> Result<Option<NonEmptyMatchCaseParamVec>, SimplifyAstError> {
+    unsimplified
+        .map(|params| simplify_match_case_params(params, triple_dot))
+        .transpose()
+}
+
+fn simplify_match_case_params(
+    unsimplified: NonEmptyVec<ust::MatchCaseParam>,
+    triple_dot: Option<TextSpan>,
+) -> Result<NonEmptyMatchCaseParamVec, SimplifyAstError> {
+    validate_there_are_no_duplicate_match_case_param_labels(unsimplified.as_ref())?;
+
+    let hetero_err = SimplifyAstError::HeterogeneousMatchCaseParams(unsimplified.clone());
+    let (remaining, last) = unsimplified.into_popped();
+
+    validate_match_case_param_label_is_not_underscore(&last)?;
+
+    if let Some(label) = last.label {
+        let last = LabeledMatchCaseParam {
+            span: last.span,
+            label,
+            name: last.name,
+        };
+        let remaining = simplify_match_case_params_but_require_labels(remaining, &hetero_err)?;
+        Ok(NonEmptyMatchCaseParamVec::UniquelyLabeled {
+            params: NonEmptyVec::from_pushed(remaining, last),
+            triple_dot,
+        })
+    } else {
+        let last = last.name;
+        let remaining = simplify_match_case_params_but_forbid_labels(remaining, &hetero_err)?;
+        Ok(NonEmptyMatchCaseParamVec::Unlabeled(
+            NonEmptyVec::from_pushed(remaining, last),
+        ))
+    }
+}
+
+fn validate_there_are_no_duplicate_match_case_param_labels(
+    unsimplified: &[ust::MatchCaseParam],
+) -> Result<(), SimplifyAstError> {
+    use std::collections::HashMap;
+    let mut seen: HashMap<&IdentifierName, &ust::MatchCaseParam> = HashMap::new();
+    for param in unsimplified {
+        let Some(label_name) = param.label_name() else {
+            continue;
+        };
+        if let Some(existing_param_with_same_name) = seen.get(&label_name).copied() {
+            return Err(SimplifyAstError::DuplicateMatchCaseParamLabel(
+                param.clone(),
+                existing_param_with_same_name.clone(),
+            ));
+        }
+        seen.insert(label_name, param);
+    }
+    Ok(())
+}
+
+fn validate_match_case_param_label_is_not_underscore(
+    param: &ust::MatchCaseParam,
+) -> Result<(), SimplifyAstError> {
+    let Some(label_name) = param.label_name() else {
+        return Ok(());
+    };
+    match label_name {
+        IdentifierName::Reserved(ReservedIdentifierName::Underscore) => Err(
+            SimplifyAstError::UnderscoreMatchCaseParamLabel(param.clone()),
+        ),
+        _ => Ok(()),
+    }
+}
+
+fn simplify_match_case_params_but_require_labels(
+    unsimplified: Vec<ust::MatchCaseParam>,
+    hetero_err: &SimplifyAstError,
+) -> Result<Vec<LabeledMatchCaseParam>, SimplifyAstError> {
+    unsimplified
+        .into_iter()
+        .map(|param| simplify_match_case_param_but_require_label(param, hetero_err))
+        .collect()
+}
+
+fn simplify_match_case_params_but_forbid_labels(
+    unsimplified: Vec<ust::MatchCaseParam>,
+    hetero_err: &SimplifyAstError,
+) -> Result<Vec<Identifier>, SimplifyAstError> {
+    unsimplified
+        .into_iter()
+        .map(|param| simplify_match_case_param_but_forbid_label(param, hetero_err))
+        .collect()
+}
+
+fn simplify_match_case_param_but_require_label(
+    unsimplified: ust::MatchCaseParam,
+    hetero_err: &SimplifyAstError,
+) -> Result<LabeledMatchCaseParam, SimplifyAstError> {
+    validate_match_case_param_label_is_not_underscore(&unsimplified)?;
+
+    if let Some(label) = unsimplified.label {
+        Ok(LabeledMatchCaseParam {
+            span: unsimplified.span,
+            label,
+            name: unsimplified.name,
+        })
+    } else {
+        Err(hetero_err.clone())
+    }
+}
+
+fn simplify_match_case_param_but_forbid_label(
+    unsimplified: ust::MatchCaseParam,
+    hetero_err: &SimplifyAstError,
+) -> Result<Identifier, SimplifyAstError> {
+    validate_match_case_param_label_is_not_underscore(&unsimplified)?;
+
+    if let Some(_) = unsimplified.label {
+        Err(hetero_err.clone())
+    } else {
+        Ok(unsimplified.name)
+    }
 }
 
 fn simplify_forall(unsimplified: ust::Forall) -> Result<Expression, SimplifyAstError> {
