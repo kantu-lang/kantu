@@ -30,7 +30,7 @@ impl ParseError {
 pub trait Parse: Sized {
     fn initial_stack(file_id: FileId, first_token: &Token) -> Vec<UnfinishedStackItem>;
 
-    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError>;
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError>;
 }
 
 pub fn parse_file(tokens: Vec<Token>, file_id: FileId) -> Result<File, ParseError> {
@@ -45,7 +45,7 @@ pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseEr
         if let ReductionResult::ReductionComplete(finished_bottom_item) =
             handle_token(token, &mut stack, file_id)?
         {
-            return T::finish(file_id, finished_bottom_item);
+            return T::finish(finished_bottom_item);
         }
     }
 

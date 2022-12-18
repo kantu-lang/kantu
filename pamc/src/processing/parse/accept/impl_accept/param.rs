@@ -3,7 +3,80 @@ use super::*;
 impl Accept for UnfinishedParam {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedParam::NoExplicitLabel {
+            UnfinishedParam::NoIdentifier {
+                pending_tilde,
+                pending_dash,
+                is_dash_allowed,
+            } => {
+                match item {
+                    FinishedStackItem::Token(token) => match token.kind {
+                        TokenKind::Tilde => {
+                            if pending_dash.is_some() {
+                                // A tilde can never come after a dash.
+                                AcceptResult::Error(ParseError::unexpected_token(token))
+                            } else if pending_tilde.is_some() {
+                                // Double tildes are forbidden.
+                                AcceptResult::Error(ParseError::unexpected_token(token))
+                            } else {
+                                *pending_tilde = Some(token);
+                                AcceptResult::ContinueToNextToken
+                            }
+                        }
+                        TokenKind::Dash => {
+                            if *is_dash_allowed && pending_dash.is_none() {
+                                *pending_dash = Some(token);
+                                AcceptResult::ContinueToNextToken
+                            } else {
+                                AcceptResult::Error(ParseError::unexpected_token(token))
+                            }
+                        }
+                        TokenKind::StandardIdentifier => {
+                            let name_or_label = Identifier {
+                                span: span_single(file_id, &token),
+                                name: IdentifierName::Standard(token.content.clone()),
+                            };
+
+                            let pending_tilde = pending_tilde.take();
+                            let pending_dash = pending_dash.take();
+                            let is_tilded = pending_tilde.is_some();
+                            let is_dashed = pending_dash.is_some();
+                            *self = UnfinishedParam::FirstIdentifier {
+                                first_token: pending_tilde
+                                    .unwrap_or_else(|| pending_dash.unwrap_or_else(|| token)),
+                                is_tilded,
+                                is_dashed,
+                                is_dash_allowed: *is_dash_allowed,
+                                name_or_label,
+                            };
+                            AcceptResult::ContinueToNextToken
+                        }
+                        TokenKind::Underscore => {
+                            let name_or_label = Identifier {
+                                span: span_single(file_id, &token),
+                                name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+                            };
+
+                            let pending_tilde = pending_tilde.take();
+                            let pending_dash = pending_dash.take();
+                            let is_tilded = pending_tilde.is_some();
+                            let is_dashed = pending_dash.is_some();
+                            *self = UnfinishedParam::FirstIdentifier {
+                                first_token: pending_tilde
+                                    .unwrap_or_else(|| pending_dash.unwrap_or_else(|| token)),
+                                is_tilded,
+                                is_dashed,
+                                is_dash_allowed: *is_dash_allowed,
+                                name_or_label,
+                            };
+                            AcceptResult::ContinueToNextToken
+                        }
+                        _ => AcceptResult::Error(ParseError::unexpected_token(token)),
+                    },
+
+                    other_item => wrapped_unexpected_finished_item_err(&other_item),
+                }
+            }
+            UnfinishedParam::FirstIdentifier {
                 first_token,
                 is_tilded,
                 is_dashed,

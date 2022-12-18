@@ -53,7 +53,12 @@ pub struct UnfinishedParams {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedParam {
-    NoExplicitLabel {
+    NoIdentifier {
+        pending_tilde: Option<Token>,
+        pending_dash: Option<Token>,
+        is_dash_allowed: bool,
+    },
+    FirstIdentifier {
         first_token: Token,
         is_tilded: bool,
         is_dashed: bool,

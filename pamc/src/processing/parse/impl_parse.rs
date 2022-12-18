@@ -12,7 +12,7 @@ impl Parse for File {
         }))]
     }
 
-    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
             FinishedStackItem::File(_, file) => Ok(file),
             other_item => Err(unexpected_finished_item_err(&other_item)),
@@ -27,7 +27,7 @@ impl Parse for Expression {
         )]
     }
 
-    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
             FinishedStackItem::DelimitedExpression(first_token, expression, end_delimiter) => {
                 if end_delimiter.raw().kind == TokenKind::Eoi {
@@ -43,10 +43,14 @@ impl Parse for Expression {
 
 impl Parse for Param {
     fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Param(todo!())]
+        vec![UnfinishedStackItem::Param(UnfinishedParam::NoIdentifier {
+            pending_tilde: None,
+            pending_dash: None,
+            is_dash_allowed: true,
+        })]
     }
 
-    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
             FinishedStackItem::Param(_, param, end_delimiter) => {
                 if end_delimiter.raw().kind == TokenKind::Eoi {
@@ -65,7 +69,7 @@ impl Parse for Variant {
         vec![UnfinishedStackItem::Variant(todo!())]
     }
 
-    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
             FinishedStackItem::Variant(_, variant, end_delimiter) => {
                 if end_delimiter.raw().kind == TokenKind::Eoi {
@@ -84,7 +88,7 @@ impl Parse for FileItem {
         vec![todo!()]
     }
 
-    fn finish(file_id: FileId, bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         todo!()
     }
 }
