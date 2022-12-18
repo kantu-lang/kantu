@@ -66,7 +66,7 @@ impl Parse for Param {
 
 impl Parse for Variant {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Variant(UnfinishedVariant::EmptyString)]
+        vec![UnfinishedStackItem::Variant(UnfinishedVariant::Empty)]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
@@ -85,9 +85,7 @@ impl Parse for Variant {
 
 impl Parse for TypeStatement {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Type(
-            UnfinishedTypeStatement::EmptyString,
-        )]
+        vec![UnfinishedStackItem::Type(UnfinishedTypeStatement::Empty)]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
@@ -100,9 +98,7 @@ impl Parse for TypeStatement {
 
 impl Parse for LetStatement {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Let(
-            UnfinishedLetStatement::EmptyString,
-        )]
+        vec![UnfinishedStackItem::Let(UnfinishedLetStatement::Empty)]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {

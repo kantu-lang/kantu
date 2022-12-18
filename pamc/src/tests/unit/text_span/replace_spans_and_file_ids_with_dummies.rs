@@ -16,16 +16,17 @@ where
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for File {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-        self.id = dummy_id();
-
-        self.items = self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let items = self
             .items
             .into_iter()
             .map(FileItem::replace_spans_and_file_ids_with_dummies)
             .collect();
-        self
+        Self {
+            span: dummy_span(),
+            id: dummy_id(),
+            items,
+        }
     }
 }
 
@@ -39,17 +40,20 @@ impl ReplaceSpansAndFileIdsWithDummies for FileItem {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.params = self.params.replace_spans_and_file_ids_with_dummies();
-        self.variants = self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        let params = self.params.replace_spans_and_file_ids_with_dummies();
+        let variants = self
             .variants
             .into_iter()
             .map(Variant::replace_spans_and_file_ids_with_dummies)
             .collect();
-        self
+        Self {
+            span: dummy_span(),
+            name,
+            params,
+            variants,
+        }
     }
 }
 
@@ -60,40 +64,63 @@ impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Param> {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Param {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let label = self.label.replace_spans_and_file_ids_with_dummies();
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        let type_ = self.type_.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            label,
+            is_dashed: self.is_dashed,
+            name,
+            type_,
+        }
+    }
+}
 
-        self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.type_ = self.type_.replace_spans_and_file_ids_with_dummies();
-        self
+impl ReplaceSpansAndFileIdsWithDummies for ParamLabel {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        match self {
+            ParamLabel::Implicit => ParamLabel::Implicit,
+            ParamLabel::Explicit(label) => {
+                ParamLabel::Explicit(label.replace_spans_and_file_ids_with_dummies())
+            }
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Variant {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.params = self.params.replace_spans_and_file_ids_with_dummies();
-        self.return_type = self.return_type.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        let params = self.params.replace_spans_and_file_ids_with_dummies();
+        let return_type = self.return_type.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            name,
+            params,
+            return_type,
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for LetStatement {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.value = self.value.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        let value = self.value.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            name,
+            value,
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Identifier {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        Self {
+            span: dummy_span(),
+            name: self.name,
+        }
     }
 }
 
@@ -126,65 +153,105 @@ impl ReplaceSpansAndFileIdsWithDummies for Expression {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Dot {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.left = self.left.replace_spans_and_file_ids_with_dummies();
-        self.right = self.right.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let left = self.left.replace_spans_and_file_ids_with_dummies();
+        let right = self.right.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            left,
+            right,
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Call {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.callee = self.callee.replace_spans_and_file_ids_with_dummies();
-        self.args = self.args.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let callee = self.callee.replace_spans_and_file_ids_with_dummies();
+        let args = self.args.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            callee,
+            args,
+        }
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Expression> {
+impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<CallArg> {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        self.into_mapped(Expression::replace_spans_and_file_ids_with_dummies)
+        self.into_mapped(CallArg::replace_spans_and_file_ids_with_dummies)
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for CallArg {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let value = self.value.replace_spans_and_file_ids_with_dummies();
+        let label = self.label.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            label,
+            value,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for ArgLabel {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        match self {
+            ArgLabel::Implicit => ArgLabel::Implicit,
+            ArgLabel::Explicit(label) => {
+                ArgLabel::Explicit(label.replace_spans_and_file_ids_with_dummies())
+            }
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Fun {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.name = self.name.replace_spans_and_file_ids_with_dummies();
-        self.params = self.params.replace_spans_and_file_ids_with_dummies();
-        self.return_type = self.return_type.replace_spans_and_file_ids_with_dummies();
-        self.body = self.body.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        let params = self.params.replace_spans_and_file_ids_with_dummies();
+        let return_type = self.return_type.replace_spans_and_file_ids_with_dummies();
+        let body = self.body.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            name,
+            params,
+            return_type,
+            body,
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Match {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let matchee = self.matchee.replace_spans_and_file_ids_with_dummies();
+        let cases = self.cases.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            matchee,
+            cases,
+        }
+    }
+}
 
-        self.matchee = self.matchee.replace_spans_and_file_ids_with_dummies();
-        self.cases = self
-            .cases
-            .into_iter()
+impl ReplaceSpansAndFileIdsWithDummies for Vec<MatchCase> {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.into_iter()
             .map(MatchCase::replace_spans_and_file_ids_with_dummies)
-            .collect();
-        self
+            .collect()
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for MatchCase {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.variant_name = self.variant_name.replace_spans_and_file_ids_with_dummies();
-        self.params = self.params.replace_spans_and_file_ids_with_dummies();
-        self.output = self.output.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let variant_name = self.variant_name.replace_spans_and_file_ids_with_dummies();
+        let params = self.params.replace_spans_and_file_ids_with_dummies();
+        let output = self.output.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            variant_name,
+            params,
+            output,
+        }
     }
 }
 
@@ -195,22 +262,26 @@ impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Identifier> {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Forall {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.params = self.params.replace_spans_and_file_ids_with_dummies();
-        self.output = self.output.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let params = self.params.replace_spans_and_file_ids_with_dummies();
+        let output = self.output.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            params,
+            output,
+        }
     }
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for Check {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.assertions = self.assertions.replace_spans_and_file_ids_with_dummies();
-        self.output = self.output.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let assertions = self.assertions.replace_spans_and_file_ids_with_dummies();
+        let output = self.output.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            assertions,
+            output,
+        }
     }
 }
 
@@ -221,12 +292,15 @@ impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<CheckAssertion> {
 }
 
 impl ReplaceSpansAndFileIdsWithDummies for CheckAssertion {
-    fn replace_spans_and_file_ids_with_dummies(mut self) -> Self {
-        self.span = dummy_span();
-
-        self.left = self.left.replace_spans_and_file_ids_with_dummies();
-        self.right = self.right.replace_spans_and_file_ids_with_dummies();
-        self
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let left = self.left.replace_spans_and_file_ids_with_dummies();
+        let right = self.right.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            kind: self.kind,
+            left,
+            right,
+        }
     }
 }
 

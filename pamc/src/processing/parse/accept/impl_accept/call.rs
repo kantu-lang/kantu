@@ -3,7 +3,7 @@ use super::*;
 impl Accept for UnfinishedCall {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match item {
-            FinishedStackItem::DelimitedExpression(_, arg, end_delimiter) => {
+            FinishedStackItem::DelimitedCallArg(_, arg, end_delimiter) => {
                 match end_delimiter.raw().kind {
                     TokenKind::Comma => {
                         self.args.push(arg);
@@ -31,6 +31,7 @@ impl Accept for UnfinishedCall {
                     }
                 }
             }
+
             FinishedStackItem::Token(token) => match token.kind {
                 TokenKind::StandardIdentifier
                 | TokenKind::Underscore
@@ -39,8 +40,8 @@ impl Accept for UnfinishedCall {
                 | TokenKind::Match
                 | TokenKind::Forall
                 | TokenKind::Check => AcceptResult::PushAndContinueReducingWithNewTop(
-                    UnfinishedStackItem::UnfinishedDelimitedExpression(
-                        UnfinishedDelimitedExpression::Empty,
+                    UnfinishedStackItem::UnfinishedDelimitedCallArg(
+                        UnfinishedDelimitedCallArg::Empty,
                     ),
                     FinishedStackItem::Token(token),
                 ),

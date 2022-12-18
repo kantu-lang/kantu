@@ -30,6 +30,7 @@ impl Accept for UnfinishedStackItem {
             UnfinishedStackItem::UnfinishedDelimitedExpression(expression) => {
                 expression.accept(item, file_id)
             }
+            UnfinishedStackItem::UnfinishedDelimitedCallArg(arg) => arg.accept(item, file_id),
             UnfinishedStackItem::Fun(fun) => fun.accept(item, file_id),
             UnfinishedStackItem::Match(match_) => match_.accept(item, file_id),
             UnfinishedStackItem::Forall(forall) => forall.accept(item, file_id),

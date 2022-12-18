@@ -70,7 +70,14 @@ fn call() {
         match &expression {
             Expression::Call(call) => {
                 assert_eq!(3, call.args.len());
-                match (&call.callee, call.args.deref()) {
+                match (
+                    &call.callee,
+                    call.args
+                        .iter()
+                        .map(|arg| &arg.value)
+                        .collect::<Vec<_>>()
+                        .deref(),
+                ) {
                     (
                         Expression::Dot(callee),
                         [Expression::Identifier(arg0), Expression::Dot(arg1), Expression::Identifier(arg2)],

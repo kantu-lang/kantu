@@ -123,7 +123,20 @@ pub struct Dot {
 pub struct Call {
     pub span: TextSpan,
     pub callee: Expression,
-    pub args: NonEmptyVec<Expression>,
+    pub args: NonEmptyVec<CallArg>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CallArg {
+    pub span: TextSpan,
+    pub label: Option<ArgLabel>,
+    pub value: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ArgLabel {
+    Implicit,
+    Explicit(Identifier),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -9,6 +9,7 @@ pub enum UnfinishedStackItem {
     Param(UnfinishedParam),
     Variant(UnfinishedVariant),
     UnfinishedDelimitedExpression(UnfinishedDelimitedExpression),
+    UnfinishedDelimitedCallArg(UnfinishedDelimitedCallArg),
     UnfinishedDelimitedGoalKwOrExpression(UnfinishedDelimitedGoalKwOrExpression),
     UnfinishedDelimitedQuestionMarkOrExpression(UnfinishedDelimitedQuestionMarkOrExpression),
     Fun(UnfinishedFun),
@@ -30,7 +31,7 @@ pub struct UnfinishedFile {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedTypeStatement {
-    EmptyString,
+    Empty,
     Keyword(Token),
     Name(Token, Identifier),
     Params(Token, Identifier, Option<NonEmptyVec<Param>>),
@@ -39,7 +40,7 @@ pub enum UnfinishedTypeStatement {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedLetStatement {
-    EmptyString,
+    Empty,
     Keyword(Token),
     Name(Token, Identifier),
 }
@@ -83,7 +84,7 @@ pub enum UnfinishedParam {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedVariant {
-    EmptyString,
+    Empty,
     Dot(Token),
     Name(Token, Identifier),
     Params(Token, Identifier, Option<NonEmptyVec<Param>>),
@@ -93,6 +94,19 @@ pub enum UnfinishedVariant {
 pub enum UnfinishedDelimitedExpression {
     Empty,
     WaitingForEndDelimiter(Token, Expression),
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedCallArg {
+    Empty,
+    Colon(Token),
+    ColonIdentifier(Token, Identifier),
+    Identifier {
+        first_token: Token,
+        identifier: Identifier,
+    },
+    IdentifierColon(Identifier),
+    Unlabeled,
 }
 
 #[derive(Clone, Debug)]
@@ -156,7 +170,7 @@ pub struct UnfinishedDot {
 pub struct UnfinishedCall {
     pub first_token: Token,
     pub callee: Expression,
-    pub args: Vec<Expression>,
+    pub args: Vec<CallArg>,
 }
 
 #[derive(Clone, Debug)]

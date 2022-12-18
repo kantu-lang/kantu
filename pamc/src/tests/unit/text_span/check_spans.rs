@@ -223,16 +223,31 @@ impl DeepCheckChildSpans for Call {
     }
 }
 
-impl ShallowCheckOwnSpan for NonEmptyVec<Expression> {
+impl ShallowCheckOwnSpan for NonEmptyVec<CallArg> {
     fn shallow_check_own_span(&self, _src: &str) {
         // Do nothing, since `NonEmptyVec<Expression>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for NonEmptyVec<Expression> {
+impl DeepCheckChildSpans for NonEmptyVec<CallArg> {
     fn deep_check_child_spans(&self, src: &str) {
         for arg in self {
             arg.deep_check_spans(src);
         }
+    }
+}
+
+impl ShallowCheckOwnSpan for CallArg {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since we haven't implemented `Parse` for `CallArg` yet.
+        // TODO: Implement `Parse` for `CallArg` and use it here.
+    }
+}
+impl DeepCheckChildSpans for CallArg {
+    fn deep_check_child_spans(&self, src: &str) {
+        if let Some(ArgLabel::Explicit(label)) = &self.label {
+            label.deep_check_spans(src);
+        }
+        self.value.deep_check_spans(src);
     }
 }
 

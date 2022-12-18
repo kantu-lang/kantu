@@ -251,7 +251,10 @@ fn simplify_call(unsimplified: ust::Call) -> Result<Expression, SimplifyAstError
     Ok(Expression::Call(Box::new(Call {
         span: unsimplified.span,
         callee: simplify_expression(unsimplified.callee)?,
-        args: unsimplified.args.try_into_mapped(simplify_expression)?,
+        // TODO: Verify homogeneity of args
+        args: unsimplified
+            .args
+            .try_into_mapped(|arg| simplify_expression(arg.value))?,
     })))
 }
 

@@ -3,7 +3,7 @@ use super::*;
 impl Accept for UnfinishedLetStatement {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedLetStatement::EmptyString => match item {
+            UnfinishedLetStatement::Empty => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Let => {
                         *self = UnfinishedLetStatement::Keyword(token);

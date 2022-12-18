@@ -3,7 +3,7 @@ use super::*;
 impl Accept for UnfinishedVariant {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedVariant::EmptyString => match item {
+            UnfinishedVariant::Empty => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Dot => {
                         *self = UnfinishedVariant::Dot(token.clone());

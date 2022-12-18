@@ -36,15 +36,21 @@ pub enum FinishedStackItem {
         ExpressionEndDelimiter,
     ),
     DelimitedExpression(
-        /// First token (".")
+        /// First token
         Token,
         Expression,
         ExpressionEndDelimiter,
     ),
     UndelimitedExpression(
-        /// First token (".")
+        /// First token
         Token,
         Expression,
+    ),
+    DelimitedCallArg(
+        /// First token
+        Token,
+        CallArg,
+        ExpressionEndDelimiter,
     ),
     MatchCase(
         /// First token (".")
@@ -53,24 +59,24 @@ pub enum FinishedStackItem {
         ExpressionEndDelimiter,
     ),
     CheckAssertions(
-        /// First token (".")
+        /// First token ("(")
         Token,
         NonEmptyVec<CheckAssertion>,
     ),
     CheckAssertion(
-        /// First token (".")
+        /// First token
         Token,
         CheckAssertion,
         ExpressionEndDelimiter,
     ),
     DelimitedGoalKwOrExpression(
-        /// First token (".")
+        /// First token
         Token,
         GoalKwOrExpression,
         ExpressionEndDelimiter,
     ),
     DelimitedQuestionMarkOrExpression(
-        /// First token (".")
+        /// First token
         Token,
         QuestionMarkOrExpression,
         ExpressionEndDelimiter,
@@ -126,6 +132,7 @@ impl FinishedStackItem {
             FinishedStackItem::Variant(token, _, _) => &token,
             FinishedStackItem::DelimitedExpression(token, _, _) => &token,
             FinishedStackItem::UndelimitedExpression(token, _) => &token,
+            FinishedStackItem::DelimitedCallArg(token, _, _) => &token,
             FinishedStackItem::MatchCase(token, _, _) => &token,
             FinishedStackItem::CheckAssertions(token, _) => &token,
             FinishedStackItem::CheckAssertion(token, _, _) => &token,

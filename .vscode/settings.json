@@ -3,6 +3,10 @@
     {
       "filePath": "pamc/src/tests/integration/should_fail/ast_simplification.rs",
       "group": "Default"
+    },
+    {
+      "filePath": "pamc/src/tests/sample_code/should_succeed/subterms/file_items/let.fi.pht",
+      "group": "Default"
     }
   ]
 }

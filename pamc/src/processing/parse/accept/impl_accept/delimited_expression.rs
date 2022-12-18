@@ -102,8 +102,8 @@ impl Accept for UnfinishedDelimitedExpression {
                                 *self = UnfinishedDelimitedExpression::Empty;
                                 AcceptResult::Push2(
                                     unfinished,
-                                    UnfinishedStackItem::UnfinishedDelimitedExpression(
-                                        UnfinishedDelimitedExpression::Empty,
+                                    UnfinishedStackItem::UnfinishedDelimitedCallArg(
+                                        UnfinishedDelimitedCallArg::Empty,
                                     ),
                                 )
                             }
