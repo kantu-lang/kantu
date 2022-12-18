@@ -58,6 +58,24 @@ let redness = fun _(~c: Color): Nat {
     }
 };
 
+let redness2 = fun _(~c: Color): Nat {
+    match c {
+        .C(:r, ...) => r,
+    }
+};
+
+let redness3 = fun _(~c: Color): Nat {
+    match c {
+        .C(:r, g: _, ...) => r,
+    }
+};
+
+let redness4 = fun _(~c: Color): Nat {
+    match c {
+        .C(...) => match c { .C(:r, ...) => r },
+    }
+};
+
 let _1 = redness(c: Color.C(Nat.S(Nat.O), Nat.O, Nat.O));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
