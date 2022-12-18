@@ -238,6 +238,7 @@ fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> 
                         content: "...".to_string(),
                         kind: TokenKind::TripleDot,
                     });
+                    state.pending_token = None;
                     Ok(())
                 } else {
                     let Some(tokens) = try_as_is(pending_token.clone()) else {

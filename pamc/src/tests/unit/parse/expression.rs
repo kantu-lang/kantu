@@ -234,16 +234,19 @@ fn labeled_match() {
         include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_match.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Match(match_) => {
-            assert_eq!(12, match_.cases.len());
+            assert_eq!(15, match_.cases.len());
 
             let case_a = &match_.cases[0];
             assert_eq!(0, case_a.params.len());
+            assert!(case_a.triple_dot.is_none());
 
             let case_b = &match_.cases[1];
             assert_eq!(1, case_b.params.len());
+            assert!(case_b.triple_dot.is_none());
 
             let case_c = &match_.cases[2];
             assert_eq!(1, case_c.params.len());
+            assert!(case_c.triple_dot.is_none());
 
             let case_d = &match_.cases[3];
             assert_eq!(2, case_d.params.len());
@@ -271,9 +274,11 @@ fn labeled_match() {
                 IdentifierName::Standard("y'".to_string()),
                 case_d.params.to_possibly_empty()[1].name.name
             );
+            assert!(case_d.triple_dot.is_none());
 
             let case_e = &match_.cases[4];
             assert_eq!(1, case_e.params.len());
+            assert!(case_e.triple_dot.is_none());
 
             let case_f = &match_.cases[5];
             assert_eq!(2, case_f.params.len());
@@ -301,21 +306,27 @@ fn labeled_match() {
                 IdentifierName::Standard("y'".to_string()),
                 case_f.params.to_possibly_empty()[1].name.name
             );
+            assert!(case_f.triple_dot.is_none());
 
             let case_g = &match_.cases[6];
             assert_eq!(2, case_g.params.len());
+            assert!(case_g.triple_dot.is_none());
 
             let case_h = &match_.cases[7];
             assert_eq!(2, case_h.params.len());
+            assert!(case_h.triple_dot.is_none());
 
             let case_i = &match_.cases[8];
             assert_eq!(1, case_i.params.len());
+            assert!(case_i.triple_dot.is_none());
 
             let case_j = &match_.cases[9];
             assert_eq!(2, case_j.params.len());
+            assert!(case_j.triple_dot.is_none());
 
             let case_k = &match_.cases[10];
             assert_eq!(2, case_k.params.len());
+            assert!(case_k.triple_dot.is_none());
 
             let case_l = &match_.cases[11];
             assert_eq!(2, case_l.params.len());
@@ -343,6 +354,19 @@ fn labeled_match() {
                 IdentifierName::Standard("z".to_string()),
                 case_l.params.to_possibly_empty()[1].name.name
             );
+            assert!(case_l.triple_dot.is_none());
+
+            let case_m = &match_.cases[12];
+            assert_eq!(0, case_m.params.len());
+            assert!(case_m.triple_dot.is_some());
+
+            let case_n = &match_.cases[13];
+            assert_eq!(1, case_n.params.len());
+            assert!(case_n.triple_dot.is_some());
+
+            let case_o = &match_.cases[14];
+            assert_eq!(2, case_o.params.len());
+            assert!(case_o.triple_dot.is_some());
         }
         other => panic!("Unexpected expression {:?}", other),
     });
