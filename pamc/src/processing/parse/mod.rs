@@ -42,7 +42,7 @@ pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseEr
     let mut stack: Vec<UnfinishedStackItem> = T::initial_stack(file_id, first_token);
 
     for token in tokens.into_iter().filter(is_not_whitespace_or_comment) {
-        if let ReductionResult::ReductionComplete(finished_bottom_item) =
+        if let ReductionStatus::BottomStackItemFinished(finished_bottom_item) =
             handle_token(token, &mut stack, file_id)?
         {
             return T::finish(finished_bottom_item);
@@ -64,9 +64,9 @@ fn is_not_whitespace_or_comment_ref(token: &&Token) -> bool {
 }
 
 #[derive(Clone, Debug)]
-enum ReductionResult {
-    ReductionStillInProgress,
-    ReductionComplete(FinishedStackItem),
+enum ReductionStatus {
+    UnfinishedItemsRemain,
+    BottomStackItemFinished(FinishedStackItem),
 }
 
 /// Returns if the stack ever becomes fully reduced
@@ -76,15 +76,15 @@ fn handle_token(
     token: Token,
     stack: &mut Vec<UnfinishedStackItem>,
     file_id: FileId,
-) -> Result<ReductionResult, ParseError> {
+) -> Result<ReductionStatus, ParseError> {
     let mut finished = FinishedStackItem::Token(token);
-    while stack.len() >= 1 {
+    loop {
         let Some(top_unfinished) = stack.last_mut() else {
-            return Ok(ReductionResult::ReductionComplete(finished));
+            return Ok(ReductionStatus::BottomStackItemFinished(finished));
         };
         let accept_result = top_unfinished.accept(finished, file_id);
         match accept_result {
-            AcceptResult::ContinueToNextToken => break,
+            AcceptResult::ContinueToNextToken => break Ok(ReductionStatus::UnfinishedItemsRemain),
             AcceptResult::PopAndContinueReducing(new_finished) => {
                 stack.pop();
                 finished = new_finished;
@@ -92,12 +92,12 @@ fn handle_token(
             }
             AcceptResult::Push(item) => {
                 stack.push(item);
-                break;
+                break Ok(ReductionStatus::UnfinishedItemsRemain);
             }
             AcceptResult::Push2(item1, item2) => {
                 stack.push(item1);
                 stack.push(item2);
-                break;
+                break Ok(ReductionStatus::UnfinishedItemsRemain);
             }
             AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
                 stack.push(item);
@@ -107,7 +107,6 @@ fn handle_token(
             AcceptResult::Error(err) => return Err(err),
         }
     }
-    Ok(ReductionResult::ReductionStillInProgress)
 }
 
 fn span_single(file_id: FileId, token: &Token) -> TextSpan {
