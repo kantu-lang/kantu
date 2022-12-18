@@ -21,6 +21,7 @@ pub enum UnfinishedStackItem {
     Dot(UnfinishedDot),
     Call(UnfinishedCall),
     MatchCase(UnfinishedMatchCase),
+    MatchCaseParam(UnfinishedMatchCaseParam),
 }
 
 #[derive(Clone, Debug)]
@@ -177,9 +178,26 @@ pub struct UnfinishedCall {
 pub enum UnfinishedMatchCase {
     Dot(Token),
     VariantName(Token, Identifier),
-    ParamsInProgress(Token, Identifier, Vec<Identifier>, CurrentlyHasEndingComma),
-    AwaitingOutput(Token, Identifier, Option<NonEmptyVec<Identifier>>),
+    ParamsInProgress(Token, Identifier, Vec<MatchCaseParam>),
+    AwaitingOutput(Token, Identifier, Option<NonEmptyVec<MatchCaseParam>>),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CurrentlyHasEndingComma(pub bool);
+#[derive(Clone, Debug)]
+pub enum UnfinishedMatchCaseParam {
+    Empty,
+    Colon(Token),
+    ColonIdentifier(Token, Identifier),
+    Identifier {
+        first_token: Token,
+        identifier: Identifier,
+    },
+    IdentifierColon {
+        first_token: Token,
+        label: Identifier,
+    },
+    IdentifierColonIdentifier {
+        first_token: Token,
+        label: Identifier,
+        name: Identifier,
+    },
+}

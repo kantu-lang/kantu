@@ -165,8 +165,15 @@ pub struct Match {
 pub struct MatchCase {
     pub span: TextSpan,
     pub variant_name: Identifier,
-    pub params: Option<NonEmptyVec<Identifier>>,
+    pub params: Option<NonEmptyVec<MatchCaseParam>>,
     pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MatchCaseParam {
+    pub span: TextSpan,
+    pub label: Option<ParamLabel>,
+    pub name: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -244,9 +244,21 @@ impl ReplaceSpansAndFileIdsWithDummies for MatchCase {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Identifier> {
+impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<MatchCaseParam> {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        self.into_mapped(Identifier::replace_spans_and_file_ids_with_dummies)
+        self.into_mapped(MatchCaseParam::replace_spans_and_file_ids_with_dummies)
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for MatchCaseParam {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let label = self.label.replace_spans_and_file_ids_with_dummies();
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            label,
+            name,
+        }
     }
 }
 

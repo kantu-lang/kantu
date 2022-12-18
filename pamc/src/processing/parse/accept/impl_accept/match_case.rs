@@ -24,7 +24,6 @@ impl Accept for UnfinishedMatchCase {
                             dot_token.clone(),
                             variant_name.clone(),
                             vec![],
-                            CurrentlyHasEndingComma(false),
                         );
                         AcceptResult::ContinueToNextToken
                     }
@@ -42,54 +41,15 @@ impl Accept for UnfinishedMatchCase {
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedMatchCase::ParamsInProgress(
-                dot_token,
-                variant_name,
-                params,
-                currently_has_ending_comma,
-            ) => match item {
-                FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::StandardIdentifier => {
-                        let can_accept_identifier =
-                            params.is_empty() || currently_has_ending_comma.0;
-                        if can_accept_identifier {
-                            let name = Identifier {
-                                span: span_single(file_id, &token),
-                                name: IdentifierName::Standard(token.content.clone()),
-                            };
-                            params.push(name);
-                            currently_has_ending_comma.0 = false;
+            UnfinishedMatchCase::ParamsInProgress(dot_token, variant_name, params) => match item {
+                FinishedStackItem::MatchCaseParam(_, param, end_delimiter) => {
+                    match end_delimiter.raw().kind {
+                        TokenKind::Comma => {
+                            params.push(param);
                             AcceptResult::ContinueToNextToken
-                        } else {
-                            AcceptResult::Error(ParseError::unexpected_token(token))
                         }
-                    }
-                    TokenKind::Underscore => {
-                        let can_accept_identifier =
-                            params.is_empty() || currently_has_ending_comma.0;
-                        if can_accept_identifier {
-                            let name = Identifier {
-                                span: span_single(file_id, &token),
-                                name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
-                            };
-                            params.push(name);
-                            currently_has_ending_comma.0 = false;
-                            AcceptResult::ContinueToNextToken
-                        } else {
-                            AcceptResult::Error(ParseError::unexpected_token(token))
-                        }
-                    }
-                    TokenKind::Comma => {
-                        let can_accept_comma = !currently_has_ending_comma.0 && !params.is_empty();
-                        if can_accept_comma {
-                            currently_has_ending_comma.0 = true;
-                            AcceptResult::ContinueToNextToken
-                        } else {
-                            AcceptResult::Error(ParseError::unexpected_token(token))
-                        }
-                    }
-                    TokenKind::RParen => match NonEmptyVec::try_from(params.clone()) {
-                        Ok(params) => {
+                        TokenKind::RParen => {
+                            let params = NonEmptyVec::from_pushed(params.clone(), param);
                             *self = UnfinishedMatchCase::AwaitingOutput(
                                 dot_token.clone(),
                                 variant_name.clone(),
@@ -97,11 +57,28 @@ impl Accept for UnfinishedMatchCase {
                             );
                             AcceptResult::ContinueToNextToken
                         }
-                        Err(_) => AcceptResult::Error(ParseError::unexpected_token(token)),
-                    },
-                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
-                },
-                other_item => wrapped_unexpected_finished_item_err(&other_item),
+                        _ => AcceptResult::Error(ParseError::unexpected_token(
+                            end_delimiter.into_raw(),
+                        )),
+                    }
+                }
+
+                FinishedStackItem::Token(token) if token.kind == TokenKind::RParen => {
+                    let Ok(params) = NonEmptyVec::try_from(params.clone()) else {
+                        return AcceptResult::Error(ParseError::unexpected_token(token));
+                    };
+                    *self = UnfinishedMatchCase::AwaitingOutput(
+                        dot_token.clone(),
+                        variant_name.clone(),
+                        Some(params),
+                    );
+                    AcceptResult::ContinueToNextToken
+                }
+
+                other_item => AcceptResult::PushAndContinueReducingWithNewTop(
+                    UnfinishedStackItem::MatchCaseParam(UnfinishedMatchCaseParam::Empty),
+                    other_item,
+                ),
             },
             UnfinishedMatchCase::AwaitingOutput(dot_token, variant_name, params) => match item {
                 FinishedStackItem::Token(token) => match token.kind {

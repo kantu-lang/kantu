@@ -294,16 +294,28 @@ impl DeepCheckChildSpans for MatchCase {
     }
 }
 
-impl ShallowCheckOwnSpan for NonEmptyVec<Identifier> {
+impl ShallowCheckOwnSpan for NonEmptyVec<MatchCaseParam> {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `NonEmptyVec<Identifier>` doesn't have its own span.
+        // Do nothing, since `NonEmptyVec<MatchCaseParam>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for NonEmptyVec<Identifier> {
+impl DeepCheckChildSpans for NonEmptyVec<MatchCaseParam> {
     fn deep_check_child_spans(&self, src: &str) {
         for id in self {
             id.deep_check_spans(src);
         }
+    }
+}
+
+impl ShallowCheckOwnSpan for MatchCaseParam {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since we haven't implemented `Parse` for `MatchCaseParam` yet.
+        // TODO: Implement `Parse` for `MatchCaseParam` and use it here.
+    }
+}
+impl DeepCheckChildSpans for MatchCaseParam {
+    fn deep_check_child_spans(&self, src: &str) {
+        self.name.deep_check_spans(src);
     }
 }
 

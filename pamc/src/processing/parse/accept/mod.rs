@@ -33,6 +33,7 @@ impl Accept for UnfinishedStackItem {
             UnfinishedStackItem::UnfinishedDelimitedCallArg(arg) => arg.accept(item, file_id),
             UnfinishedStackItem::Fun(fun) => fun.accept(item, file_id),
             UnfinishedStackItem::Match(match_) => match_.accept(item, file_id),
+            UnfinishedStackItem::MatchCaseParam(param) => param.accept(item, file_id),
             UnfinishedStackItem::Forall(forall) => forall.accept(item, file_id),
             UnfinishedStackItem::Check(check) => check.accept(item, file_id),
             UnfinishedStackItem::CheckAssertions(assertions) => assertions.accept(item, file_id),

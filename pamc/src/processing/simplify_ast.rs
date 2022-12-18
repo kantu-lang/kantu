@@ -280,7 +280,11 @@ fn simplify_match_case(unsimplified: ust::MatchCase) -> Result<MatchCase, Simpli
     Ok(MatchCase {
         span: unsimplified.span,
         variant_name: unsimplified.variant_name,
-        params: unsimplified.params,
+        params:
+        // TODO: Actually simplify params
+        unsimplified
+            .params
+            .map(|params| params.into_mapped(|param| param.name)),
         output: simplify_expression(unsimplified.output)?,
     })
 }

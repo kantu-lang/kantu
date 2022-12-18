@@ -15,6 +15,7 @@ mod fun;
 mod let_statement;
 mod match_;
 mod match_case;
+mod match_case_param;
 mod param;
 mod params;
 mod type_statement;

@@ -58,6 +58,12 @@ pub enum FinishedStackItem {
         MatchCase,
         ExpressionEndDelimiter,
     ),
+    MatchCaseParam(
+        /// First token (".")
+        Token,
+        MatchCaseParam,
+        ExpressionEndDelimiter,
+    ),
     CheckAssertions(
         /// First token ("(")
         Token,
@@ -134,6 +140,7 @@ impl FinishedStackItem {
             FinishedStackItem::UndelimitedExpression(token, _) => &token,
             FinishedStackItem::DelimitedCallArg(token, _, _) => &token,
             FinishedStackItem::MatchCase(token, _, _) => &token,
+            FinishedStackItem::MatchCaseParam(token, _, _) => &token,
             FinishedStackItem::CheckAssertions(token, _) => &token,
             FinishedStackItem::CheckAssertion(token, _, _) => &token,
             FinishedStackItem::DelimitedGoalKwOrExpression(token, _, _) => &token,
