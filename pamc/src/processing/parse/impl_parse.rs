@@ -66,7 +66,7 @@ impl Parse for Param {
 
 impl Parse for Variant {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::Variant(todo!())]
+        vec![UnfinishedStackItem::Variant(UnfinishedVariant::EmptyString)]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {

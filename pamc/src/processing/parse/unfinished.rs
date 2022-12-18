@@ -81,6 +81,7 @@ pub enum UnfinishedParam {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedVariant {
+    EmptyString,
     Dot(Token),
     Name(Token, Identifier),
     Params(Token, Identifier, Option<NonEmptyVec<Param>>),

@@ -3,6 +3,16 @@ use super::*;
 impl Accept for UnfinishedVariant {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
+            UnfinishedVariant::EmptyString => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Dot => {
+                        *self = UnfinishedVariant::Dot(token.clone());
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _ => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
             UnfinishedVariant::Dot(dot) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
