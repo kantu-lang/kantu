@@ -1,7 +1,7 @@
 use crate::data::{
     bound_ast as heavy,
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry},
 };
 
 fn dummy_id<T>() -> NodeId<T> {
@@ -250,15 +250,17 @@ pub fn register_call_args(
 pub fn register_labeled_call_arg(
     registry: &mut NodeRegistry,
     unregistered: heavy::LabeledCallArg,
-) -> NodeId<LabeledCallArg> {
-    let label_id = register_label(registry, unregistered.label);
-    let value_id = register_expression(registry, unregistered.value);
-    registry.add(LabeledCallArg {
-        id: dummy_id(),
-        span: unregistered.span,
-        label_id,
-        value_id,
-    })
+) -> LabeledCallArgId {
+    match unregistered {
+        heavy::LabeledCallArg::Implicit { value, db_index } => LabeledCallArgId::Implicit {
+            value_id: register_identifier(registry, value),
+            db_index,
+        },
+        heavy::LabeledCallArg::Explicit { label, value } => LabeledCallArgId::Explicit {
+            label_id: register_identifier(registry, label),
+            value_id: register_expression(registry, value),
+        },
+    }
 }
 
 pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> NodeId<Fun> {

@@ -164,7 +164,7 @@ impl IntoSemanticId for NonEmptyCallArgListId {
     }
 }
 
-impl GetIndexInSubregistry for NonEmptyListId<NodeId<LabeledCallArg>> {
+impl GetIndexInSubregistry for NonEmptyListId<LabeledCallArgId> {
     type Stripped = LabeledCallArgSemanticIdSet;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
@@ -179,8 +179,8 @@ impl GetIndexInSubregistry for NonEmptyListId<NodeId<LabeledCallArg>> {
             .collect()
     }
 }
-impl IntoSemanticId for NonEmptyListId<NodeId<LabeledCallArg>> {
-    type Output = SemanticId<stripped::Set<stripped::LabeledCallArg>>;
+impl IntoSemanticId for NonEmptyListId<LabeledCallArgId> {
+    type Output = SemanticId<stripped::Set<LabeledCallArgSemanticId>>;
 
     fn into_semantic_id(
         self,
@@ -197,59 +197,50 @@ pub struct LabeledCallArgSemanticIdSet(
     /// We internally use a sorted Vec instead of a hash set
     /// because Vecs should be faster to compare for equality
     /// than hash sets.
-    Vec<SemanticId<stripped::LabeledCallArg>>,
+    Vec<LabeledCallArgSemanticId>,
 );
 
-impl FromIterator<SemanticId<stripped::LabeledCallArg>> for LabeledCallArgSemanticIdSet {
-    fn from_iter<I: IntoIterator<Item = SemanticId<stripped::LabeledCallArg>>>(iter: I) -> Self {
-        let mut v: Vec<SemanticId<stripped_ast::LabeledCallArg>> = iter.into_iter().collect();
-        v.sort_unstable_by(|a, b| a.raw.cmp(&b.raw));
+impl FromIterator<LabeledCallArgSemanticId> for LabeledCallArgSemanticIdSet {
+    fn from_iter<I: IntoIterator<Item = LabeledCallArgSemanticId>>(iter: I) -> Self {
+        let mut v: Vec<LabeledCallArgSemanticId> = iter.into_iter().collect();
+        v.sort_unstable_by(|a, b| a.cmp(&b));
         Self(v)
     }
 }
 
-impl GetIndexInSubregistry for NodeId<LabeledCallArg> {
-    type Stripped = stripped::LabeledCallArg;
+impl GetIndexInSubregistry for LabeledCallArgId {
+    type Stripped = LabeledCallArgSemanticId;
 
     fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
         &mut sreg.labeled_call_args
     }
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
-        let arg = registry.get(self);
-        stripped::LabeledCallArg {
-            label_id: arg.label_id.into_semantic_id(registry, sreg),
-            value_id: arg.value_id.into_semantic_id(registry, sreg),
-        }
-    }
-}
-impl IntoSemanticId for NodeId<LabeledCallArg> {
-    type Output = SemanticId<stripped::LabeledCallArg>;
-
-    fn into_semantic_id(
-        self,
-        registry: &NodeRegistry,
-        sreg: &mut StrippedRegistry,
-    ) -> Self::Output {
-        let raw = self.get_index_in_subregistry(registry, sreg);
-        SemanticId::new(raw)
-    }
-}
-
-impl IntoSemanticId for ParamLabelId {
-    type Output = stripped::ParamLabelSemanticId;
-
-    fn into_semantic_id(
-        self,
-        registry: &NodeRegistry,
-        sreg: &mut StrippedRegistry,
-    ) -> Self::Output {
         match self {
-            ParamLabelId::Implicit => stripped::ParamLabelSemanticId::Implicit,
-            ParamLabelId::Explicit(id) => {
-                stripped::ParamLabelSemanticId::Explicit(id.into_semantic_id(registry, sreg))
+            LabeledCallArgId::Implicit { value_id, db_index } => {
+                LabeledCallArgSemanticId::Implicit {
+                    value_id: value_id.into_semantic_id(registry, sreg),
+                    db_index,
+                }
+            }
+            LabeledCallArgId::Explicit { label_id, value_id } => {
+                LabeledCallArgSemanticId::Explicit {
+                    label_id: label_id.into_semantic_id(registry, sreg),
+                    value_id: value_id.into_semantic_id(registry, sreg),
+                }
             }
         }
+    }
+}
+impl IntoSemanticId for LabeledCallArgId {
+    type Output = LabeledCallArgSemanticId;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        self.strip(registry, sreg)
     }
 }
 

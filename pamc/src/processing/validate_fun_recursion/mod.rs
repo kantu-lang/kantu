@@ -1,7 +1,7 @@
 use crate::data::{
     fun_recursion_validation_result::*,
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::OptionalNonEmptyVecLen,
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
@@ -307,22 +307,14 @@ fn is_call_restricted(
                             let id_of_arg_that_is_supposed_to_be_substruct = arg_ids
                                 .iter()
                                 .find(|arg_id| {
-                                    let arg = registry.get(**arg_id);
-                                    let label_name: &IdentifierName = match arg.label_id {
-                                        ParamLabelId::Explicit(label_id) => {
+                                    let label_name: &IdentifierName = match arg_id {
+                                        LabeledCallArgId::Implicit { value_id, db_index } => {
+                                            let label_id = *value_id;
                                             &registry.get(label_id).name
                                         }
-                                        ParamLabelId::Implicit => match arg.value_id {
-                                            ExpressionId::Name(name_id) => {
-                                                let first_component_id = registry.get_list(
-                                                    registry.get(name_id).component_list_id,
-                                                )[0];
-                                                &registry.get(first_component_id).name
-                                            }
-                                            _ => panic!(
-                                                "Implicit argument label must be an identifier"
-                                            ),
-                                        },
+                                        LabeledCallArgId::Explicit { label_id, .. } => {
+                                            &registry.get(*label_id).name
+                                        }
                                     };
                                     *label_name == label_name_of_arg_that_must_be_substruct
                                 })

@@ -176,10 +176,15 @@ impl NonEmptyCallArgVec {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LabeledCallArg {
-    pub span: Option<TextSpan>,
-    pub label: ParamLabel,
-    pub value: Expression,
+pub enum LabeledCallArg {
+    Implicit {
+        value: Identifier,
+        db_index: DbIndex,
+    },
+    Explicit {
+        label: Identifier,
+        value: Expression,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

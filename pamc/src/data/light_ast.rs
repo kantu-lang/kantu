@@ -99,14 +99,6 @@ pub struct Call {
 pub use crate::data::node_registry::NonEmptyCallArgListId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LabeledCallArg {
-    pub id: NodeId<Self>,
-    pub span: Option<TextSpan>,
-    pub label_id: ParamLabelId,
-    pub value_id: ExpressionId,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,

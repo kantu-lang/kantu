@@ -16,18 +16,6 @@ pub struct Call {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LabeledCallArg {
-    pub label_id: ParamLabelSemanticId,
-    pub value_id: ExpressionSemanticId,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ParamLabelSemanticId {
-    Implicit,
-    Explicit(SemanticId<IdentifierName>),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
     pub param_type_list_id: SemanticId<Vec<ExpressionSemanticId>>,
     pub dash_index: Option<usize>,

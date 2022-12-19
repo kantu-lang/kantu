@@ -363,9 +363,14 @@ fn generate_code_for_call(
             let arg_ids = registry.get_list(arg_list_id);
             arg_ids
                 .iter()
-                .map(|arg_id| {
-                    let arg = registry.get(*arg_id);
-                    generate_code_for_expression(registry, context, arg.value_id)
+                .map(|arg_id| match arg_id {
+                    LabeledCallArgId::Implicit { value_id, db_index } => {
+                        let identifier_name = context.js_name(*db_index);
+                        Ok(Expression::Identifier(identifier_name))
+                    }
+                    LabeledCallArgId::Explicit { label_id, value_id } => {
+                        generate_code_for_expression(registry, context, *value_id)
+                    }
                 })
                 .collect::<Result<Vec<_>, _>>()?
         }

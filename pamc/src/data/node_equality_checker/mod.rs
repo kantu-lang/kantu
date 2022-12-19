@@ -1,9 +1,9 @@
 use crate::data::{
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
 };
 
-use std::{fmt::Debug, hash::Hash};
+use std::{cmp::Ordering, fmt::Debug, hash::Hash};
 
 use rustc_hash::FxHashMap;
 
@@ -78,11 +78,11 @@ pub trait GetIndexInSubregistry: Copy + Eq + Hash {
 #[derive(Clone, Debug)]
 pub struct StrippedRegistry {
     expression_lists: Subregistry<NonEmptyListId<ExpressionId>>,
-    labeled_call_arg_lists: Subregistry<NonEmptyListId<NodeId<LabeledCallArg>>>,
+    labeled_call_arg_lists: Subregistry<NonEmptyListId<LabeledCallArgId>>,
     match_case_lists: Subregistry<NonEmptyListId<NodeId<MatchCase>>>,
     identifier_names: Subregistry<NodeId<Identifier>>,
 
-    labeled_call_args: Subregistry<NodeId<LabeledCallArg>>,
+    labeled_call_args: Subregistry<LabeledCallArgId>,
     match_cases: Subregistry<NodeId<MatchCase>>,
 
     name_expressions: Subregistry<NodeId<NameExpression>>,

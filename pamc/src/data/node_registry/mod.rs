@@ -51,7 +51,7 @@ impl NonEmptyParamListId {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyCallArgListId {
     Unlabeled(NonEmptyListId<ExpressionId>),
-    UniquelyLabeled(NonEmptyListId<NodeId<LabeledCallArg>>),
+    UniquelyLabeled(NonEmptyListId<LabeledCallArgId>),
 }
 
 impl OptionalNonEmptyVecLen for Option<NonEmptyCallArgListId> {
@@ -71,6 +71,18 @@ impl NonEmptyCallArgListId {
             NonEmptyCallArgListId::UniquelyLabeled(vec) => vec.len,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum LabeledCallArgId {
+    Implicit {
+        value_id: NodeId<Identifier>,
+        db_index: DbIndex,
+    },
+    Explicit {
+        label_id: NodeId<Identifier>,
+        value_id: ExpressionId,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -137,7 +149,6 @@ pub struct NodeRegistry {
     let_statements: Subregistry<LetStatement>,
     name_expressions: Subregistry<NameExpression>,
     calls: Subregistry<Call>,
-    labeled_call_args: Subregistry<LabeledCallArg>,
     funs: Subregistry<Fun>,
     matches: Subregistry<Match>,
     match_cases: Subregistry<MatchCase>,
@@ -155,7 +166,7 @@ pub struct NodeRegistry {
     match_case_lists: ListSubregistry<NodeId<MatchCase>>,
     check_assertion_lists: ListSubregistry<NodeId<CheckAssertion>>,
     expression_lists: ListSubregistry<ExpressionId>,
-    labeled_call_arg_lists: ListSubregistry<NodeId<LabeledCallArg>>,
+    labeled_call_arg_lists: ListSubregistry<LabeledCallArgId>,
     identifier_lists: ListSubregistry<NodeId<Identifier>>,
 }
 
@@ -170,7 +181,6 @@ impl NodeRegistry {
             let_statements: Subregistry::new(),
             name_expressions: Subregistry::new(),
             calls: Subregistry::new(),
-            labeled_call_args: Subregistry::new(),
             funs: Subregistry::new(),
             matches: Subregistry::new(),
             match_cases: Subregistry::new(),
@@ -305,16 +315,6 @@ mod registerable_node {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
             &mut registry.calls
-        }
-    }
-
-    impl RegisterableNode for LabeledCallArg {
-        fn subregistry(registry: &NodeRegistry) -> &Subregistry<Self> {
-            &registry.labeled_call_args
-        }
-
-        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
-            &mut registry.labeled_call_args
         }
     }
 
@@ -541,7 +541,7 @@ mod registerable_list {
         }
     }
 
-    impl RegisterableList for NodeId<LabeledCallArg> {
+    impl RegisterableList for LabeledCallArgId {
         fn subregistry(registry: &NodeRegistry) -> &ListSubregistry<Self> {
             &registry.labeled_call_arg_lists
         }
@@ -731,12 +731,6 @@ mod set_id {
     }
 
     impl SetId for Call {
-        fn set_id(&mut self, id: NodeId<Self>) {
-            self.id = id;
-        }
-    }
-
-    impl SetId for LabeledCallArg {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }
