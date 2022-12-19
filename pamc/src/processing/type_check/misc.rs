@@ -1659,3 +1659,16 @@ pub(super) fn get_names_and_types_of_labeled_params(
         (param.name_id, param.type_id)
     })
 }
+
+pub(super) fn get_arg_corresponding_to_label(
+    state: &State,
+    target_label_id: NodeId<Identifier>,
+    arg_ids: &[LabeledCallArgId],
+) -> Option<(usize, LabeledCallArgId)> {
+    let target_label_name = &state.registry.get(target_label_id).name;
+    arg_ids.iter().copied().enumerate().find(|(_, arg_id)| {
+        let arg_label_id = arg_id.label_id();
+        let arg_label_name = &state.registry.get(arg_label_id).name;
+        arg_label_name == target_label_name
+    })
+}
