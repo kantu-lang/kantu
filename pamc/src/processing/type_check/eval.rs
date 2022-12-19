@@ -535,10 +535,18 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .get_possibly_empty_list(case.param_list_id)
                 .to_vec();
             let case_arity = case_param_ids.len();
-            let matchee_arg_ids = state
-                .registry
-                .get_list(normalized_matchee_arg_list_id)
-                .to_vec();
+            // TODO: Properly implement this after we add support for
+            // labeled match case params.
+            let matchee_arg_ids: Vec<_> = match normalized_matchee_arg_list_id {
+                NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
+                    state.registry.get_list(arg_list_id).to_vec()
+                }
+                NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => state
+                    .registry
+                    .get_list(arg_list_id)
+                    .to_mapped(|arg_id| arg_id.value_id(state.registry))
+                    .into(),
+            };
             let substitutions: Vec<Substitution> = case_param_ids
                 .iter()
                 .copied()
