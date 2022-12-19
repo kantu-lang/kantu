@@ -223,10 +223,15 @@ fn get_type_of_name(state: &mut State, name_id: NodeId<NameExpression>) -> Norma
     state.context.get_type(name.db_index, state.registry)
 }
 
+
 fn get_type_of_call_dirty(
     state: &mut State,
     call_id: NodeId<Call>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
+    if let Some(corrected) = correct_call_arg_order_dirty(state, call_id)? {
+        return get_type_of_call_dirty(state, corrected);
+    }
+
     let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
@@ -234,7 +239,13 @@ fn get_type_of_call_dirty(
     } else {
         return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
     };
-    let arg_ids = state.registry.get_list(call.arg_list_id).to_vec();
+    let arg_ids = match call.arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(arg_list_id) => state.registry.get_list(arg_list_id).to_vec(),
+        NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
+            let arg_list = state.registry.get_list(arg_list_id).to_vec();
+            arg_list.iter().map(|arg| arg.value_id(state.registry)).collect()
+        }
+    };
     let normalized_arg_ids: Vec<NormalFormId> = arg_ids
         .iter()
         .copied()
@@ -242,9 +253,6 @@ fn get_type_of_call_dirty(
         .collect();
 
     let callee_type = state.registry.get(callee_type_id).clone();
-    // We use the params of the callee _type_ rather than the params of the
-    // callee itself, since the callee type is a normal form, which guarantees
-    // that its params are normal forms.
     {
         let expected_arity = callee_type.param_list_id.len();
         let actual_arity = arg_ids.len();
@@ -330,6 +338,94 @@ fn get_type_of_call_dirty(
         evaluate_well_typed_expression(state, substituted)
     };
     Ok(substituted_output_id)
+}
+
+/// If the params and args are both labeled AND the label order is correct,
+/// this returns `Ok(None)`.
+/// Otherwise, it tries to return `Ok(Some(new_call_id))` where `new_call_id`
+/// is the result or correcting the arg order to match the param order.
+/// If it cannot do this (e.g., the labeledness of the params and args doesn't match),
+/// then it returns `Err(_)`.
+fn correct_call_arg_order_dirty(state: &mut State, call_id: NodeId<Call>) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+    let call = state.registry.get(call_id).clone();
+    let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
+    let ExpressionId::Forall(callee_type_id) = callee_type_id.raw() else {
+        return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
+    };
+    let callee_type = state.registry.get(callee_type_id).clone();
+
+    match (callee_type.param_list_id, call.arg_list_id) {
+        (NonEmptyParamListId::Unlabeled(param_list_id), NonEmptyCallArgListId::Unlabeled(arg_list_id)) => {
+            let expected_arity = param_list_id.len.get();
+            let actual_arity = arg_list_id.len.get();
+            if expected_arity != actual_arity {
+                tainted_err(TypeCheckError::WrongNumberOfArguments {
+                    call_id: call_id,
+                    expected: expected_arity,
+                    actual: actual_arity,
+                })
+            } else {
+                Ok(None)
+            }
+        }
+        (NonEmptyParamListId::UniquelyLabeled(param_list_id), NonEmptyCallArgListId::UniquelyLabeled(arg_list_id)) => {
+            correct_labeled_call_arg_order_dirty(state, call_id, param_list_id, arg_list_id)
+        }
+        _ => tainted_err(TypeCheckError::LabelednessMismatch { call_id })
+    }
+}
+
+fn correct_labeled_call_arg_order_dirty(
+    state: &mut State,
+    call_id: NodeId<Call>,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    arg_list_id: NonEmptyListId<LabeledCallArgId>,
+) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id);
+    let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
+    let remaining_param_ids = remaining_param_ids.to_vec();
+    let arg_ids = state.registry.get_list(arg_list_id).to_non_empty_vec();
+
+    let mut are_any_args_out_of_place = false;
+    let mut reordered_arg_ids = {
+        let first_param_label_id = state.registry.get(first_param_id).label_identifier_id();
+        let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, first_param_label_id, arg_ids.as_ref())? else {
+            return tainted_err(TypeCheckError::MissingArgument { call_id, label_id: first_param_label_id });
+        };
+        if arg_index != 0 {
+            are_any_args_out_of_place = true;
+        }
+        NonEmptyVec::singleton(arg_id)
+    };
+    for (param_index_in_remaining_params, param_id) in remaining_param_ids.iter().copied().enumerate() {
+        let param_index = 1 + param_index_in_remaining_params;
+        let param_label_id = state.registry.get(param_id).label_identifier_id();
+        let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, param_label_id, arg_ids.as_ref())? else {
+            return tainted_err(TypeCheckError::MissingArgument { call_id, label_id: param_label_id });
+        };
+        if arg_index != param_index {
+            are_any_args_out_of_place = true;
+        }
+        reordered_arg_ids.push(arg_id);
+    }
+
+    if are_any_args_out_of_place {
+        let callee_id = state.registry.get(call_id).callee_id;
+        let reordered_arg_list_id = state.registry.add_list(reordered_arg_ids);
+        let reordered = state.registry.add(Call {
+            id: dummy_id(),
+            span: None,
+            callee_id,
+            arg_list_id: NonEmptyCallArgListId::UniquelyLabeled(reordered_arg_list_id),
+        }).without_spans(state.registry);
+        Ok(Some(reordered))
+    } else {
+        Ok(None)
+    }
+}
+
+fn get_arg_corresponding_to_label(_state: &mut State, _label_id: NodeId<Identifier>, _arg_ids: &[LabeledCallArgId]) -> Result<Option<(usize, LabeledCallArgId)>, Tainted<TypeCheckError>> {
+    unimplemented!()
 }
 
 fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, Tainted<TypeCheckError>> {
@@ -604,7 +700,9 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                             DbIndex(case_param_arity - index - 1),
                         ))
                     });
-                let arg_list_id = state.registry.add_list(arg_ids);
+                // TODO: Properly construct parameterized matchee id
+                // after we add support for labeled match case params.
+                let arg_list_id = NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
                 let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
                     state.registry.add(Call {
                         id: dummy_id(),

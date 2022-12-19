@@ -1,8 +1,8 @@
 use crate::data::{
     fun_recursion_validation_result::*,
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::OptionalNonEmptyVecLen,
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
 
@@ -234,13 +234,8 @@ fn validate_fun_recursion_in_call_dirty(
         validate_fun_recursion_in_expression_dirty(context, registry, call.callee_id)?
     };
 
-    let arg_ids = registry
-        .get_list(call.arg_list_id)
-        .to_non_empty_vec()
-        .try_into_mapped(|arg_id| {
-            validate_fun_recursion_in_expression_dirty(context, registry, arg_id)
-        })?;
-    let arg_list_id = registry.add_list(arg_ids);
+    let arg_list_id =
+        validate_fun_recursion_in_call_args_dirty(context, registry, call.arg_list_id)?;
 
     Ok(registry.add(Call {
         id: dummy_id(),
@@ -252,7 +247,7 @@ fn validate_fun_recursion_in_call_dirty(
 
 fn is_call_restricted(
     context: &Context,
-    registry: &NodeRegistry,
+    registry: &mut NodeRegistry,
     call_id: NodeId<Call>,
 ) -> Result<bool, TaintedIllegalFunRecursionError> {
     let call = registry.get(call_id).clone();
@@ -265,33 +260,122 @@ fn is_call_restricted(
                         arg_position,
                         superstruct_db_level,
                         ..
-                    } => {
-                        let arg_ids = registry.get_list(call.arg_list_id);
-                        if arg_position < arg_ids.len() {
-                            let expected_substruct_id = arg_ids[arg_position];
-                            let err = Err(Tainted::new(
-                                IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-                                    callee: callee_name_id,
-                                    arg: expected_substruct_id,
-                                },
-                            ));
-                            match expected_substruct_id {
-                                ExpressionId::Name(expected_substruct_name_id) => {
-                                    let expected_substruct =
-                                        registry.get(expected_substruct_name_id);
-                                    let expected_substruct_db_level =
-                                        context.index_to_level(expected_substruct.db_index);
-                                    if !context.is_left_strict_substruct_of_right(
-                                        expected_substruct_db_level,
-                                        superstruct_db_level,
-                                    ) {
-                                        return err;
+                    } => match (arg_position, call.arg_list_id) {
+                        (
+                            IndexOrLabel::Index(index_of_arg_that_must_be_substruct),
+                            NonEmptyCallArgListId::Unlabeled(arg_list_id),
+                        ) => {
+                            let arg_ids = registry.get_list(arg_list_id);
+                            if index_of_arg_that_must_be_substruct < arg_ids.len() {
+                                let expected_substruct_id =
+                                    arg_ids[index_of_arg_that_must_be_substruct];
+                                let err = Err(Tainted::new(
+                                    IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
+                                        callee: callee_name_id,
+                                        arg: expected_substruct_id,
+                                    },
+                                ));
+                                match expected_substruct_id {
+                                    ExpressionId::Name(expected_substruct_name_id) => {
+                                        let expected_substruct =
+                                            registry.get(expected_substruct_name_id);
+                                        let expected_substruct_db_level =
+                                            context.index_to_level(expected_substruct.db_index);
+                                        if !context.is_left_strict_substruct_of_right(
+                                            expected_substruct_db_level,
+                                            superstruct_db_level,
+                                        ) {
+                                            return err;
+                                        }
                                     }
+                                    _ => return err,
                                 }
-                                _ => return err,
                             }
                         }
-                    }
+                        (
+                            IndexOrLabel::LabelId(
+                                identifier_id_of_label_of_arg_that_must_be_substruct,
+                            ),
+                            NonEmptyCallArgListId::UniquelyLabeled(arg_list_id),
+                        ) => {
+                            let label_name_of_arg_that_must_be_substruct = registry
+                                .get(identifier_id_of_label_of_arg_that_must_be_substruct)
+                                .name
+                                .clone();
+                            let arg_ids = registry.get_list(arg_list_id);
+
+                            let id_of_arg_that_is_supposed_to_be_substruct = arg_ids
+                                .iter()
+                                .find(|arg_id| {
+                                    let label_name: &IdentifierName = match arg_id {
+                                        LabeledCallArgId::Implicit {
+                                            label_id: value_id, ..
+                                        } => {
+                                            let label_id = *value_id;
+                                            &registry.get(label_id).name
+                                        }
+                                        LabeledCallArgId::Explicit { label_id, .. } => {
+                                            &registry.get(*label_id).name
+                                        }
+                                    };
+                                    *label_name == label_name_of_arg_that_must_be_substruct
+                                })
+                                .copied();
+                            if let Some(id_of_arg_that_is_supposed_to_be_substruct) =
+                                id_of_arg_that_is_supposed_to_be_substruct
+                            {
+                                match id_of_arg_that_is_supposed_to_be_substruct {
+                                    LabeledCallArgId::Implicit { db_index, .. } => {
+                                        let expected_substruct_db_level =
+                                            context.index_to_level(db_index);
+                                        if !context.is_left_strict_substruct_of_right(
+                                            expected_substruct_db_level,
+                                            superstruct_db_level,
+                                        ) {
+                                            let value_id =
+                                                id_of_arg_that_is_supposed_to_be_substruct
+                                                    .value_id(registry);
+                                            let err = Err(Tainted::new(
+                                                IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
+                                                    callee: callee_name_id,
+                                                    arg: value_id,
+                                                },
+                                            ));
+                                            return err;
+                                        }
+                                    }
+                                    LabeledCallArgId::Explicit { value_id, .. } => {
+                                        let err = Err(Tainted::new(
+                                            IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
+                                                callee: callee_name_id,
+                                                arg: value_id,
+                                            },
+                                        ));
+                                        match value_id {
+                                            ExpressionId::Name(expected_substruct_name_id) => {
+                                                let expected_substruct =
+                                                    registry.get(expected_substruct_name_id);
+                                                let expected_substruct_db_level = context
+                                                    .index_to_level(expected_substruct.db_index);
+                                                if !context.is_left_strict_substruct_of_right(
+                                                    expected_substruct_db_level,
+                                                    superstruct_db_level,
+                                                ) {
+                                                    return err;
+                                                }
+                                            }
+                                            _ => return err,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(Tainted::new(
+                                IllegalFunRecursionError::LabelednessMismatch(call_id),
+                            ))
+                        }
+                    },
                     ReferenceRestriction::CannotCall { .. } => return Err(Tainted::new(
                         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
                             callee: callee_name.id,
@@ -305,6 +389,78 @@ fn is_call_restricted(
         }
         _ => Ok(false),
     }
+}
+
+fn validate_fun_recursion_in_call_args_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    arg_list_id: NonEmptyCallArgListId,
+) -> Result<NonEmptyCallArgListId, TaintedIllegalFunRecursionError> {
+    Ok(match arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(id) => NonEmptyCallArgListId::Unlabeled(
+            validate_fun_recursion_in_expression_list_dirty(context, registry, id)?,
+        ),
+        NonEmptyCallArgListId::UniquelyLabeled(id) => NonEmptyCallArgListId::UniquelyLabeled(
+            validate_fun_recursion_in_labeled_call_arg_list_dirty(context, registry, id)?,
+        ),
+    })
+}
+
+fn validate_fun_recursion_in_expression_list_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    list_id: NonEmptyListId<ExpressionId>,
+) -> Result<NonEmptyListId<ExpressionId>, TaintedIllegalFunRecursionError> {
+    let expression_ids = registry
+        .get_list(list_id)
+        .to_non_empty_vec()
+        .try_into_mapped(|id| validate_fun_recursion_in_expression_dirty(context, registry, id))?;
+    Ok(registry.add_list(expression_ids))
+}
+
+fn validate_fun_recursion_in_labeled_call_arg_list_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    list_id: NonEmptyListId<LabeledCallArgId>,
+) -> Result<NonEmptyListId<LabeledCallArgId>, TaintedIllegalFunRecursionError> {
+    let expression_ids = registry
+        .get_list(list_id)
+        .to_non_empty_vec()
+        .try_into_mapped(|id| {
+            validate_fun_recursion_in_labeled_call_arg_dirty(context, registry, id)
+        })?;
+    Ok(registry.add_list(expression_ids))
+}
+
+fn validate_fun_recursion_in_labeled_call_arg_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    arg_id: LabeledCallArgId,
+) -> Result<LabeledCallArgId, TaintedIllegalFunRecursionError> {
+    Ok(match arg_id {
+        LabeledCallArgId::Implicit { label_id, db_index } => {
+            if context.reference_restriction(db_index).is_some() {
+                let span = registry.get(label_id).span;
+                let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
+                let name_id = registry.add(NameExpression {
+                    id: dummy_id(),
+                    span,
+                    component_list_id,
+                    db_index,
+                });
+                return Err(Tainted::new(
+                    IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
+                        reference: name_id,
+                    },
+                ));
+            }
+            LabeledCallArgId::Implicit { label_id, db_index }
+        }
+        LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
+            label_id,
+            value_id: validate_fun_recursion_in_expression_dirty(context, registry, value_id)?,
+        },
+    })
 }
 
 fn validate_fun_recursion_in_fun_dirty(
@@ -334,26 +490,37 @@ fn validate_fun_recursion_in_fun_dirty(
                     let superstruct_db_level = context.index_to_level(superstruct_db_index);
                     ReferenceRestriction::MustCallWithSubstruct {
                         superstruct_db_level,
-                        arg_position: param_position,
+                        arg_position: IndexOrLabel::Index(param_position),
                     }
                 }
                 None => ReferenceRestriction::CannotCall,
             }
         }
         NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
-            // TODO: We should use label instead of index.
             let param_ids = registry.get_list(param_list_id);
-            let decreasing_param_position = param_ids.iter().position(|param_id| {
-                let param = registry.get(*param_id);
-                param.is_dashed
-            });
-            match decreasing_param_position {
-                Some(param_position) => {
-                    let superstruct_db_index = DbIndex(param_ids.len() - param_position - 1);
+            let decreasing_param_info =
+                param_ids
+                    .iter()
+                    .enumerate()
+                    .find_map(|(param_index, param_id)| {
+                        let param = registry.get(*param_id);
+                        if param.is_dashed {
+                            Some(match param.label_id {
+                                ParamLabelId::Explicit(label_id) => (param_index, label_id),
+                                ParamLabelId::Implicit => (param_index, param.name_id),
+                            })
+                        } else {
+                            None
+                        }
+                    });
+            match decreasing_param_info {
+                Some((decreasing_param_index, decreasing_param_label_id)) => {
+                    let superstruct_db_index =
+                        DbIndex(param_ids.len() - decreasing_param_index - 1);
                     let superstruct_db_level = context.index_to_level(superstruct_db_index);
                     ReferenceRestriction::MustCallWithSubstruct {
                         superstruct_db_level,
-                        arg_position: param_position,
+                        arg_position: IndexOrLabel::LabelId(decreasing_param_label_id),
                     }
                 }
                 None => ReferenceRestriction::CannotCall,

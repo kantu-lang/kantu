@@ -3,8 +3,8 @@ use crate::data::{
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{
-        GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyListId, NonEmptyParamListId,
-        ParamLabelId, QuestionMarkOrPossiblyInvalidExpressionId,
+        GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyCallArgListId, NonEmptyListId,
+        NonEmptyParamListId, ParamLabelId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
     simplified_ast as unbound, FileId, TextSpan,
 };
@@ -283,7 +283,7 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
-    pub arg_list_id: NonEmptyListId<ExpressionId>,
+    pub arg_list_id: NonEmptyCallArgListId,
 }
 impl RemoveId for with_id::Call {
     type Output = Call;

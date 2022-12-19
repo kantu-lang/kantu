@@ -175,6 +175,28 @@ impl ShiftDbIndices for NodeId<Call> {
     }
 }
 
+impl ShiftDbIndices for NonEmptyCallArgListId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        match self {
+            NonEmptyCallArgListId::Unlabeled(id) => {
+                let shifted_id = id.try_shift_with_cutoff(f, cutoff, registry)?;
+                Ok(NonEmptyCallArgListId::Unlabeled(shifted_id))
+            }
+            NonEmptyCallArgListId::UniquelyLabeled(id) => {
+                let shifted_id = id.try_shift_with_cutoff(f, cutoff, registry)?;
+                Ok(NonEmptyCallArgListId::UniquelyLabeled(shifted_id))
+            }
+        }
+    }
+}
+
 impl ShiftDbIndices for NonEmptyListId<ExpressionId> {
     type Output = Self;
 
@@ -189,6 +211,45 @@ impl ShiftDbIndices for NonEmptyListId<ExpressionId> {
             .to_non_empty_vec()
             .try_into_mapped(|id| id.try_shift_with_cutoff(f, cutoff, registry))?;
         Ok(registry.add_list(list))
+    }
+}
+
+impl ShiftDbIndices for NonEmptyListId<LabeledCallArgId> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        let list = registry
+            .get_list(self)
+            .to_non_empty_vec()
+            .try_into_mapped(|id| id.try_shift_with_cutoff(f, cutoff, registry))?;
+        Ok(registry.add_list(list))
+    }
+}
+
+impl ShiftDbIndices for LabeledCallArgId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        Ok(match self {
+            LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArgId::Implicit {
+                label_id,
+                db_index: f.try_apply(db_index, cutoff)?,
+            },
+            LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
+                label_id,
+                value_id: value_id.try_shift_with_cutoff(f, cutoff, registry)?,
+            },
+        })
     }
 }
 

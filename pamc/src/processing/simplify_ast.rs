@@ -274,18 +274,14 @@ fn simplify_call_args(
 
     validate_call_arg_label_is_not_underscore(&last)?;
 
-    if let Some(label) = last.label {
-        let last = LabeledCallArg {
-            span: last.span,
-            label,
-            value: simplify_expression(last.value)?,
-        };
+    if last.label.is_some() {
+        let last = simplify_call_arg_but_require_label(last, &hetero_err)?;
         let remaining = simplify_call_args_but_require_labels(remaining, &hetero_err)?;
         Ok(NonEmptyCallArgVec::UniquelyLabeled(
             NonEmptyVec::from_pushed(remaining, last),
         ))
     } else {
-        let last = simplify_expression(last.value)?;
+        let last = simplify_call_arg_but_forbid_label(last, &hetero_err)?;
         let remaining = simplify_call_args_but_forbid_labels(remaining, &hetero_err)?;
         Ok(NonEmptyCallArgVec::Unlabeled(NonEmptyVec::from_pushed(
             remaining, last,
@@ -340,10 +336,16 @@ fn simplify_call_arg_but_require_label(
     validate_call_arg_label_is_not_underscore(&unsimplified)?;
 
     if let Some(label) = unsimplified.label {
-        Ok(LabeledCallArg {
-            span: unsimplified.span,
-            label,
-            value: simplify_expression(unsimplified.value)?,
+        Ok(match label {
+            ParamLabel::Implicit => {
+                let ust::Expression::Identifier(label) = unsimplified.value else {
+                    panic!("Impossible: Implicitly labeled call arg value must be an identifier.");
+                };
+                LabeledCallArg::Implicit(label)
+            }
+            ParamLabel::Explicit(label) => {
+                LabeledCallArg::Explicit(label, simplify_expression(unsimplified.value)?)
+            }
         })
     } else {
         Err(hetero_err.clone())

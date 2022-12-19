@@ -27,4 +27,5 @@ pub enum IllegalFunRecursionError {
     RecursivelyCalledFunctionWithoutDecreasingParam {
         callee: NodeId<NameExpression>,
     },
+    LabelednessMismatch(NodeId<Call>),
 }

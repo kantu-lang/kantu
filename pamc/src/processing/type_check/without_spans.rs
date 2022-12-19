@@ -148,11 +148,47 @@ impl WithoutSpans for NodeId<Call> {
     }
 }
 
+impl WithoutSpans for NonEmptyCallArgListId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            NonEmptyCallArgListId::Unlabeled(id) => {
+                NonEmptyCallArgListId::Unlabeled(id.without_spans(registry))
+            }
+            NonEmptyCallArgListId::UniquelyLabeled(id) => {
+                NonEmptyCallArgListId::UniquelyLabeled(id.without_spans(registry))
+            }
+        }
+    }
+}
+
 impl WithoutSpans for NonEmptyListId<ExpressionId> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
+    }
+}
+
+impl WithoutSpans for NonEmptyListId<LabeledCallArgId> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
+        registry.add_list(new)
+    }
+}
+
+impl WithoutSpans for LabeledCallArgId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArgId::Implicit {
+                label_id: label_id.without_spans(registry),
+                db_index,
+            },
+            LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
+                label_id: label_id.without_spans(registry),
+                value_id: value_id.without_spans(registry),
+            },
+        }
     }
 }
 

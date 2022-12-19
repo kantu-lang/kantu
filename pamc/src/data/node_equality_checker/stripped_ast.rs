@@ -1,4 +1,6 @@
-use crate::data::node_equality_checker::{ExpressionSemanticId, SemanticId};
+use crate::data::node_equality_checker::{
+    ExpressionSemanticId, NonEmptyCallArgListSemanticId, SemanticId,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
@@ -10,7 +12,7 @@ pub use crate::data::bound_ast::{DbIndex, DbLevel};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
     pub callee_id: ExpressionSemanticId,
-    pub arg_list_id: SemanticId<Vec<ExpressionSemanticId>>,
+    pub arg_list_id: NonEmptyCallArgListSemanticId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

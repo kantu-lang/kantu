@@ -148,6 +148,25 @@ impl SubstituteWithoutRemovingSpans for NodeId<Call> {
     }
 }
 
+impl SubstituteWithoutRemovingSpans for NonEmptyCallArgListId {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        match self {
+            NonEmptyCallArgListId::Unlabeled(id) => NonEmptyCallArgListId::Unlabeled(
+                id.subst_without_removing_spans(substitution, state),
+            ),
+            NonEmptyCallArgListId::UniquelyLabeled(id) => NonEmptyCallArgListId::UniquelyLabeled(
+                id.subst_without_removing_spans(substitution, state),
+            ),
+        }
+    }
+}
+
 impl SubstituteWithoutRemovingSpans for NonEmptyListId<ExpressionId> {
     type Output = Self;
 
@@ -162,6 +181,58 @@ impl SubstituteWithoutRemovingSpans for NonEmptyListId<ExpressionId> {
             .to_non_empty_vec()
             .into_mapped(|id| id.subst_without_removing_spans(substitution, state));
         state.registry.add_list(new_ids)
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for NonEmptyListId<LabeledCallArgId> {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        let new_ids = state
+            .registry
+            .get_list(self)
+            .to_non_empty_vec()
+            .into_mapped(|id| id.subst_without_removing_spans(substitution, state));
+        state.registry.add_list(new_ids)
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for LabeledCallArgId {
+    type Output = Self;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        match self {
+            LabeledCallArgId::Implicit { label_id, db_index } => match substitution.from {
+                ExpressionId::Name(from_id) => {
+                    let from_db_index = state.registry.get(from_id).db_index;
+                    if from_db_index == db_index {
+                        LabeledCallArgId::Explicit {
+                            label_id,
+                            value_id: substitution.to,
+                        }
+                    } else {
+                        LabeledCallArgId::Implicit { label_id, db_index }
+                    }
+                }
+                _ => LabeledCallArgId::Implicit { label_id, db_index },
+            },
+            LabeledCallArgId::Explicit { label_id, value_id } => {
+                let substituted_value_id =
+                    value_id.subst_without_removing_spans(substitution, state);
+                LabeledCallArgId::Explicit {
+                    label_id,
+                    value_id: substituted_value_id,
+                }
+            }
+        }
     }
 }
 

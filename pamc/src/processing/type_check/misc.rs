@@ -377,11 +377,7 @@ fn is_left_inclusive_subterm_of_right(
                 return true;
             }
 
-            let right_arg_ids = state.registry.get_list(right.arg_list_id).to_vec();
-            if right_arg_ids
-                .iter()
-                .any(|&right_arg_id| is_left_inclusive_subterm_of_right(state, left, right_arg_id))
-            {
+            if does_right_call_arg_list_contain_left(state, left, right.arg_list_id) {
                 return true;
             }
 
@@ -468,6 +464,29 @@ fn is_left_inclusive_subterm_of_right(
     }
 }
 
+fn does_right_call_arg_list_contain_left(
+    state: &mut State,
+    left: ExpressionId,
+    right: NonEmptyCallArgListId,
+) -> bool {
+    match right {
+        NonEmptyCallArgListId::Unlabeled(right) => {
+            let right_arg_ids = state.registry.get_list(right).to_vec();
+            right_arg_ids
+                .iter()
+                .copied()
+                .any(|right_arg_id| is_left_inclusive_subterm_of_right(state, left, right_arg_id))
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(right) => {
+            let right_arg_ids = state.registry.get_list(right).to_vec();
+            right_arg_ids.iter().copied().any(|right_arg_id| {
+                let right_value_id = right_arg_id.value_id(state.registry);
+                is_left_inclusive_subterm_of_right(state, left, right_value_id)
+            })
+        }
+    }
+}
+
 fn is_left_subterm_of_any_right_param_type(
     state: &mut State,
     left: ExpressionId,
@@ -532,7 +551,7 @@ fn is_left_inclusive_subterm_of_any_right_assertion(
 pub struct NormalFormAdtExpression {
     pub type_name_id: NodeId<NameExpression>,
     pub variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
-    pub arg_list_id: Option<NonEmptyListId<ExpressionId>>,
+    pub arg_list_id: Option<NonEmptyCallArgListId>,
 }
 
 /// If the provided expression is has an ADT constructor at
@@ -588,7 +607,7 @@ pub(super) fn try_as_normal_form_adt_expression(
 pub(super) fn try_as_variant_expression(
     state: &mut State,
     expression_id: ExpressionId,
-) -> Option<(NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>)> {
+) -> Option<(NodeId<Identifier>, Option<NonEmptyCallArgListId>)> {
     match expression_id {
         ExpressionId::Name(name_id) => {
             let db_index = state.registry.get(name_id).db_index;
@@ -787,8 +806,35 @@ fn expand_dynamic_adt_substitution_shallow(
         return DynamicSubstitutionExpansionResult::Exploded;
     }
 
-    let left_args = state.registry.get_possibly_empty_list(left.arg_list_id);
-    let right_args = state.registry.get_possibly_empty_list(right.arg_list_id);
+    match (left.arg_list_id, right.arg_list_id) {
+        (
+            Some(NonEmptyCallArgListId::Unlabeled(left_arg_list_id)),
+            Some(NonEmptyCallArgListId::Unlabeled(right_arg_list_id)),
+        ) => expand_dynamic_normal_form_unlabeled_call_arg_list_adt_substitution_shallow(
+            state,
+            left_arg_list_id,
+            right_arg_list_id,
+        ),
+        (
+            Some(NonEmptyCallArgListId::UniquelyLabeled(left_arg_list_id)),
+            Some(NonEmptyCallArgListId::UniquelyLabeled(right_arg_list_id)),
+        ) => expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
+            state,
+            left_arg_list_id,
+            right_arg_list_id,
+        ),
+        (None, None) => DynamicSubstitutionExpansionResult::Replace(vec![]),
+        _ => DynamicSubstitutionExpansionResult::Exploded,
+    }
+}
+
+fn expand_dynamic_normal_form_unlabeled_call_arg_list_adt_substitution_shallow(
+    state: &mut State,
+    normalized_left_arg_list_id: NonEmptyListId<ExpressionId>,
+    normalized_right_arg_list_id: NonEmptyListId<ExpressionId>,
+) -> DynamicSubstitutionExpansionResult {
+    let left_args = state.registry.get_list(normalized_left_arg_list_id);
+    let right_args = state.registry.get_list(normalized_right_arg_list_id);
     assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
     let arg_substitutions = left_args
         .iter()
@@ -806,10 +852,48 @@ fn expand_dynamic_adt_substitution_shallow(
     DynamicSubstitutionExpansionResult::Replace(arg_substitutions)
 }
 
+fn expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
+    state: &mut State,
+    normalized_left_arg_list_id: NonEmptyListId<LabeledCallArgId>,
+    normalized_right_arg_list_id: NonEmptyListId<LabeledCallArgId>,
+) -> DynamicSubstitutionExpansionResult {
+    let normalized_left_arg_ids = state
+        .registry
+        .get_list(normalized_left_arg_list_id)
+        .to_non_empty_vec();
+    let normalized_right_arg_ids = state
+        .registry
+        .get_list(normalized_right_arg_list_id)
+        .to_non_empty_vec();
+    assert_eq!(normalized_left_arg_ids.len(), normalized_right_arg_ids.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
+
+    let mut subs = vec![];
+    for &normalized_left_arg_id in normalized_left_arg_ids.iter() {
+        let left_value_id =
+            NormalFormId::unchecked_new(normalized_left_arg_id.value_id(state.registry));
+        let left_label_id = normalized_left_arg_id.label_id();
+        let left_label_name = &state.registry.get(left_label_id).name;
+        let corresponding_normalized_right_arg = normalized_right_arg_ids
+            .iter()
+            .find(|&right_arg_id| {
+                let right_label_id = right_arg_id.label_id();
+                left_label_name == &state.registry.get(right_label_id).name
+            })
+            .expect(
+                "Two well-typed Call expressions with the same callee should have the same labels.",
+            );
+        let right_value_id = NormalFormId::unchecked_new(
+            corresponding_normalized_right_arg.value_id(state.registry),
+        );
+        subs.push(DynamicSubstitution(left_value_id, right_value_id))
+    }
+    DynamicSubstitutionExpansionResult::Replace(subs)
+}
+
 fn expand_dynamic_normal_form_variant_substitution_shallow(
     state: &mut State,
-    left: (NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>),
-    right: (NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>),
+    left: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
+    right: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
 ) -> DynamicSubstitutionExpansionResult {
     // We only need to compare name (rather than DB index) because
     // `left` and `right` are assumed to have the same type, and
@@ -821,24 +905,26 @@ fn expand_dynamic_normal_form_variant_substitution_shallow(
         return DynamicSubstitutionExpansionResult::Exploded;
     }
 
-    let left_args = state.registry.get_possibly_empty_list(left.1);
-    let right_args = state.registry.get_possibly_empty_list(right.1);
-
-    assert_eq!(left_args.len(), right_args.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
-    let arg_substitutions = left_args
-        .iter()
-        .copied()
-        .zip(right_args.iter().copied())
-        .map(|(left_arg_id, right_arg_id)| {
-            DynamicSubstitution(
-                // This is safe because the argument of a normal
-                // form Call expression is always itself a normal form.
-                NormalFormId::unchecked_new(left_arg_id),
-                NormalFormId::unchecked_new(right_arg_id),
-            )
-        })
-        .collect();
-    DynamicSubstitutionExpansionResult::Replace(arg_substitutions)
+    match (left.1, right.1) {
+        (
+            Some(NonEmptyCallArgListId::Unlabeled(left_arg_list_id)),
+            Some(NonEmptyCallArgListId::Unlabeled(right_arg_list_id)),
+        ) => expand_dynamic_normal_form_unlabeled_call_arg_list_adt_substitution_shallow(
+            state,
+            left_arg_list_id,
+            right_arg_list_id,
+        ),
+        (
+            Some(NonEmptyCallArgListId::UniquelyLabeled(left_arg_list_id)),
+            Some(NonEmptyCallArgListId::UniquelyLabeled(right_arg_list_id)),
+        ) => expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
+            state,
+            left_arg_list_id,
+            right_arg_list_id,
+        ),
+        (None, None) => DynamicSubstitutionExpansionResult::Replace(vec![]),
+        _ => DynamicSubstitutionExpansionResult::Exploded,
+    }
 }
 
 /// Returns `None` if the dynamic substitution is a no-op.
@@ -964,12 +1050,67 @@ fn min_db_index_in_call_relative_to_cutoff(
     let call = registry.get(id);
     let callee_min =
         min_db_index_in_expression_relative_to_cutoff(registry, call.callee_id, cutoff);
-    let arg_ids = registry.get_list(call.arg_list_id);
-    let args_min = arg_ids
-        .iter()
-        .map(|&arg_id| min_db_index_in_expression_relative_to_cutoff(registry, arg_id, cutoff))
-        .min();
-    min_or_first(callee_min, args_min)
+    let args_min =
+        min_db_index_in_call_arg_list_relative_to_cutoff(registry, call.arg_list_id, cutoff);
+    callee_min.min(args_min)
+}
+
+fn min_db_index_in_call_arg_list_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyCallArgListId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
+            min_db_index_in_expression_list_relative_to_cutoff(registry, arg_list_id, cutoff)
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
+            min_db_index_in_labeled_call_arg_list_relative_to_cutoff(registry, arg_list_id, cutoff)
+        }
+    }
+}
+
+fn min_db_index_in_expression_list_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyListId<ExpressionId>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let arg_ids = registry.get_list(arg_list_id);
+    let mut min = MinDbIndex::Infinity;
+    for &arg_id in arg_ids.iter() {
+        min = min.min(min_db_index_in_expression_relative_to_cutoff(
+            registry, arg_id, cutoff,
+        ));
+    }
+    min
+}
+
+fn min_db_index_in_labeled_call_arg_list_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyListId<LabeledCallArgId>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let arg_ids = registry.get_list(arg_list_id);
+    let mut min = MinDbIndex::Infinity;
+    for &arg_id in arg_ids.iter() {
+        min = min.min(min_db_index_in_labeled_call_arg_relative_to_cutoff(
+            registry, arg_id, cutoff,
+        ));
+    }
+    min
+}
+
+fn min_db_index_in_labeled_call_arg_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_id: LabeledCallArgId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match arg_id {
+        LabeledCallArgId::Implicit { db_index, .. } => MinDbIndex::Some(db_index),
+        LabeledCallArgId::Explicit { value_id, .. } => {
+            min_db_index_in_expression_relative_to_cutoff(registry, value_id, cutoff)
+        }
+    }
 }
 
 fn min_db_index_in_fun_relative_to_cutoff(

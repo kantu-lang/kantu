@@ -33,13 +33,11 @@ fn evaluate_well_typed_name_expression(
 }
 
 fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalFormId {
-    fn register_normalized_nonsubstituted_fun(
+    fn register_normalized_nonsubstituted_call(
         registry: &mut NodeRegistry,
         normalized_callee_id: NormalFormId,
-        normalized_arg_ids: NonEmptySlice<NormalFormId>,
+        normalized_arg_list_id: NonEmptyCallArgListId,
     ) -> NormalFormId {
-        let normalized_arg_ids = normalized_arg_ids.to_mapped(|id| NormalFormId::raw(*id));
-        let normalized_arg_list_id = registry.add_list(normalized_arg_ids);
         let normalized_call_id = registry
             .add(Call {
                 id: dummy_id(),
@@ -55,64 +53,124 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
 
     let normalized_callee_id = evaluate_well_typed_expression(state, call.callee_id);
 
-    let normalized_arg_ids: NonEmptyVec<NormalFormId> = {
-        let arg_ids = state.registry.get_list(call.arg_list_id).to_non_empty_vec();
-        eval_all(state, arg_ids.as_non_empty_slice())
-    };
+    let normalized_arg_list_id = evaluate_well_typed_call_arg_list(state, call.arg_list_id);
 
     match normalized_callee_id.raw() {
         ExpressionId::Fun(fun_id) => {
-            if !can_fun_be_applied(state, fun_id, &normalized_arg_ids) {
-                return register_normalized_nonsubstituted_fun(
+            if !can_fun_be_applied(state, fun_id, normalized_arg_list_id) {
+                return register_normalized_nonsubstituted_call(
                     state.registry,
                     normalized_callee_id,
-                    normalized_arg_ids.as_non_empty_slice(),
+                    normalized_arg_list_id,
                 );
             }
 
             let fun = state.registry.get(fun_id).clone();
-            let param_name_ids = get_param_name_ids(state, fun.param_list_id);
             let param_arity = fun.param_list_id.len();
-            let shifted_normalized_arg_ids = normalized_arg_ids
-                .into_iter()
-                .map(|arg_id| arg_id.upshift(param_arity + 1, state.registry))
-                .collect::<Vec<_>>();
-            let substitutions = {
-                let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
-                    fun_id.upshift(param_arity + 1, state.registry),
-                ));
-                const FUN_DB_INDEX: DbIndex = DbIndex(0);
-                vec![Substitution {
-                    from: ExpressionId::Name(add_name_expression(
-                        state.registry,
-                        NonEmptyVec::singleton(fun.name_id),
-                        FUN_DB_INDEX,
-                    )),
-                    to: shifted_fun_id.raw(),
-                }]
-            }
-            .into_iter()
-            .chain(
-                param_name_ids
-                    .iter()
-                    .copied()
-                    .zip(shifted_normalized_arg_ids.iter().copied())
-                    .enumerate()
-                    .map(|(arg_index, (param_name_id, arg_id))| {
-                        let db_index = DbIndex(param_arity - arg_index);
+            let shifted_normalized_arg_list_id =
+                normalized_arg_list_id.upshift(param_arity + 1, state.registry);
+            let substitutions: Vec<Substitution> = match shifted_normalized_arg_list_id {
+                NonEmptyCallArgListId::Unlabeled(shifted_normalized_arg_list_id) => {
+                    let param_name_ids = get_param_name_ids(state, fun.param_list_id);
+                    let shifted_normalized_arg_ids = state
+                        .registry
+                        .get_list(shifted_normalized_arg_list_id)
+                        .to_non_empty_vec();
+                    {
+                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
+                            fun_id.upshift(param_arity + 1, state.registry),
+                        ));
+                        const FUN_DB_INDEX: DbIndex = DbIndex(0);
+                        vec![Substitution {
+                            from: ExpressionId::Name(add_name_expression(
+                                state.registry,
+                                NonEmptyVec::singleton(fun.name_id),
+                                FUN_DB_INDEX,
+                            )),
+                            to: shifted_fun_id.raw(),
+                        }]
+                    }
+                    .into_iter()
+                    .chain(
+                        param_name_ids
+                            .iter()
+                            .copied()
+                            .zip(shifted_normalized_arg_ids.iter().copied())
+                            .enumerate()
+                            .map(|(arg_index, (param_name_id, arg_id))| {
+                                let db_index = DbIndex(param_arity - arg_index);
+                                let name = NormalFormId::unchecked_new(ExpressionId::Name(
+                                    add_name_expression(
+                                        state.registry,
+                                        NonEmptyVec::singleton(param_name_id),
+                                        db_index,
+                                    ),
+                                ));
+                                Substitution {
+                                    from: name.raw(),
+                                    to: arg_id,
+                                }
+                            }),
+                    )
+                    .collect::<Vec<_>>()
+                }
+
+                NonEmptyCallArgListId::UniquelyLabeled(shifted_normalized_arg_list_id) => {
+                    let recursive_fun_sub = {
+                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
+                            fun_id.upshift(param_arity + 1, state.registry),
+                        ));
+                        const FUN_DB_INDEX: DbIndex = DbIndex(0);
+                        Substitution {
+                            from: ExpressionId::Name(add_name_expression(
+                                state.registry,
+                                NonEmptyVec::singleton(fun.name_id),
+                                FUN_DB_INDEX,
+                            )),
+                            to: shifted_fun_id.raw(),
+                        }
+                    };
+
+                    let shifted_normalized_arg_ids = state
+                        .registry
+                        .get_list(shifted_normalized_arg_list_id)
+                        .to_non_empty_vec();
+
+                    let param_ids = match fun.param_list_id {
+                            NonEmptyParamListId::Unlabeled(_) => panic!("A well-typed Call with labeled arguments should have a callee with labeled params."),
+                            NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
+                                state.registry.get_list(param_list_id).to_non_empty_vec()
+                            }
+                        };
+
+                    let mut subs = vec![recursive_fun_sub];
+                    for &arg_id in &shifted_normalized_arg_ids {
+                        let arg_label_name = &state.registry.get(arg_id.label_id()).name;
+                        let (param_index, param_name_id) = param_ids.iter().copied().enumerate().find_map(|(param_index, param_id)| {
+                            let param = state.registry.get(param_id);
+                            let param_label_name = &state.registry.get(param.label_identifier_id()).name;
+                            if param_label_name == arg_label_name {
+                                Some((param_index, param.name_id))
+                            } else {
+                                None
+                            }
+
+                        }).expect("A well-typed Call's callee should have a param for everyone one of the Call's args.");
+                        let db_index = DbIndex(param_arity - param_index);
                         let name =
                             NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
                                 state.registry,
                                 NonEmptyVec::singleton(param_name_id),
                                 db_index,
                             )));
-                        Substitution {
+                        subs.push(Substitution {
                             from: name.raw(),
-                            to: arg_id.raw(),
-                        }
-                    }),
-            )
-            .collect::<Vec<_>>();
+                            to: arg_id.value_id(state.registry),
+                        });
+                    }
+                    subs
+                }
+            };
 
             let body_id = fun
                 .body_id
@@ -121,10 +179,10 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
             evaluate_well_typed_expression(state, shifted_body_id)
         }
         ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
-            register_normalized_nonsubstituted_fun(
+            register_normalized_nonsubstituted_call(
                 state.registry,
                 normalized_callee_id,
-                normalized_arg_ids.as_non_empty_slice(),
+                normalized_arg_list_id,
             )
         }
         ExpressionId::Forall(_) => {
@@ -139,42 +197,141 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
 fn can_fun_be_applied(
     state: &mut State,
     fun_id: NodeId<Fun>,
-    normalized_arg_ids: &[NormalFormId],
+    normalized_arg_ids: NonEmptyCallArgListId,
 ) -> bool {
     let param_list_id = state.registry.get(fun_id).param_list_id;
-    let decreasing_param_index = get_decreasing_param_index(state, param_list_id);
-    let decreasing_param_index = if let Some(i) = decreasing_param_index {
-        i
-    } else {
+    match (param_list_id, normalized_arg_ids) {
+        (NonEmptyParamListId::Unlabeled(param_list_id), NonEmptyCallArgListId::Unlabeled(normalized_arg_ids)) => can_unlabeled_fun_be_applied(state, param_list_id, normalized_arg_ids),
+        (NonEmptyParamListId::UniquelyLabeled(param_list_id), NonEmptyCallArgListId::UniquelyLabeled(normalized_arg_ids)) => can_labeled_fun_be_applied(state, param_list_id, normalized_arg_ids),
+        _ => panic!("A well-typed Call should have labeled args if and only if its callee has labeled params."),
+    }
+}
+
+fn can_unlabeled_fun_be_applied(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+    normalized_arg_list_id: NonEmptyListId<ExpressionId>,
+) -> bool {
+    let Some(decreasing_param_index) = get_decreasing_param_index(state, param_list_id) else {
         // If there is no decreasing parameter, the function is non-recursive,
         // so it can be safely applied without causing infinite expansion.
         return true;
     };
 
-    let decreasing_arg_id = normalized_arg_ids[decreasing_param_index];
+    let normalized_arg_ids = state.registry.get_list(normalized_arg_list_id);
+    let decreasing_arg_id = NormalFormId::unchecked_new(normalized_arg_ids[decreasing_param_index]);
     is_variant_expression(state, decreasing_arg_id)
 }
 
-fn get_decreasing_param_index(state: &State, param_list_id: NonEmptyParamListId) -> Option<usize> {
-    match param_list_id {
-        NonEmptyParamListId::Unlabeled(param_list_id) => state
-            .registry
-            .get_list(param_list_id)
-            .iter()
-            .copied()
-            .position(|param_id| {
-                let param = state.registry.get(param_id);
-                param.is_dashed
-            }),
-        NonEmptyParamListId::UniquelyLabeled(param_list_id) => state
-            .registry
-            .get_list(param_list_id)
-            .iter()
-            .copied()
-            .position(|param_id| {
-                let param = state.registry.get(param_id);
-                param.is_dashed
-            }),
+fn get_decreasing_param_index(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> Option<usize> {
+    state
+        .registry
+        .get_list(param_list_id)
+        .iter()
+        .copied()
+        .position(|param_id| {
+            let param = state.registry.get(param_id);
+            param.is_dashed
+        })
+}
+
+fn can_labeled_fun_be_applied(
+    state: &mut State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    normalized_arg_list_id: NonEmptyListId<LabeledCallArgId>,
+) -> bool {
+    let Some(decreasing_param_label_id) = get_decreasing_param_label_id(state, param_list_id) else {
+        // If there is no decreasing parameter, the function is non-recursive,
+        // so it can be safely applied without causing infinite expansion.
+        return true;
+    };
+    let decreasing_param_label_name = state.registry.get(decreasing_param_label_id).name.clone();
+
+    let normalized_arg_ids = state
+        .registry
+        .get_list(normalized_arg_list_id)
+        .to_non_empty_vec();
+    let decreasing_arg_id = normalized_arg_ids.iter().copied().find_map(|normalized_arg_id| {
+        let arg_label_id = normalized_arg_id.label_id();
+        let arg_label_name = &state.registry.get(arg_label_id).name;
+        if decreasing_param_label_name == *arg_label_name {
+            let value_id = NormalFormId::unchecked_new(normalized_arg_id.value_id(state.registry));
+            Some(value_id)
+        } else {
+            None
+        }
+    }).expect(
+        "A well-typed labeled Call should have a labeled arg corresponding to each param label.",
+    );
+    is_variant_expression(state, decreasing_arg_id)
+}
+
+fn get_decreasing_param_label_id(
+    state: &State,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> Option<NodeId<Identifier>> {
+    state
+        .registry
+        .get_list(param_list_id)
+        .iter()
+        .copied()
+        .find_map(|param_id| {
+            let param = state.registry.get(param_id);
+            if param.is_dashed {
+                Some(param.label_identifier_id())
+            } else {
+                None
+            }
+        })
+}
+
+fn evaluate_well_typed_call_arg_list(
+    state: &mut State,
+    arg_list_id: NonEmptyCallArgListId,
+) -> NonEmptyCallArgListId {
+    match arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
+            let arg_ids = state
+                .registry
+                .get_list(arg_list_id)
+                .to_non_empty_vec()
+                .into_mapped(|arg_id| evaluate_well_typed_expression(state, arg_id).raw());
+            NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids))
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
+            let arg_ids = state
+                .registry
+                .get_list(arg_list_id)
+                .to_non_empty_vec()
+                .into_mapped(|arg_id| evaluate_well_typed_labeled_call_arg(state, arg_id));
+            NonEmptyCallArgListId::UniquelyLabeled(state.registry.add_list(arg_ids))
+        }
+    }
+}
+
+fn evaluate_well_typed_labeled_call_arg(
+    state: &mut State,
+    arg_id: LabeledCallArgId,
+) -> LabeledCallArgId {
+    match arg_id {
+        LabeledCallArgId::Implicit { label_id, db_index } => {
+            let definition = state.context.get_definition(db_index, state.registry);
+            if let ContextEntryDefinition::Alias { value_id } = definition {
+                LabeledCallArgId::Explicit {
+                    label_id,
+                    value_id: value_id.raw(),
+                }
+            } else {
+                LabeledCallArgId::Implicit { label_id, db_index }
+            }
+        }
+        LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
+            label_id,
+            value_id: evaluate_well_typed_expression(state, value_id).raw(),
+        },
     }
 }
 
@@ -383,10 +540,19 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .get_possibly_empty_list(case.param_list_id)
                 .to_vec();
             let case_arity = case_param_ids.len();
-            let matchee_arg_ids = state
-                .registry
-                .get_list(normalized_matchee_arg_list_id)
-                .to_vec();
+            // TODO: Properly implement this after we add support for
+            // labeled match case params.
+            let matchee_arg_ids: Vec<_> = match normalized_matchee_arg_list_id {
+                NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
+                    state.registry.get_list(arg_list_id).to_vec()
+                }
+                NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => state
+                    .registry
+                    .get_list(arg_list_id)
+                    .to_non_empty_vec()
+                    .into_mapped(|arg_id| arg_id.value_id(state.registry))
+                    .into(),
+            };
             let substitutions: Vec<Substitution> = case_param_ids
                 .iter()
                 .copied()
@@ -452,18 +618,4 @@ fn evaluate_well_typed_forall_pseudo_dirty(
 fn evaluate_well_typed_check(state: &mut State, check_id: NodeId<Check>) -> NormalFormId {
     let check = state.registry.get(check_id);
     evaluate_well_typed_expression(state, check.output_id)
-}
-
-fn eval_all(
-    state: &mut State,
-    original_ids: NonEmptySlice<ExpressionId>,
-) -> NonEmptyVec<NormalFormId> {
-    let (&first_id, remaining_ids) = original_ids.to_cons();
-    let normalized_first_id = evaluate_well_typed_expression(state, first_id);
-    let mut nfids = NonEmptyVec::singleton(normalized_first_id);
-    for id in remaining_ids.iter().copied() {
-        let nfid = evaluate_well_typed_expression(state, id);
-        nfids.push(nfid);
-    }
-    nfids
 }

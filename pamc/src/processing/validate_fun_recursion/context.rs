@@ -16,9 +16,15 @@ pub enum ContextEntry {
 pub enum ReferenceRestriction {
     MustCallWithSubstruct {
         superstruct_db_level: DbLevel,
-        arg_position: usize,
+        arg_position: IndexOrLabel,
     },
     CannotCall,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum IndexOrLabel {
+    Index(usize),
+    LabelId(NodeId<Identifier>),
 }
 
 impl Context {

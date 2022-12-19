@@ -2,9 +2,9 @@ use crate::data::{
     bound_ast::*,
     light_ast::{self as light, ParamLabelId},
     node_registry::{
-        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, NodeId,
-        NodeRegistry, NonEmptyListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
-        QuestionMarkOrPossiblyInvalidExpressionId,
+        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, LabeledCallArgId,
+        NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyParamListId,
+        PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
@@ -228,10 +228,38 @@ pub fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
 
 pub fn expand_call_arg_list(
     registry: &NodeRegistry,
-    id: NonEmptyListId<light::ExpressionId>,
+    id: NonEmptyCallArgListId,
 ) -> NonEmptyCallArgVec {
-    // TODO: Properly expand call arg
-    NonEmptyCallArgVec::Unlabeled(expand_expression_list(registry, id))
+    match id {
+        NonEmptyCallArgListId::Unlabeled(id) => {
+            NonEmptyCallArgVec::Unlabeled(expand_expression_list(registry, id))
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(id) => {
+            NonEmptyCallArgVec::UniquelyLabeled(expand_labeled_call_arg_list(registry, id))
+        }
+    }
+}
+
+pub fn expand_labeled_call_arg_list(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<LabeledCallArgId>,
+) -> NonEmptyVec<LabeledCallArg> {
+    registry
+        .get_list(id)
+        .to_mapped(|id| expand_labeled_call_arg(registry, *id))
+}
+
+pub fn expand_labeled_call_arg(registry: &NodeRegistry, id: LabeledCallArgId) -> LabeledCallArg {
+    match id {
+        LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArg::Implicit {
+            label: expand_identifier(registry, label_id),
+            db_index,
+        },
+        LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArg::Explicit {
+            label: expand_identifier(registry, label_id),
+            value: expand_expression(registry, value_id),
+        },
+    }
 }
 
 pub fn expand_expression_list(

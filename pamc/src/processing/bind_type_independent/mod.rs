@@ -294,12 +294,16 @@ fn bind_labeled_call_arg_dirty(
     context: &mut Context,
     arg: ub::LabeledCallArg,
 ) -> Result<LabeledCallArg, BindError> {
-    let value = bind_expression_dirty(context, arg.value)?;
-    Ok(LabeledCallArg {
-        span: Some(arg.span),
-        label: arg.label.into(),
-        value,
-    })
+    match arg {
+        ub::LabeledCallArg::Implicit(value) => Ok(LabeledCallArg::Implicit {
+            db_index: context.get_db_index(&[value.clone()])?,
+            label: value.into(),
+        }),
+        ub::LabeledCallArg::Explicit(label, value) => Ok(LabeledCallArg::Explicit {
+            label: label.into(),
+            value: bind_expression_dirty(context, value)?,
+        }),
+    }
 }
 
 fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, BindError> {

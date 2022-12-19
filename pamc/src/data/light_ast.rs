@@ -47,6 +47,15 @@ pub struct LabeledParam {
 
 pub use crate::data::node_registry::ParamLabelId;
 
+impl LabeledParam {
+    pub fn label_identifier_id(&self) -> NodeId<Identifier> {
+        match self.label_id {
+            ParamLabelId::Implicit => self.name_id,
+            ParamLabelId::Explicit(label_id) => label_id,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Variant {
     pub id: NodeId<Self>,
@@ -93,8 +102,10 @@ pub struct Call {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
-    pub arg_list_id: NonEmptyListId<ExpressionId>,
+    pub arg_list_id: NonEmptyCallArgListId,
 }
+
+pub use crate::data::node_registry::NonEmptyCallArgListId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {

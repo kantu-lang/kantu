@@ -2,8 +2,8 @@ use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
     TextSpan,
 };
 
@@ -40,6 +40,13 @@ pub enum TypeCheckError {
         call_id: NodeId<Call>,
         expected: usize,
         actual: usize,
+    },
+    LabelednessMismatch {
+        call_id: NodeId<Call>,
+    },
+    MissingArgument {
+        call_id: NodeId<Call>,
+        label_id: NodeId<Identifier>,
     },
     WrongNumberOfCaseParams {
         case_id: NodeId<MatchCase>,

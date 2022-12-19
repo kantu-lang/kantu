@@ -137,10 +137,9 @@ pub enum NonEmptyCallArgVec {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LabeledCallArg {
-    pub span: TextSpan,
-    pub label: ParamLabel,
-    pub value: Expression,
+pub enum LabeledCallArg {
+    Implicit(Identifier),
+    Explicit(Identifier, Expression),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

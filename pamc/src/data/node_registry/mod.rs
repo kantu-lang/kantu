@@ -49,6 +49,72 @@ impl NonEmptyParamListId {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum NonEmptyCallArgListId {
+    Unlabeled(NonEmptyListId<ExpressionId>),
+    UniquelyLabeled(NonEmptyListId<LabeledCallArgId>),
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyCallArgListId> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.non_zero_len().get()).unwrap_or(0)
+    }
+}
+
+impl NonEmptyCallArgListId {
+    pub fn len(&self) -> usize {
+        self.non_zero_len().get()
+    }
+
+    pub fn non_zero_len(&self) -> NonZeroUsize {
+        match self {
+            NonEmptyCallArgListId::Unlabeled(vec) => vec.len,
+            NonEmptyCallArgListId::UniquelyLabeled(vec) => vec.len,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum LabeledCallArgId {
+    Implicit {
+        label_id: NodeId<Identifier>,
+        db_index: DbIndex,
+    },
+    Explicit {
+        label_id: NodeId<Identifier>,
+        value_id: ExpressionId,
+    },
+}
+
+impl LabeledCallArgId {
+    pub fn label_id(&self) -> NodeId<Identifier> {
+        match self {
+            LabeledCallArgId::Implicit { label_id, .. } => *label_id,
+            LabeledCallArgId::Explicit { label_id, .. } => *label_id,
+        }
+    }
+
+    pub fn value_id(&self, registry: &mut NodeRegistry) -> ExpressionId {
+        fn dummy_id<T>() -> NodeId<T> {
+            NodeId::new(0)
+        }
+
+        match *self {
+            LabeledCallArgId::Implicit { label_id, db_index } => {
+                let span = registry.get(label_id).span;
+                let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
+                ExpressionId::Name(registry.add(NameExpression {
+                    id: dummy_id(),
+                    span,
+                    component_list_id,
+                    db_index,
+                }))
+            }
+            LabeledCallArgId::Explicit { value_id, .. } => value_id,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ParamLabelId {
     Implicit,
     Explicit(NodeId<Identifier>),
@@ -129,6 +195,7 @@ pub struct NodeRegistry {
     match_case_lists: ListSubregistry<NodeId<MatchCase>>,
     check_assertion_lists: ListSubregistry<NodeId<CheckAssertion>>,
     expression_lists: ListSubregistry<ExpressionId>,
+    labeled_call_arg_lists: ListSubregistry<LabeledCallArgId>,
     identifier_lists: ListSubregistry<NodeId<Identifier>>,
 }
 
@@ -160,6 +227,7 @@ impl NodeRegistry {
             match_case_lists: ListSubregistry::new(),
             check_assertion_lists: ListSubregistry::new(),
             expression_lists: ListSubregistry::new(),
+            labeled_call_arg_lists: ListSubregistry::new(),
             identifier_lists: ListSubregistry::new(),
         }
     }
@@ -499,6 +567,16 @@ mod registerable_list {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
             &mut registry.expression_lists
+        }
+    }
+
+    impl RegisterableList for LabeledCallArgId {
+        fn subregistry(registry: &NodeRegistry) -> &ListSubregistry<Self> {
+            &registry.labeled_call_arg_lists
+        }
+
+        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
+            &mut registry.labeled_call_arg_lists
         }
     }
 
