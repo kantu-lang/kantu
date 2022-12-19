@@ -44,6 +44,10 @@ pub enum TypeCheckError {
     LabelednessMismatch {
         call_id: NodeId<Call>,
     },
+    MissingArgument {
+        call_id: NodeId<Call>,
+        label_id: NodeId<Identifier>,
+    },
     WrongNumberOfCaseParams {
         case_id: NodeId<MatchCase>,
         expected: usize,

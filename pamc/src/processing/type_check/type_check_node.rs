@@ -381,14 +381,50 @@ fn correct_labeled_call_arg_order_dirty(
     param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
     arg_list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
-    // let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
-    // let arg_ids = state.registry.get_list(arg_list_id).to_non_empty_vec();
+    let param_ids = state.registry.get_list(param_list_id);
+    let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
+    let remaining_param_ids = remaining_param_ids.to_vec();
+    let arg_ids = state.registry.get_list(arg_list_id).to_non_empty_vec();
 
-    // let mut out = NonEmptyVec::singleton(x);
-    // for (param_index, param_id) in param_ids.iter().copied().enumerate() {
-    //     //
-    // }
+    let mut are_any_args_out_of_place = false;
+    let mut reordered_arg_ids = {
+        let first_param_label_id = state.registry.get(first_param_id).label_identifier_id();
+        let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, first_param_label_id, arg_ids.as_ref())? else {
+            return tainted_err(TypeCheckError::MissingArgument { call_id, label_id: first_param_label_id });
+        };
+        if arg_index != 0 {
+            are_any_args_out_of_place = true;
+        }
+        NonEmptyVec::singleton(arg_id)
+    };
+    for (param_index_in_remaining_params, param_id) in remaining_param_ids.iter().copied().enumerate() {
+        let param_index = 1 + param_index_in_remaining_params;
+        let param_label_id = state.registry.get(param_id).label_identifier_id();
+        let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, param_label_id, arg_ids.as_ref())? else {
+            return tainted_err(TypeCheckError::MissingArgument { call_id, label_id: param_label_id });
+        };
+        if arg_index != param_index {
+            are_any_args_out_of_place = true;
+        }
+        reordered_arg_ids.push(arg_id);
+    }
 
+    if are_any_args_out_of_place {
+        let callee_id = state.registry.get(call_id).callee_id;
+        let reordered_arg_list_id = state.registry.add_list(reordered_arg_ids);
+        let reordered = state.registry.add(Call {
+            id: dummy_id(),
+            span: None,
+            callee_id,
+            arg_list_id: NonEmptyCallArgListId::UniquelyLabeled(reordered_arg_list_id),
+        }).without_spans(state.registry);
+        Ok(Some(reordered))
+    } else {
+        Ok(None)
+    }
+}
+
+fn get_arg_corresponding_to_label(_state: &mut State, _label_id: NodeId<Identifier>, _arg_ids: &[LabeledCallArgId]) -> Result<Option<(usize, LabeledCallArgId)>, Tainted<TypeCheckError>> {
     unimplemented!()
 }
 
