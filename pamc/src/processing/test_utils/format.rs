@@ -92,7 +92,12 @@ pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) ->
             .iter()
             .map(|arg| match arg {
                 LabeledCallArg::Implicit { label, db_index } => {
-                    format!("{}:{},", &i1, format_ident(label))
+                    let db_index = if options.print_db_indices {
+                        format!("<{}>", db_index.0)
+                    } else {
+                        "".to_string()
+                    };
+                    format!("{}:{}{},", &i1, format_ident(label), db_index)
                 }
                 LabeledCallArg::Explicit { label, value } => {
                     let label = format!("{}: ", format_ident(label));

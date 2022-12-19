@@ -1107,7 +1107,7 @@ fn min_db_index_in_labeled_call_arg_relative_to_cutoff(
 ) -> MinDbIndex {
     match arg_id {
         LabeledCallArgId::Implicit { db_index, .. } => MinDbIndex::Some(db_index),
-        LabeledCallArgId::Explicit { label_id, value_id } => {
+        LabeledCallArgId::Explicit { value_id, .. } => {
             min_db_index_in_expression_relative_to_cutoff(registry, value_id, cutoff)
         }
     }

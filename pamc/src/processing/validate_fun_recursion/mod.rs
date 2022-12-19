@@ -309,8 +309,7 @@ fn is_call_restricted(
                                 .find(|arg_id| {
                                     let label_name: &IdentifierName = match arg_id {
                                         LabeledCallArgId::Implicit {
-                                            label_id: value_id,
-                                            db_index,
+                                            label_id: value_id, ..
                                         } => {
                                             let label_id = *value_id;
                                             &registry.get(label_id).name
@@ -326,7 +325,7 @@ fn is_call_restricted(
                                 id_of_arg_that_is_supposed_to_be_substruct
                             {
                                 match id_of_arg_that_is_supposed_to_be_substruct {
-                                    LabeledCallArgId::Implicit { label_id, db_index } => {
+                                    LabeledCallArgId::Implicit { db_index, .. } => {
                                         let expected_substruct_db_level =
                                             context.index_to_level(db_index);
                                         if !context.is_left_strict_substruct_of_right(
@@ -345,7 +344,7 @@ fn is_call_restricted(
                                             return err;
                                         }
                                     }
-                                    LabeledCallArgId::Explicit { label_id, value_id } => {
+                                    LabeledCallArgId::Explicit { value_id, .. } => {
                                         let err = Err(Tainted::new(
                                             IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
                                                 callee: callee_name_id,

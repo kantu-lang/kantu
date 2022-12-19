@@ -365,15 +365,16 @@ fn generate_code_for_call(
                 .iter()
                 .map(|arg_id| match arg_id {
                     LabeledCallArgId::Implicit {
-                        label_id: value_id,
+                        label_id: _,
                         db_index,
                     } => {
                         let identifier_name = context.js_name(*db_index);
                         Ok(Expression::Identifier(identifier_name))
                     }
-                    LabeledCallArgId::Explicit { label_id, value_id } => {
-                        generate_code_for_expression(registry, context, *value_id)
-                    }
+                    LabeledCallArgId::Explicit {
+                        label_id: _,
+                        value_id,
+                    } => generate_code_for_expression(registry, context, *value_id),
                 })
                 .collect::<Result<Vec<_>, _>>()?
         }

@@ -346,7 +346,7 @@ fn get_type_of_call_dirty(
 /// is the result or correcting the arg order to match the param order.
 /// If it cannot do this (e.g., the labeledness of the params and args doesn't match),
 /// then it returns `Err(_)`.
-fn correct_call_arg_order_dirty(state: &mut State, call_id: NodeId<Call>) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+fn correct_call_arg_order_dirty(_state: &mut State, _call_id: NodeId<Call>) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
     unimplemented!()
 }
 

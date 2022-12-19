@@ -3,7 +3,7 @@ use crate::data::{
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
     TextSpan,
 };
 

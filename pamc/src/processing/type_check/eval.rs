@@ -619,17 +619,3 @@ fn evaluate_well_typed_check(state: &mut State, check_id: NodeId<Check>) -> Norm
     let check = state.registry.get(check_id);
     evaluate_well_typed_expression(state, check.output_id)
 }
-
-fn eval_all(
-    state: &mut State,
-    original_ids: NonEmptySlice<ExpressionId>,
-) -> NonEmptyVec<NormalFormId> {
-    let (&first_id, remaining_ids) = original_ids.to_cons();
-    let normalized_first_id = evaluate_well_typed_expression(state, first_id);
-    let mut nfids = NonEmptyVec::singleton(normalized_first_id);
-    for id in remaining_ids.iter().copied() {
-        let nfid = evaluate_well_typed_expression(state, id);
-        nfids.push(nfid);
-    }
-    nfids
-}
