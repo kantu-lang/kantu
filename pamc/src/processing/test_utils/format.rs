@@ -90,17 +90,19 @@ pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) ->
             .join("\n"),
         NonEmptyCallArgVec::UniquelyLabeled(args) => args
             .iter()
-            .map(|arg| {
-                let label = match &arg.label {
-                    ParamLabel::Implicit => ":".to_string(),
-                    ParamLabel::Explicit(label) => format!("{}: ", format_ident(label)),
-                };
-                format!(
-                    "{}{}{},",
-                    &i1,
-                    label,
-                    format_expression(&arg.value, indent_level + 1, options)
-                )
+            .map(|arg| match arg {
+                LabeledCallArg::Implicit { label, db_index } => {
+                    format!("{}:{},", &i1, format_ident(label))
+                }
+                LabeledCallArg::Explicit { label, value } => {
+                    let label = format!("{}: ", format_ident(label));
+                    format!(
+                        "{}{}{},",
+                        &i1,
+                        label,
+                        format_expression(value, indent_level + 1, options)
+                    )
+                }
             })
             .collect::<Vec<_>>()
             .join("\n"),

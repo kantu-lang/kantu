@@ -2,7 +2,7 @@ use crate::data::{
     fun_recursion_validation_result::*,
     light_ast::*,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::OptionalNonEmptyVecLen,
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
 
@@ -308,7 +308,10 @@ fn is_call_restricted(
                                 .iter()
                                 .find(|arg_id| {
                                     let label_name: &IdentifierName = match arg_id {
-                                        LabeledCallArgId::Implicit { value_id, db_index } => {
+                                        LabeledCallArgId::Implicit {
+                                            label_id: value_id,
+                                            db_index,
+                                        } => {
                                             let label_id = *value_id;
                                             &registry.get(label_id).name
                                         }
@@ -322,29 +325,56 @@ fn is_call_restricted(
                             if let Some(id_of_arg_that_is_supposed_to_be_substruct) =
                                 id_of_arg_that_is_supposed_to_be_substruct
                             {
-                                let expected_substruct_id = registry
-                                    .get(id_of_arg_that_is_supposed_to_be_substruct)
-                                    .value_id;
-                                let err = Err(Tainted::new(
-                                    IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-                                        callee: callee_name_id,
-                                        arg: expected_substruct_id,
-                                    },
-                                ));
-                                match expected_substruct_id {
-                                    ExpressionId::Name(expected_substruct_name_id) => {
-                                        let expected_substruct =
-                                            registry.get(expected_substruct_name_id);
+                                match id_of_arg_that_is_supposed_to_be_substruct {
+                                    LabeledCallArgId::Implicit { label_id, db_index } => {
                                         let expected_substruct_db_level =
-                                            context.index_to_level(expected_substruct.db_index);
+                                            context.index_to_level(db_index);
                                         if !context.is_left_strict_substruct_of_right(
                                             expected_substruct_db_level,
                                             superstruct_db_level,
                                         ) {
+                                            let span = registry.get(label_id).span;
+                                            let component_list_id =
+                                                registry.add_list(NonEmptyVec::singleton(label_id));
+                                            let value_id =
+                                                ExpressionId::Name(registry.add(NameExpression {
+                                                    id: dummy_id(),
+                                                    span,
+                                                    component_list_id,
+                                                    db_index,
+                                                }));
+                                            let err = Err(Tainted::new(
+                                                IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
+                                                    callee: callee_name_id,
+                                                    arg: value_id,
+                                                },
+                                            ));
                                             return err;
                                         }
                                     }
-                                    _ => return err,
+                                    LabeledCallArgId::Explicit { label_id, value_id } => {
+                                        let err = Err(Tainted::new(
+                                            IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
+                                                callee: callee_name_id,
+                                                arg: value_id,
+                                            },
+                                        ));
+                                        match value_id {
+                                            ExpressionId::Name(expected_substruct_name_id) => {
+                                                let expected_substruct =
+                                                    registry.get(expected_substruct_name_id);
+                                                let expected_substruct_db_level = context
+                                                    .index_to_level(expected_substruct.db_index);
+                                                if !context.is_left_strict_substruct_of_right(
+                                                    expected_substruct_db_level,
+                                                    superstruct_db_level,
+                                                ) {
+                                                    return err;
+                                                }
+                                            }
+                                            _ => return err,
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -398,8 +428,8 @@ fn validate_fun_recursion_in_expression_list_dirty(
 fn validate_fun_recursion_in_labeled_call_arg_list_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    list_id: NonEmptyListId<NodeId<LabeledCallArg>>,
-) -> Result<NonEmptyListId<NodeId<LabeledCallArg>>, TaintedIllegalFunRecursionError> {
+    list_id: NonEmptyListId<LabeledCallArgId>,
+) -> Result<NonEmptyListId<LabeledCallArgId>, TaintedIllegalFunRecursionError> {
     let expression_ids = registry.get_list(list_id).try_to_mapped(|id| {
         validate_fun_recursion_in_labeled_call_arg_dirty(context, registry, *id)
     })?;
@@ -409,16 +439,32 @@ fn validate_fun_recursion_in_labeled_call_arg_list_dirty(
 fn validate_fun_recursion_in_labeled_call_arg_dirty(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    arg_id: NodeId<LabeledCallArg>,
-) -> Result<NodeId<LabeledCallArg>, TaintedIllegalFunRecursionError> {
-    let arg = registry.get(arg_id).clone();
-    let value_id = validate_fun_recursion_in_expression_dirty(context, registry, arg.value_id)?;
-    Ok(registry.add(LabeledCallArg {
-        id: dummy_id(),
-        span: arg.span,
-        label_id: arg.label_id,
-        value_id,
-    }))
+    arg_id: LabeledCallArgId,
+) -> Result<LabeledCallArgId, TaintedIllegalFunRecursionError> {
+    Ok(match arg_id {
+        LabeledCallArgId::Implicit { label_id, db_index } => {
+            if context.reference_restriction(db_index).is_some() {
+                let span = registry.get(label_id).span;
+                let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
+                let name_id = registry.add(NameExpression {
+                    id: dummy_id(),
+                    span,
+                    component_list_id,
+                    db_index,
+                });
+                return Err(Tainted::new(
+                    IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
+                        reference: name_id,
+                    },
+                ));
+            }
+            LabeledCallArgId::Implicit { label_id, db_index }
+        }
+        LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
+            label_id,
+            value_id: validate_fun_recursion_in_expression_dirty(context, registry, value_id)?,
+        },
+    })
 }
 
 fn validate_fun_recursion_in_fun_dirty(

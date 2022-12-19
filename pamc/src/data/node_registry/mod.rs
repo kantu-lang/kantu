@@ -76,7 +76,7 @@ impl NonEmptyCallArgListId {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum LabeledCallArgId {
     Implicit {
-        value_id: NodeId<Identifier>,
+        label_id: NodeId<Identifier>,
         db_index: DbIndex,
     },
     Explicit {

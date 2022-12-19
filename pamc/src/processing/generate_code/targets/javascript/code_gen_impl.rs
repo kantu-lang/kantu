@@ -364,7 +364,10 @@ fn generate_code_for_call(
             arg_ids
                 .iter()
                 .map(|arg_id| match arg_id {
-                    LabeledCallArgId::Implicit { value_id, db_index } => {
+                    LabeledCallArgId::Implicit {
+                        label_id: value_id,
+                        db_index,
+                    } => {
                         let identifier_name = context.js_name(*db_index);
                         Ok(Expression::Identifier(identifier_name))
                     }

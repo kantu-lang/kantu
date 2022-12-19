@@ -2,8 +2,8 @@ use crate::data::{
     bound_ast::*,
     light_ast::{self as light, ParamLabelId},
     node_registry::{
-        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, NodeId,
-        NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyParamListId,
+        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, LabeledCallArgId,
+        NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyParamListId,
         PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
@@ -242,22 +242,23 @@ pub fn expand_call_arg_list(
 
 pub fn expand_labeled_call_arg_list(
     registry: &NodeRegistry,
-    id: NonEmptyListId<NodeId<light::LabeledCallArg>>,
+    id: NonEmptyListId<LabeledCallArgId>,
 ) -> NonEmptyVec<LabeledCallArg> {
     registry
         .get_list(id)
         .to_mapped(|id| expand_labeled_call_arg(registry, *id))
 }
 
-pub fn expand_labeled_call_arg(
-    registry: &NodeRegistry,
-    id: NodeId<light::LabeledCallArg>,
-) -> LabeledCallArg {
-    let arg = registry.get(id);
-    LabeledCallArg {
-        span: arg.span,
-        label: expand_label(registry, arg.label_id),
-        value: expand_expression(registry, arg.value_id),
+pub fn expand_labeled_call_arg(registry: &NodeRegistry, id: LabeledCallArgId) -> LabeledCallArg {
+    match id {
+        LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArg::Implicit {
+            label: expand_identifier(registry, label_id),
+            db_index,
+        },
+        LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArg::Explicit {
+            label: expand_identifier(registry, label_id),
+            value: expand_expression(registry, value_id),
+        },
     }
 }
 

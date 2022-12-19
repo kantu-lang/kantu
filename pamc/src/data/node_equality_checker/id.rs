@@ -75,7 +75,7 @@ pub enum NonEmptyCallArgListSemanticId {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum LabeledCallArgSemanticId {
     Implicit {
-        value_id: SemanticId<IdentifierName>,
+        label_id: SemanticId<IdentifierName>,
         db_index: DbIndex,
     },
     Explicit {

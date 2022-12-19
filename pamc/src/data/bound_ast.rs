@@ -178,7 +178,7 @@ impl NonEmptyCallArgVec {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum LabeledCallArg {
     Implicit {
-        value: Identifier,
+        label: Identifier,
         db_index: DbIndex,
     },
     Explicit {

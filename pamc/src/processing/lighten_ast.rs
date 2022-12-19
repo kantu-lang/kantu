@@ -252,8 +252,11 @@ pub fn register_labeled_call_arg(
     unregistered: heavy::LabeledCallArg,
 ) -> LabeledCallArgId {
     match unregistered {
-        heavy::LabeledCallArg::Implicit { value, db_index } => LabeledCallArgId::Implicit {
-            value_id: register_identifier(registry, value),
+        heavy::LabeledCallArg::Implicit {
+            label: value,
+            db_index,
+        } => LabeledCallArgId::Implicit {
+            label_id: register_identifier(registry, value),
             db_index,
         },
         heavy::LabeledCallArg::Explicit { label, value } => LabeledCallArgId::Explicit {
