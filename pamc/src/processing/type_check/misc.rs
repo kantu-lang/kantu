@@ -377,11 +377,7 @@ fn is_left_inclusive_subterm_of_right(
                 return true;
             }
 
-            let right_arg_ids = state.registry.get_list(right.arg_list_id).to_vec();
-            if right_arg_ids
-                .iter()
-                .any(|&right_arg_id| is_left_inclusive_subterm_of_right(state, left, right_arg_id))
-            {
+            if does_right_contain_left(state, left, right.arg_list_id) {
                 return true;
             }
 
@@ -468,6 +464,14 @@ fn is_left_inclusive_subterm_of_right(
     }
 }
 
+fn does_right_contain_left(
+    state: &mut State,
+    left: ExpressionId,
+    right: NonEmptyCallArgListId,
+) -> bool {
+    unimplemented!()
+}
+
 fn is_left_subterm_of_any_right_param_type(
     state: &mut State,
     left: ExpressionId,
@@ -532,7 +536,7 @@ fn is_left_inclusive_subterm_of_any_right_assertion(
 pub struct NormalFormAdtExpression {
     pub type_name_id: NodeId<NameExpression>,
     pub variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
-    pub arg_list_id: Option<NonEmptyListId<ExpressionId>>,
+    pub arg_list_id: Option<NonEmptyCallArgListId>,
 }
 
 /// If the provided expression is has an ADT constructor at
@@ -588,7 +592,7 @@ pub(super) fn try_as_normal_form_adt_expression(
 pub(super) fn try_as_variant_expression(
     state: &mut State,
     expression_id: ExpressionId,
-) -> Option<(NodeId<Identifier>, Option<NonEmptyListId<ExpressionId>>)> {
+) -> Option<(NodeId<Identifier>, Option<NonEmptyCallArgListId>)> {
     match expression_id {
         ExpressionId::Name(name_id) => {
             let db_index = state.registry.get(name_id).db_index;
@@ -964,12 +968,67 @@ fn min_db_index_in_call_relative_to_cutoff(
     let call = registry.get(id);
     let callee_min =
         min_db_index_in_expression_relative_to_cutoff(registry, call.callee_id, cutoff);
-    let arg_ids = registry.get_list(call.arg_list_id);
-    let args_min = arg_ids
-        .iter()
-        .map(|&arg_id| min_db_index_in_expression_relative_to_cutoff(registry, arg_id, cutoff))
-        .min();
-    min_or_first(callee_min, args_min)
+    let args_min =
+        min_db_index_in_call_arg_list_relative_to_cutoff(registry, call.arg_list_id, cutoff);
+    callee_min.min(args_min)
+}
+
+fn min_db_index_in_call_arg_list_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyCallArgListId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
+            min_db_index_in_expression_list_relative_to_cutoff(registry, arg_list_id, cutoff)
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
+            min_db_index_in_labeled_call_arg_list_relative_to_cutoff(registry, arg_list_id, cutoff)
+        }
+    }
+}
+
+fn min_db_index_in_expression_list_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyListId<ExpressionId>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let arg_ids = registry.get_list(arg_list_id);
+    let mut min = MinDbIndex::Infinity;
+    for &arg_id in arg_ids.iter() {
+        min = min.min(min_db_index_in_expression_relative_to_cutoff(
+            registry, arg_id, cutoff,
+        ));
+    }
+    min
+}
+
+fn min_db_index_in_labeled_call_arg_list_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyListId<LabeledCallArgId>,
+    cutoff: usize,
+) -> MinDbIndex {
+    let arg_ids = registry.get_list(arg_list_id);
+    let mut min = MinDbIndex::Infinity;
+    for &arg_id in arg_ids.iter() {
+        min = min.min(min_db_index_in_labeled_call_arg_relative_to_cutoff(
+            registry, arg_id, cutoff,
+        ));
+    }
+    min
+}
+
+fn min_db_index_in_labeled_call_arg_relative_to_cutoff(
+    registry: &NodeRegistry,
+    arg_id: LabeledCallArgId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match arg_id {
+        LabeledCallArgId::Implicit { db_index, .. } => MinDbIndex::Some(db_index),
+        LabeledCallArgId::Explicit { label_id, value_id } => {
+            min_db_index_in_expression_relative_to_cutoff(registry, value_id, cutoff)
+        }
+    }
 }
 
 fn min_db_index_in_fun_relative_to_cutoff(
