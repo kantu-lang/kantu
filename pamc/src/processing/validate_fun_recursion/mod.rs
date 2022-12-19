@@ -414,7 +414,8 @@ fn validate_fun_recursion_in_expression_list_dirty(
 ) -> Result<NonEmptyListId<ExpressionId>, TaintedIllegalFunRecursionError> {
     let expression_ids = registry
         .get_list(list_id)
-        .try_to_mapped(|id| validate_fun_recursion_in_expression_dirty(context, registry, *id))?;
+        .to_non_empty_vec()
+        .try_into_mapped(|id| validate_fun_recursion_in_expression_dirty(context, registry, id))?;
     Ok(registry.add_list(expression_ids))
 }
 
@@ -423,9 +424,12 @@ fn validate_fun_recursion_in_labeled_call_arg_list_dirty(
     registry: &mut NodeRegistry,
     list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> Result<NonEmptyListId<LabeledCallArgId>, TaintedIllegalFunRecursionError> {
-    let expression_ids = registry.get_list(list_id).try_to_mapped(|id| {
-        validate_fun_recursion_in_labeled_call_arg_dirty(context, registry, *id)
-    })?;
+    let expression_ids = registry
+        .get_list(list_id)
+        .to_non_empty_vec()
+        .try_into_mapped(|id| {
+            validate_fun_recursion_in_labeled_call_arg_dirty(context, registry, id)
+        })?;
     Ok(registry.add_list(expression_ids))
 }
 

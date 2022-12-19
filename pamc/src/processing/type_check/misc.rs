@@ -857,8 +857,14 @@ fn expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
     normalized_left_arg_list_id: NonEmptyListId<LabeledCallArgId>,
     normalized_right_arg_list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> DynamicSubstitutionExpansionResult {
-    let normalized_left_arg_ids = state.registry.get_list(normalized_left_arg_list_id);
-    let normalized_right_arg_ids = state.registry.get_list(normalized_right_arg_list_id);
+    let normalized_left_arg_ids = state
+        .registry
+        .get_list(normalized_left_arg_list_id)
+        .to_non_empty_vec();
+    let normalized_right_arg_ids = state
+        .registry
+        .get_list(normalized_right_arg_list_id)
+        .to_non_empty_vec();
     assert_eq!(normalized_left_arg_ids.len(), normalized_right_arg_ids.len(), "Two well-typed Call expressions with the same callee should have the same number of arguments.");
 
     let mut subs = vec![];

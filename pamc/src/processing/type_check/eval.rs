@@ -248,13 +248,16 @@ fn can_labeled_fun_be_applied(
         // so it can be safely applied without causing infinite expansion.
         return true;
     };
-    let decreasing_param_label_name = &state.registry.get(decreasing_param_label_id).name;
+    let decreasing_param_label_name = state.registry.get(decreasing_param_label_id).name.clone();
 
-    let normalized_arg_ids = state.registry.get_list(normalized_arg_list_id);
+    let normalized_arg_ids = state
+        .registry
+        .get_list(normalized_arg_list_id)
+        .to_non_empty_vec();
     let decreasing_arg_id = normalized_arg_ids.iter().copied().find_map(|normalized_arg_id| {
         let arg_label_id = normalized_arg_id.label_id();
         let arg_label_name = &state.registry.get(arg_label_id).name;
-        if decreasing_param_label_name == arg_label_name {
+        if decreasing_param_label_name == *arg_label_name {
             let value_id = NormalFormId::unchecked_new(normalized_arg_id.value_id(state.registry));
             Some(value_id)
         } else {
@@ -294,14 +297,16 @@ fn evaluate_well_typed_call_arg_list(
             let arg_ids = state
                 .registry
                 .get_list(arg_list_id)
-                .to_mapped(|&arg_id| evaluate_well_typed_expression(state, arg_id).raw());
+                .to_non_empty_vec()
+                .into_mapped(|arg_id| evaluate_well_typed_expression(state, arg_id).raw());
             NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids))
         }
         NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
             let arg_ids = state
                 .registry
                 .get_list(arg_list_id)
-                .to_mapped(|&arg_id| evaluate_well_typed_labeled_call_arg(state, arg_id));
+                .to_non_empty_vec()
+                .into_mapped(|arg_id| evaluate_well_typed_labeled_call_arg(state, arg_id));
             NonEmptyCallArgListId::UniquelyLabeled(state.registry.add_list(arg_ids))
         }
     }
@@ -544,7 +549,8 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => state
                     .registry
                     .get_list(arg_list_id)
-                    .to_mapped(|arg_id| arg_id.value_id(state.registry))
+                    .to_non_empty_vec()
+                    .into_mapped(|arg_id| arg_id.value_id(state.registry))
                     .into(),
             };
             let substitutions: Vec<Substitution> = case_param_ids

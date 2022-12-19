@@ -296,7 +296,7 @@ fn bind_labeled_call_arg_dirty(
 ) -> Result<LabeledCallArg, BindError> {
     match arg {
         ub::LabeledCallArg::Implicit(value) => Ok(LabeledCallArg::Implicit {
-            db_index: context.get_db_index(&[value])?,
+            db_index: context.get_db_index(&[value.clone()])?,
             label: value.into(),
         }),
         ub::LabeledCallArg::Explicit(label, value) => Ok(LabeledCallArg::Explicit {
