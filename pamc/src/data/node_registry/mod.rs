@@ -85,6 +85,35 @@ pub enum LabeledCallArgId {
     },
 }
 
+impl LabeledCallArgId {
+    pub fn label_id(&self) -> NodeId<Identifier> {
+        match self {
+            LabeledCallArgId::Implicit { label_id, .. } => *label_id,
+            LabeledCallArgId::Explicit { label_id, .. } => *label_id,
+        }
+    }
+
+    pub fn value_id(&self, registry: &mut NodeRegistry) -> ExpressionId {
+        fn dummy_id<T>() -> NodeId<T> {
+            NodeId::new(0)
+        }
+
+        match *self {
+            LabeledCallArgId::Implicit { label_id, db_index } => {
+                let span = registry.get(label_id).span;
+                let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
+                ExpressionId::Name(registry.add(NameExpression {
+                    id: dummy_id(),
+                    span,
+                    component_list_id,
+                    db_index,
+                }))
+            }
+            LabeledCallArgId::Explicit { value_id, .. } => value_id,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ParamLabelId {
     Implicit,

@@ -247,7 +247,7 @@ fn validate_fun_recursion_in_call_dirty(
 
 fn is_call_restricted(
     context: &Context,
-    registry: &NodeRegistry,
+    registry: &mut NodeRegistry,
     call_id: NodeId<Call>,
 ) -> Result<bool, TaintedIllegalFunRecursionError> {
     let call = registry.get(call_id).clone();
@@ -333,16 +333,9 @@ fn is_call_restricted(
                                             expected_substruct_db_level,
                                             superstruct_db_level,
                                         ) {
-                                            let span = registry.get(label_id).span;
-                                            let component_list_id =
-                                                registry.add_list(NonEmptyVec::singleton(label_id));
                                             let value_id =
-                                                ExpressionId::Name(registry.add(NameExpression {
-                                                    id: dummy_id(),
-                                                    span,
-                                                    component_list_id,
-                                                    db_index,
-                                                }));
+                                                id_of_arg_that_is_supposed_to_be_substruct
+                                                    .value_id(registry);
                                             let err = Err(Tainted::new(
                                                 IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
                                                     callee: callee_name_id,
