@@ -2,7 +2,7 @@ use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
     TextSpan,
 };
