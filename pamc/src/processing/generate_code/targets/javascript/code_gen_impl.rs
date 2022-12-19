@@ -347,12 +347,28 @@ fn generate_code_for_call(
     call: &light::Call,
 ) -> Result<Expression, CompileToJavaScriptError> {
     let callee = generate_code_for_expression(registry, context, call.callee_id)?;
-    let args = {
-        let arg_ids = registry.get_list(call.arg_list_id);
-        arg_ids
-            .iter()
-            .map(|arg_id| generate_code_for_expression(registry, context, *arg_id))
-            .collect::<Result<Vec<_>, _>>()?
+    let args = match call.arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
+            let arg_ids = registry.get_list(arg_list_id);
+            arg_ids
+                .iter()
+                .map(|arg_id| generate_code_for_expression(registry, context, *arg_id))
+                .collect::<Result<Vec<_>, _>>()?
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
+            // TODO: Properly generate code for labeled arguments
+            // This will likely entail either reordering the arguments
+            // to match the order to their callee's signature, or
+            // using an object literal to pass the arguments.
+            let arg_ids = registry.get_list(arg_list_id);
+            arg_ids
+                .iter()
+                .map(|arg_id| {
+                    let arg = registry.get(*arg_id);
+                    generate_code_for_expression(registry, context, arg.value_id)
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        }
     };
     Ok(Expression::Call(Box::new(Call { callee, args })))
 }

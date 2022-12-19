@@ -1,7 +1,7 @@
 use crate::data::{
     bound_ast as heavy,
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    node_registry::{NodeId, NodeRegistry},
 };
 
 fn dummy_id<T>() -> NodeId<T> {
@@ -232,20 +232,33 @@ pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> 
 pub fn register_call_args(
     registry: &mut NodeRegistry,
     unregistered: heavy::NonEmptyCallArgVec,
-) -> NonEmptyListId<ExpressionId> {
+) -> NonEmptyCallArgListId {
     match unregistered {
         heavy::NonEmptyCallArgVec::Unlabeled(unregistered) => {
             let value_ids = unregistered
                 .into_mapped(|unregistered| register_expression(registry, unregistered));
-            registry.add_list(value_ids)
+            NonEmptyCallArgListId::Unlabeled(registry.add_list(value_ids))
         }
         heavy::NonEmptyCallArgVec::UniquelyLabeled(unregistered) => {
-            // TODO: Properly lighten labeled call args
             let value_ids = unregistered
-                .into_mapped(|unregistered| register_expression(registry, unregistered.value));
-            registry.add_list(value_ids)
+                .into_mapped(|unregistered| register_labeled_call_arg(registry, unregistered));
+            NonEmptyCallArgListId::UniquelyLabeled(registry.add_list(value_ids))
         }
     }
+}
+
+pub fn register_labeled_call_arg(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::LabeledCallArg,
+) -> NodeId<LabeledCallArg> {
+    let label_id = register_label(registry, unregistered.label);
+    let value_id = register_expression(registry, unregistered.value);
+    registry.add(LabeledCallArg {
+        id: dummy_id(),
+        span: unregistered.span,
+        label_id,
+        value_id,
+    })
 }
 
 pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> NodeId<Fun> {

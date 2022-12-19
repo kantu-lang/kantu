@@ -3,8 +3,8 @@ use crate::data::{
     light_ast::{self as light, ParamLabelId},
     node_registry::{
         FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, NodeId,
-        NodeRegistry, NonEmptyListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
-        QuestionMarkOrPossiblyInvalidExpressionId,
+        NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyParamListId,
+        PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
@@ -228,10 +228,37 @@ pub fn expand_call(registry: &NodeRegistry, id: NodeId<light::Call>) -> Call {
 
 pub fn expand_call_arg_list(
     registry: &NodeRegistry,
-    id: NonEmptyListId<light::ExpressionId>,
+    id: NonEmptyCallArgListId,
 ) -> NonEmptyCallArgVec {
-    // TODO: Properly expand call arg
-    NonEmptyCallArgVec::Unlabeled(expand_expression_list(registry, id))
+    match id {
+        NonEmptyCallArgListId::Unlabeled(id) => {
+            NonEmptyCallArgVec::Unlabeled(expand_expression_list(registry, id))
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(id) => {
+            NonEmptyCallArgVec::UniquelyLabeled(expand_labeled_call_arg_list(registry, id))
+        }
+    }
+}
+
+pub fn expand_labeled_call_arg_list(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<NodeId<light::LabeledCallArg>>,
+) -> NonEmptyVec<LabeledCallArg> {
+    registry
+        .get_list(id)
+        .to_mapped(|id| expand_labeled_call_arg(registry, *id))
+}
+
+pub fn expand_labeled_call_arg(
+    registry: &NodeRegistry,
+    id: NodeId<light::LabeledCallArg>,
+) -> LabeledCallArg {
+    let arg = registry.get(id);
+    LabeledCallArg {
+        span: arg.span,
+        label: expand_label(registry, arg.label_id),
+        value: expand_expression(registry, arg.value_id),
+    }
 }
 
 pub fn expand_expression_list(

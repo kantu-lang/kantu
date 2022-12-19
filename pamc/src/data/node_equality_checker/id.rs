@@ -53,3 +53,9 @@ pub enum ExpressionSemanticId {
     Match(SemanticId<stripped::Match>),
     Forall(SemanticId<stripped::Forall>),
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum NonEmptyCallArgListSemanticId {
+    Unlabeled(SemanticId<Vec<ExpressionSemanticId>>),
+    UniquelyLabeled(SemanticId<stripped::Set<stripped::LabeledCallArg>>),
+}

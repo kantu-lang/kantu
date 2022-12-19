@@ -93,7 +93,17 @@ pub struct Call {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
-    pub arg_list_id: NonEmptyListId<ExpressionId>,
+    pub arg_list_id: NonEmptyCallArgListId,
+}
+
+pub use crate::data::node_registry::NonEmptyCallArgListId;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LabeledCallArg {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+    pub label_id: ParamLabelId,
+    pub value_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

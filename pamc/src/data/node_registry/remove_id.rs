@@ -3,8 +3,8 @@ use crate::data::{
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{
-        GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyListId, NonEmptyParamListId,
-        ParamLabelId, QuestionMarkOrPossiblyInvalidExpressionId,
+        GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyCallArgListId, NonEmptyListId,
+        NonEmptyParamListId, ParamLabelId, QuestionMarkOrPossiblyInvalidExpressionId,
     },
     simplified_ast as unbound, FileId, TextSpan,
 };
@@ -283,7 +283,7 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 pub struct Call {
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,
-    pub arg_list_id: NonEmptyListId<ExpressionId>,
+    pub arg_list_id: NonEmptyCallArgListId,
 }
 impl RemoveId for with_id::Call {
     type Output = Call;
@@ -303,6 +303,34 @@ impl AddId for Call {
             span: self.span,
             callee_id: self.callee_id,
             arg_list_id: self.arg_list_id,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledCallArg {
+    pub span: Option<TextSpan>,
+    pub label_id: ParamLabelId,
+    pub value_id: ExpressionId,
+}
+impl RemoveId for with_id::LabeledCallArg {
+    type Output = LabeledCallArg;
+    fn remove_id(&self) -> Self::Output {
+        LabeledCallArg {
+            span: self.span,
+            label_id: self.label_id,
+            value_id: self.value_id,
+        }
+    }
+}
+impl AddId for LabeledCallArg {
+    type Output = with_id::LabeledCallArg;
+    fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
+        with_id::LabeledCallArg {
+            id,
+            span: self.span,
+            label_id: self.label_id,
+            value_id: self.value_id,
         }
     }
 }

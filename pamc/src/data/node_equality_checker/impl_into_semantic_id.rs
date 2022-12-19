@@ -145,6 +145,114 @@ impl IntoSemanticId for NodeId<Call> {
     }
 }
 
+impl IntoSemanticId for NonEmptyCallArgListId {
+    type Output = NonEmptyCallArgListSemanticId;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        match self {
+            NonEmptyCallArgListId::Unlabeled(id) => {
+                NonEmptyCallArgListSemanticId::Unlabeled(id.into_semantic_id(registry, sreg))
+            }
+            NonEmptyCallArgListId::UniquelyLabeled(id) => {
+                NonEmptyCallArgListSemanticId::UniquelyLabeled(id.into_semantic_id(registry, sreg))
+            }
+        }
+    }
+}
+
+impl GetIndexInSubregistry for NonEmptyListId<NodeId<LabeledCallArg>> {
+    type Stripped = LabeledCallArgSemanticIdSet;
+
+    fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
+        &mut sreg.labeled_call_arg_lists
+    }
+
+    fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
+        let arg_ids = registry.get_list(self);
+        arg_ids
+            .iter()
+            .map(|arg_id| arg_id.into_semantic_id(registry, sreg))
+            .collect()
+    }
+}
+impl IntoSemanticId for NonEmptyListId<NodeId<LabeledCallArg>> {
+    type Output = SemanticId<stripped::Set<stripped::LabeledCallArg>>;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        let raw = self.get_index_in_subregistry(registry, sreg);
+        SemanticId::new(raw)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct LabeledCallArgSemanticIdSet(
+    /// We internally use a sorted Vec instead of a hash set
+    /// because Vecs should be faster to compare for equality
+    /// than hash sets.
+    Vec<SemanticId<stripped::LabeledCallArg>>,
+);
+
+impl FromIterator<SemanticId<stripped::LabeledCallArg>> for LabeledCallArgSemanticIdSet {
+    fn from_iter<I: IntoIterator<Item = SemanticId<stripped::LabeledCallArg>>>(iter: I) -> Self {
+        let mut v: Vec<SemanticId<stripped_ast::LabeledCallArg>> = iter.into_iter().collect();
+        v.sort_unstable_by(|a, b| a.raw.cmp(&b.raw));
+        Self(v)
+    }
+}
+
+impl GetIndexInSubregistry for NodeId<LabeledCallArg> {
+    type Stripped = stripped::LabeledCallArg;
+
+    fn subregistry_mut(sreg: &mut StrippedRegistry) -> &mut Subregistry<Self> {
+        &mut sreg.labeled_call_args
+    }
+
+    fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
+        let arg = registry.get(self);
+        stripped::LabeledCallArg {
+            label_id: arg.label_id.into_semantic_id(registry, sreg),
+            value_id: arg.value_id.into_semantic_id(registry, sreg),
+        }
+    }
+}
+impl IntoSemanticId for NodeId<LabeledCallArg> {
+    type Output = SemanticId<stripped::LabeledCallArg>;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        let raw = self.get_index_in_subregistry(registry, sreg);
+        SemanticId::new(raw)
+    }
+}
+
+impl IntoSemanticId for ParamLabelId {
+    type Output = stripped::ParamLabelSemanticId;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        match self {
+            ParamLabelId::Implicit => stripped::ParamLabelSemanticId::Implicit,
+            ParamLabelId::Explicit(id) => {
+                stripped::ParamLabelSemanticId::Explicit(id.into_semantic_id(registry, sreg))
+            }
+        }
+    }
+}
+
 impl GetIndexInSubregistry for NodeId<Fun> {
     type Stripped = stripped::Fun;
 
@@ -347,6 +455,7 @@ impl GetIndexInSubregistry for NodeId<Forall> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let forall = registry.get(self);
         stripped::Forall {
+            // TODO: Properly handle possibly labeled params
             param_type_list_id: match forall.param_list_id {
                 NonEmptyParamListId::Unlabeled(param_list_id) => {
                     expression_ids_to_expression_vec_semantic_id(
