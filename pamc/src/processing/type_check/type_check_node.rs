@@ -346,7 +346,49 @@ fn get_type_of_call_dirty(
 /// is the result or correcting the arg order to match the param order.
 /// If it cannot do this (e.g., the labeledness of the params and args doesn't match),
 /// then it returns `Err(_)`.
-fn correct_call_arg_order_dirty(_state: &mut State, _call_id: NodeId<Call>) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+fn correct_call_arg_order_dirty(state: &mut State, call_id: NodeId<Call>) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+    let call = state.registry.get(call_id).clone();
+    let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
+    let ExpressionId::Forall(callee_type_id) = callee_type_id.raw() else {
+        return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
+    };
+    let callee_type = state.registry.get(callee_type_id).clone();
+
+    match (callee_type.param_list_id, call.arg_list_id) {
+        (NonEmptyParamListId::Unlabeled(param_list_id), NonEmptyCallArgListId::Unlabeled(arg_list_id)) => {
+            let expected_arity = param_list_id.len.get();
+            let actual_arity = arg_list_id.len.get();
+            if expected_arity != actual_arity {
+                tainted_err(TypeCheckError::WrongNumberOfArguments {
+                    call_id: call_id,
+                    expected: expected_arity,
+                    actual: actual_arity,
+                })
+            } else {
+                Ok(None)
+            }
+        }
+        (NonEmptyParamListId::UniquelyLabeled(param_list_id), NonEmptyCallArgListId::UniquelyLabeled(arg_list_id)) => {
+            correct_labeled_call_arg_order_dirty(state, call_id, param_list_id, arg_list_id)
+        }
+        _ => tainted_err(TypeCheckError::LabelednessMismatch { call_id })
+    }
+}
+
+fn correct_labeled_call_arg_order_dirty(
+    state: &mut State,
+    call_id: NodeId<Call>,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    arg_list_id: NonEmptyListId<LabeledCallArgId>,
+) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+    // let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
+    // let arg_ids = state.registry.get_list(arg_list_id).to_non_empty_vec();
+
+    // let mut out = NonEmptyVec::singleton(x);
+    // for (param_index, param_id) in param_ids.iter().copied().enumerate() {
+    //     //
+    // }
+
     unimplemented!()
 }
 
