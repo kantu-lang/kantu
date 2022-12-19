@@ -377,7 +377,7 @@ fn is_left_inclusive_subterm_of_right(
                 return true;
             }
 
-            if does_right_contain_left(state, left, right.arg_list_id) {
+            if does_right_call_arg_list_contain_left(state, left, right.arg_list_id) {
                 return true;
             }
 
@@ -464,12 +464,27 @@ fn is_left_inclusive_subterm_of_right(
     }
 }
 
-fn does_right_contain_left(
+fn does_right_call_arg_list_contain_left(
     state: &mut State,
     left: ExpressionId,
     right: NonEmptyCallArgListId,
 ) -> bool {
-    unimplemented!()
+    match right {
+        NonEmptyCallArgListId::Unlabeled(right) => {
+            let right_arg_ids = state.registry.get_list(right).to_vec();
+            right_arg_ids
+                .iter()
+                .copied()
+                .any(|right_arg_id| is_left_inclusive_subterm_of_right(state, left, right_arg_id))
+        }
+        NonEmptyCallArgListId::UniquelyLabeled(right) => {
+            let right_arg_ids = state.registry.get_list(right).to_vec();
+            right_arg_ids.iter().copied().any(|right_arg_id| {
+                let right_value_id = right_arg_id.value_id(state.registry);
+                is_left_inclusive_subterm_of_right(state, left, right_value_id)
+            })
+        }
+    }
 }
 
 fn is_left_subterm_of_any_right_param_type(
