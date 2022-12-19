@@ -242,9 +242,6 @@ fn get_type_of_call_dirty(
         .collect();
 
     let callee_type = state.registry.get(callee_type_id).clone();
-    // We use the params of the callee _type_ rather than the params of the
-    // callee itself, since the callee type is a normal form, which guarantees
-    // that its params are normal forms.
     {
         let expected_arity = callee_type.param_list_id.len();
         let actual_arity = arg_ids.len();
