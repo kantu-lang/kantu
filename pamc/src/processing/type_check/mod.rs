@@ -41,6 +41,9 @@ pub enum TypeCheckError {
         expected: usize,
         actual: usize,
     },
+    LabelednessMismatch {
+        call_id: NodeId<Call>,
+    },
     WrongNumberOfCaseParams {
         case_id: NodeId<MatchCase>,
         expected: usize,
