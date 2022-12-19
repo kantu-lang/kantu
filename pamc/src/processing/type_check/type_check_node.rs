@@ -425,6 +425,9 @@ fn correct_labeled_call_arg_order_dirty(
     }
 }
 
+// TODO: Properly label params of type if the fun's params are labeled.
+// TODO: Maybe we don't need `skip_type_checking_body` if we add it to the context
+// as `Uninterpreted`.
 fn get_type_of_fun_dirty(state: &mut State, fun_id: NodeId<Fun>) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let fun = state.registry.get(fun_id).clone();
     // We call this "param arity" instead of simply "arity"
