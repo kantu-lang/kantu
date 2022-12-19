@@ -622,7 +622,9 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                             DbIndex(case_param_arity - index - 1),
                         ))
                     });
-                let arg_list_id = state.registry.add_list(arg_ids);
+                // TODO: Properly construct parameterized matchee id
+                // after we add support for labeled match case params.
+                let arg_list_id = NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
                 let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
                     state.registry.add(Call {
                         id: dummy_id(),
