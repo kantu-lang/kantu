@@ -308,6 +308,10 @@ impl_from_array!(8);
 
 pub trait OptionalNonEmptyVecLen {
     fn len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl<T> OptionalNonEmptyVecLen for Option<NonEmptyVec<T>> {

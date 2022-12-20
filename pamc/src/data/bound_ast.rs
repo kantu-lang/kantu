@@ -1,6 +1,8 @@
 use crate::data::{
-    bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
-    non_empty_vec::NonEmptyVec, simplified_ast as unbound, FileId, TextSpan,
+    bind_error::BindError,
+    fun_recursion_validation_result::IllegalFunRecursionError,
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    simplified_ast as unbound, FileId, TextSpan,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -213,8 +215,42 @@ pub struct Match {
 pub struct MatchCase {
     pub span: Option<TextSpan>,
     pub variant_name: Identifier,
-    pub params: Vec<Identifier>,
+    pub params: Option<NonEmptyMatchCaseParamVec>,
     pub output: Expression,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum NonEmptyMatchCaseParamVec {
+    Unlabeled(NonEmptyVec<Identifier>),
+    UniquelyLabeled {
+        params: NonEmptyVec<LabeledMatchCaseParam>,
+        triple_dot: Option<TextSpan>,
+    },
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamVec> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.len()).unwrap_or(0)
+    }
+}
+
+impl NonEmptyMatchCaseParamVec {
+    pub fn len(&self) -> usize {
+        match self {
+            NonEmptyMatchCaseParamVec::Unlabeled(vec) => vec.len(),
+            NonEmptyMatchCaseParamVec::UniquelyLabeled {
+                params,
+                triple_dot: _,
+            } => params.len(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledMatchCaseParam {
+    pub span: TextSpan,
+    pub label: ParamLabel,
+    pub name: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
