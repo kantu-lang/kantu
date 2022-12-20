@@ -164,7 +164,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     actual: 0,
                 });
             };
-            if case_param_list_id.non_zero_len() != expected_case_param_arity {
+            if case_param_list_id.len() != expected_case_param_arity.get() {
                 return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
                     case_id,
                     expected: expected_case_param_arity.get(),
@@ -200,7 +200,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                         triple_dot: _,
                     } => state
                         .registry
-                        .get_list(param_list_id)
+                        .get_list(param_list_id.expect("TODO: Properly handle this case"))
                         .to_mapped(|&param_id| state.registry.get(param_id).name_id),
                 };
                 let case_param_arity = case_param_ids.len();

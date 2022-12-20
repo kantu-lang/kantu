@@ -378,16 +378,20 @@ fn bind_match_case_params(
 
         ub::NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
             NonEmptyMatchCaseParamVec::UniquelyLabeled {
-                params: params.try_into_mapped(
-                    |param| -> Result<LabeledMatchCaseParam, BindError> {
-                        let name = create_name_and_add_to_scope(context, param.name)?;
-                        Ok(LabeledMatchCaseParam {
-                            span: Some(param.span),
-                            label: param.label.into(),
-                            name,
-                        })
-                    },
-                )?,
+                params: params
+                    .map(|params| {
+                        params.try_into_mapped(
+                            |param| -> Result<LabeledMatchCaseParam, BindError> {
+                                let name = create_name_and_add_to_scope(context, param.name)?;
+                                Ok(LabeledMatchCaseParam {
+                                    span: Some(param.span),
+                                    label: param.label.into(),
+                                    name,
+                                })
+                            },
+                        )
+                    })
+                    .transpose()?,
                 triple_dot,
             }
         }

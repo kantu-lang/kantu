@@ -124,27 +124,23 @@ impl LabeledCallArgId {
 pub enum NonEmptyMatchCaseParamListId {
     Unlabeled(NonEmptyListId<NodeId<Identifier>>),
     UniquelyLabeled {
-        param_list_id: NonEmptyListId<NodeId<LabeledMatchCaseParam>>,
+        param_list_id: Option<NonEmptyListId<NodeId<LabeledMatchCaseParam>>>,
         triple_dot: Option<TextSpan>,
     },
 }
 
 impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamListId> {
     fn len(&self) -> usize {
-        self.as_ref().map(|v| v.non_zero_len().get()).unwrap_or(0)
+        self.as_ref().map(|v| v.len()).unwrap_or(0)
     }
 }
 
 impl NonEmptyMatchCaseParamListId {
     pub fn len(&self) -> usize {
-        self.non_zero_len().get()
-    }
-
-    pub fn non_zero_len(&self) -> NonZeroUsize {
         match self {
-            NonEmptyMatchCaseParamListId::Unlabeled(vec) => vec.len,
+            NonEmptyMatchCaseParamListId::Unlabeled(vec) => vec.len.get(),
             NonEmptyMatchCaseParamListId::UniquelyLabeled { param_list_id, .. } => {
-                param_list_id.len
+                param_list_id.map(|v| v.len.get()).unwrap_or(0)
             }
         }
     }

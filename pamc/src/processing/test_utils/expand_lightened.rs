@@ -44,9 +44,9 @@ pub fn expand_type_statement(
 ) -> TypeStatement {
     let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
-    let params = expand_possibly_empty_param_list(registry, light.param_list_id);
+    let params = expand_optional_param_list(registry, light.param_list_id);
     let variants =
-        expand_possibly_empty_variant_list(registry, light.variant_list_id).into_possibly_empty();
+        expand_optional_variant_list(registry, light.variant_list_id).into_possibly_empty();
     TypeStatement {
         span: light.span,
         name,
@@ -63,7 +63,7 @@ pub fn expand_identifier(registry: &NodeRegistry, id: NodeId<light::Identifier>)
     }
 }
 
-pub fn expand_possibly_empty_param_list(
+pub fn expand_optional_param_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyParamListId>,
 ) -> Option<NonEmptyParamVec> {
@@ -138,7 +138,7 @@ pub fn expand_param_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLab
     }
 }
 
-pub fn expand_possibly_empty_variant_list(
+pub fn expand_optional_variant_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyListId<NodeId<light::Variant>>>,
 ) -> Option<NonEmptyVec<Variant>> {
@@ -157,7 +157,7 @@ pub fn expand_variant_list(
 pub fn expand_variant(registry: &NodeRegistry, id: NodeId<light::Variant>) -> Variant {
     let light = registry.get(id);
     let name = expand_identifier(registry, light.name_id);
-    let params = expand_possibly_empty_param_list(registry, light.param_list_id);
+    let params = expand_optional_param_list(registry, light.param_list_id);
     let return_type = expand_expression(registry, light.return_type_id);
     Variant {
         span: light.span,
@@ -292,8 +292,7 @@ pub fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
 pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match {
     let light = registry.get(id);
     let matchee = expand_expression(registry, light.matchee_id);
-    let cases =
-        expand_possibly_empty_match_case_list(registry, light.case_list_id).into_possibly_empty();
+    let cases = expand_optional_match_case_list(registry, light.case_list_id).into_possibly_empty();
     Match {
         span: light.span,
         matchee,
@@ -301,7 +300,7 @@ pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match 
     }
 }
 
-pub fn expand_possibly_empty_match_case_list(
+pub fn expand_optional_match_case_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyListId<NodeId<light::MatchCase>>>,
 ) -> Option<NonEmptyVec<MatchCase>> {
@@ -320,7 +319,7 @@ pub fn expand_match_case_list(
 pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> MatchCase {
     let light = registry.get(id);
     let variant_name = expand_identifier(registry, light.variant_name_id);
-    let params = expand_possibly_empty_match_case_param_list(registry, light.param_list_id);
+    let params = expand_optional_match_case_param_list(registry, light.param_list_id);
     let output = expand_expression(registry, light.output_id);
     MatchCase {
         span: light.span,
@@ -330,7 +329,7 @@ pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) 
     }
 }
 
-pub fn expand_possibly_empty_match_case_param_list(
+pub fn expand_optional_match_case_param_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyMatchCaseParamListId>,
 ) -> Option<NonEmptyMatchCaseParamVec> {
@@ -349,10 +348,17 @@ pub fn expand_match_case_param_list(
             param_list_id,
             triple_dot,
         } => {
-            let params = expand_labeled_match_case_param_list(registry, param_list_id);
+            let params = expand_optional_labeled_match_case_param_list(registry, param_list_id);
             NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot }
         }
     }
+}
+
+pub fn expand_optional_labeled_match_case_param_list(
+    registry: &NodeRegistry,
+    param_list_id: Option<NonEmptyListId<NodeId<light::LabeledMatchCaseParam>>>,
+) -> Option<NonEmptyVec<LabeledMatchCaseParam>> {
+    param_list_id.map(|id| expand_labeled_match_case_param_list(registry, id))
 }
 
 pub fn expand_labeled_match_case_param_list(

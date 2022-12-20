@@ -546,7 +546,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                     triple_dot: _,
                 }) => state
                     .registry
-                    .get_list(param_list_id)
+                    .get_list(param_list_id.expect("TODO: Properly handle the labeled case"))
                     .to_mapped(|&param_id| state.registry.get(param_id).name_id)
                     .into(),
             };

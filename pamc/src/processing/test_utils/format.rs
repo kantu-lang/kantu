@@ -273,11 +273,15 @@ pub fn format_match_case_params(params: &NonEmptyMatchCaseParamVec) -> String {
             format!("({})", without_parens)
         }
         NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
-            let without_parens = params
-                .iter()
-                .map(|param| format!("{}", format_labeled_match_case_param(param)))
-                .collect::<Vec<_>>()
-                .join(", ");
+            let without_parens = if let Some(params) = params {
+                params
+                    .iter()
+                    .map(|param| format!("{}", format_labeled_match_case_param(param)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            } else {
+                "".to_string()
+            };
             let triple_dot = if triple_dot.is_some() {
                 if params.is_empty() {
                     "...".to_string()

@@ -333,7 +333,7 @@ pub fn register_match_case_params(
             NonEmptyMatchCaseParamListId::Unlabeled(id)
         }
         heavy::NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
-            let param_list_id = register_labeled_match_case_params(registry, params);
+            let param_list_id = register_optional_labeled_match_case_params(registry, params);
             NonEmptyMatchCaseParamListId::UniquelyLabeled {
                 param_list_id,
                 triple_dot,
@@ -348,6 +348,13 @@ pub fn register_identifiers(
 ) -> NonEmptyListId<NodeId<Identifier>> {
     let ids = unregistered.into_mapped(|unregistered| register_identifier(registry, unregistered));
     registry.add_list(ids)
+}
+
+pub fn register_optional_labeled_match_case_params(
+    registry: &mut NodeRegistry,
+    unregistered: Option<NonEmptyVec<heavy::LabeledMatchCaseParam>>,
+) -> Option<NonEmptyListId<NodeId<LabeledMatchCaseParam>>> {
+    unregistered.map(|unregistered| register_labeled_match_case_params(registry, unregistered))
 }
 
 pub fn register_labeled_match_case_params(

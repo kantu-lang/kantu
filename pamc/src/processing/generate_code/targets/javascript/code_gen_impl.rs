@@ -506,8 +506,11 @@ fn generate_code_for_match_case(
                 param_list_id,
                 triple_dot: _,
             }) => {
-                for (param_index, param_id) in
-                    registry.get_list(param_list_id).iter().copied().enumerate()
+                for (param_index, param_id) in registry
+                    .get_possibly_empty_list(param_list_id)
+                    .iter()
+                    .copied()
+                    .enumerate()
                 {
                     let param_name = &registry.get(registry.get(param_id).name_id).name;
                     context.try_push_name(param_name.js_name());
