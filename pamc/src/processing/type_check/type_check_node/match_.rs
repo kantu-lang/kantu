@@ -21,9 +21,13 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
         state.registry,
         matchee_type.variant_name_list_id,
         match_.case_list_id,
-    ).map_err(Tainted::new)?;
+    )
+    .map_err(Tainted::new)?;
 
-    let case_ids = state.registry.get_possibly_empty_list(match_.case_list_id).to_vec();
+    let case_ids = state
+        .registry
+        .get_possibly_empty_list(match_.case_list_id)
+        .to_vec();
     let mut first_case_type_id = None;
     for case_id in case_ids {
         let case_type_id = get_type_of_match_case_dirty(
@@ -93,11 +97,8 @@ fn get_type_of_match_case_dirty(
     let output_type_id = get_type_of_expression_dirty(state, coercion_target_id, case.output_id)?;
 
     if let Some(coercion_target_id) = coercion_target_id {
-        let can_be_coerced = is_left_type_assignable_to_right_type(
-            state,
-            output_type_id,
-            coercion_target_id,
-        );
+        let can_be_coerced =
+            is_left_type_assignable_to_right_type(state, output_type_id, coercion_target_id);
 
         state.context.pop_n(case_arity);
         state.substitution_context.pop();
@@ -114,7 +115,7 @@ fn get_type_of_match_case_dirty(
                 // tracking (if we implement it).
                 expected_type_id: coercion_target_id,
             })
-        }
+        };
     }
 
     state.context.pop_n(case_arity);
@@ -122,9 +123,7 @@ fn get_type_of_match_case_dirty(
 
     match output_type_id.try_downshift(case_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
-        Err(_) => {
-            tainted_err(TypeCheckError::AmbiguousOutputType { case_id })
-        }
+        Err(_) => tainted_err(TypeCheckError::AmbiguousOutputType { case_id }),
     }
 }
 
@@ -140,7 +139,8 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
     let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
         let matchee_type_name = state.registry.get(matchee_type.type_name_id);
         let matchee_type_name_component_ids = state
-            .registry.get_list(matchee_type_name.component_list_id)
+            .registry
+            .get_list(matchee_type_name.component_list_id)
             .to_vec();
         NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
     };
@@ -181,27 +181,34 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 ));
-                let case_param_ids = state.registry.get_list(case_param_list_id).to_non_empty_vec();
+                let case_param_ids = state
+                    .registry
+                    .get_list(case_param_list_id)
+                    .to_non_empty_vec();
                 let case_param_arity = case_param_ids.len();
-                let arg_ids = case_param_ids
-                    .as_non_empty_slice()
-                    .enumerate_to_mapped(|(index, &case_param_id)| {
+                let arg_ids = case_param_ids.as_non_empty_slice().enumerate_to_mapped(
+                    |(index, &case_param_id)| {
                         ExpressionId::Name(add_name_expression(
                             state.registry,
                             NonEmptyVec::singleton(case_param_id),
                             DbIndex(case_param_arity - index - 1),
                         ))
-                    });
+                    },
+                );
                 // TODO: Properly construct parameterized matchee id
                 // after we add support for labeled match case params.
-                let arg_list_id = NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
+                let arg_list_id =
+                    NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
                 let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
-                    state.registry.add(Call {
-                        id: dummy_id(),
-                        span: None,
-                        callee_id,
-                        arg_list_id,
-                    }).without_spans(state.registry),
+                    state
+                        .registry
+                        .add(Call {
+                            id: dummy_id(),
+                            span: None,
+                            callee_id,
+                            arg_list_id,
+                        })
+                        .without_spans(state.registry),
                 ));
 
                 let output_substitutions: Vec<Substitution> = case_param_ids
@@ -210,7 +217,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     .enumerate()
                     .map(|(raw_index, case_param_id)| {
                         let db_index = DbIndex(case_param_ids.len() - raw_index - 1);
-                        let param_name_expression_id = ExpressionId::Name(add_name_expression(state.registry, NonEmptyVec::singleton(case_param_id), db_index));
+                        let param_name_expression_id = ExpressionId::Name(add_name_expression(
+                            state.registry,
+                            NonEmptyVec::singleton(case_param_id),
+                            db_index,
+                        ));
                         Substitution {
                             // We don't care about the name of the `from` `NameExpression`
                             // because the comparison is only based on the `db_index`.
@@ -219,16 +230,19 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                         }
                     })
                     .collect();
-                let substituted_output_id = normalized_forall.output_id.subst_all(
-                    &output_substitutions,
-                    &mut state.without_context(),
-                );
-                let parameterized_matchee_type_id = NormalFormId::unchecked_new(substituted_output_id);
+                let substituted_output_id = normalized_forall
+                    .output_id
+                    .subst_all(&output_substitutions, &mut state.without_context());
+                let parameterized_matchee_type_id =
+                    NormalFormId::unchecked_new(substituted_output_id);
 
                 (parameterized_matchee_id, parameterized_matchee_type_id)
             };
-            
-            Ok(with_push_warning((parameterized_matchee_id, parameterized_matchee_type_id)))
+
+            Ok(with_push_warning((
+                parameterized_matchee_id,
+                parameterized_matchee_type_id,
+            )))
         }
         ExpressionId::Name(_) => {
             // In this case, the variant type is nullary.
@@ -249,8 +263,14 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 )));
-            Ok(with_push_warning((parameterized_matchee_id, variant_type_id)))
+            Ok(with_push_warning((
+                parameterized_matchee_id,
+                variant_type_id,
+            )))
         }
-        other => panic!("A variant's type should always either be a Forall or a Name, but it was actually a {:?}", other),
+        other => panic!(
+            "A variant's type should always either be a Forall or a Name, but it was actually a {:?}",
+            other,
+        ),
     }
 }
