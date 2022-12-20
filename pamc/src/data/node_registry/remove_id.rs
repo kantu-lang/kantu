@@ -4,7 +4,8 @@ use crate::data::{
     light_ast as with_id,
     node_registry::{
         GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyCallArgListId, NonEmptyListId,
-        NonEmptyParamListId, ParamLabelId, QuestionMarkOrPossiblyInvalidExpressionId,
+        NonEmptyMatchCaseParamListId, NonEmptyParamListId, ParamLabelId,
+        QuestionMarkOrPossiblyInvalidExpressionId,
     },
     simplified_ast as unbound, FileId, TextSpan,
 };
@@ -376,7 +377,7 @@ impl AddId for Match {
 pub struct MatchCase {
     pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<with_id::Identifier>,
-    pub param_list_id: Option<NonEmptyListId<NodeId<with_id::Identifier>>>,
+    pub param_list_id: Option<NonEmptyMatchCaseParamListId>,
     pub output_id: ExpressionId,
 }
 impl RemoveId for with_id::MatchCase {
@@ -402,6 +403,35 @@ impl AddId for MatchCase {
         }
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledMatchCaseParam {
+    pub span: Option<TextSpan>,
+    pub label_id: with_id::ParamLabelId,
+    pub name_id: NodeId<with_id::Identifier>,
+}
+impl RemoveId for with_id::LabeledMatchCaseParam {
+    type Output = LabeledMatchCaseParam;
+    fn remove_id(&self) -> Self::Output {
+        LabeledMatchCaseParam {
+            span: self.span,
+            label_id: self.label_id,
+            name_id: self.name_id,
+        }
+    }
+}
+impl AddId for LabeledMatchCaseParam {
+    type Output = with_id::LabeledMatchCaseParam;
+    fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
+        with_id::LabeledMatchCaseParam {
+            id,
+            span: self.span,
+            label_id: self.label_id,
+            name_id: self.name_id,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: Option<TextSpan>,

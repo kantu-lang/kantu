@@ -49,6 +49,12 @@ impl NonEmptyParamListId {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum ParamLabelId {
+    Implicit,
+    Explicit(NodeId<Identifier>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyCallArgListId {
     Unlabeled(NonEmptyListId<ExpressionId>),
     UniquelyLabeled(NonEmptyListId<LabeledCallArgId>),
@@ -115,9 +121,33 @@ impl LabeledCallArgId {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum ParamLabelId {
-    Implicit,
-    Explicit(NodeId<Identifier>),
+pub enum NonEmptyMatchCaseParamListId {
+    Unlabeled(NonEmptyListId<NodeId<Identifier>>),
+    UniquelyLabeled {
+        param_list_id: NonEmptyListId<NodeId<LabeledMatchCaseParam>>,
+        triple_dot: Option<TextSpan>,
+    },
+}
+
+impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamListId> {
+    fn len(&self) -> usize {
+        self.as_ref().map(|v| v.non_zero_len().get()).unwrap_or(0)
+    }
+}
+
+impl NonEmptyMatchCaseParamListId {
+    pub fn len(&self) -> usize {
+        self.non_zero_len().get()
+    }
+
+    pub fn non_zero_len(&self) -> NonZeroUsize {
+        match self {
+            NonEmptyMatchCaseParamListId::Unlabeled(vec) => vec.len,
+            NonEmptyMatchCaseParamListId::UniquelyLabeled { param_list_id, .. } => {
+                param_list_id.len
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -181,6 +211,7 @@ pub struct NodeRegistry {
     funs: Subregistry<Fun>,
     matches: Subregistry<Match>,
     match_cases: Subregistry<MatchCase>,
+    labeled_match_case_params: Subregistry<LabeledMatchCaseParam>,
     foralls: Subregistry<Forall>,
     checks: Subregistry<Check>,
     check_assertions: Subregistry<CheckAssertion>,
@@ -193,6 +224,7 @@ pub struct NodeRegistry {
     labeled_param_lists: ListSubregistry<NodeId<LabeledParam>>,
     variant_lists: ListSubregistry<NodeId<Variant>>,
     match_case_lists: ListSubregistry<NodeId<MatchCase>>,
+    labeled_match_case_param_lists: ListSubregistry<NodeId<LabeledMatchCaseParam>>,
     check_assertion_lists: ListSubregistry<NodeId<CheckAssertion>>,
     expression_lists: ListSubregistry<ExpressionId>,
     labeled_call_arg_lists: ListSubregistry<LabeledCallArgId>,
@@ -213,6 +245,7 @@ impl NodeRegistry {
             funs: Subregistry::new(),
             matches: Subregistry::new(),
             match_cases: Subregistry::new(),
+            labeled_match_case_params: Subregistry::new(),
             foralls: Subregistry::new(),
             checks: Subregistry::new(),
             check_assertions: Subregistry::new(),
@@ -225,6 +258,7 @@ impl NodeRegistry {
             labeled_param_lists: ListSubregistry::new(),
             variant_lists: ListSubregistry::new(),
             match_case_lists: ListSubregistry::new(),
+            labeled_match_case_param_lists: ListSubregistry::new(),
             check_assertion_lists: ListSubregistry::new(),
             expression_lists: ListSubregistry::new(),
             labeled_call_arg_lists: ListSubregistry::new(),
@@ -374,6 +408,16 @@ mod registerable_node {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
             &mut registry.match_cases
+        }
+    }
+
+    impl RegisterableNode for LabeledMatchCaseParam {
+        fn subregistry(registry: &NodeRegistry) -> &Subregistry<Self> {
+            &registry.labeled_match_case_params
+        }
+
+        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
+            &mut registry.labeled_match_case_params
         }
     }
 
@@ -547,6 +591,16 @@ mod registerable_list {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
             &mut registry.match_case_lists
+        }
+    }
+
+    impl RegisterableList for NodeId<LabeledMatchCaseParam> {
+        fn subregistry(registry: &NodeRegistry) -> &ListSubregistry<Self> {
+            &registry.labeled_match_case_param_lists
+        }
+
+        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
+            &mut registry.labeled_match_case_param_lists
         }
     }
 
@@ -778,6 +832,12 @@ mod set_id {
     }
 
     impl SetId for MatchCase {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for LabeledMatchCaseParam {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }

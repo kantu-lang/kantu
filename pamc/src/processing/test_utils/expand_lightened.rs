@@ -3,8 +3,9 @@ use crate::data::{
     light_ast::{self as light, ParamLabelId},
     node_registry::{
         FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, LabeledCallArgId,
-        NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyParamListId,
-        PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
+        NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyMatchCaseParamListId,
+        NonEmptyParamListId, PossiblyInvalidExpressionId,
+        QuestionMarkOrPossiblyInvalidExpressionId,
     },
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
@@ -118,7 +119,7 @@ pub fn expand_labeled_param(
     id: NodeId<light::LabeledParam>,
 ) -> LabeledParam {
     let light = registry.get(id);
-    let label = expand_label(registry, light.label_id);
+    let label = expand_param_label(registry, light.label_id);
     let name = expand_identifier(registry, light.name_id);
     let type_ = expand_expression(registry, light.type_id);
     LabeledParam {
@@ -130,7 +131,7 @@ pub fn expand_labeled_param(
     }
 }
 
-pub fn expand_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLabel {
+pub fn expand_param_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLabel {
     match id {
         ParamLabelId::Implicit => ParamLabel::Implicit,
         ParamLabelId::Explicit(id) => ParamLabel::Explicit(expand_identifier(registry, id)),
@@ -331,17 +332,50 @@ pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) 
 
 pub fn expand_possibly_empty_match_case_param_list(
     registry: &NodeRegistry,
-    id: Option<NonEmptyListId<NodeId<light::Identifier>>>,
+    id: Option<NonEmptyMatchCaseParamListId>,
 ) -> Option<NonEmptyMatchCaseParamVec> {
     id.map(|id| expand_match_case_param_list(registry, id))
 }
 
 pub fn expand_match_case_param_list(
     registry: &NodeRegistry,
-    id: NonEmptyListId<NodeId<light::Identifier>>,
+    id: NonEmptyMatchCaseParamListId,
 ) -> NonEmptyMatchCaseParamVec {
-    // TODO: Properly expand match case params
-    NonEmptyMatchCaseParamVec::Unlabeled(expand_identifier_list(registry, id))
+    match id {
+        NonEmptyMatchCaseParamListId::Unlabeled(id) => {
+            NonEmptyMatchCaseParamVec::Unlabeled(expand_identifier_list(registry, id))
+        }
+        NonEmptyMatchCaseParamListId::UniquelyLabeled {
+            param_list_id,
+            triple_dot,
+        } => {
+            let params = expand_labeled_match_case_param_list(registry, param_list_id);
+            NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot }
+        }
+    }
+}
+
+pub fn expand_labeled_match_case_param_list(
+    registry: &NodeRegistry,
+    param_list_id: NonEmptyListId<NodeId<light::LabeledMatchCaseParam>>,
+) -> NonEmptyVec<LabeledMatchCaseParam> {
+    registry
+        .get_list(param_list_id)
+        .to_mapped(|id| expand_labeled_match_case_param(registry, *id))
+}
+
+pub fn expand_labeled_match_case_param(
+    registry: &NodeRegistry,
+    param_list_id: NodeId<light::LabeledMatchCaseParam>,
+) -> LabeledMatchCaseParam {
+    let light = registry.get(param_list_id);
+    let label = expand_param_label(registry, light.label_id);
+    let name = expand_identifier(registry, light.name_id);
+    LabeledMatchCaseParam {
+        span: light.span,
+        label,
+        name,
+    }
 }
 
 pub fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Forall {

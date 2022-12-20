@@ -248,7 +248,7 @@ impl NonEmptyMatchCaseParamVec {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledMatchCaseParam {
-    pub span: TextSpan,
+    pub span: Option<TextSpan>,
     pub label: ParamLabel,
     pub name: Identifier,
 }

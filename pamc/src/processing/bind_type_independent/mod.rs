@@ -382,7 +382,7 @@ fn bind_match_case_params(
                     |param| -> Result<LabeledMatchCaseParam, BindError> {
                         let name = create_name_and_add_to_scope(context, param.name)?;
                         Ok(LabeledMatchCaseParam {
-                            span: param.span,
+                            span: Some(param.span),
                             label: param.label.into(),
                             name,
                         })

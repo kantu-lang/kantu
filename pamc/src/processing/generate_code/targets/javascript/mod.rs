@@ -2,7 +2,7 @@ use crate::data::{
     light_ast as light,
     node_registry::{
         ExpressionRef, LabeledCallArgId, NodeId, NodeRegistry, NonEmptyCallArgListId,
-        NonEmptyParamListId,
+        NonEmptyMatchCaseParamListId, NonEmptyParamListId,
     },
     non_empty_vec::OptionalNonEmptyVecLen,
     FileId,

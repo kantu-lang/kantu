@@ -249,6 +249,45 @@ impl WithoutSpans for NodeId<MatchCase> {
     }
 }
 
+impl WithoutSpans for NonEmptyMatchCaseParamListId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            NonEmptyMatchCaseParamListId::Unlabeled(ids) => {
+                NonEmptyMatchCaseParamListId::Unlabeled(ids.without_spans(registry))
+            }
+            NonEmptyMatchCaseParamListId::UniquelyLabeled {
+                param_list_id,
+                triple_dot: _,
+            } => NonEmptyMatchCaseParamListId::UniquelyLabeled {
+                param_list_id: param_list_id.without_spans(registry),
+                triple_dot: None,
+            },
+        }
+    }
+}
+
+impl WithoutSpans for NonEmptyListId<NodeId<LabeledMatchCaseParam>> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.get_list(self).to_non_empty_vec();
+        let new = original.into_mapped(|id| id.without_spans(registry));
+        registry.add_list(new)
+    }
+}
+
+impl WithoutSpans for NodeId<LabeledMatchCaseParam> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        let original = registry.get(self).clone();
+        let label_id = original.label_id.without_spans(registry);
+        let name_id = original.name_id.without_spans(registry);
+        registry.add(LabeledMatchCaseParam {
+            id: dummy_id(),
+            span: None,
+            label_id,
+            name_id,
+        })
+    }
+}
+
 impl WithoutSpans for NodeId<Forall> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
