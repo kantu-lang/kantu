@@ -203,6 +203,8 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
         reordered_arg_ids.push(arg_id);
     }
 
+    verify_there_are_no_extraneous_args(state, call_id, param_list_id, arg_list_id)?;
+
     if are_any_args_out_of_place {
         let callee_id = state.registry.get(call_id).callee_id;
         let reordered_arg_list_id = state.registry.add_list(reordered_arg_ids);
@@ -219,4 +221,27 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
     } else {
         Ok(None)
     }
+}
+
+fn verify_there_are_no_extraneous_args(
+    state: &State,
+    call_id: NodeId<Call>,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    arg_list_id: NonEmptyListId<LabeledCallArgId>,
+) -> Result<(), Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id);
+    let arg_ids = state.registry.get_list(arg_list_id);
+    for &arg_id in arg_ids.iter() {
+        let arg_label_id = arg_id.label_id();
+        let arg_label_name: &IdentifierName = &state.registry.get(arg_label_id).name;
+        let has_corresponding_param = param_ids.iter().copied().any(|param_id| {
+            let param_label_id = state.registry.get(param_id).label_identifier_id();
+            let param_label_name: &IdentifierName = &state.registry.get(param_label_id).name;
+            arg_label_name == param_label_name
+        });
+        if !has_corresponding_param {
+            return tainted_err(TypeCheckError::ExtraneousLabeledCallArg { call_id, arg_id });
+        }
+    }
+    Ok(())
 }
