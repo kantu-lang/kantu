@@ -71,20 +71,22 @@ fn get_type_of_match_case_dirty(
     matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
-    let case_arity = case.param_list_id.len();
-    let (parameterized_matchee_id, parameterized_matchee_type_id) =
-        add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
-            state,
-            case_id,
-            matchee_type,
-        )??;
+    let ConstructedTerms {
+        parameterized_matchee_id,
+        parameterized_matchee_type_id,
+        variant_arity,
+    } = add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
+        state,
+        case_id,
+        matchee_type,
+    )??;
 
     let original_coercion_target_id = coercion_target_id;
     let coercion_target_id =
-        coercion_target_id.map(|target_id| target_id.upshift(case_arity, state.registry));
+        coercion_target_id.map(|target_id| target_id.upshift(variant_arity, state.registry));
 
-    let normalized_matchee_id = normalized_matchee_id.upshift(case_arity, state.registry);
-    let matchee_type_id = matchee_type_id.upshift(case_arity, state.registry);
+    let normalized_matchee_id = normalized_matchee_id.upshift(variant_arity, state.registry);
+    let matchee_type_id = matchee_type_id.upshift(variant_arity, state.registry);
 
     state.substitution_context.push(SubstitutionContextEntry {
         context_len: state.context.len(),
@@ -100,7 +102,7 @@ fn get_type_of_match_case_dirty(
         let can_be_coerced =
             is_left_type_assignable_to_right_type(state, output_type_id, coercion_target_id);
 
-        state.context.pop_n(case_arity);
+        state.context.pop_n(variant_arity);
         state.substitution_context.pop();
 
         return if can_be_coerced {
@@ -118,20 +120,27 @@ fn get_type_of_match_case_dirty(
         };
     }
 
-    state.context.pop_n(case_arity);
+    state.context.pop_n(variant_arity);
     state.substitution_context.pop();
 
-    match output_type_id.try_downshift(case_arity, state.registry) {
+    match output_type_id.try_downshift(variant_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
         Err(_) => tainted_err(TypeCheckError::AmbiguousOutputType { case_id }),
     }
+}
+
+#[derive(Debug, Clone)]
+struct ConstructedTerms {
+    parameterized_matchee_id: NormalFormId,
+    parameterized_matchee_type_id: NormalFormId,
+    variant_arity: usize,
 }
 
 fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
     state: &mut State,
     case_id: NodeId<MatchCase>,
     matchee_type: NormalFormAdtExpression,
-) -> Result<WithPushWarning<(NormalFormId, NormalFormId)>, Tainted<TypeCheckError>> {
+) -> Result<WithPushWarning<ConstructedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
@@ -248,10 +257,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                 (parameterized_matchee_id, parameterized_matchee_type_id)
             };
 
-            Ok(with_push_warning((
+            Ok(with_push_warning(ConstructedTerms {
                 parameterized_matchee_id,
                 parameterized_matchee_type_id,
-            )))
+                variant_arity: normalized_forall.param_list_id.len(),
+            }))
         }
         ExpressionId::Name(_) => {
             // In this case, the variant type is nullary.
@@ -272,10 +282,11 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 )));
-            Ok(with_push_warning((
+            Ok(with_push_warning(ConstructedTerms {
                 parameterized_matchee_id,
-                variant_type_id,
-            )))
+                parameterized_matchee_type_id: variant_type_id,
+                variant_arity: 0,
+            }))
         }
         other => {
             // We could inline this constant directly into the `panic!()` call,
