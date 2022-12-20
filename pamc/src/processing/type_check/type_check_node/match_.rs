@@ -185,17 +185,15 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
                 }
             }
         }
-        ExpressionId::Name(name_id) => {
+        ExpressionId::Name(_) | ExpressionId::Call(_) => {
             add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_dirty(
                 state,
                 case_id,
                 matchee_type,
                 variant_dbi,
-                name_id,
+                variant_type_id,
             )
         }
-        // TODO: Support ExpressionId::Call case.
-        // One test that may fail this is `type Foo(T: Type) { .Bar: Foo(Nat) }`.
         other => {
             // We could inline this constant directly into the `panic!()` call,
             // but then rustfmt will mysteriously stop working.
@@ -460,7 +458,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
     case_id: NodeId<MatchCase>,
     matchee_type: NormalFormAdtExpression,
     variant_dbi: DbIndex,
-    normalized_variant_type_id: NodeId<NameExpression>,
+    variant_type_id: NormalFormId,
 ) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
     if let Some(case_param_list_id) = case.param_list_id {
@@ -498,9 +496,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
 
     Ok(with_push_warning(ParameterizedTerms {
         matchee_id: parameterized_matchee_id,
-        matchee_type_id: NormalFormId::unchecked_new(ExpressionId::Name(
-            normalized_variant_type_id,
-        )),
+        matchee_type_id: variant_type_id,
         variant_arity: 0,
     }))
 }
