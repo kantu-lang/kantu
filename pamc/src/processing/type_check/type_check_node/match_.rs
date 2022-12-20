@@ -71,15 +71,11 @@ fn get_type_of_match_case_dirty(
     matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
-    let ConstructedTerms {
-        parameterized_matchee_id,
-        parameterized_matchee_type_id,
+    let ParameterizedTerms {
+        matchee_id: parameterized_matchee_id,
+        matchee_type_id: parameterized_matchee_type_id,
         variant_arity,
-    } = add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
-        state,
-        case_id,
-        matchee_type,
-    )??;
+    } = add_case_params_to_context_and_parameterize_terms_dirty(state, case_id, matchee_type)??;
 
     let original_coercion_target_id = coercion_target_id;
     let coercion_target_id =
@@ -130,138 +126,64 @@ fn get_type_of_match_case_dirty(
 }
 
 #[derive(Debug, Clone)]
-struct ConstructedTerms {
-    parameterized_matchee_id: NormalFormId,
-    parameterized_matchee_type_id: NormalFormId,
+struct ParameterizedTerms {
+    matchee_id: NormalFormId,
+    matchee_type_id: NormalFormId,
     variant_arity: usize,
 }
 
-fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
+fn add_case_params_to_context_and_parameterize_terms_dirty(
     state: &mut State,
     case_id: NodeId<MatchCase>,
     matchee_type: NormalFormAdtExpression,
-) -> Result<WithPushWarning<ConstructedTerms>, Tainted<TypeCheckError>> {
+) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
     let variant_dbi =
         get_db_index_for_adt_variant_of_name(state, matchee_type, case.variant_name_id);
     let variant_type_id = state.context.get_type(variant_dbi, state.registry);
-    let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
-        let matchee_type_name = state.registry.get(matchee_type.type_name_id);
-        let matchee_type_name_component_ids = state
-            .registry
-            .get_list(matchee_type_name.component_list_id)
-            .to_vec();
-        NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
-    };
+
     match variant_type_id.raw() {
         ExpressionId::Forall(normalized_forall_id) => {
             let normalized_forall = state.registry.get(normalized_forall_id).clone();
-            let expected_case_param_arity = normalized_forall.param_list_id.non_zero_len();
-            let Some(case_param_list_id) = case.param_list_id else {
-                return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
-                    case_id,
-                    expected: expected_case_param_arity.get(),
-                    actual: 0,
-                });
-            };
-            if case_param_list_id.len() != expected_case_param_arity.get() {
-                return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
-                    case_id,
-                    expected: expected_case_param_arity.get(),
-                    actual: case.param_list_id.len(),
-                });
-            }
 
-            let param_type_ids = get_param_type_ids(state, normalized_forall.param_list_id)
-                // This is safe because every param type of a normal form Forall
-                // is also a normal form itself.
-                .into_mapped(NormalFormId::unchecked_new);
-            for &param_type_id in &param_type_ids {
-                state.context.push(ContextEntry {
-                    type_id: param_type_id,
-                    definition: ContextEntryDefinition::Uninterpreted,
-                })?;
-            }
-
-            let (parameterized_matchee_id, parameterized_matchee_type_id) = {
-                let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len());
-                let callee_id = ExpressionId::Name(add_name_expression(
-                    state.registry,
-                    fully_qualified_variant_name_component_ids,
-                    shifted_variant_dbi,
-                ));
-                let case_param_ids = match case_param_list_id {
-                    NonEmptyMatchCaseParamListId::Unlabeled(param_list_id) => {
-                        state.registry.get_list(param_list_id).to_non_empty_vec()
+            match normalized_forall.param_list_id {
+                NonEmptyParamListId::Unlabeled(variant_type_param_list_id) => {
+                    // We only need this macro to avoid breaking rustfmt.
+                    // For some reason, when lines get really long, rustfmt mysteriously
+                    // stops working.
+                    macro_rules! handle_unlabeled {
+                        () => {
+                            add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_dirty
+                        };
                     }
-                    // TODO: Properly handle the labeled case.
-                    NonEmptyMatchCaseParamListId::UniquelyLabeled {
-                        param_list_id,
-                        triple_dot: _,
-                    } => state
-                        .registry
-                        .get_list(param_list_id.expect("TODO: Properly handle this case"))
-                        .to_mapped(|&param_id| state.registry.get(param_id).name_id),
-                };
-                let case_param_arity = case_param_ids.len();
-                let arg_ids = case_param_ids.as_non_empty_slice().enumerate_to_mapped(
-                    |(index, &case_param_id)| {
-                        ExpressionId::Name(add_name_expression(
-                            state.registry,
-                            NonEmptyVec::singleton(case_param_id),
-                            DbIndex(case_param_arity - index - 1),
-                        ))
-                    },
-                );
-                // TODO: Properly construct parameterized matchee id
-                // after we add support for labeled match case params.
-                let arg_list_id =
-                    NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
-                let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
-                    state
-                        .registry
-                        .add(Call {
-                            id: dummy_id(),
-                            span: None,
-                            callee_id,
-                            arg_list_id,
-                        })
-                        .without_spans(state.registry),
-                ));
-
-                let output_substitutions: Vec<Substitution> = case_param_ids
-                    .iter()
-                    .copied()
-                    .enumerate()
-                    .map(|(raw_index, case_param_id)| {
-                        let db_index = DbIndex(case_param_ids.len() - raw_index - 1);
-                        let param_name_expression_id = ExpressionId::Name(add_name_expression(
-                            state.registry,
-                            NonEmptyVec::singleton(case_param_id),
-                            db_index,
-                        ));
-                        Substitution {
-                            // We don't care about the name of the `from` `NameExpression`
-                            // because the comparison is only based on the `db_index`.
-                            from: param_name_expression_id,
-                            to: param_name_expression_id,
-                        }
-                    })
-                    .collect();
-                let substituted_output_id = normalized_forall
-                    .output_id
-                    .subst_all(&output_substitutions, &mut state.without_context());
-                let parameterized_matchee_type_id =
-                    NormalFormId::unchecked_new(substituted_output_id);
-
-                (parameterized_matchee_id, parameterized_matchee_type_id)
-            };
-
-            Ok(with_push_warning(ConstructedTerms {
-                parameterized_matchee_id,
-                parameterized_matchee_type_id,
-                variant_arity: normalized_forall.param_list_id.len(),
-            }))
+                    handle_unlabeled!()(
+                        state,
+                        case_id,
+                        matchee_type,
+                        variant_dbi,
+                        normalized_forall_id,
+                        variant_type_param_list_id,
+                    )
+                }
+                NonEmptyParamListId::UniquelyLabeled(variant_type_param_list_id) => {
+                    // We only need this macro to avoid breaking rustfmt.
+                    // For some reason, when lines get really long, rustfmt mysteriously
+                    // stops working.
+                    macro_rules! handle_labeled {
+                        () => {
+                            add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty
+                        };
+                    }
+                    handle_labeled!()(
+                        state,
+                        case_id,
+                        matchee_type,
+                        variant_dbi,
+                        normalized_forall_id,
+                        variant_type_param_list_id,
+                    )
+                }
+            }
         }
         ExpressionId::Name(_) => {
             // In this case, the variant type is nullary.
@@ -274,6 +196,16 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     actual: case.param_list_id.len(),
                 });
             }
+
+            let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+                let matchee_type_name = state.registry.get(matchee_type.type_name_id);
+                let matchee_type_name_component_ids = state
+                    .registry
+                    .get_list(matchee_type_name.component_list_id)
+                    .to_vec();
+                NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+            };
+
             // Since the case is nullary, we shift by zero.
             let shifted_variant_dbi = variant_dbi;
             let parameterized_matchee_id =
@@ -282,9 +214,9 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 )));
-            Ok(with_push_warning(ConstructedTerms {
-                parameterized_matchee_id,
-                parameterized_matchee_type_id: variant_type_id,
+            Ok(with_push_warning(ParameterizedTerms {
+                matchee_id: parameterized_matchee_id,
+                matchee_type_id: variant_type_id,
                 variant_arity: 0,
             }))
         }
@@ -297,4 +229,252 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
             panic!("{}{:?}", MESSAGE, other)
         }
     }
+}
+
+fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_dirty(
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    matchee_type: NormalFormAdtExpression,
+    variant_dbi: DbIndex,
+    variant_type_id: NodeId<Forall>,
+    variant_type_param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
+    let case = state.registry.get(case_id).clone();
+    let expected_case_param_arity = variant_type_param_list_id.len;
+    let Some(case_param_list_id) = case.param_list_id else {
+         return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
+             case_id,
+             expected: expected_case_param_arity.get(),
+             actual: 0,
+         });
+     };
+    let NonEmptyMatchCaseParamListId::Unlabeled(case_param_list_id) = case_param_list_id else {
+        return tainted_err(TypeCheckError::MatchCaseLabelednessMismatch {
+            case_id,
+        });
+     };
+    if case_param_list_id.len != expected_case_param_arity {
+        return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
+            case_id,
+            expected: expected_case_param_arity.get(),
+            actual: case.param_list_id.len(),
+        });
+    }
+
+    let param_type_ids = get_unlabeled_param_type_ids(state, variant_type_param_list_id)
+        // This is safe because every param type of a normal form Forall
+        // is also a normal form itself.
+        .into_mapped(NormalFormId::unchecked_new);
+    for &param_type_id in &param_type_ids {
+        state.context.push(ContextEntry {
+            type_id: param_type_id,
+            definition: ContextEntryDefinition::Uninterpreted,
+        })?;
+    }
+
+    let (parameterized_matchee_id, parameterized_matchee_type_id) = {
+        let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+            let matchee_type_name = state.registry.get(matchee_type.type_name_id);
+            let matchee_type_name_component_ids = state
+                .registry
+                .get_list(matchee_type_name.component_list_id)
+                .to_vec();
+            NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+        };
+        let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len());
+        let callee_id = ExpressionId::Name(add_name_expression(
+            state.registry,
+            fully_qualified_variant_name_component_ids,
+            shifted_variant_dbi,
+        ));
+        let case_param_ids = state
+            .registry
+            .get_list(case_param_list_id)
+            .to_non_empty_vec();
+        let case_param_arity = case_param_ids.len();
+        let arg_ids =
+            case_param_ids
+                .as_non_empty_slice()
+                .enumerate_to_mapped(|(index, &case_param_id)| {
+                    ExpressionId::Name(add_name_expression(
+                        state.registry,
+                        NonEmptyVec::singleton(case_param_id),
+                        DbIndex(case_param_arity - index - 1),
+                    ))
+                });
+        // TODO: Properly construct parameterized matchee id
+        // after we add support for labeled match case params.
+        let arg_list_id = NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
+        let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
+            state
+                .registry
+                .add(Call {
+                    id: dummy_id(),
+                    span: None,
+                    callee_id,
+                    arg_list_id,
+                })
+                .without_spans(state.registry),
+        ));
+
+        let output_substitutions: Vec<Substitution> = case_param_ids
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(raw_index, case_param_id)| {
+                let db_index = DbIndex(case_param_ids.len() - raw_index - 1);
+                let param_name_expression_id = ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    NonEmptyVec::singleton(case_param_id),
+                    db_index,
+                ));
+                Substitution {
+                    // We don't care about the name of the `from` `NameExpression`
+                    // because the comparison is only based on the `db_index`.
+                    from: param_name_expression_id,
+                    to: param_name_expression_id,
+                }
+            })
+            .collect();
+        let normalized_forall = state.registry.get(variant_type_id);
+        let substituted_output_id = normalized_forall
+            .output_id
+            .subst_all(&output_substitutions, &mut state.without_context());
+        let parameterized_matchee_type_id = NormalFormId::unchecked_new(substituted_output_id);
+
+        (parameterized_matchee_id, parameterized_matchee_type_id)
+    };
+
+    Ok(with_push_warning(ParameterizedTerms {
+        matchee_id: parameterized_matchee_id,
+        matchee_type_id: parameterized_matchee_type_id,
+        variant_arity: variant_type_param_list_id.len.get(),
+    }))
+}
+
+fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty(
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    matchee_type: NormalFormAdtExpression,
+    variant_dbi: DbIndex,
+    variant_type_id: NodeId<Forall>,
+    variant_type_param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
+    // TODO: Properly handle the labeled case.
+    let case = state.registry.get(case_id).clone();
+    let expected_case_param_arity = variant_type_param_list_id.len;
+    let Some(case_param_list_id) = case.param_list_id else {
+        // TODO: This should return a missing params error.
+         return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
+             case_id,
+             expected: expected_case_param_arity.get(),
+             actual: 0,
+         });
+     };
+    if case_param_list_id.len() != expected_case_param_arity.get() {
+        return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
+            case_id,
+            expected: expected_case_param_arity.get(),
+            actual: case.param_list_id.len(),
+        });
+    }
+
+    let param_type_ids = get_labeled_param_type_ids(state, variant_type_param_list_id)
+        // This is safe because every param type of a normal form Forall
+        // is also a normal form itself.
+        .into_mapped(NormalFormId::unchecked_new);
+    for &param_type_id in &param_type_ids {
+        state.context.push(ContextEntry {
+            type_id: param_type_id,
+            definition: ContextEntryDefinition::Uninterpreted,
+        })?;
+    }
+
+    let (parameterized_matchee_id, parameterized_matchee_type_id) = {
+        let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+            let matchee_type_name = state.registry.get(matchee_type.type_name_id);
+            let matchee_type_name_component_ids = state
+                .registry
+                .get_list(matchee_type_name.component_list_id)
+                .to_vec();
+            NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+        };
+        let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len());
+        let callee_id = ExpressionId::Name(add_name_expression(
+            state.registry,
+            fully_qualified_variant_name_component_ids,
+            shifted_variant_dbi,
+        ));
+        let case_param_ids = match case_param_list_id {
+            NonEmptyMatchCaseParamListId::Unlabeled(param_list_id) => {
+                state.registry.get_list(param_list_id).to_non_empty_vec()
+            }
+            // TODO: Properly handle the labeled case.
+            NonEmptyMatchCaseParamListId::UniquelyLabeled {
+                param_list_id,
+                triple_dot: _,
+            } => state
+                .registry
+                .get_list(param_list_id.expect("TODO: Properly handle this case"))
+                .to_mapped(|&param_id| state.registry.get(param_id).name_id),
+        };
+        let case_param_arity = case_param_ids.len();
+        let arg_ids =
+            case_param_ids
+                .as_non_empty_slice()
+                .enumerate_to_mapped(|(index, &case_param_id)| {
+                    ExpressionId::Name(add_name_expression(
+                        state.registry,
+                        NonEmptyVec::singleton(case_param_id),
+                        DbIndex(case_param_arity - index - 1),
+                    ))
+                });
+        // TODO: Properly construct parameterized matchee id
+        // after we add support for labeled match case params.
+        let arg_list_id = NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
+        let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
+            state
+                .registry
+                .add(Call {
+                    id: dummy_id(),
+                    span: None,
+                    callee_id,
+                    arg_list_id,
+                })
+                .without_spans(state.registry),
+        ));
+
+        let output_substitutions: Vec<Substitution> = case_param_ids
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(raw_index, case_param_id)| {
+                let db_index = DbIndex(case_param_ids.len() - raw_index - 1);
+                let param_name_expression_id = ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    NonEmptyVec::singleton(case_param_id),
+                    db_index,
+                ));
+                Substitution {
+                    // We don't care about the name of the `from` `NameExpression`
+                    // because the comparison is only based on the `db_index`.
+                    from: param_name_expression_id,
+                    to: param_name_expression_id,
+                }
+            })
+            .collect();
+        let normalized_forall = state.registry.get(variant_type_id);
+        let substituted_output_id = normalized_forall
+            .output_id
+            .subst_all(&output_substitutions, &mut state.without_context());
+        let parameterized_matchee_type_id = NormalFormId::unchecked_new(substituted_output_id);
+
+        (parameterized_matchee_id, parameterized_matchee_type_id)
+    };
+
+    Ok(with_push_warning(ParameterizedTerms {
+        matchee_id: parameterized_matchee_id,
+        matchee_type_id: parameterized_matchee_type_id,
+        variant_arity: variant_type_param_list_id.len.get(),
+    }))
 }

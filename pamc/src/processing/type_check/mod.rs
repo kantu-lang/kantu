@@ -41,7 +41,7 @@ pub enum TypeCheckError {
         expected: usize,
         actual: usize,
     },
-    LabelednessMismatch {
+    CallLabelednessMismatch {
         call_id: NodeId<Call>,
     },
     MissingLabeledCallArg {
@@ -56,6 +56,9 @@ pub enum TypeCheckError {
         case_id: NodeId<MatchCase>,
         expected: usize,
         actual: usize,
+    },
+    MatchCaseLabelednessMismatch {
+        case_id: NodeId<MatchCase>,
     },
     TypeMismatch {
         expression_id: ExpressionId,
