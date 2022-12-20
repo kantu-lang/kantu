@@ -182,7 +182,7 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
     let mut reordered_arg_ids = {
         let first_param_label_id = state.registry.get(first_param_id).label_identifier_id();
         let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, first_param_label_id, arg_ids.as_ref()) else {
-            return tainted_err(TypeCheckError::MissingArgument { call_id, label_id: first_param_label_id });
+            return tainted_err(TypeCheckError::MissingLabeledCallArg { call_id, label_id: first_param_label_id });
         };
         if arg_index != 0 {
             are_any_args_out_of_place = true;
@@ -195,7 +195,7 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
         let param_index = 1 + param_index_in_remaining_params;
         let param_label_id = state.registry.get(param_id).label_identifier_id();
         let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, param_label_id, arg_ids.as_ref()) else {
-            return tainted_err(TypeCheckError::MissingArgument { call_id, label_id: param_label_id });
+            return tainted_err(TypeCheckError::MissingLabeledCallArg { call_id, label_id: param_label_id });
         };
         if arg_index != param_index {
             are_any_args_out_of_place = true;

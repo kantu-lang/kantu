@@ -44,7 +44,7 @@ pub enum TypeCheckError {
     LabelednessMismatch {
         call_id: NodeId<Call>,
     },
-    MissingArgument {
+    MissingLabeledCallArg {
         call_id: NodeId<Call>,
         label_id: NodeId<Identifier>,
     },
