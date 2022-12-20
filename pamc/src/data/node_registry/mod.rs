@@ -131,12 +131,30 @@ pub enum NonEmptyMatchCaseParamListId {
 
 impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamListId> {
     fn len(&self) -> usize {
-        self.as_ref().map(|v| v.len()).unwrap_or(0)
+        self.as_ref().map(|v| v.explicit_len()).unwrap_or(0)
     }
 }
 
 impl NonEmptyMatchCaseParamListId {
-    pub fn len(&self) -> usize {
+    /// Note that this is not the _true_ length of the param list,
+    /// but rather the number of params that are explicitly listed.
+    /// For example, if we have
+    ///
+    /// ```pamlihu
+    /// type Nat {
+    ///    .O: Nat,
+    ///    .S(~n: Nat): Nat,
+    /// }
+    ///
+    /// let foo = match Nat.O {
+    ///     .O => Nat.O,
+    ///     .S(...) => Nat.O,
+    /// };
+    /// ```
+    ///
+    /// then the _true_ length of the `.S(...)` case is 1 (the `~n` param),
+    /// but the _explicit_ length is 0 (since no params are explicitly listed).
+    pub fn explicit_len(&self) -> usize {
         match self {
             NonEmptyMatchCaseParamListId::Unlabeled(vec) => vec.len.get(),
             NonEmptyMatchCaseParamListId::UniquelyLabeled { param_list_id, .. } => {

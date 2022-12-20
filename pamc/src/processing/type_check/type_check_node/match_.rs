@@ -185,41 +185,17 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
                 }
             }
         }
-        ExpressionId::Name(_) => {
-            // In this case, the variant type is nullary.
-
-            let expected_case_param_arity = 0;
-            if case.param_list_id.len() != expected_case_param_arity {
-                return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
-                    case_id,
-                    expected: expected_case_param_arity,
-                    actual: case.param_list_id.len(),
-                });
-            }
-
-            let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
-                let matchee_type_name = state.registry.get(matchee_type.type_name_id);
-                let matchee_type_name_component_ids = state
-                    .registry
-                    .get_list(matchee_type_name.component_list_id)
-                    .to_vec();
-                NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
-            };
-
-            // Since the case is nullary, we shift by zero.
-            let shifted_variant_dbi = variant_dbi;
-            let parameterized_matchee_id =
-                NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
-                    state.registry,
-                    fully_qualified_variant_name_component_ids,
-                    shifted_variant_dbi,
-                )));
-            Ok(with_push_warning(ParameterizedTerms {
-                matchee_id: parameterized_matchee_id,
-                matchee_type_id: variant_type_id,
-                variant_arity: 0,
-            }))
+        ExpressionId::Name(name_id) => {
+            add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_dirty(
+                state,
+                case_id,
+                matchee_type,
+                variant_dbi,
+                name_id,
+            )
         }
+        // TODO: Support ExpressionId::Call case.
+        // One test that may fail this is `type Foo(T: Type) { .Bar: Foo(Nat) }`.
         other => {
             // We could inline this constant directly into the `panic!()` call,
             // but then rustfmt will mysteriously stop working.
@@ -371,7 +347,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
              actual: 0,
          });
      };
-    if case_param_list_id.len() != expected_case_param_arity.get() {
+    if case_param_list_id.explicit_len() != expected_case_param_arity.get() {
         return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
             case_id,
             expected: expected_case_param_arity.get(),
@@ -476,5 +452,55 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         matchee_id: parameterized_matchee_id,
         matchee_type_id: parameterized_matchee_type_id,
         variant_arity: variant_type_param_list_id.len.get(),
+    }))
+}
+
+fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_dirty(
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    matchee_type: NormalFormAdtExpression,
+    variant_dbi: DbIndex,
+    normalized_variant_type_id: NodeId<NameExpression>,
+) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
+    let case = state.registry.get(case_id).clone();
+    if let Some(case_param_list_id) = case.param_list_id {
+        return tainted_err(match case_param_list_id {
+            NonEmptyMatchCaseParamListId::Unlabeled(case_param_list_id) => {
+                TypeCheckError::WrongNumberOfCaseParams {
+                    case_id,
+                    expected: 0,
+                    actual: case_param_list_id.len.get(),
+                }
+            }
+            NonEmptyMatchCaseParamListId::UniquelyLabeled { .. } => {
+                TypeCheckError::MatchCaseLabelednessMismatch { case_id }
+            }
+        });
+    }
+
+    let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+        let matchee_type_name = state.registry.get(matchee_type.type_name_id);
+        let matchee_type_name_component_ids = state
+            .registry
+            .get_list(matchee_type_name.component_list_id)
+            .to_vec();
+        NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+    };
+
+    // Since the case is nullary, we shift by zero.
+    let shifted_variant_dbi = variant_dbi;
+    let parameterized_matchee_id =
+        NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+            state.registry,
+            fully_qualified_variant_name_component_ids,
+            shifted_variant_dbi,
+        )));
+
+    Ok(with_push_warning(ParameterizedTerms {
+        matchee_id: parameterized_matchee_id,
+        matchee_type_id: NormalFormId::unchecked_new(ExpressionId::Name(
+            normalized_variant_type_id,
+        )),
+        variant_arity: 0,
     }))
 }
