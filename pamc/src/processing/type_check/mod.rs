@@ -48,6 +48,10 @@ pub enum TypeCheckError {
         call_id: NodeId<Call>,
         label_id: NodeId<Identifier>,
     },
+    ExtraneousLabeledCallArg {
+        call_id: NodeId<Call>,
+        arg_id: LabeledCallArgId,
+    },
     WrongNumberOfCaseParams {
         case_id: NodeId<MatchCase>,
         expected: usize,
