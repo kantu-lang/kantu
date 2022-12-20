@@ -170,7 +170,7 @@ pub struct MatchCase {
 pub enum NonEmptyMatchCaseParamVec {
     Unlabeled(NonEmptyVec<Identifier>),
     UniquelyLabeled {
-        params: NonEmptyVec<LabeledMatchCaseParam>,
+        params: Option<NonEmptyVec<LabeledMatchCaseParam>>,
         triple_dot: Option<TextSpan>,
     },
 }

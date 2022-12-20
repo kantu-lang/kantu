@@ -406,11 +406,18 @@ fn simplify_match_case(unsimplified: ust::MatchCase) -> Result<MatchCase, Simpli
 
 fn simplify_optional_match_case_params(
     unsimplified: Option<NonEmptyVec<ust::MatchCaseParam>>,
-    triple_dot: Option<TextSpan>,
+    optional_triple_dot: Option<TextSpan>,
 ) -> Result<Option<NonEmptyMatchCaseParamVec>, SimplifyAstError> {
-    unsimplified
-        .map(|params| simplify_match_case_params(params, triple_dot))
-        .transpose()
+    Ok(match (unsimplified, optional_triple_dot) {
+        (None, None) => None,
+        (None, Some(triple_dot)) => Some(NonEmptyMatchCaseParamVec::UniquelyLabeled {
+            params: None,
+            triple_dot: Some(triple_dot),
+        }),
+        (Some(params), optional_triple_dot) => {
+            Some(simplify_match_case_params(params, optional_triple_dot)?)
+        }
+    })
 }
 
 fn simplify_match_case_params(
@@ -432,7 +439,7 @@ fn simplify_match_case_params(
         };
         let remaining = simplify_match_case_params_but_require_labels(remaining, &hetero_err)?;
         Ok(NonEmptyMatchCaseParamVec::UniquelyLabeled {
-            params: NonEmptyVec::from_pushed(remaining, last),
+            params: Some(NonEmptyVec::from_pushed(remaining, last)),
             triple_dot,
         })
     } else {
