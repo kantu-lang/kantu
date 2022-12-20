@@ -182,12 +182,14 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     shifted_variant_dbi,
                 ));
                 let case_param_ids = match case_param_list_id {
-                    NonEmptyMatchCaseParamListId::Unlabeled(param_list_id) => state
-                        .registry
-                        .get_list(param_list_id)
-                        .to_non_empty_vec(),
+                    NonEmptyMatchCaseParamListId::Unlabeled(param_list_id) => {
+                        state.registry.get_list(param_list_id).to_non_empty_vec()
+                    }
                     // TODO: Properly handle the labeled case.
-                    NonEmptyMatchCaseParamListId::UniquelyLabeled { param_list_id, triple_dot: _ } => state
+                    NonEmptyMatchCaseParamListId::UniquelyLabeled {
+                        param_list_id,
+                        triple_dot: _,
+                    } => state
                         .registry
                         .get_list(param_list_id)
                         .to_mapped(|&param_id| state.registry.get(param_id).name_id),
@@ -275,9 +277,13 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                 variant_type_id,
             )))
         }
-        other => panic!(
-            "A variant's type should always either be a Forall or a Name, but it was actually a {:?}",
-            other,
-        ),
+        other => {
+            // We could inline this constant directly into the `panic!()` call,
+            // but then rustfmt will mysteriously stop working.
+            // I don't know why this is, but it may have to do with the line length.
+            // This is the only reason we use this constant.
+            const MESSAGE: &str = "A variant's type should always either be a Forall or a Name, but it was actually a ";
+            panic!("{}{:?}", MESSAGE, other)
+        }
     }
 }
