@@ -1,4 +1,4 @@
-use crate::data::bound_ast::*;
+use crate::data::{bound_ast::*, non_empty_vec::OptionalNonEmptyVecLen};
 
 fn indent(indent_level: usize, options: &FormatOptions) -> String {
     " ".repeat(indent_level * options.ident_size_in_spaces)
@@ -244,13 +244,7 @@ pub fn format_match_case(case: &MatchCase, indent_level: usize, options: &Format
     let params = if case.params.is_empty() {
         "".to_string()
     } else {
-        let params = case
-            .params
-            .iter()
-            .map(|param| format!("{}", format_ident(param)))
-            .collect::<Vec<_>>()
-            .join(", ");
-        format!("({})", params)
+        format_optional_match_case_params(case.params.as_ref())
     };
     let output = format_expression(&case.output, indent_level + 1, options);
     format!(
@@ -259,6 +253,52 @@ pub fn format_match_case(case: &MatchCase, indent_level: usize, options: &Format
         params,
         try_oneline(&format!("{},", output), indent_level, options)
     )
+}
+
+pub fn format_optional_match_case_params(params: Option<&NonEmptyMatchCaseParamVec>) -> String {
+    match params {
+        Some(params) => format_match_case_params(params),
+        None => "".to_string(),
+    }
+}
+
+pub fn format_match_case_params(params: &NonEmptyMatchCaseParamVec) -> String {
+    match params {
+        NonEmptyMatchCaseParamVec::Unlabeled(params) => {
+            let without_parens = params
+                .iter()
+                .map(|param| format!("{}", format_ident(param)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("({})", without_parens)
+        }
+        NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
+            let without_parens = params
+                .iter()
+                .map(|param| format!("{}", format_labeled_match_case_param(param)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let triple_dot = if triple_dot.is_some() {
+                if params.is_empty() {
+                    "...".to_string()
+                } else {
+                    ", ...".to_string()
+                }
+            } else {
+                "".to_string()
+            };
+            format!("({}{})", without_parens, triple_dot)
+        }
+    }
+}
+
+pub fn format_labeled_match_case_param(param: &LabeledMatchCaseParam) -> String {
+    match &param.label {
+        ParamLabel::Implicit => format!(":{}", format_ident(&param.name)),
+        ParamLabel::Explicit(label) => {
+            format!("{}: {}", format_ident(label), format_ident(&param.name))
+        }
+    }
 }
 
 fn try_oneline(s: &str, indent_level: usize, options: &FormatOptions) -> String {

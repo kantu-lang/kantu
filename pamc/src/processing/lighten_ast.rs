@@ -432,11 +432,21 @@ pub fn register_match_case(
     unregistered: heavy::MatchCase,
 ) -> NodeId<MatchCase> {
     let variant_name_id = register_identifier(registry, unregistered.variant_name);
-    let param_ids: Vec<_> = unregistered
-        .params
-        .into_iter()
-        .map(|unregistered| register_identifier(registry, unregistered))
-        .collect();
+    // TODO: Properly lighten params.
+    let param_ids: Vec<_> = match unregistered.params {
+        Some(heavy::NonEmptyMatchCaseParamVec::Unlabeled(params)) => params
+            .into_iter()
+            .map(|unregistered| register_identifier(registry, unregistered))
+            .collect(),
+        Some(heavy::NonEmptyMatchCaseParamVec::UniquelyLabeled {
+            params,
+            triple_dot: _,
+        }) => params
+            .into_iter()
+            .map(|unregistered| register_identifier(registry, unregistered.name))
+            .collect(),
+        None => vec![],
+    };
     let param_list_id = registry.add_possibly_empty_list(param_ids);
     let output_id = register_expression(registry, unregistered.output);
     registry.add(MatchCase {

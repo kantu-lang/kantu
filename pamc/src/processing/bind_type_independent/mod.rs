@@ -344,24 +344,7 @@ fn bind_match_dirty(context: &mut Context, match_: ub::Match) -> Result<Expressi
 fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCase, BindError> {
     let arity = case.params.len();
     let variant_name = case.variant_name.into();
-    // TODO: Properly bind params (this is just a placeholder)
-    let params = case
-        .params
-        .map(|params| match params {
-            ub::NonEmptyMatchCaseParamVec::Unlabeled(params) => {
-                params.try_into_mapped(|param| -> Result<_, BindError> {
-                    Ok(create_name_and_add_to_scope(context, param)?)
-                })
-            }
-            ub::NonEmptyMatchCaseParamVec::UniquelyLabeled {
-                params,
-                triple_dot: _,
-            } => params.try_into_mapped(|param| -> Result<_, BindError> {
-                Ok(create_name_and_add_to_scope(context, param.name)?)
-            }),
-        })
-        .transpose()?
-        .into_possibly_empty();
+    let params = bind_optional_match_case_params(context, case.params)?;
     let output = bind_expression_dirty(context, case.output)?;
 
     context.pop_n(arity);
@@ -370,6 +353,44 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
         variant_name,
         params,
         output,
+    })
+}
+
+fn bind_optional_match_case_params(
+    context: &mut Context,
+    params: Option<ub::NonEmptyMatchCaseParamVec>,
+) -> Result<Option<NonEmptyMatchCaseParamVec>, BindError> {
+    params
+        .map(|params| bind_match_case_params(context, params))
+        .transpose()
+}
+
+fn bind_match_case_params(
+    context: &mut Context,
+    params: ub::NonEmptyMatchCaseParamVec,
+) -> Result<NonEmptyMatchCaseParamVec, BindError> {
+    Ok(match params {
+        ub::NonEmptyMatchCaseParamVec::Unlabeled(params) => NonEmptyMatchCaseParamVec::Unlabeled(
+            params.try_into_mapped(|param| -> Result<_, BindError> {
+                Ok(create_name_and_add_to_scope(context, param)?)
+            })?,
+        ),
+
+        ub::NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
+            NonEmptyMatchCaseParamVec::UniquelyLabeled {
+                params: params.try_into_mapped(
+                    |param| -> Result<LabeledMatchCaseParam, BindError> {
+                        let name = create_name_and_add_to_scope(context, param.name)?;
+                        Ok(LabeledMatchCaseParam {
+                            span: param.span,
+                            label: param.label.into(),
+                            name,
+                        })
+                    },
+                )?,
+                triple_dot,
+            }
+        }
     })
 }
 

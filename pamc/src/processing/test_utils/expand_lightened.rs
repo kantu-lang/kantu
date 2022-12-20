@@ -319,8 +319,7 @@ pub fn expand_match_case_list(
 pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) -> MatchCase {
     let light = registry.get(id);
     let variant_name = expand_identifier(registry, light.variant_name_id);
-    let params =
-        expand_possibly_empty_identifier_list(registry, light.param_list_id).into_possibly_empty();
+    let params = expand_possibly_empty_match_case_param_list(registry, light.param_list_id);
     let output = expand_expression(registry, light.output_id);
     MatchCase {
         span: light.span,
@@ -330,11 +329,19 @@ pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) 
     }
 }
 
-pub fn expand_possibly_empty_identifier_list(
+pub fn expand_possibly_empty_match_case_param_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyListId<NodeId<light::Identifier>>>,
-) -> Option<NonEmptyVec<Identifier>> {
-    id.map(|id| expand_identifier_list(registry, id))
+) -> Option<NonEmptyMatchCaseParamVec> {
+    id.map(|id| expand_match_case_param_list(registry, id))
+}
+
+pub fn expand_match_case_param_list(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<NodeId<light::Identifier>>,
+) -> NonEmptyMatchCaseParamVec {
+    // TODO: Properly expand match case params
+    NonEmptyMatchCaseParamVec::Unlabeled(expand_identifier_list(registry, id))
 }
 
 pub fn expand_forall(registry: &NodeRegistry, id: NodeId<light::Forall>) -> Forall {
