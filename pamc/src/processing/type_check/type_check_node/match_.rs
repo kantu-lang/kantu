@@ -165,14 +165,7 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
                     )
                 }
                 NonEmptyParamListId::UniquelyLabeled(variant_type_param_list_id) => {
-                    // We only need this alias to avoid breaking rustfmt.
-                    // For some reason, when lines get really long, rustfmt mysteriously
-                    // stops working.
-                    // However, even though this alias has a really long line, rustfmt somehow
-                    // still works.
-                    // Thus, we use the alias.
-                    use add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty as handle_labeled;
-                    handle_labeled(
+                    add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty(
                         state,
                         case_id,
                         matchee_type,
