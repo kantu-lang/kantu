@@ -116,6 +116,14 @@ fn misordered_labeled_args() {
     expect_success_with_no_warnings(src);
 }
 
+#[test]
+fn nullary_variant_with_call_return_type() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/nullary_variant_with_call_return_type.ph"
+    );
+    expect_success_with_no_warnings(src);
+}
+
 fn expect_success_with_no_warnings(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
