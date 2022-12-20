@@ -157,12 +157,17 @@ fn correct_call_arg_order_dirty(
         (
             NonEmptyParamListId::UniquelyLabeled(param_list_id),
             NonEmptyCallArgListId::UniquelyLabeled(arg_list_id),
-        ) => correct_labeled_call_arg_order_dirty(state, call_id, param_list_id, arg_list_id),
+        ) => correct_uniquely_labeled_call_arg_order_dirty(
+            state,
+            call_id,
+            param_list_id,
+            arg_list_id,
+        ),
         _ => tainted_err(TypeCheckError::LabelednessMismatch { call_id }),
     }
 }
 
-fn correct_labeled_call_arg_order_dirty(
+fn correct_uniquely_labeled_call_arg_order_dirty(
     state: &mut State,
     call_id: NodeId<Call>,
     param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
