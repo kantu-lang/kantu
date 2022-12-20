@@ -108,8 +108,6 @@ fn labeled_call_args() {
     expect_success_with_no_warnings(src);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn misordered_labeled_args() {
     let src = include_str!(
