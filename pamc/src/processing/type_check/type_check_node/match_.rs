@@ -148,15 +148,14 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
 
             match normalized_forall.param_list_id {
                 NonEmptyParamListId::Unlabeled(variant_type_param_list_id) => {
-                    // We only need this macro to avoid breaking rustfmt.
+                    // We only need this alias to avoid breaking rustfmt.
                     // For some reason, when lines get really long, rustfmt mysteriously
                     // stops working.
-                    macro_rules! handle_unlabeled {
-                        () => {
-                            add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_dirty
-                        };
-                    }
-                    handle_unlabeled!()(
+                    // However, even though this alias has a really long line, rustfmt somehow
+                    // still works.
+                    // Thus, we use the alias.
+                    use add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_dirty as handle_unlabeled;
+                    handle_unlabeled(
                         state,
                         case_id,
                         matchee_type,
@@ -166,15 +165,14 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
                     )
                 }
                 NonEmptyParamListId::UniquelyLabeled(variant_type_param_list_id) => {
-                    // We only need this macro to avoid breaking rustfmt.
+                    // We only need this alias to avoid breaking rustfmt.
                     // For some reason, when lines get really long, rustfmt mysteriously
                     // stops working.
-                    macro_rules! handle_labeled {
-                        () => {
-                            add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty
-                        };
-                    }
-                    handle_labeled!()(
+                    // However, even though this alias has a really long line, rustfmt somehow
+                    // still works.
+                    // Thus, we use the alias.
+                    use add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty as handle_labeled;
+                    handle_labeled(
                         state,
                         case_id,
                         matchee_type,
