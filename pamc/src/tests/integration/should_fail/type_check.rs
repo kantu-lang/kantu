@@ -621,4 +621,12 @@ mod labeledness_mismatch {
         );
         expect_labeledness_mismatch_type_error(src, "plus(O, O,)");
     }
+
+    #[test]
+    fn labeled_variant_unlabeled_args() {
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/labeledness_mismatch/labeled_variant_unlabeled_args.ph"
+        );
+        expect_labeledness_mismatch_type_error(src, "Nat.S(Nat.O,)");
+    }
 }
