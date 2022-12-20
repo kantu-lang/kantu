@@ -1,7 +1,8 @@
 use crate::data::{
     bound_ast as heavy,
     light_ast::*,
-    node_registry::{LabeledCallArgId, NodeId, NodeRegistry},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
+    non_empty_vec::NonEmptyVec,
 };
 
 fn dummy_id<T>() -> NodeId<T> {
@@ -115,7 +116,7 @@ pub fn register_labeled_param(
     registry: &mut NodeRegistry,
     unregistered: heavy::LabeledParam,
 ) -> NodeId<LabeledParam> {
-    let label_id = register_label(registry, unregistered.label);
+    let label_id = register_param_label(registry, unregistered.label);
     let name_id = register_identifier(registry, unregistered.name);
     let type_id = register_expression(registry, unregistered.type_);
     registry.add(LabeledParam {
@@ -128,7 +129,7 @@ pub fn register_labeled_param(
     })
 }
 
-pub fn register_label(
+pub fn register_param_label(
     registry: &mut NodeRegistry,
     unregistered: heavy::ParamLabel,
 ) -> ParamLabelId {
@@ -299,6 +300,79 @@ pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -
     })
 }
 
+pub fn register_match_case(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::MatchCase,
+) -> NodeId<MatchCase> {
+    let variant_name_id = register_identifier(registry, unregistered.variant_name);
+    let param_list_id = register_optional_match_case_params(registry, unregistered.params);
+    let output_id = register_expression(registry, unregistered.output);
+    registry.add(MatchCase {
+        id: dummy_id(),
+        span: unregistered.span,
+        variant_name_id,
+        param_list_id,
+        output_id,
+    })
+}
+
+pub fn register_optional_match_case_params(
+    registry: &mut NodeRegistry,
+    unregistered: Option<heavy::NonEmptyMatchCaseParamVec>,
+) -> Option<NonEmptyMatchCaseParamListId> {
+    unregistered.map(|unregistered| register_match_case_params(registry, unregistered))
+}
+
+pub fn register_match_case_params(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::NonEmptyMatchCaseParamVec,
+) -> NonEmptyMatchCaseParamListId {
+    match unregistered {
+        heavy::NonEmptyMatchCaseParamVec::Unlabeled(unregistered) => {
+            let id = register_identifiers(registry, unregistered);
+            NonEmptyMatchCaseParamListId::Unlabeled(id)
+        }
+        heavy::NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
+            let param_list_id = register_labeled_match_case_params(registry, params);
+            NonEmptyMatchCaseParamListId::UniquelyLabeled {
+                param_list_id,
+                triple_dot,
+            }
+        }
+    }
+}
+
+pub fn register_identifiers(
+    registry: &mut NodeRegistry,
+    unregistered: NonEmptyVec<heavy::Identifier>,
+) -> NonEmptyListId<NodeId<Identifier>> {
+    let ids = unregistered.into_mapped(|unregistered| register_identifier(registry, unregistered));
+    registry.add_list(ids)
+}
+
+pub fn register_labeled_match_case_params(
+    registry: &mut NodeRegistry,
+    unregistered: NonEmptyVec<heavy::LabeledMatchCaseParam>,
+) -> NonEmptyListId<NodeId<LabeledMatchCaseParam>> {
+    let ids = unregistered
+        .into_mapped(|unregistered| register_labeled_match_case_param(registry, unregistered));
+    registry.add_list(ids)
+}
+
+pub fn register_labeled_match_case_param(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::LabeledMatchCaseParam,
+) -> NodeId<LabeledMatchCaseParam> {
+    let label_id = register_param_label(registry, unregistered.label);
+    let name_id = register_identifier(registry, unregistered.name);
+    registry.add(LabeledMatchCaseParam {
+        id: dummy_id(),
+        span: unregistered.span,
+        label_id,
+        name_id,
+    })
+}
+
 pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall) -> NodeId<Forall> {
     let param_list_id = register_params(registry, unregistered.params);
     let output_id = register_expression(registry, unregistered.output);
@@ -424,36 +498,5 @@ pub fn register_illegal_fun_recursion_expression(
         expression_id,
         error: unregistered.error,
         span_invalidated: unregistered.span_invalidated,
-    })
-}
-
-pub fn register_match_case(
-    registry: &mut NodeRegistry,
-    unregistered: heavy::MatchCase,
-) -> NodeId<MatchCase> {
-    let variant_name_id = register_identifier(registry, unregistered.variant_name);
-    // TODO: Properly lighten params.
-    let param_ids: Vec<_> = match unregistered.params {
-        Some(heavy::NonEmptyMatchCaseParamVec::Unlabeled(params)) => params
-            .into_iter()
-            .map(|unregistered| register_identifier(registry, unregistered))
-            .collect(),
-        Some(heavy::NonEmptyMatchCaseParamVec::UniquelyLabeled {
-            params,
-            triple_dot: _,
-        }) => params
-            .into_iter()
-            .map(|unregistered| register_identifier(registry, unregistered.name))
-            .collect(),
-        None => vec![],
-    };
-    let param_list_id = registry.add_possibly_empty_list(param_ids);
-    let output_id = register_expression(registry, unregistered.output);
-    registry.add(MatchCase {
-        id: dummy_id(),
-        span: unregistered.span,
-        variant_name_id,
-        param_list_id,
-        output_id,
     })
 }

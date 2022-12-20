@@ -136,8 +136,18 @@ pub struct MatchCase {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<Identifier>,
-    pub param_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    pub param_list_id: Option<NonEmptyMatchCaseParamListId>,
     pub output_id: ExpressionId,
+}
+
+pub use crate::data::node_registry::NonEmptyMatchCaseParamListId;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledMatchCaseParam {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+    pub label_id: ParamLabelId,
+    pub name_id: NodeId<Identifier>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

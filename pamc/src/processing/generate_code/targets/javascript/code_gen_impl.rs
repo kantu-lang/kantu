@@ -479,26 +479,52 @@ fn generate_code_for_match_case(
         let arity = case.param_list_id.len();
         let mut body = Vec::with_capacity(arity + 1);
 
-        for (param_index, param_id) in registry
-            .get_possibly_empty_list(case.param_list_id)
-            .iter()
-            .copied()
-            .enumerate()
-        {
-            let param_name = &registry.get(param_id).name;
-            context.try_push_name(param_name.js_name());
-            let param_js_name = context.js_name(DbIndex(0));
-            let field_index = i32::try_from(1 + param_index)
-                .expect("The param index should not be absurdly large.");
-            let param_value = Expression::BinaryOp(Box::new(BinaryOp {
-                left: Expression::Identifier(matchee_js_name.clone()),
-                op: BinaryOpKind::Index,
-                right: Expression::Literal(Literal::Number(field_index)),
-            }));
-            body.push(FunctionStatement::Const(ConstStatement {
-                name: param_js_name,
-                value: param_value,
-            }));
+        // TODO: Properly generate code for labeled args
+        match case.param_list_id {
+            None => {}
+            Some(NonEmptyMatchCaseParamListId::Unlabeled(param_list_id)) => {
+                for (param_index, param_id) in
+                    registry.get_list(param_list_id).iter().copied().enumerate()
+                {
+                    let param_name = &registry.get(param_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    let field_index = i32::try_from(1 + param_index)
+                        .expect("The param index should not be absurdly large.");
+                    let param_value = Expression::BinaryOp(Box::new(BinaryOp {
+                        left: Expression::Identifier(matchee_js_name.clone()),
+                        op: BinaryOpKind::Index,
+                        right: Expression::Literal(Literal::Number(field_index)),
+                    }));
+                    body.push(FunctionStatement::Const(ConstStatement {
+                        name: param_js_name,
+                        value: param_value,
+                    }));
+                }
+            }
+            Some(NonEmptyMatchCaseParamListId::UniquelyLabeled {
+                param_list_id,
+                triple_dot: _,
+            }) => {
+                for (param_index, param_id) in
+                    registry.get_list(param_list_id).iter().copied().enumerate()
+                {
+                    let param_name = &registry.get(registry.get(param_id).name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    let field_index = i32::try_from(1 + param_index)
+                        .expect("The param index should not be absurdly large.");
+                    let param_value = Expression::BinaryOp(Box::new(BinaryOp {
+                        left: Expression::Identifier(matchee_js_name.clone()),
+                        op: BinaryOpKind::Index,
+                        right: Expression::Literal(Literal::Number(field_index)),
+                    }));
+                    body.push(FunctionStatement::Const(ConstStatement {
+                        name: param_js_name,
+                        value: param_value,
+                    }));
+                }
+            }
         }
 
         body.push(FunctionStatement::Return(generate_code_for_expression(

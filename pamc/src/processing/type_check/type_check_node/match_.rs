@@ -155,7 +155,7 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     actual: 0,
                 });
             };
-            if case_param_list_id.len != expected_case_param_arity {
+            if case_param_list_id.non_zero_len() != expected_case_param_arity {
                 return tainted_err(TypeCheckError::WrongNumberOfCaseParams {
                     case_id,
                     expected: expected_case_param_arity.get(),
@@ -181,10 +181,17 @@ fn add_case_params_to_context_and_get_constructed_matchee_and_type_dirty(
                     fully_qualified_variant_name_component_ids,
                     shifted_variant_dbi,
                 ));
-                let case_param_ids = state
-                    .registry
-                    .get_list(case_param_list_id)
-                    .to_non_empty_vec();
+                let case_param_ids = match case_param_list_id {
+                    NonEmptyMatchCaseParamListId::Unlabeled(param_list_id) => state
+                        .registry
+                        .get_list(param_list_id)
+                        .to_non_empty_vec(),
+                    // TODO: Properly handle the labeled case.
+                    NonEmptyMatchCaseParamListId::UniquelyLabeled { param_list_id, triple_dot: _ } => state
+                        .registry
+                        .get_list(param_list_id)
+                        .to_mapped(|&param_id| state.registry.get(param_id).name_id),
+                };
                 let case_param_arity = case_param_ids.len();
                 let arg_ids = case_param_ids.as_non_empty_slice().enumerate_to_mapped(
                     |(index, &case_param_id)| {
