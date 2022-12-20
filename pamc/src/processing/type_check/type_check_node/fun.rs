@@ -1,6 +1,5 @@
 use super::*;
 
-// TODO: Properly label params of type if the fun's params are labeled.
 // TODO: Maybe we don't need `skip_type_checking_body` if we add it to the context
 // as `Uninterpreted`.
 pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
