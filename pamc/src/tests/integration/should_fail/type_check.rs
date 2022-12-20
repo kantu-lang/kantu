@@ -637,4 +637,12 @@ mod labeledness_mismatch {
         );
         expect_labeledness_mismatch_type_error(src, "List(Nat,)");
     }
+
+    #[test]
+    fn unlabeled_fun_labeled_args() {
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/labeledness_mismatch/unlabeled_fun_labeled_args.ph"
+        );
+        expect_labeledness_mismatch_type_error(src, "plus(left: O, right: O,)");
+    }
 }
