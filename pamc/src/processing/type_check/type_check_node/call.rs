@@ -163,7 +163,7 @@ fn correct_call_arg_order_dirty(
             param_list_id,
             arg_list_id,
         ),
-        _ => tainted_err(TypeCheckError::LabelednessMismatch { call_id }),
+        _ => tainted_err(TypeCheckError::CallLabelednessMismatch { call_id }),
     }
 }
 

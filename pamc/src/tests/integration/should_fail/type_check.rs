@@ -596,7 +596,7 @@ mod labeledness_mismatch {
 
     fn expect_labeledness_mismatch_type_error(src: &str, expected_call_src: &str) {
         expect_type_check_error(src, |registry, err| match err {
-            TypeCheckError::LabelednessMismatch { call_id } => {
+            TypeCheckError::CallLabelednessMismatch { call_id } => {
                 let actual_call_src = format_expression(
                     &expand_expression(registry, ExpressionId::Call(call_id)),
                     0,
