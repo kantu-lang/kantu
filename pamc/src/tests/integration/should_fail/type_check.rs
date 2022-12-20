@@ -590,3 +590,35 @@ mod labeled_call_args {
         expect_missing_labeled_call_arg_type_error(src, "right");
     }
 }
+
+mod labeledness_mismatch {
+    use super::*;
+
+    fn expect_labeledness_mismatch_type_error(src: &str, expected_call_src: &str) {
+        expect_type_check_error(src, |registry, err| match err {
+            TypeCheckError::LabelednessMismatch { call_id } => {
+                let actual_call_src = format_expression(
+                    &expand_expression(registry, ExpressionId::Call(call_id)),
+                    0,
+                    &FormatOptions {
+                        ident_size_in_spaces: 4,
+                        print_db_indices: false,
+                        print_fun_body_status: false,
+                    },
+                );
+                assert_eq_up_to_white_space(&actual_call_src, expected_call_src);
+            }
+            _ => {
+                panic!("Unexpected error: {:#?}", err)
+            }
+        });
+    }
+
+    #[test]
+    fn labeled_fun_unlabeled_args() {
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/labeledness_mismatch/labeled_fun_unlabeled_args.ph"
+        );
+        expect_labeledness_mismatch_type_error(src, "plus(O, O,)");
+    }
+}
