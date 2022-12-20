@@ -653,4 +653,12 @@ mod labeledness_mismatch {
         );
         expect_labeledness_mismatch_type_error(src, "Nat.S(pred: O,)");
     }
+
+    #[test]
+    fn unlabeled_type_labeled_args() {
+        let src = include_str!(
+            "../../sample_code/should_fail/type_check/labeledness_mismatch/unlabeled_type_labeled_args.ph"
+        );
+        expect_labeledness_mismatch_type_error(src, "List(Item: Nat,)");
+    }
 }
