@@ -42,5 +42,5 @@ fn expect_duplicate_match_case_error(
 #[test]
 fn duplicate_match_case() {
     let src = include_str!("../../../sample_code/should_fail/type_check/duplicate_match_case.ph");
-    expect_duplicate_match_case_error(src, "U => Bool.True,", "U => Bool.False,");
+    expect_duplicate_match_case_error(src, ".U => Bool.True,", ".U => Bool.False,");
 }

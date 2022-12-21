@@ -83,3 +83,16 @@ fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
         );
     expect_type_mismatch_error(src, "Nat.O", "Bool", "Nat");
 }
+
+#[test]
+fn differing_generated_underscore_name_expressions() {
+    let src = include_str!(
+            "../../../sample_code/should_fail/type_check/type_mismatch/differing_generated_underscore_name_expressions.ph"
+        );
+    expect_type_mismatch_error(
+        src,
+        "ColorEq.Refl(x,)",
+        "ColorEq(x, match x { .C(:b, :r, :g) => Color.C(r: g, :g, :b,), },)",
+        "ColorEq(x, x,)",
+    );
+}

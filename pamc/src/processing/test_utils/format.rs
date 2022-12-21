@@ -248,7 +248,7 @@ pub fn format_match_case(case: &MatchCase, indent_level: usize, options: &Format
     };
     let output = format_expression(&case.output, indent_level + 1, options);
     format!(
-        "{}{} => {}",
+        ".{}{} => {}",
         variant_name,
         params,
         try_oneline(&format!("{},", output), indent_level, options)
