@@ -1603,19 +1603,6 @@ pub(super) fn get_unlabeled_param_type_ids(
         })
 }
 
-pub(super) fn get_labeled_param_type_ids(
-    state: &State,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
-) -> NonEmptyVec<ExpressionId> {
-    state
-        .registry
-        .get_list(param_list_id)
-        .to_mapped(|&param_id| {
-            let param = state.registry.get(param_id);
-            param.type_id
-        })
-}
-
 pub(super) fn get_names_and_types_of_params(
     state: &State,
     param_list_id: NonEmptyParamListId,
