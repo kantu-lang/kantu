@@ -544,7 +544,8 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                         variant_type_param_label_name == case_param_label_name
                     })
                 else {
-                    return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParam { case_id, case_param_id });
+                    // TODO: Properly handle this case.
+                     return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParams { case_id, case_param_list_id: unimplemented!() });
                 };
                 Ok(CaseOutputSubstitution {
                     explicit_param_index: case_param_index,
@@ -620,27 +621,36 @@ fn verify_case_param_bijection(
     explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
     variant_type_param_ids: NonEmptySlice<NodeId<LabeledParam>>,
 ) -> Result<(), Tainted<TypeCheckError>> {
-    for &case_param_id in explicit_case_param_ids {
-        let case_param = state.registry.get(case_param_id);
-        let case_param_label_name_id = case_param.label_identifier_id();
-        let case_param_label_name: &IdentifierName =
-            &state.registry.get(case_param_label_name_id).name;
-        if !variant_type_param_ids
-            .iter()
-            .copied()
-            .any(|variant_type_param_id| {
-                let variant_type_param = state.registry.get(variant_type_param_id);
-                let variant_type_param_label_name_id = variant_type_param.label_identifier_id();
-                let variant_type_param_label_name: &IdentifierName =
-                    &state.registry.get(variant_type_param_label_name_id).name;
-                variant_type_param_label_name == case_param_label_name
-            })
-        {
-            return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParam {
-                case_id,
-                case_param_id,
-            });
-        }
+    let missing_case_param_ids: Vec<NodeId<LabeledMatchCaseParam>> = explicit_case_param_ids
+        .iter()
+        .copied()
+        .filter(|&case_param_id| {
+            let case_param = state.registry.get(case_param_id);
+            let case_param_label_name_id = case_param.label_identifier_id();
+            let case_param_label_name: &IdentifierName =
+                &state.registry.get(case_param_label_name_id).name;
+            let has_corresponding_variant_type_param =
+                variant_type_param_ids
+                    .iter()
+                    .copied()
+                    .any(|variant_type_param_id| {
+                        let variant_type_param = state.registry.get(variant_type_param_id);
+                        let variant_type_param_label_name_id =
+                            variant_type_param.label_identifier_id();
+                        let variant_type_param_label_name: &IdentifierName =
+                            &state.registry.get(variant_type_param_label_name_id).name;
+                        variant_type_param_label_name == case_param_label_name
+                    });
+            !has_corresponding_variant_type_param
+        })
+        .collect();
+
+    if let Ok(missing_case_param_ids) = NonEmptyVec::try_from(missing_case_param_ids) {
+        let case_param_list_id = state.registry.add_list(missing_case_param_ids);
+        return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParams {
+            case_id,
+            case_param_list_id,
+        });
     }
 
     let mut missing_label_ids: Vec<NodeId<Identifier>> = vec![];
