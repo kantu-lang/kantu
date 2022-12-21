@@ -7,6 +7,7 @@ mod extraneous_match_case;
 mod illegal_callee;
 mod illegal_type;
 mod labeled_call_args;
+mod labeled_match_case_params;
 mod missing_match_case;
 mod non_adt_matchee;
 mod type_mismatch;
