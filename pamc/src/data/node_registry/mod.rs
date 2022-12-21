@@ -299,7 +299,169 @@ impl NodeRegistry {
     }
 }
 
-// TODO: Move
+impl NodeRegistry {
+    pub fn add_list<T>(&mut self, list: NonEmptyVec<T>) -> NonEmptyListId<T>
+    where
+        T: RegisterableList + Clone + Eq + Hash,
+    {
+        T::subregistry_mut(self).add(list)
+    }
+
+    pub fn add_possibly_empty_list<T, L>(&mut self, list: L) -> Option<NonEmptyListId<T>>
+    where
+        T: RegisterableList + Clone + Eq + Hash,
+        L: IntoOptionalNonEmptyVec<T>,
+    {
+        list.into_optional_non_empty_vec()
+            .map(|list| T::subregistry_mut(self).add(list))
+    }
+
+    pub fn get_list<T>(&self, id: NonEmptyListId<T>) -> NonEmptySlice<'_, T>
+    where
+        T: RegisterableList + Clone + Eq + Hash,
+    {
+        T::subregistry(self).get(id)
+    }
+
+    pub fn get_possibly_empty_list<T>(&self, id: Option<NonEmptyListId<T>>) -> &[T]
+    where
+        T: RegisterableList + Clone + Eq + Hash,
+    {
+        if let Some(id) = id {
+            self.get_list(id).into()
+        } else {
+            &[]
+        }
+    }
+}
+
+pub trait IntoOptionalNonEmptyVec<T> {
+    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>>;
+}
+
+impl<T> IntoOptionalNonEmptyVec<T> for Option<NonEmptyVec<T>> {
+    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>> {
+        self
+    }
+}
+
+impl<T> IntoOptionalNonEmptyVec<T> for Vec<T> {
+    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>> {
+        NonEmptyVec::try_from(self).ok()
+    }
+}
+
+impl NodeRegistry {
+    pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
+        match id {
+            ExpressionId::Name(id) => ExpressionRef::Name(self.get(id)),
+            ExpressionId::Call(id) => ExpressionRef::Call(self.get(id)),
+            ExpressionId::Fun(id) => ExpressionRef::Fun(self.get(id)),
+            ExpressionId::Match(id) => ExpressionRef::Match(self.get(id)),
+            ExpressionId::Forall(id) => ExpressionRef::Forall(self.get(id)),
+            ExpressionId::Check(id) => ExpressionRef::Check(self.get(id)),
+        }
+    }
+}
+
+use subregistry::*;
+mod subregistry {
+    use super::*;
+
+    #[derive(Clone, Debug)]
+    pub struct Subregistry<T>
+    where
+        T: RemoveId,
+        T::Output: Clone + Debug,
+    {
+        items: Vec<T>,
+        ids: FxHashMap<T::Output, NodeId<T>>,
+    }
+
+    impl<T> Subregistry<T>
+    where
+        T: RemoveId,
+        T::Output: Clone + Debug,
+    {
+        pub fn new() -> Self {
+            Self {
+                items: Vec::new(),
+                ids: FxHashMap::default(),
+            }
+        }
+    }
+
+    impl<T> Subregistry<T>
+    where
+        T: RemoveId,
+        T::Output: Clone + Debug,
+    {
+        pub fn get(&self, id: NodeId<T>) -> &T {
+            &self.items[id.raw]
+        }
+    }
+
+    impl<T> Subregistry<T>
+    where
+        T: RemoveId + SetId,
+        T::Output: Clone + Debug,
+    {
+        pub fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
+            if let Some(existing_id) = self.ids.get(&item.remove_id()) {
+                *existing_id
+            } else {
+                let new_id = NodeId::<T>::new(self.items.len());
+                item.set_id(new_id);
+                self.ids.insert(item.remove_id(), new_id);
+                self.items.push(item);
+                new_id
+            }
+        }
+    }
+}
+
+use list_subregistry::*;
+mod list_subregistry {
+    use super::*;
+
+    #[derive(Clone, Debug)]
+    pub struct ListSubregistry<T> {
+        flattened_items: Vec<T>,
+        ids: FxHashMap<NonEmptyVec<T>, NonEmptyListId<T>>,
+    }
+
+    impl<T> ListSubregistry<T> {
+        pub fn new() -> Self {
+            Self {
+                flattened_items: Vec::new(),
+                ids: FxHashMap::default(),
+            }
+        }
+    }
+
+    impl<T> ListSubregistry<T> {
+        pub fn get(&self, id: NonEmptyListId<T>) -> NonEmptySlice<'_, T> {
+            NonEmptySlice::new(&self.flattened_items, id.start, id.len)
+        }
+    }
+
+    impl<T> ListSubregistry<T>
+    where
+        T: Clone + Eq + std::hash::Hash,
+    {
+        pub fn add(&mut self, list: NonEmptyVec<T>) -> NonEmptyListId<T> {
+            if let Some(existing_id) = self.ids.get(&list) {
+                *existing_id
+            } else {
+                let new_id =
+                    NonEmptyListId::<T>::new(self.flattened_items.len(), list.non_zero_len());
+                self.flattened_items.extend(list.iter().cloned());
+                self.ids.insert(list, new_id);
+                new_id
+            }
+        }
+    }
+}
 
 pub use registerable_node::RegisterableNode;
 mod registerable_node {
@@ -495,59 +657,6 @@ mod registerable_node {
     }
 }
 
-impl NodeRegistry {
-    pub fn add_list<T>(&mut self, list: NonEmptyVec<T>) -> NonEmptyListId<T>
-    where
-        T: RegisterableList + Clone + Eq + Hash,
-    {
-        T::subregistry_mut(self).add(list)
-    }
-
-    pub fn add_possibly_empty_list<T, L>(&mut self, list: L) -> Option<NonEmptyListId<T>>
-    where
-        T: RegisterableList + Clone + Eq + Hash,
-        L: IntoOptionalNonEmptyVec<T>,
-    {
-        list.into_optional_non_empty_vec()
-            .map(|list| T::subregistry_mut(self).add(list))
-    }
-
-    pub fn get_list<T>(&self, id: NonEmptyListId<T>) -> NonEmptySlice<'_, T>
-    where
-        T: RegisterableList + Clone + Eq + Hash,
-    {
-        T::subregistry(self).get(id)
-    }
-
-    pub fn get_possibly_empty_list<T>(&self, id: Option<NonEmptyListId<T>>) -> &[T]
-    where
-        T: RegisterableList + Clone + Eq + Hash,
-    {
-        if let Some(id) = id {
-            self.get_list(id).into()
-        } else {
-            &[]
-        }
-    }
-}
-
-pub trait IntoOptionalNonEmptyVec<T> {
-    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>>;
-}
-
-impl<T> IntoOptionalNonEmptyVec<T> for Option<NonEmptyVec<T>> {
-    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>> {
-        self
-    }
-}
-
-impl<T> IntoOptionalNonEmptyVec<T> for Vec<T> {
-    fn into_optional_non_empty_vec(self) -> Option<NonEmptyVec<T>> {
-        NonEmptyVec::try_from(self).ok()
-    }
-}
-
-// TODO: Move
 pub use registerable_list::RegisterableList;
 mod registerable_list {
     use super::*;
@@ -654,118 +763,6 @@ mod registerable_list {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut ListSubregistry<Self> {
             &mut registry.identifier_lists
-        }
-    }
-}
-
-impl NodeRegistry {
-    pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
-        match id {
-            ExpressionId::Name(id) => ExpressionRef::Name(self.get(id)),
-            ExpressionId::Call(id) => ExpressionRef::Call(self.get(id)),
-            ExpressionId::Fun(id) => ExpressionRef::Fun(self.get(id)),
-            ExpressionId::Match(id) => ExpressionRef::Match(self.get(id)),
-            ExpressionId::Forall(id) => ExpressionRef::Forall(self.get(id)),
-            ExpressionId::Check(id) => ExpressionRef::Check(self.get(id)),
-        }
-    }
-}
-
-use subregistry::*;
-mod subregistry {
-    use super::*;
-
-    #[derive(Clone, Debug)]
-    pub struct Subregistry<T>
-    where
-        T: RemoveId,
-        T::Output: Clone + Debug,
-    {
-        items: Vec<T>,
-        ids: FxHashMap<T::Output, NodeId<T>>,
-    }
-
-    impl<T> Subregistry<T>
-    where
-        T: RemoveId,
-        T::Output: Clone + Debug,
-    {
-        pub fn new() -> Self {
-            Self {
-                items: Vec::new(),
-                ids: FxHashMap::default(),
-            }
-        }
-    }
-
-    impl<T> Subregistry<T>
-    where
-        T: RemoveId,
-        T::Output: Clone + Debug,
-    {
-        pub fn get(&self, id: NodeId<T>) -> &T {
-            &self.items[id.raw]
-        }
-    }
-
-    impl<T> Subregistry<T>
-    where
-        T: RemoveId + SetId,
-        T::Output: Clone + Debug,
-    {
-        pub fn add_and_overwrite_id(&mut self, mut item: T) -> NodeId<T> {
-            if let Some(existing_id) = self.ids.get(&item.remove_id()) {
-                *existing_id
-            } else {
-                let new_id = NodeId::<T>::new(self.items.len());
-                item.set_id(new_id);
-                self.ids.insert(item.remove_id(), new_id);
-                self.items.push(item);
-                new_id
-            }
-        }
-    }
-}
-
-use list_subregistry::*;
-mod list_subregistry {
-    use super::*;
-
-    #[derive(Clone, Debug)]
-    pub struct ListSubregistry<T> {
-        flattened_items: Vec<T>,
-        ids: FxHashMap<NonEmptyVec<T>, NonEmptyListId<T>>,
-    }
-
-    impl<T> ListSubregistry<T> {
-        pub fn new() -> Self {
-            Self {
-                flattened_items: Vec::new(),
-                ids: FxHashMap::default(),
-            }
-        }
-    }
-
-    impl<T> ListSubregistry<T> {
-        pub fn get(&self, id: NonEmptyListId<T>) -> NonEmptySlice<'_, T> {
-            NonEmptySlice::new(&self.flattened_items, id.start, id.len)
-        }
-    }
-
-    impl<T> ListSubregistry<T>
-    where
-        T: Clone + Eq + std::hash::Hash,
-    {
-        pub fn add(&mut self, list: NonEmptyVec<T>) -> NonEmptyListId<T> {
-            if let Some(existing_id) = self.ids.get(&list) {
-                *existing_id
-            } else {
-                let new_id =
-                    NonEmptyListId::<T>::new(self.flattened_items.len(), list.non_zero_len());
-                self.flattened_items.extend(list.iter().cloned());
-                self.ids.insert(list, new_id);
-                new_id
-            }
         }
     }
 }
