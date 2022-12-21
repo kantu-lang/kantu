@@ -58,7 +58,7 @@ impl AddId for File {
     }
 }
 
-pub type FileItemNodeId = crate::data::node_registry::FileItemNodeId;
+pub use crate::data::node_registry::FileItemNodeId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
@@ -215,7 +215,7 @@ impl AddId for LetStatement {
     }
 }
 
-pub type ExpressionId = crate::data::node_registry::ExpressionId;
+pub use crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
