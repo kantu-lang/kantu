@@ -740,7 +740,11 @@ fn apply_case_output_substitutions(
         })
         .collect();
     let case_output_id = case_output_id.subst_all(&concrete_subs, state);
-    case_output_id.downshift(subs.case_explicit_arity, state.registry)
+    case_output_id.downshift_with_cutoff(
+        subs.case_explicit_arity,
+        subs.variant_arity,
+        state.registry,
+    )
 }
 
 // TODO: Perform `match` hunt.
