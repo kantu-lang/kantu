@@ -150,6 +150,15 @@ pub struct LabeledMatchCaseParam {
     pub name_id: NodeId<Identifier>,
 }
 
+impl LabeledMatchCaseParam {
+    pub fn label_identifier_id(&self) -> NodeId<Identifier> {
+        match self.label_id {
+            ParamLabelId::Implicit => self.name_id,
+            ParamLabelId::Explicit(label_id) => label_id,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall {
     pub id: NodeId<Self>,

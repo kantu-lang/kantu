@@ -46,19 +46,25 @@ pub enum TypeCheckError {
     },
     MissingLabeledCallArg {
         call_id: NodeId<Call>,
+        // TODO: Make this a list, so the user can
+        // see all the missing arguments at once.
         label_id: NodeId<Identifier>,
     },
     ExtraneousLabeledCallArg {
         call_id: NodeId<Call>,
         arg_id: LabeledCallArgId,
     },
-    WrongNumberOfCaseParams {
+    WrongNumberOfMatchCaseParams {
         case_id: NodeId<MatchCase>,
         expected: usize,
         actual: usize,
     },
     MatchCaseLabelednessMismatch {
         case_id: NodeId<MatchCase>,
+    },
+    MissingLabeledMatchCaseParams {
+        case_id: NodeId<MatchCase>,
+        missing_label_list_id: NonEmptyListId<NodeId<Identifier>>,
     },
     TypeMismatch {
         expression_id: ExpressionId,
