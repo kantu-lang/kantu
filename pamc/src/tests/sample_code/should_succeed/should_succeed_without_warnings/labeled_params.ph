@@ -31,7 +31,7 @@ let redness4 = fun _(~c: Color): Nat {
     }
 };
 
-let _1 = redness(c: Color.C(Nat.S(Nat.O), Nat.O, Nat.O));
+let _1 = redness(c: Color.C(r: Nat.S(Nat.O), b: Nat.O, g: Nat.O));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
     f(d: c)
