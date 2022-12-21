@@ -615,12 +615,64 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
 }
 
 fn verify_case_param_bijection(
-    _state: &mut State,
-    _case_id: NodeId<MatchCase>,
-    _explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
-    _variant_type_param_ids: NonEmptySlice<NodeId<LabeledParam>>,
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
+    variant_type_param_ids: NonEmptySlice<NodeId<LabeledParam>>,
 ) -> Result<(), Tainted<TypeCheckError>> {
-    todo!()
+    for &case_param_id in explicit_case_param_ids {
+        let case_param = state.registry.get(case_param_id);
+        let case_param_label_name_id = case_param.label_identifier_id();
+        let case_param_label_name: &IdentifierName =
+            &state.registry.get(case_param_label_name_id).name;
+        if !variant_type_param_ids
+            .iter()
+            .copied()
+            .any(|variant_type_param_id| {
+                let variant_type_param = state.registry.get(variant_type_param_id);
+                let variant_type_param_label_name_id = variant_type_param.label_identifier_id();
+                let variant_type_param_label_name: &IdentifierName =
+                    &state.registry.get(variant_type_param_label_name_id).name;
+                variant_type_param_label_name == case_param_label_name
+            })
+        {
+            return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParam {
+                case_id,
+                case_param_id,
+            });
+        }
+    }
+
+    let mut missing_label_ids: Vec<NodeId<Identifier>> = vec![];
+    for &variant_type_param_id in variant_type_param_ids.iter() {
+        let variant_type_param = state.registry.get(variant_type_param_id);
+        let variant_type_param_label_name_id = variant_type_param.label_identifier_id();
+        let variant_type_param_label_name: &IdentifierName =
+            &state.registry.get(variant_type_param_label_name_id).name;
+        if !explicit_case_param_ids
+            .iter()
+            .copied()
+            .any(|case_param_id| {
+                let case_param = state.registry.get(case_param_id);
+                let case_param_label_name_id = case_param.label_identifier_id();
+                let case_param_label_name: &IdentifierName =
+                    &state.registry.get(case_param_label_name_id).name;
+                case_param_label_name == variant_type_param_label_name
+            })
+        {
+            missing_label_ids.push(variant_type_param_label_name_id);
+        }
+    }
+
+    if let Ok(missing_label_ids) = NonEmptyVec::try_from(missing_label_ids) {
+        let missing_label_list_id = state.registry.add_list(missing_label_ids);
+        return tainted_err(TypeCheckError::MissingLabeledMatchCaseParams {
+            case_id,
+            missing_label_list_id,
+        });
+    }
+
+    Ok(())
 }
 
 fn apply_case_output_substitutions(
