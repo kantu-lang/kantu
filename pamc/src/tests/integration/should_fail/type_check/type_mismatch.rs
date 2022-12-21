@@ -96,3 +96,17 @@ fn differing_generated_underscore_name_expressions() {
         "ColorEq(x, x,)",
     );
 }
+
+#[ignore]
+#[test]
+fn misordered_fun_params() {
+    let src = include_str!(
+        "../../../sample_code/should_fail/type_check/type_mismatch/misordered_fun_params.ph"
+    );
+    expect_type_mismatch_error(
+        src,
+        "fun _(~x: Nat, ~y: Nat,): Nat { x }",
+        "forall(~y: Nat, ~x: Nat,) { Nat }",
+        "forall(~x: Nat, ~y: Nat,) { Nat }",
+    );
+}

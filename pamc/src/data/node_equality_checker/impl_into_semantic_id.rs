@@ -395,6 +395,7 @@ impl GetIndexInSubregistry for NodeId<MatchCase> {
 
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let case = registry.get(self);
+        // TODO: Track explicit param count
         stripped::MatchCase {
             variant_name_id: case.variant_name_id.into_semantic_id(registry, sreg),
             output_id: case.output_id.into_semantic_id(registry, sreg),
