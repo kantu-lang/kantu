@@ -39,7 +39,7 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
         normalized_arg_list_id: NonEmptyCallArgListId,
     ) -> NormalFormId {
         let normalized_call_id = registry
-            .add(Call {
+            .add_and_overwrite_id(Call {
                 id: dummy_id(),
                 span: None,
                 callee_id: normalized_callee_id.raw(),
@@ -373,7 +373,7 @@ fn evaluate_well_typed_fun_pseudo_dirty(
     Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
         state
             .registry
-            .add(Fun {
+            .add_and_overwrite_id(Fun {
                 id: dummy_id(),
                 span: None,
                 name_id: fun.name_id,
@@ -414,7 +414,7 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
             type_id: normalized_param_type_id,
             definition: ContextEntryDefinition::Uninterpreted,
         })?;
-        state.registry.add(UnlabeledParam {
+        state.registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
             span: None,
             is_dashed: first_param.is_dashed,
@@ -427,7 +427,7 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
     for param_id in remaining_param_ids.iter().copied() {
         let param = state.registry.get(param_id).clone();
         let normalized_param_type_id = evaluate_well_typed_expression(state, param.type_id);
-        normalized_param_ids.push(state.registry.add(UnlabeledParam {
+        normalized_param_ids.push(state.registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
             span: None,
             is_dashed: param.is_dashed,
@@ -458,7 +458,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
             type_id: normalized_param_type_id,
             definition: ContextEntryDefinition::Uninterpreted,
         })?;
-        state.registry.add(LabeledParam {
+        state.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
             label_id: first_param.label_id,
@@ -472,7 +472,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     for param_id in remaining_param_ids.iter().copied() {
         let param = state.registry.get(param_id).clone();
         let normalized_param_type_id = evaluate_well_typed_expression(state, param.type_id);
-        normalized_param_ids.push(state.registry.add(LabeledParam {
+        normalized_param_ids.push(state.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
             label_id: param.label_id,
@@ -503,7 +503,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
             return NormalFormId::unchecked_new(ExpressionId::Match(
                 state
                     .registry
-                    .add(Match {
+                    .add_and_overwrite_id(Match {
                         id: dummy_id(),
                         span: None,
                         matchee_id: normalized_matchee_id.raw(),
@@ -657,7 +657,7 @@ fn evaluate_well_typed_forall_pseudo_dirty(
     Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
         state
             .registry
-            .add(Forall {
+            .add_and_overwrite_id(Forall {
                 id: dummy_id(),
                 span: None,
                 param_list_id: normalized_param_list_id,

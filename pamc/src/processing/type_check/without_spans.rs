@@ -39,7 +39,7 @@ impl WithoutSpans for NodeId<UnlabeledParam> {
         let original = registry.get(self).clone();
         let name_id = original.name_id.without_spans(registry);
         let type_id = original.type_id.without_spans(registry);
-        registry.add(UnlabeledParam {
+        registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
             span: None,
             is_dashed: original.is_dashed,
@@ -63,7 +63,7 @@ impl WithoutSpans for NodeId<LabeledParam> {
         let label_id = original.label_id.without_spans(registry);
         let name_id = original.name_id.without_spans(registry);
         let type_id = original.type_id.without_spans(registry);
-        registry.add(LabeledParam {
+        registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
             label_id,
@@ -86,7 +86,7 @@ impl WithoutSpans for ParamLabelId {
 impl WithoutSpans for NodeId<Identifier> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
-        registry.add(Identifier {
+        registry.add_and_overwrite_id(Identifier {
             id: dummy_id(),
             span: None,
             name: original.name.clone(),
@@ -117,7 +117,7 @@ impl WithoutSpans for NodeId<NameExpression> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let component_list_id = original.component_list_id.without_spans(registry);
-        registry.add(NameExpression {
+        registry.add_and_overwrite_id(NameExpression {
             id: dummy_id(),
             span: None,
             component_list_id,
@@ -139,7 +139,7 @@ impl WithoutSpans for NodeId<Call> {
         let original = registry.get(self).clone();
         let callee_id = original.callee_id.without_spans(registry);
         let arg_list_id = original.arg_list_id.without_spans(registry);
-        registry.add(Call {
+        registry.add_and_overwrite_id(Call {
             id: dummy_id(),
             span: None,
             callee_id,
@@ -199,7 +199,7 @@ impl WithoutSpans for NodeId<Fun> {
         let param_list_id = original.param_list_id.without_spans(registry);
         let return_type_id = original.return_type_id.without_spans(registry);
         let body_id = original.body_id.without_spans(registry);
-        registry.add(Fun {
+        registry.add_and_overwrite_id(Fun {
             id: dummy_id(),
             span: None,
             name_id,
@@ -216,7 +216,7 @@ impl WithoutSpans for NodeId<Match> {
         let original = registry.get(self).clone();
         let matchee_id = original.matchee_id.without_spans(registry);
         let case_list_id = original.case_list_id.without_spans(registry);
-        registry.add(Match {
+        registry.add_and_overwrite_id(Match {
             id: dummy_id(),
             span: None,
             matchee_id,
@@ -239,7 +239,7 @@ impl WithoutSpans for NodeId<MatchCase> {
         let variant_name_id = original.variant_name_id.without_spans(registry);
         let param_list_id = original.param_list_id.without_spans(registry);
         let output_id = original.output_id.without_spans(registry);
-        registry.add(MatchCase {
+        registry.add_and_overwrite_id(MatchCase {
             id: dummy_id(),
             span: None,
             variant_name_id,
@@ -279,7 +279,7 @@ impl WithoutSpans for NodeId<LabeledMatchCaseParam> {
         let original = registry.get(self).clone();
         let label_id = original.label_id.without_spans(registry);
         let name_id = original.name_id.without_spans(registry);
-        registry.add(LabeledMatchCaseParam {
+        registry.add_and_overwrite_id(LabeledMatchCaseParam {
             id: dummy_id(),
             span: None,
             label_id,
@@ -293,7 +293,7 @@ impl WithoutSpans for NodeId<Forall> {
         let original = registry.get(self).clone();
         let param_list_id = original.param_list_id.without_spans(registry);
         let output_id = original.output_id.without_spans(registry);
-        registry.add(Forall {
+        registry.add_and_overwrite_id(Forall {
             id: dummy_id(),
             span: None,
             param_list_id,
@@ -307,7 +307,7 @@ impl WithoutSpans for NodeId<Check> {
         let original = check.get(self).clone();
         let assertion_list_id = original.assertion_list_id.without_spans(check);
         let output_id = original.output_id.without_spans(check);
-        check.add(Check {
+        check.add_and_overwrite_id(Check {
             id: dummy_id(),
             span: None,
             assertion_list_id,
@@ -329,7 +329,7 @@ impl WithoutSpans for NodeId<CheckAssertion> {
         let original = registry.get(self).clone();
         let left_id = original.left_id.without_spans(registry);
         let right_id = original.right_id.without_spans(registry);
-        registry.add(CheckAssertion {
+        registry.add_and_overwrite_id(CheckAssertion {
             id: dummy_id(),
             span: None,
             kind: original.kind,

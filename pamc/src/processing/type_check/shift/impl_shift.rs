@@ -148,7 +148,7 @@ impl ShiftDbIndices for NodeId<NameExpression> {
             db_index: shifted_index,
             ..*name
         };
-        Ok(registry.add(shifted_with_dummy_id))
+        Ok(registry.add_and_overwrite_id(shifted_with_dummy_id))
     }
 }
 
@@ -166,7 +166,7 @@ impl ShiftDbIndices for NodeId<Call> {
         let shifted_argument_id = call
             .arg_list_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(registry.add(Call {
+        Ok(registry.add_and_overwrite_id(Call {
             id: dummy_id(),
             span: call.span,
             callee_id: shifted_callee_id,
@@ -273,7 +273,7 @@ impl ShiftDbIndices for NodeId<Fun> {
         let shifted_body_id =
             fun.body_id
                 .try_shift_with_cutoff(f, cutoff + param_arity + 1, registry)?;
-        Ok(registry.add(Fun {
+        Ok(registry.add_and_overwrite_id(Fun {
             id: dummy_id(),
             span: fun.span,
             name_id: fun.name_id,
@@ -337,7 +337,7 @@ impl ShiftDbIndices for NodeId<UnlabeledParam> {
     ) -> Result<Self, F::ShiftError> {
         let param = registry.get(self).clone();
         let shifted_type_id = param.type_id.try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(registry.add(UnlabeledParam {
+        Ok(registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
             span: param.span,
             is_dashed: param.is_dashed,
@@ -377,7 +377,7 @@ impl ShiftDbIndices for NodeId<LabeledParam> {
     ) -> Result<Self, F::ShiftError> {
         let param = registry.get(self).clone();
         let shifted_type_id = param.type_id.try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(registry.add(LabeledParam {
+        Ok(registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: param.span,
             label_id: param.label_id,
@@ -404,7 +404,7 @@ impl ShiftDbIndices for NodeId<Match> {
         let shifted_case_list_id = match_
             .case_list_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(registry.add(Match {
+        Ok(registry.add_and_overwrite_id(Match {
             id: dummy_id(),
             span: match_.span,
             matchee_id: shifted_matchee_id,
@@ -444,7 +444,7 @@ impl ShiftDbIndices for NodeId<MatchCase> {
         let shifted_output_id =
             case.output_id
                 .try_shift_with_cutoff(f, cutoff + arity, registry)?;
-        Ok(registry.add(MatchCase {
+        Ok(registry.add_and_overwrite_id(MatchCase {
             id: dummy_id(),
             span: case.span,
             variant_name_id: case.variant_name_id,
@@ -472,7 +472,7 @@ impl ShiftDbIndices for NodeId<Forall> {
             forall
                 .output_id
                 .try_shift_with_cutoff(f, cutoff + arity, registry)?;
-        Ok(registry.add(Forall {
+        Ok(registry.add_and_overwrite_id(Forall {
             id: dummy_id(),
             span: forall.span,
             param_list_id: shifted_param_list_id,
@@ -495,7 +495,7 @@ impl ShiftDbIndices for NodeId<Check> {
             .assertion_list_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
         let shifted_output_id = check.output_id.try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(registry.add(Check {
+        Ok(registry.add_and_overwrite_id(Check {
             id: dummy_id(),
             span: check.span,
             assertion_list_id: shifted_assertion_list_id,
@@ -537,7 +537,7 @@ impl ShiftDbIndices for NodeId<CheckAssertion> {
         let shifted_right_id = assertion
             .right_id
             .try_shift_with_cutoff(f, cutoff, registry)?;
-        Ok(registry.add(CheckAssertion {
+        Ok(registry.add_and_overwrite_id(CheckAssertion {
             id: dummy_id(),
             span: assertion.span,
             kind: assertion.kind,

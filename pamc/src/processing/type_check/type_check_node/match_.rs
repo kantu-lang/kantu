@@ -302,7 +302,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
         let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
             state
                 .registry
-                .add(Call {
+                .add_and_overwrite_id(Call {
                     id: dummy_id(),
                     span: None,
                     callee_id,
@@ -427,7 +427,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         ));
 
         let arg_name_ids = {
-            let underscore_id = state.registry.add(Identifier {
+            let underscore_id = state.registry.add_and_overwrite_id(Identifier {
                 id: dummy_id(),
                 span: None,
                 name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
@@ -493,7 +493,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
             state
                 .registry
-                .add(Call {
+                .add_and_overwrite_id(Call {
                     id: dummy_id(),
                     span: None,
                     callee_id,
