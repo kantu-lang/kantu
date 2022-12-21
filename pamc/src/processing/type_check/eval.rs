@@ -532,8 +532,11 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
 
     let case = state.registry.get(case_id).clone();
 
-    match (normalized_matchee_arg_list_id, case.param_list_id) {
-        (None, None) => evaluate_well_typed_expression(state, case.output_id),
+    let substitutions: Vec<Substitution> = match (
+        normalized_matchee_arg_list_id,
+        case.param_list_id,
+    ) {
+        (None, None) => vec![],
         (
             Some(NonEmptyCallArgListId::Unlabeled(normalized_matchee_arg_list_id)),
             Some(NonEmptyMatchCaseParamListId::Unlabeled(case_param_list_id)),
@@ -544,7 +547,8 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .registry
                 .get_list(normalized_matchee_arg_list_id)
                 .to_vec();
-            let substitutions: Vec<Substitution> = case_param_ids
+
+            case_param_ids
                 .iter()
                 .copied()
                 .zip(matchee_arg_ids.iter().copied())
@@ -564,13 +568,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                         to: shifted_arg_id.raw(),
                     }
                 })
-                .collect();
-            let substituted_body = case
-                .output_id
-                .subst_all(&substitutions, &mut state.without_context())
-                .downshift(case_arity, state.registry);
-
-            evaluate_well_typed_expression(state, substituted_body)
+                .collect()
         }
         (
             Some(NonEmptyCallArgListId::UniquelyLabeled(normalized_matchee_arg_list_id)),
@@ -588,7 +586,8 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .registry
                 .get_list(normalized_matchee_arg_list_id)
                 .to_non_empty_vec();
-            let substitutions: Vec<Substitution> = explicit_param_ids
+
+            explicit_param_ids
                 .iter()
                 .copied().enumerate()
                 .map(|(explicit_param_index, explicit_param_id)| {
@@ -616,20 +615,25 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                         .upshift(explicit_arity, state.registry);
                     Substitution { from: param_value_id, to: arg_value_id }
                 })
-                .collect();
-            // TODO: DRY by lifting
-            let substituted_body = case
-                .output_id
-                .subst_all(&substitutions, &mut state.without_context())
-                .downshift(explicit_arity, state.registry);
-
-            evaluate_well_typed_expression(state, substituted_body)
+                .collect()
         }
         other => panic!(
             "Impossible: a well-typed Match expression has a labeledness mismatch. {:?}",
             other
         ),
-    }
+    };
+
+    let explicit_arity = case
+        .param_list_id
+        .map(|param_list_id| param_list_id.explicit_len())
+        .unwrap_or(0);
+
+    let substituted_body = case
+        .output_id
+        .subst_all(&substitutions, &mut state.without_context())
+        .downshift(explicit_arity, state.registry);
+
+    evaluate_well_typed_expression(state, substituted_body)
 }
 
 fn evaluate_well_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> NormalFormId {
