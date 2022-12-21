@@ -73,7 +73,7 @@ pub struct LetStatement {
     pub value_id: ExpressionId,
 }
 
-pub type ExpressionId = crate::data::node_registry::ExpressionId;
+pub use crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NameExpression {
