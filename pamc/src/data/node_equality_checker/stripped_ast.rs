@@ -53,6 +53,7 @@ pub struct Set<T> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MatchCase {
     pub variant_name_id: SemanticId<IdentifierName>,
+    pub explicit_arity: usize,
     pub output_id: ExpressionSemanticId,
 }
 
