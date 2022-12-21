@@ -35,7 +35,7 @@ let pow = fun pow_(~base: Nat, ~-power: Nat): Nat {
 
 let _2 = Nat.S(Nat.S(Nat.O));
 let _8 = mult(_2, mult(_2, _2));
-let _256 = pow(_2, _8);
+let _256 = pow(base: _2, power: _8);
 let _255 = pred(_256);
 
 let white1 = Color.C(r: _255, g: _255, b: _255);
@@ -76,7 +76,7 @@ let redness4 = fun _(~c: Color): Nat {
     }
 };
 
-let _1 = redness(c: Color.C(Nat.S(Nat.O), Nat.O, Nat.O));
+let _1 = redness(c: Color.C(r: Nat.S(Nat.O), b: Nat.O, g: Nat.O));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
     f(d: c)
