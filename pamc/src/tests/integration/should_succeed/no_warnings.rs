@@ -160,6 +160,14 @@ fn equal_despite_different_param_names() {
     expect_success_with_no_warnings(src);
 }
 
+#[test]
+fn dash_does_not_affect_type() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/dash_does_not_affect_type.ph"
+    );
+    expect_success_with_no_warnings(src);
+}
+
 fn expect_success_with_no_warnings(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");

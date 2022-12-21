@@ -24,14 +24,12 @@ pub struct Fun {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct UnlabeledParam {
-    pub is_dashed: bool,
     pub type_id: ExpressionSemanticId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledParam {
     pub label_name_id: SemanticId<IdentifierName>,
-    pub is_dashed: bool,
     pub type_id: ExpressionSemanticId,
 }
 
