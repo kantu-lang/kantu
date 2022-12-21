@@ -97,7 +97,6 @@ fn differing_generated_underscore_name_expressions() {
     );
 }
 
-#[ignore]
 #[test]
 fn misordered_fun_params() {
     let src = include_str!(
@@ -105,7 +104,7 @@ fn misordered_fun_params() {
     );
     expect_type_mismatch_error(
         src,
-        "fun _(~x: Nat, ~y: Nat,): Nat { x }",
+        "foo",
         "forall(~y: Nat, ~x: Nat,) { Nat }",
         "forall(~x: Nat, ~y: Nat,) { Nat }",
     );
