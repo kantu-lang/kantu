@@ -149,6 +149,7 @@ fn generate_code_for_type_constructor(
     let type_ = registry.get(type_id);
 
     let param_js_names: Vec<ValidJsIdentifierName> = match type_.param_list_id {
+        // TODO: Properly generate code for uniquely labeled type params.
         Some(NonEmptyParamListId::Unlabeled(param_list_id)) => {
             let type_param_ids = registry.get_list(param_list_id);
             let param_js_names = type_param_ids
@@ -227,6 +228,7 @@ fn generate_code_for_variant_constructor(
     let arity = variant.param_list_id.len();
 
     let param_js_names: Vec<ValidJsIdentifierName> = match variant.param_list_id {
+        // TODO: Properly generate code for uniquely labeled type params.
         Some(NonEmptyParamListId::Unlabeled(param_list_id)) => {
             let type_param_ids = registry.get_list(param_list_id);
             let param_js_names = type_param_ids
@@ -388,6 +390,7 @@ fn generate_code_for_fun(
     fun: &light::Fun,
 ) -> Result<Expression, CompileToJavaScriptError> {
     let param_arity = fun.param_list_id.len();
+    // TODO: Properly generate code for uniquely labeled type params.
     let param_js_names = match fun.param_list_id {
         NonEmptyParamListId::Unlabeled(param_list_id) => registry
             .get_list(param_list_id)
