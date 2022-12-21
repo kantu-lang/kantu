@@ -76,6 +76,11 @@ let redness4 = fun _(~c: Color): Nat {
     }
 };
 
+// TODO: We'll need to move this function once we add
+// misordered call arg warnings.
+// Maybe match case param warnings, too, but I haven't
+// checked yet (it's late and I want to get to bed rather
+// than scrutinize every line of this file)
 let _1 = redness(c: Color.C(r: Nat.S(Nat.O), b: Nat.O, g: Nat.O));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
