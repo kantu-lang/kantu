@@ -810,7 +810,7 @@ fn expand_dynamic_adt_substitution_shallow(
         (
             Some(NonEmptyCallArgListId::Unlabeled(left_arg_list_id)),
             Some(NonEmptyCallArgListId::Unlabeled(right_arg_list_id)),
-        ) => expand_dynamic_normal_form_unlabeled_call_arg_list_adt_substitution_shallow(
+        ) => expand_dynamic_normal_form_unlabeled_call_arg_list_substitution_shallow(
             state,
             left_arg_list_id,
             right_arg_list_id,
@@ -828,7 +828,44 @@ fn expand_dynamic_adt_substitution_shallow(
     }
 }
 
-fn expand_dynamic_normal_form_unlabeled_call_arg_list_adt_substitution_shallow(
+fn expand_dynamic_normal_form_variant_substitution_shallow(
+    state: &mut State,
+    left: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
+    right: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
+) -> DynamicSubstitutionExpansionResult {
+    // We only need to compare name (rather than DB index) because
+    // `left` and `right` are assumed to have the same type, and
+    // every type can only have at most one variant associated with
+    // a given name.
+    let left_name = &state.registry.get(left.0).name;
+    let right_name = &state.registry.get(right.0).name;
+    if left_name != right_name {
+        return DynamicSubstitutionExpansionResult::Exploded;
+    }
+
+    match (left.1, right.1) {
+        (
+            Some(NonEmptyCallArgListId::Unlabeled(left_arg_list_id)),
+            Some(NonEmptyCallArgListId::Unlabeled(right_arg_list_id)),
+        ) => expand_dynamic_normal_form_unlabeled_call_arg_list_substitution_shallow(
+            state,
+            left_arg_list_id,
+            right_arg_list_id,
+        ),
+        (
+            Some(NonEmptyCallArgListId::UniquelyLabeled(left_arg_list_id)),
+            Some(NonEmptyCallArgListId::UniquelyLabeled(right_arg_list_id)),
+        ) => expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
+            state,
+            left_arg_list_id,
+            right_arg_list_id,
+        ),
+        (None, None) => DynamicSubstitutionExpansionResult::Replace(vec![]),
+        _ => DynamicSubstitutionExpansionResult::Exploded,
+    }
+}
+
+fn expand_dynamic_normal_form_unlabeled_call_arg_list_substitution_shallow(
     state: &mut State,
     normalized_left_arg_list_id: NonEmptyListId<ExpressionId>,
     normalized_right_arg_list_id: NonEmptyListId<ExpressionId>,
@@ -888,43 +925,6 @@ fn expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
         subs.push(DynamicSubstitution(left_value_id, right_value_id))
     }
     DynamicSubstitutionExpansionResult::Replace(subs)
-}
-
-fn expand_dynamic_normal_form_variant_substitution_shallow(
-    state: &mut State,
-    left: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
-    right: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
-) -> DynamicSubstitutionExpansionResult {
-    // We only need to compare name (rather than DB index) because
-    // `left` and `right` are assumed to have the same type, and
-    // every type can only have at most one variant associated with
-    // a given name.
-    let left_name = &state.registry.get(left.0).name;
-    let right_name = &state.registry.get(right.0).name;
-    if left_name != right_name {
-        return DynamicSubstitutionExpansionResult::Exploded;
-    }
-
-    match (left.1, right.1) {
-        (
-            Some(NonEmptyCallArgListId::Unlabeled(left_arg_list_id)),
-            Some(NonEmptyCallArgListId::Unlabeled(right_arg_list_id)),
-        ) => expand_dynamic_normal_form_unlabeled_call_arg_list_adt_substitution_shallow(
-            state,
-            left_arg_list_id,
-            right_arg_list_id,
-        ),
-        (
-            Some(NonEmptyCallArgListId::UniquelyLabeled(left_arg_list_id)),
-            Some(NonEmptyCallArgListId::UniquelyLabeled(right_arg_list_id)),
-        ) => expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
-            state,
-            left_arg_list_id,
-            right_arg_list_id,
-        ),
-        (None, None) => DynamicSubstitutionExpansionResult::Replace(vec![]),
-        _ => DynamicSubstitutionExpansionResult::Exploded,
-    }
 }
 
 /// Returns `None` if the dynamic substitution is a no-op.
