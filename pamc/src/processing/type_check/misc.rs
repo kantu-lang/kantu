@@ -39,9 +39,10 @@ pub fn add_name_expression_and_overwrite_component_ids(
     let last_span = components.last().span;
     let span = first_span
         .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
-    let component_ids = components.into_mapped(|component| registry.add(component));
+    let component_ids =
+        components.into_mapped(|component| registry.add_and_overwrite_id(component));
     let component_list_id = registry.add_list(component_ids);
-    registry.add(NameExpression {
+    registry.add_and_overwrite_id(NameExpression {
         id: dummy_id(),
         span,
         component_list_id,
@@ -59,7 +60,7 @@ pub fn add_name_expression(
     let span = first_span
         .and_then(|first_span| last_span.map(|last_span| first_span.inclusive_merge(last_span)));
     let component_list_id = registry.add_list(component_ids);
-    registry.add(NameExpression {
+    registry.add_and_overwrite_id(NameExpression {
         id: dummy_id(),
         span,
         component_list_id,
@@ -82,7 +83,7 @@ pub struct PossiblyNullaryForall {
 impl PossiblyNullaryForall {
     pub fn into_id(self, registry: &mut NodeRegistry) -> ExpressionId {
         if let Some(param_list_id) = self.param_list_id {
-            let forall_id = registry.add(Forall {
+            let forall_id = registry.add_and_overwrite_id(Forall {
                 id: dummy_id(),
                 span: self.span,
                 param_list_id,
@@ -202,7 +203,7 @@ pub(super) fn normalize_unlabeled_params_and_leave_params_in_context_dirty(
             };
             let normalized_id = state
                 .registry
-                .add(normalized_param_with_dummy_id)
+                .add_and_overwrite_id(normalized_param_with_dummy_id)
                 .without_spans(state.registry);
             Ok(normalized_id)
         },
@@ -234,7 +235,7 @@ pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
             };
             let normalized_id = state
                 .registry
-                .add(normalized_param_with_dummy_id)
+                .add_and_overwrite_id(normalized_param_with_dummy_id)
                 .without_spans(state.registry);
             Ok(normalized_id)
         },

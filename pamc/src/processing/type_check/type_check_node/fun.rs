@@ -27,7 +27,7 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
         state
             .registry
-            .add(Forall {
+            .add_and_overwrite_id(Forall {
                 id: dummy_id(),
                 span: None,
                 param_list_id: normalized_param_list_id,
@@ -40,7 +40,7 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
         let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
         let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
         let shifted_fun = state.registry.get(shifted_fun_id).clone();
-        let body_skipped_fun_id = state.registry.add(Fun {
+        let body_skipped_fun_id = state.registry.add_and_overwrite_id(Fun {
             skip_type_checking_body: true,
             ..shifted_fun
         });

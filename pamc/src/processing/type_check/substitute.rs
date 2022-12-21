@@ -139,7 +139,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Call> {
         let substituted_arg_list_id = call
             .arg_list_id
             .subst_without_removing_spans(substitution, state);
-        ExpressionId::Call(state.registry.add(Call {
+        ExpressionId::Call(state.registry.add_and_overwrite_id(Call {
             id: dummy_id(),
             span: None,
             callee_id: substituted_callee_id,
@@ -261,7 +261,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Fun> {
             substitution.upshift(fun.param_list_id.len() + 1, state.registry),
             state,
         );
-        ExpressionId::Fun(state.registry.add(Fun {
+        ExpressionId::Fun(state.registry.add_and_overwrite_id(Fun {
             id: dummy_id(),
             span: None,
             name_id: fun.name_id,
@@ -323,7 +323,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<UnlabeledParam> {
         let substituted_type_id = param
             .type_id
             .subst_without_removing_spans(substitution, state);
-        state.registry.add(UnlabeledParam {
+        state.registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
             span: None,
             is_dashed: param.is_dashed,
@@ -364,7 +364,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<LabeledParam> {
         let substituted_type_id = param
             .type_id
             .subst_without_removing_spans(substitution, state);
-        state.registry.add(LabeledParam {
+        state.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
             label_id: param.label_id,
@@ -397,7 +397,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Match> {
             .case_list_id
             .subst_without_removing_spans(substitution, state);
 
-        ExpressionId::Match(state.registry.add(Match {
+        ExpressionId::Match(state.registry.add_and_overwrite_id(Match {
             id: dummy_id(),
             span: None,
             matchee_id: substituted_matchee_id,
@@ -436,7 +436,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<MatchCase> {
             substitution.upshift(case.param_list_id.len(), state.registry),
             state,
         );
-        state.registry.add(MatchCase {
+        state.registry.add_and_overwrite_id(MatchCase {
             id: dummy_id(),
             span: None,
             variant_name_id: case.variant_name_id,
@@ -469,7 +469,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Forall> {
             state,
         );
 
-        ExpressionId::Forall(state.registry.add(Forall {
+        ExpressionId::Forall(state.registry.add_and_overwrite_id(Forall {
             id: dummy_id(),
             span: None,
             param_list_id: substituted_param_list_id,
@@ -500,7 +500,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<Check> {
             .output_id
             .subst_without_removing_spans(substitution, state);
 
-        ExpressionId::Check(state.registry.add(Check {
+        ExpressionId::Check(state.registry.add_and_overwrite_id(Check {
             id: dummy_id(),
             span: None,
             assertion_list_id: substituted_assertion_list_id,
@@ -541,7 +541,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<CheckAssertion> {
         let substituted_right_id = original
             .right_id
             .subst_without_removing_spans(substitution, state);
-        state.registry.add(CheckAssertion {
+        state.registry.add_and_overwrite_id(CheckAssertion {
             id: dummy_id(),
             span: None,
             kind: original.kind,

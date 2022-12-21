@@ -34,12 +34,14 @@ pub fn validate_fun_recursion_in_file(
         .map(|item_id| validate_fun_recursion_in_file_item(&mut context, registry, item_id))
         .collect::<Result<Vec<_>, _>>()?;
     let item_list_id = registry.add_possibly_empty_list(item_ids);
-    Ok(FunRecursionValidated::unchecked_new(registry.add(File {
-        id: dummy_id(),
-        span: file.span,
-        file_id: file.file_id,
-        item_list_id,
-    })))
+    Ok(FunRecursionValidated::unchecked_new(
+        registry.add_and_overwrite_id(File {
+            id: dummy_id(),
+            span: file.span,
+            file_id: file.file_id,
+            item_list_id,
+        }),
+    ))
 }
 
 fn validate_fun_recursion_in_file_item(
@@ -93,7 +95,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
         .collect::<Result<Vec<_>, _>>()?;
     let variant_list_id = registry.add_possibly_empty_list(variant_ids);
 
-    Ok(registry.add(TypeStatement {
+    Ok(registry.add_and_overwrite_id(TypeStatement {
         id: dummy_id(),
         span: type_statement.span,
         name_id: type_statement.name_id,
@@ -120,7 +122,7 @@ fn validate_fun_recursion_in_variant_dirty(
 
     context.push(ContextEntry::NoInformation)?;
 
-    Ok(registry.add(Variant {
+    Ok(registry.add_and_overwrite_id(Variant {
         id: dummy_id(),
         span: variant.span,
         name_id: variant.name_id,
@@ -151,7 +153,7 @@ fn validate_fun_recursion_in_let_statement_dirty(
     let value_id =
         validate_fun_recursion_in_expression_dirty(context, registry, let_statement.value_id)?;
     context.push(ContextEntry::NoInformation)?;
-    Ok(registry.add(LetStatement {
+    Ok(registry.add_and_overwrite_id(LetStatement {
         id: dummy_id(),
         span: let_statement.span,
         name_id: let_statement.name_id,
@@ -237,7 +239,7 @@ fn validate_fun_recursion_in_call_dirty(
     let arg_list_id =
         validate_fun_recursion_in_call_args_dirty(context, registry, call.arg_list_id)?;
 
-    Ok(registry.add(Call {
+    Ok(registry.add_and_overwrite_id(Call {
         id: dummy_id(),
         span: call.span,
         callee_id,
@@ -442,7 +444,7 @@ fn validate_fun_recursion_in_labeled_call_arg_dirty(
             if context.reference_restriction(db_index).is_some() {
                 let span = registry.get(label_id).span;
                 let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
-                let name_id = registry.add(NameExpression {
+                let name_id = registry.add_and_overwrite_id(NameExpression {
                     id: dummy_id(),
                     span,
                     component_list_id,
@@ -532,7 +534,7 @@ fn validate_fun_recursion_in_fun_dirty(
     let body_id = validate_fun_recursion_in_expression_dirty(context, registry, fun.body_id)?;
     context.pop_n(param_list_id.len() + 1);
 
-    Ok(registry.add(Fun {
+    Ok(registry.add_and_overwrite_id(Fun {
         id: dummy_id(),
         span: fun.span,
         name_id: fun.name_id,
@@ -597,7 +599,7 @@ fn validate_fun_recursion_in_unlabeled_params_and_leave_in_context_dirty(
             let type_id =
                 validate_fun_recursion_in_expression_dirty(context, registry, param.type_id)?;
             context.push(ContextEntry::NoInformation)?;
-            Ok(registry.add(UnlabeledParam {
+            Ok(registry.add_and_overwrite_id(UnlabeledParam {
                 id: dummy_id(),
                 span: param.span,
                 name_id: param.name_id,
@@ -622,7 +624,7 @@ fn validate_fun_recursion_in_labeled_params_and_leave_in_context_dirty(
             let type_id =
                 validate_fun_recursion_in_expression_dirty(context, registry, param.type_id)?;
             context.push(ContextEntry::NoInformation)?;
-            Ok(registry.add(LabeledParam {
+            Ok(registry.add_and_overwrite_id(LabeledParam {
                 id: dummy_id(),
                 span: param.span,
                 label_id: param.label_id,
@@ -661,7 +663,7 @@ fn validate_fun_recursion_in_match_dirty(
         .collect::<Result<Vec<_>, _>>()?;
     let case_list_id = registry.add_possibly_empty_list(case_ids);
 
-    Ok(registry.add(Match {
+    Ok(registry.add_and_overwrite_id(Match {
         id: dummy_id(),
         span: match_.span,
         matchee_id,
@@ -698,7 +700,7 @@ fn validate_fun_recursion_in_match_case_dirty(
     let output_id = validate_fun_recursion_in_expression_dirty(context, registry, case.output_id)?;
     context.pop_n(case_arity);
 
-    Ok(registry.add(MatchCase {
+    Ok(registry.add_and_overwrite_id(MatchCase {
         id: dummy_id(),
         span: case.span,
         variant_name_id: case.variant_name_id,
@@ -724,7 +726,7 @@ fn validate_fun_recursion_in_forall_dirty(
         validate_fun_recursion_in_expression_dirty(context, registry, forall.output_id)?;
     context.pop_n(arity);
 
-    Ok(registry.add(Forall {
+    Ok(registry.add_and_overwrite_id(Forall {
         id: dummy_id(),
         span: forall.span,
         param_list_id,
@@ -744,7 +746,7 @@ fn validate_fun_recursion_in_check_dirty(
         check.assertion_list_id,
     )?;
     let output_id = validate_fun_recursion_in_expression_dirty(context, registry, check.output_id)?;
-    Ok(registry.add(Check {
+    Ok(registry.add_and_overwrite_id(Check {
         id: dummy_id(),
         span: check.span,
         assertion_list_id,
@@ -783,7 +785,7 @@ fn validate_fun_recursion_in_check_assertion_dirty(
         registry,
         assertion.right_id,
     )?;
-    Ok(registry.add(CheckAssertion {
+    Ok(registry.add_and_overwrite_id(CheckAssertion {
         id: dummy_id(),
         span: assertion.span,
         kind: assertion.kind,
@@ -847,7 +849,7 @@ fn validate_fun_recursion_in_possibly_invalid_expression_dirty(
                 Ok(validated_id) => PossiblyInvalidExpressionId::Valid(validated_id),
                 Err(err) => {
                     PossiblyInvalidExpressionId::Invalid(InvalidExpressionId::IllegalFunRecursion(
-                        registry.add(IllegalFunRecursionExpression {
+                        registry.add_and_overwrite_id(IllegalFunRecursionExpression {
                             id: dummy_id(),
                             expression_id: original_id,
                             error: err,

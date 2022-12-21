@@ -210,7 +210,7 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
         let reordered_arg_list_id = state.registry.add_list(reordered_arg_ids);
         let reordered = state
             .registry
-            .add(Call {
+            .add_and_overwrite_id(Call {
                 id: dummy_id(),
                 span: None,
                 callee_id,

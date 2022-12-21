@@ -108,7 +108,7 @@ impl LabeledCallArgId {
             LabeledCallArgId::Implicit { label_id, db_index } => {
                 let span = registry.get(label_id).span;
                 let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
-                ExpressionId::Name(registry.add(NameExpression {
+                ExpressionId::Name(registry.add_and_overwrite_id(NameExpression {
                     id: dummy_id(),
                     span,
                     component_list_id,
@@ -282,8 +282,7 @@ impl NodeRegistry {
 }
 
 impl NodeRegistry {
-    // TODO: Rename to `add_and_overwrite_id`
-    pub fn add<T>(&mut self, item: T) -> NodeId<T>
+    pub fn add_and_overwrite_id<T>(&mut self, item: T) -> NodeId<T>
     where
         T: RegisterableNode + SetId,
         T::Output: Clone + Debug,
