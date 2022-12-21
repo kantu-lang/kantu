@@ -120,8 +120,6 @@ fn nullary_variant_with_call_return_type() {
     expect_success_with_no_warnings(src);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn misordered_match_case_params() {
     let src = include_str!(

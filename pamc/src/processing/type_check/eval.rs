@@ -583,6 +583,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                 .registry
                 .get_possibly_empty_list(explicit_param_list_id)
                 .to_vec();
+            let explicit_arity = explicit_param_ids.len();
             let matchee_arg_ids = state
                 .registry
                 .get_list(normalized_matchee_arg_list_id)
@@ -608,9 +609,11 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                     let param_value_id = ExpressionId::Name(add_name_expression(
                         state.registry,
                         NonEmptyVec::singleton(explicit_param_name_id),
-                        DbIndex(explicit_param_ids.len() - explicit_param_index - 1),
+                        DbIndex(explicit_arity - explicit_param_index - 1),
                     ));
-                    let arg_value_id = corresponding_arg_id.value_id(state.registry);
+                    let arg_value_id = corresponding_arg_id
+                        .value_id(state.registry)
+                        .upshift(explicit_arity, state.registry);
                     Substitution { from: param_value_id, to: arg_value_id }
                 })
                 .collect();
@@ -618,7 +621,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
             let substituted_body = case
                 .output_id
                 .subst_all(&substitutions, &mut state.without_context())
-                .downshift(explicit_param_ids.len(), state.registry);
+                .downshift(explicit_arity, state.registry);
 
             evaluate_well_typed_expression(state, substituted_body)
         }
