@@ -1,5 +1,5 @@
 //! TODO: We'll need to move this once we add
-//! misorered match case param warnings
+//! misordered match case param warnings
 
 type Nat {
     .O: Nat,

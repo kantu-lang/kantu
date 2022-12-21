@@ -255,6 +255,7 @@ impl GetIndexInSubregistry for NodeId<Fun> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let fun = registry.get(self);
         stripped::Fun {
+            // TODO: Properly handle possibly labeled params
             param_type_list_id: match fun.param_list_id {
                 NonEmptyParamListId::Unlabeled(param_list_id) => {
                     expression_ids_to_expression_vec_semantic_id(

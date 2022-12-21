@@ -84,6 +84,8 @@ pub enum TypeCheckError {
         new_match_case_id: NodeId<MatchCase>,
     },
     MissingMatchCase {
+        // TODO: Make this a list, so the user can
+        // see all the missing match cases at once.
         variant_name_id: NodeId<Identifier>,
     },
     ExtraneousMatchCase {
@@ -153,8 +155,6 @@ impl<'a> State<'_> {
         }
     }
 }
-
-// TODO: Delete
 
 #[derive(Debug)]
 struct ContextlessState<'a> {
