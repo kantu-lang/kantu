@@ -83,3 +83,9 @@ pub enum LabeledCallArgSemanticId {
         value_id: ExpressionSemanticId,
     },
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum NonEmptyParamListSemanticId {
+    Unlabeled(SemanticId<Vec<SemanticId<stripped::UnlabeledParam>>>),
+    UniquelyLabeled(SemanticId<Vec<SemanticId<stripped::LabeledParam>>>),
+}
