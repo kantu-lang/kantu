@@ -152,6 +152,14 @@ fn equal_despite_misordered_args() {
     expect_success_with_no_warnings(src);
 }
 
+#[test]
+fn equal_despite_different_param_names() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/equal_despite_different_param_names.ph"
+    );
+    expect_success_with_no_warnings(src);
+}
+
 fn expect_success_with_no_warnings(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
