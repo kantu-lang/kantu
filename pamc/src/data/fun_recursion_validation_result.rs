@@ -18,14 +18,14 @@ impl<T> FunRecursionValidated<T> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IllegalFunRecursionError {
     RecursiveReferenceWasNotDirectCall {
-        reference: NodeId<NameExpression>,
+        reference_id: NodeId<NameExpression>,
     },
     NonSubstructPassedToDecreasingParam {
-        callee: NodeId<NameExpression>,
-        arg: ExpressionId,
+        callee_id: NodeId<NameExpression>,
+        arg_id: ExpressionId,
     },
     RecursivelyCalledFunctionWithoutDecreasingParam {
-        callee: NodeId<NameExpression>,
+        callee_id: NodeId<NameExpression>,
     },
     LabelednessMismatch(NodeId<Call>),
 }
