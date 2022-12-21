@@ -420,11 +420,36 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
             shifted_variant_dbi,
         ));
 
-        let underscore_id = state.registry.add(Identifier {
-            id: dummy_id(),
-            span: None,
-            name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
-        });
+        let arg_name_ids = {
+            let underscore_id = state.registry.add(Identifier {
+                id: dummy_id(),
+                span: None,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+            });
+
+            variant_type_param_ids
+                .as_non_empty_slice()
+                .to_mapped(|&variant_param_id| {
+                    let variant_param = state.registry.get(variant_param_id);
+                    let variant_param_label_name_id = variant_param.label_identifier_id();
+                    let variant_param_label_name: &IdentifierName =
+                        &state.registry.get(variant_param_label_name_id).name;
+                    let corresponding_case_param_name_id =
+                        explicit_case_param_ids.iter().find_map(|&case_param_id| {
+                            let case_param = state.registry.get(case_param_id);
+                            let case_param_label_name_id = case_param.label_identifier_id();
+                            let case_param_label_name: &IdentifierName =
+                                &state.registry.get(case_param_label_name_id).name;
+                            if variant_param_label_name == case_param_label_name {
+                                Some(case_param.name_id)
+                            } else {
+                                None
+                            }
+                        });
+
+                    corresponding_case_param_name_id.unwrap_or(underscore_id)
+                })
+        };
         let arg_ids = variant_type_param_ids
             .as_non_empty_slice()
             .enumerate_to_mapped(|(variant_param_index, &variant_param_id)| {
@@ -432,20 +457,8 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 let variant_param_label_name_id = variant_param.label_identifier_id();
                 let variant_param_label_name: &IdentifierName =
                     &state.registry.get(variant_param_label_name_id).name;
-                let corresponding_case_param_name_id =
-                    explicit_case_param_ids.iter().find_map(|&case_param_id| {
-                        let case_param = state.registry.get(case_param_id);
-                        let case_param_label_name_id = case_param.label_identifier_id();
-                        let case_param_label_name: &IdentifierName =
-                            &state.registry.get(case_param_label_name_id).name;
-                        if variant_param_label_name == case_param_label_name {
-                            Some(case_param.name_id)
-                        } else {
-                            None
-                        }
-                    });
 
-                let arg_name_id = corresponding_case_param_name_id.unwrap_or(underscore_id);
+                let arg_name_id = arg_name_ids[variant_param_index];
                 let does_arg_name_equal_param_label_name = {
                     let arg_name: &IdentifierName = &state.registry.get(arg_name_id).name;
                     arg_name == variant_param_label_name
@@ -483,8 +496,25 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 .without_spans(state.registry),
         ));
 
-        // TODO: Properly substitute names
-        let variant_type_output_substitutions: Vec<Substitution> = vec![];
+        let variant_type_output_substitutions: Vec<Substitution> = (0..variant_type_param_ids
+            .len())
+            .into_iter()
+            .map(|variant_param_index| {
+                let db_index = DbIndex(variant_type_param_ids.len() - variant_param_index - 1);
+                let arg_name_id = arg_name_ids[variant_param_index];
+
+                let to = ExpressionId::Name(add_name_expression(
+                    state.registry,
+                    NonEmptyVec::singleton(arg_name_id),
+                    db_index,
+                ));
+                // We don't care what the name of `from` is as long as the
+                // DB index is correct, so we may as well reuse `to`.
+                let from = to;
+
+                Substitution { from, to }
+            })
+            .collect();
         let normalized_forall = state.registry.get(variant_type_id);
         let substituted_output_id = normalized_forall.output_id.subst_all(
             &variant_type_output_substitutions,
