@@ -93,8 +93,11 @@ fn get_type_of_match_case_dirty(
         ],
     });
 
-    let shifted_output_id =
-        apply_case_output_substitutions(state.registry, case.output_id, &case_output_substitutions);
+    let shifted_output_id = apply_case_output_substitutions(
+        &mut state.without_context(),
+        case.output_id,
+        &case_output_substitutions,
+    );
     let output_type_id =
         get_type_of_expression_dirty(state, coercion_target_id, shifted_output_id)?;
 
@@ -663,16 +666,45 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
 }
 
 fn apply_case_output_substitutions(
-    registry: &mut NodeRegistry,
+    state: &mut ContextlessState,
     case_output_id: ExpressionId,
     subs: &CaseOutputSubstitutions,
 ) -> ExpressionId {
-    // TODO: Properly implement
+    // This case does not need to be handled specially,
+    // (i.e., we could delete the whole `if` statement)
+    // and the code would still be correct.
+    // However, it's a low-hanging performance optimization.
     if subs.substitutions.len() == 0 && subs.case_explicit_arity == subs.variant_arity {
-        case_output_id
-    } else {
-        unimplemented!()
+        return case_output_id;
     }
+
+    let case_output_id = case_output_id.upshift(subs.variant_arity, state.registry);
+    let concrete_subs: Vec<Substitution> = subs
+        .substitutions
+        .iter()
+        .map(|sub| {
+            let explicit_param_db_index =
+                DbIndex(subs.case_explicit_arity - sub.explicit_param_index - 1);
+            let variant_param_db_index =
+                DbIndex(subs.variant_arity - sub.corresponding_variant_param_index - 1);
+            let dummy = sub.explicit_param_name_id;
+            let from = ExpressionId::Name(add_name_expression(
+                state.registry,
+                // This will never get used in the comparison,
+                // so it doesn't matter what we put here.
+                NonEmptyVec::singleton(dummy),
+                DbIndex(explicit_param_db_index.0 + subs.variant_arity),
+            ));
+            let to = ExpressionId::Name(add_name_expression(
+                state.registry,
+                NonEmptyVec::singleton(sub.explicit_param_name_id),
+                variant_param_db_index,
+            ));
+            Substitution { from, to }
+        })
+        .collect();
+    let case_output_id = case_output_id.subst_all(&concrete_subs, state);
+    case_output_id.downshift(subs.case_explicit_arity, state.registry)
 }
 
 // TODO: Perform `match` hunt.
