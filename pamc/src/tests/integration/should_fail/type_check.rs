@@ -210,7 +210,7 @@ mod wrong_number_of_case_params {
         expected_expected_arity: usize,
     ) {
         expect_type_check_error(src, |registry, err| match err {
-            TypeCheckError::WrongNumberOfCaseParams {
+            TypeCheckError::WrongNumberOfMatchCaseParams {
                 case_id,
                 expected: actual_expected_arity,
                 ..
