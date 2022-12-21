@@ -31,7 +31,7 @@ let redness4 = fun _(~c: Color): Nat {
     }
 };
 
-// TODO: We'll need to move this function once we add
+// TODO: We'll need to move this file once we add
 // misordered call arg warnings.
 // Maybe match case param warnings, too, but I haven't
 // checked yet (it's late and I want to get to bed rather
