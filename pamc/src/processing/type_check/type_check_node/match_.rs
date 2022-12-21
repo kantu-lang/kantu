@@ -525,14 +525,43 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         (parameterized_matchee_id, parameterized_matchee_type_id)
     };
 
+    let case_output_substitutions: Vec<CaseOutputSubstitution> = explicit_case_param_ids
+        .iter()
+        .copied()
+        .enumerate()
+        .map(
+            |(case_param_index, case_param_id)| -> Result<CaseOutputSubstitution, _> {
+                let case_param = state.registry.get(case_param_id);
+                let case_param_name_id = case_param.name_id;
+                let case_param_label_name_id = case_param.label_identifier_id();
+                let case_param_label_name: &IdentifierName = &state.registry.get(case_param_label_name_id).name;
+                let Some(corresponding_variant_param_index) = variant_type_param_ids
+                    .iter().copied()
+                    .position(|variant_type_param_id| {
+                        let variant_type_param = state.registry.get(variant_type_param_id);
+                        let variant_type_param_label_name_id = variant_type_param.label_identifier_id();
+                        let variant_type_param_label_name: &IdentifierName = &state.registry.get(variant_type_param_label_name_id).name;
+                        variant_type_param_label_name == case_param_label_name
+                    })
+                else {
+                    return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParam { case_id, case_param_id });
+                };
+                Ok(CaseOutputSubstitution {
+                    explicit_param_index: case_param_index,
+                    explicit_param_name_id: case_param_name_id,
+                    corresponding_variant_param_index,
+                })
+            },
+        )
+        .collect::<Result<Vec<_>, _>>()?;
+
     Ok(with_push_warning(ParameterizedTerms {
         matchee_id: parameterized_matchee_id,
         matchee_type_id: parameterized_matchee_type_id,
         case_output_substitutions: CaseOutputSubstitutions {
             variant_arity: variant_type_param_list_id.len.get(),
             case_explicit_arity: case_param_list_id.explicit_len(),
-            // TODO: Properly substitute params
-            substitutions: vec![],
+            substitutions: case_output_substitutions,
         },
     }))
 }

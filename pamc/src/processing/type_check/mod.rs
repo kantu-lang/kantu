@@ -66,6 +66,10 @@ pub enum TypeCheckError {
         case_id: NodeId<MatchCase>,
         missing_label_list_id: NonEmptyListId<NodeId<Identifier>>,
     },
+    UndefinedLabeledMatchCaseParam {
+        case_id: NodeId<MatchCase>,
+        case_param_id: NodeId<LabeledMatchCaseParam>,
+    },
     TypeMismatch {
         expression_id: ExpressionId,
         expected_type_id: NormalFormId,
