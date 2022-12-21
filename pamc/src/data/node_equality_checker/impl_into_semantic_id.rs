@@ -228,7 +228,6 @@ impl GetIndexInSubregistry for NodeId<Fun> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let fun = registry.get(self);
         stripped::Fun {
-            // TODO: Properly handle possibly labeled params
             param_list_id: fun.param_list_id.into_semantic_id(registry, sreg),
             return_type_id: fun.return_type_id.into_semantic_id(registry, sreg),
             body_id: fun.body_id.into_semantic_id(registry, sreg),
@@ -518,7 +517,6 @@ impl GetIndexInSubregistry for NodeId<Forall> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let forall = registry.get(self);
         stripped::Forall {
-            // TODO: Properly handle possibly labeled params
             param_list_id: forall.param_list_id.into_semantic_id(registry, sreg),
             output_id: forall.output_id.into_semantic_id(registry, sreg),
         }
