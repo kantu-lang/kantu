@@ -384,8 +384,14 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         .get_list(variant_type_param_list_id)
         .to_non_empty_vec();
 
+    verify_every_case_param_has_a_corresponding_variant_param(
+        state,
+        case_id,
+        &explicit_case_param_ids,
+        variant_type_param_ids.as_non_empty_slice(),
+    )?;
     if triple_dot.is_none() {
-        verify_case_param_bijection(
+        verify_every_variant_param_has_a_corresponding_case_param(
             state,
             case_id,
             &explicit_case_param_ids,
@@ -530,31 +536,32 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         .copied()
         .enumerate()
         .map(
-            |(case_param_index, case_param_id)| -> Result<CaseOutputSubstitution, _> {
+            |(case_param_index, case_param_id)| -> CaseOutputSubstitution {
                 let case_param = state.registry.get(case_param_id);
                 let case_param_name_id = case_param.name_id;
                 let case_param_label_name_id = case_param.label_identifier_id();
-                let case_param_label_name: &IdentifierName = &state.registry.get(case_param_label_name_id).name;
-                let Some(corresponding_variant_param_index) = variant_type_param_ids
-                    .iter().copied()
+                let case_param_label_name: &IdentifierName =
+                    &state.registry.get(case_param_label_name_id).name;
+                let corresponding_variant_param_index = variant_type_param_ids
+                    .iter()
+                    .copied()
                     .position(|variant_type_param_id| {
                         let variant_type_param = state.registry.get(variant_type_param_id);
-                        let variant_type_param_label_name_id = variant_type_param.label_identifier_id();
-                        let variant_type_param_label_name: &IdentifierName = &state.registry.get(variant_type_param_label_name_id).name;
+                        let variant_type_param_label_name_id =
+                            variant_type_param.label_identifier_id();
+                        let variant_type_param_label_name: &IdentifierName =
+                            &state.registry.get(variant_type_param_label_name_id).name;
                         variant_type_param_label_name == case_param_label_name
                     })
-                else {
-                    // TODO: Properly handle this case.
-                     return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParams { case_id, case_param_list_id: unimplemented!() });
-                };
-                Ok(CaseOutputSubstitution {
+                    .expect("Impossible: We already verified that every case param has a corresponding variant param.");
+                CaseOutputSubstitution {
                     explicit_param_index: case_param_index,
                     explicit_param_name_id: case_param_name_id,
                     corresponding_variant_param_index,
-                })
+                }
             },
         )
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect();
 
     Ok(with_push_warning(ParameterizedTerms {
         matchee_id: parameterized_matchee_id,
@@ -615,7 +622,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
     }))
 }
 
-fn verify_case_param_bijection(
+fn verify_every_case_param_has_a_corresponding_variant_param(
     state: &mut State,
     case_id: NodeId<MatchCase>,
     explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
@@ -653,6 +660,15 @@ fn verify_case_param_bijection(
         });
     }
 
+    Ok(())
+}
+
+fn verify_every_variant_param_has_a_corresponding_case_param(
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
+    variant_type_param_ids: NonEmptySlice<NodeId<LabeledParam>>,
+) -> Result<(), Tainted<TypeCheckError>> {
     let mut missing_label_ids: Vec<NodeId<Identifier>> = vec![];
     for &variant_type_param_id in variant_type_param_ids.iter() {
         let variant_type_param = state.registry.get(variant_type_param_id);
