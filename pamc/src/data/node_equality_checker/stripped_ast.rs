@@ -1,5 +1,5 @@
 use crate::data::node_equality_checker::{
-    ExpressionSemanticId, NonEmptyCallArgListSemanticId, SemanticId,
+    ExpressionSemanticId, NonEmptyCallArgListSemanticId, NonEmptyParamListSemanticId, SemanticId,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -17,10 +17,22 @@ pub struct Call {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Fun {
-    pub param_type_list_id: SemanticId<Vec<ExpressionSemanticId>>,
-    pub dash_index: Option<usize>,
+    pub param_list_id: NonEmptyParamListSemanticId,
     pub return_type_id: ExpressionSemanticId,
     pub body_id: ExpressionSemanticId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UnlabeledParam {
+    pub is_dashed: bool,
+    pub type_id: ExpressionSemanticId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LabeledParam {
+    pub label_name_id: SemanticId<IdentifierName>,
+    pub is_dashed: bool,
+    pub type_id: ExpressionSemanticId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -50,6 +62,6 @@ pub use crate::data::light_ast::IdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
-    pub param_type_list_id: SemanticId<Vec<ExpressionSemanticId>>,
+    pub param_list_id: NonEmptyParamListSemanticId,
     pub output_id: ExpressionSemanticId,
 }

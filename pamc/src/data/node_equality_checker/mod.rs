@@ -78,10 +78,14 @@ pub trait GetIndexInSubregistry: Copy + Eq + Hash {
 #[derive(Clone, Debug)]
 pub struct StrippedRegistry {
     expression_lists: Subregistry<NonEmptyListId<ExpressionId>>,
+    unlabeled_param_lists: Subregistry<NonEmptyListId<NodeId<UnlabeledParam>>>,
+    labeled_param_lists: Subregistry<NonEmptyListId<NodeId<LabeledParam>>>,
     labeled_call_arg_lists: Subregistry<NonEmptyListId<LabeledCallArgId>>,
     match_case_lists: Subregistry<NonEmptyListId<NodeId<MatchCase>>>,
     identifier_names: Subregistry<NodeId<Identifier>>,
 
+    unlabeled_params: Subregistry<NodeId<UnlabeledParam>>,
+    labeled_params: Subregistry<NodeId<LabeledParam>>,
     labeled_call_args: Subregistry<LabeledCallArgId>,
     match_cases: Subregistry<NodeId<MatchCase>>,
 
@@ -96,10 +100,14 @@ impl StrippedRegistry {
     fn empty() -> Self {
         Self {
             expression_lists: Subregistry::empty(),
+            unlabeled_param_lists: Subregistry::empty(),
+            labeled_param_lists: Subregistry::empty(),
             labeled_call_arg_lists: Subregistry::empty(),
             match_case_lists: Subregistry::empty(),
             identifier_names: Subregistry::empty(),
 
+            unlabeled_params: Subregistry::empty(),
+            labeled_params: Subregistry::empty(),
             labeled_call_args: Subregistry::empty(),
             match_cases: Subregistry::empty(),
 
