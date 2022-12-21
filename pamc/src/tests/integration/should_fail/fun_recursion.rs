@@ -27,10 +27,7 @@ fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFun
 fn rec_fun_same_param() {
     let src = include_str!("../../sample_code/should_fail/illegal_recursion/rec_fun_same_param.ph");
     expect_recursion_error(src, |registry, err| match err {
-        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-            callee: callee_id,
-            arg: arg_id,
-        } => {
+        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { callee_id, arg_id } => {
             let arg = &registry.expression_ref(arg_id);
             assert_eq!(
                 component_identifier_names(registry, callee_id),
@@ -52,10 +49,7 @@ fn rec_fun_non_substruct() {
     let src =
         include_str!("../../sample_code/should_fail/illegal_recursion/rec_fun_non_substruct.ph");
     expect_recursion_error(src, |registry, err| match err {
-        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-            callee: callee_id,
-            arg: arg_id,
-        } => {
+        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { callee_id, arg_id } => {
             let arg = &registry.expression_ref(arg_id);
             assert_eq!(
                 component_identifier_names(registry, callee_id),
@@ -76,10 +70,7 @@ fn rec_fun_non_substruct() {
 fn rec_fun_non_ident() {
     let src = include_str!("../../sample_code/should_fail/illegal_recursion/rec_fun_non_ident.ph");
     expect_recursion_error(src, |registry, err| match err {
-        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-            callee: callee_id,
-            arg: arg_id,
-        } => {
+        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { callee_id, arg_id } => {
             let arg = &registry.expression_ref(arg_id);
             assert_eq!(
                 component_identifier_names(registry, callee_id),
@@ -102,13 +93,34 @@ fn rec_fun_no_decreasing_param() {
         "../../sample_code/should_fail/illegal_recursion/rec_fun_no_decreasing_param.ph"
     );
     expect_recursion_error(src, |registry, err| match err {
-        IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
-            callee: callee_id,
-        } => {
+        IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam { callee_id } => {
             assert_eq!(
                 component_identifier_names(registry, callee_id),
                 vec![standard_ident_name("x")],
                 "Unexpected param name"
+            );
+        }
+        _ => panic!("Unexpected error: {:#?}", err),
+    });
+}
+
+#[test]
+fn rec_fun_right_index_wrong_label() {
+    let src = include_str!(
+        "../../sample_code/should_fail/illegal_recursion/rec_fun_right_index_wrong_label.ph"
+    );
+    expect_recursion_error(src, |registry, err| match err {
+        IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { arg_id, callee_id } => {
+            let arg = &registry.expression_ref(arg_id);
+            assert_eq!(
+                component_identifier_names(registry, callee_id),
+                vec![standard_ident_name("f")],
+                "Unexpected param name"
+            );
+            assert!(
+                matches!(arg, ExpressionRef::Name(name) if component_identifier_names(registry, name.id) == vec![standard_ident_name("a")]),
+                "Unexpected arg: {:#?}",
+                arg
             );
         }
         _ => panic!("Unexpected error: {:#?}", err),

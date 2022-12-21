@@ -208,7 +208,9 @@ fn validate_fun_recursion_in_name_dirty(
     let name = registry.get(name_id);
     if context.reference_restriction(name.db_index).is_some() {
         return Err(Tainted::new(
-            IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall { reference: name_id },
+            IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
+                reference_id: name_id,
+            },
         ));
     }
     Ok(name_id)
@@ -273,8 +275,8 @@ fn is_call_restricted(
                                     arg_ids[index_of_arg_that_must_be_substruct];
                                 let err = Err(Tainted::new(
                                     IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-                                        callee: callee_name_id,
-                                        arg: expected_substruct_id,
+                                        callee_id: callee_name_id,
+                                        arg_id: expected_substruct_id,
                                     },
                                 ));
                                 match expected_substruct_id {
@@ -339,8 +341,8 @@ fn is_call_restricted(
                                                     .value_id(registry);
                                             let err = Err(Tainted::new(
                                                 IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-                                                    callee: callee_name_id,
-                                                    arg: value_id,
+                                                    callee_id: callee_name_id,
+                                                    arg_id: value_id,
                                                 },
                                             ));
                                             return err;
@@ -349,8 +351,8 @@ fn is_call_restricted(
                                     LabeledCallArgId::Explicit { value_id, .. } => {
                                         let err = Err(Tainted::new(
                                             IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
-                                                callee: callee_name_id,
-                                                arg: value_id,
+                                                callee_id: callee_name_id,
+                                                arg_id: value_id,
                                             },
                                         ));
                                         match value_id {
@@ -380,7 +382,7 @@ fn is_call_restricted(
                     },
                     ReferenceRestriction::CannotCall { .. } => return Err(Tainted::new(
                         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam {
-                            callee: callee_name.id,
+                            callee_id: callee_name.id,
                         },
                     )),
                 }
@@ -452,7 +454,7 @@ fn validate_fun_recursion_in_labeled_call_arg_dirty(
                 });
                 return Err(Tainted::new(
                     IllegalFunRecursionError::RecursiveReferenceWasNotDirectCall {
-                        reference: name_id,
+                        reference_id: name_id,
                     },
                 ));
             }
