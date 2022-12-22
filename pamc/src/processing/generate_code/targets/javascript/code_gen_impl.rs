@@ -737,7 +737,7 @@ struct Context {
 
 #[derive(Clone, Debug)]
 struct ContextEntry {
-    name: ValidJsIdentifierName,
+    js_name: ValidJsIdentifierName,
 }
 
 impl Context {
@@ -745,10 +745,10 @@ impl Context {
         Self {
             stack: vec![
                 ContextEntry {
-                    name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE1.to_string()),
+                    js_name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE1.to_string()),
                 },
                 ContextEntry {
-                    name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string()),
+                    js_name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string()),
                 },
             ],
             other_reserved_names: vec![ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string())],
@@ -765,12 +765,12 @@ impl Context {
 impl Context {
     fn js_name(&self, index: DbIndex) -> ValidJsIdentifierName {
         let level = self.index_to_level(index);
-        self.stack[level.0].name.clone()
+        self.stack[level.0].js_name.clone()
     }
 
     fn try_push_name(&mut self, preferred: ValidJsIdentifierName) {
         if !self.contains(&preferred) {
-            self.push(ContextEntry { name: preferred });
+            self.push(ContextEntry { js_name: preferred });
             return;
         }
 
@@ -778,7 +778,7 @@ impl Context {
         loop {
             let name = ValidJsIdentifierName(format!("{}{}", preferred.0, i));
             if !self.contains(&name) {
-                self.push(ContextEntry { name });
+                self.push(ContextEntry { js_name: name });
                 return;
             }
             i += 1;
@@ -798,7 +798,7 @@ impl Context {
     }
 
     fn contains(&self, name: &ValidJsIdentifierName) -> bool {
-        self.stack.iter().any(|x| x.name == *name)
+        self.stack.iter().any(|x| x.js_name == *name)
             || self.other_reserved_names.iter().any(|x| x == name)
     }
 
