@@ -2,6 +2,12 @@ use light::{DbIndex, DbLevel};
 
 use super::*;
 
+// TODO: Handle bug where different label names
+// with the same JS name cause a collision.
+// For example, `a'` and `a_` both have the JS name `a_`.
+// If these were two separate labels in the same set of
+// params/args, this would likely cause a bug.
+
 pub fn generate_code_with_options(
     registry: &NodeRegistry,
     file_ids: &[NodeId<light::File>],
@@ -82,7 +88,7 @@ fn generate_code_for_explosion_thrower() -> Vec<FileItem> {
         name: thrower_name.clone(),
         value: Expression::Function(Box::new(Function {
             name: thrower_name,
-            params: vec![],
+            params: Params::Standard(vec![]),
             body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
                 callee: Expression::Identifier(ValidJsIdentifierName("Error".to_string())),
                 args: vec![Expression::Literal(Literal::String {
@@ -148,44 +154,34 @@ fn generate_code_for_type_constructor(
 ) -> Result<ConstStatement, CompileToJavaScriptError> {
     let type_ = registry.get(type_id);
 
-    let param_js_names: Vec<ValidJsIdentifierName> = match type_.param_list_id {
-        // TODO: Properly generate code for uniquely labeled type params.
-        Some(NonEmptyParamListId::Unlabeled(param_list_id)) => {
-            let type_param_ids = registry.get_list(param_list_id);
-            let param_js_names = type_param_ids
-                .iter()
-                .map(|id| {
-                    let param = registry.get(*id);
-                    let param_name = &registry.get(param.name_id).name;
-                    context.try_push_name(param_name.js_name());
-                    let param_js_name = context.js_name(DbIndex(0));
-                    param_js_name
-                })
-                .collect();
-            context.pop_n(type_param_ids.len());
-            param_js_names
-        }
-        Some(NonEmptyParamListId::UniquelyLabeled(param_list_id)) => {
-            let type_param_ids = registry.get_list(param_list_id);
-            let param_js_names = type_param_ids
-                .iter()
-                .map(|id| {
-                    let param = registry.get(*id);
-                    let param_name = &registry.get(param.name_id).name;
-                    context.try_push_name(param_name.js_name());
-                    let param_js_name = context.js_name(DbIndex(0));
-                    param_js_name
-                })
-                .collect();
-            context.pop_n(type_param_ids.len());
-            param_js_names
-        }
-        None => vec![],
-    };
+    let params = generate_code_for_optional_params_and_leave_params_in_context(
+        registry,
+        context,
+        type_.param_list_id,
+    )?;
+    context.pop_n(type_.param_list_id.len());
 
     let type_name = &registry.get(type_.name_id).name;
     context.try_push_name(type_name.js_name());
     let type_js_name = context.js_name(DbIndex(0));
+
+    let type_args = match &params {
+        Params::Standard(param_js_names) => Expression::Array(Box::new(Array {
+            items: param_js_names
+                .iter()
+                .map(|param| Expression::Identifier(param.clone()))
+                .collect(),
+        })),
+        Params::DestructuredSingleton(entries) => Expression::Object(Box::new(Object {
+            entries: entries
+                .iter()
+                .map(|entry| ObjectEntry {
+                    key: entry.in_name.clone(),
+                    value: Expression::Identifier(entry.out_name.clone()),
+                })
+                .collect(),
+        })),
+    };
 
     let return_value = Expression::Object(Box::new(Object {
         entries: vec![
@@ -197,12 +193,7 @@ fn generate_code_for_type_constructor(
             },
             ObjectEntry {
                 key: ValidJsIdentifierName(TYPE_ARGS_KEY.to_string()),
-                value: Expression::Array(Box::new(Array {
-                    items: param_js_names
-                        .iter()
-                        .map(|param| Expression::Identifier(param.clone()))
-                        .collect(),
-                })),
+                value: type_args,
             },
         ],
     }));
@@ -211,10 +202,66 @@ fn generate_code_for_type_constructor(
         name: type_js_name.clone(),
         value: Function {
             name: type_js_name,
-            params: param_js_names,
+            params,
             body: vec![FunctionStatement::Return(return_value)],
         }
         .into_return_value_if_simple_nullary(),
+    })
+}
+
+fn generate_code_for_optional_params_and_leave_params_in_context(
+    registry: &NodeRegistry,
+    context: &mut Context,
+    param_list_id: Option<NonEmptyParamListId>,
+) -> Result<Params, CompileToJavaScriptError> {
+    match param_list_id {
+        Some(param_list_id) => {
+            generate_code_for_params_and_leave_params_in_context(registry, context, param_list_id)
+        }
+        None => Ok(Params::Standard(vec![])),
+    }
+}
+
+fn generate_code_for_params_and_leave_params_in_context(
+    registry: &NodeRegistry,
+    context: &mut Context,
+    param_list_id: NonEmptyParamListId,
+) -> Result<Params, CompileToJavaScriptError> {
+    Ok(match param_list_id {
+        NonEmptyParamListId::Unlabeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            let param_js_names = param_ids
+                .iter()
+                .map(|id| {
+                    let param = registry.get(*id);
+                    let param_name = &registry.get(param.name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+                    param_js_name
+                })
+                .collect();
+            Params::Standard(param_js_names)
+        }
+        NonEmptyParamListId::UniquelyLabeled(param_list_id) => {
+            let param_ids = registry.get_list(param_list_id);
+            let entries = param_ids
+                .iter()
+                .map(|&id| {
+                    let param = registry.get(id);
+                    let param_name = &registry.get(param.name_id).name;
+                    context.try_push_name(param_name.js_name());
+                    let param_js_name = context.js_name(DbIndex(0));
+
+                    let param_label_name = &registry.get(param.label_identifier_id()).name;
+                    let param_label_js_name = param_label_name.js_name();
+                    ObjectDestructureEntry {
+                        in_name: param_label_js_name,
+                        out_name: param_js_name,
+                    }
+                })
+                .collect();
+            Params::DestructuredSingleton(entries)
+        }
     })
 }
 
@@ -227,38 +274,28 @@ fn generate_code_for_variant_constructor(
     let variant = registry.get(variant_id);
     let arity = variant.param_list_id.len();
 
-    let param_js_names: Vec<ValidJsIdentifierName> = match variant.param_list_id {
-        // TODO: Properly generate code for uniquely labeled type params.
-        Some(NonEmptyParamListId::Unlabeled(param_list_id)) => {
-            let type_param_ids = registry.get_list(param_list_id);
-            let param_js_names = type_param_ids
+    let params = generate_code_for_optional_params_and_leave_params_in_context(
+        registry,
+        context,
+        variant.param_list_id,
+    )?;
+
+    let type_args: Vec<Expression> = match &params {
+        Params::Standard(param_js_names) => param_js_names
+            .iter()
+            .map(|param| Expression::Identifier(param.clone()))
+            .collect(),
+        Params::DestructuredSingleton(entries) => vec![Expression::Object(Box::new(Object {
+            entries: entries
                 .iter()
-                .map(|id| {
-                    let param = registry.get(*id);
-                    let param_name = &registry.get(param.name_id).name;
-                    context.try_push_name(param_name.js_name());
-                    let param_js_name = context.js_name(DbIndex(0));
-                    param_js_name
+                .map(|entry| ObjectEntry {
+                    key: entry.in_name.clone(),
+                    value: Expression::Identifier(entry.out_name.clone()),
                 })
-                .collect();
-            param_js_names
-        }
-        Some(NonEmptyParamListId::UniquelyLabeled(param_list_id)) => {
-            let type_param_ids = registry.get_list(param_list_id);
-            let param_js_names = type_param_ids
-                .iter()
-                .map(|id| {
-                    let param = registry.get(*id);
-                    let param_name = &registry.get(param.name_id).name;
-                    context.try_push_name(param_name.js_name());
-                    let param_js_name = context.js_name(DbIndex(0));
-                    param_js_name
-                })
-                .collect();
-            param_js_names
-        }
-        None => vec![],
+                .collect(),
+        }))],
     };
+
     let return_value = {
         let mut items = Vec::with_capacity(arity + 1);
         items.push(Expression::Literal(Literal::String {
@@ -269,11 +306,7 @@ fn generate_code_for_variant_constructor(
             // Later, we can fix this.
             unescaped: registry.get(variant.name_id).name.js_name().0,
         }));
-        items.extend(
-            param_js_names
-                .iter()
-                .map(|param| Expression::Identifier(param.clone())),
-        );
+        items.extend(type_args);
         Expression::Array(Box::new(Array { items }))
     };
 
@@ -291,7 +324,7 @@ fn generate_code_for_variant_constructor(
         name: variant_symbol_js_name.clone(),
         value: Function {
             name: variant_symbol_js_name,
-            params: param_js_names,
+            params,
             body: vec![FunctionStatement::Return(return_value)],
         }
         .into_return_value_if_simple_nullary(),
@@ -358,27 +391,25 @@ fn generate_code_for_call(
                 .collect::<Result<Vec<_>, _>>()?
         }
         NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
-            // TODO: Properly generate code for labeled arguments
-            // This will likely entail either reordering the arguments
-            // to match the order to their callee's signature, or
-            // using an object literal to pass the arguments.
             let arg_ids = registry.get_list(arg_list_id);
-            arg_ids
+            let entries = arg_ids
                 .iter()
-                .map(|arg_id| match arg_id {
-                    LabeledCallArgId::Implicit {
-                        label_id: _,
-                        db_index,
-                    } => {
-                        let identifier_name = context.js_name(*db_index);
-                        Ok(Expression::Identifier(identifier_name))
-                    }
-                    LabeledCallArgId::Explicit {
-                        label_id: _,
-                        value_id,
-                    } => generate_code_for_expression(registry, context, *value_id),
+                .map(|arg_id| {
+                    Ok(match arg_id {
+                        LabeledCallArgId::Implicit { label_id, db_index } => {
+                            let key = registry.get(*label_id).name.js_name();
+                            let value = Expression::Identifier(context.js_name(*db_index));
+                            ObjectEntry { key, value }
+                        }
+                        LabeledCallArgId::Explicit { label_id, value_id } => {
+                            let key = registry.get(*label_id).name.js_name();
+                            let value = generate_code_for_expression(registry, context, *value_id)?;
+                            ObjectEntry { key, value }
+                        }
+                    })
                 })
-                .collect::<Result<Vec<_>, _>>()?
+                .collect::<Result<Vec<_>, _>>()?;
+            vec![Expression::Object(Box::new(Object { entries }))]
         }
     };
     Ok(Expression::Call(Box::new(Call { callee, args })))
@@ -390,31 +421,8 @@ fn generate_code_for_fun(
     fun: &light::Fun,
 ) -> Result<Expression, CompileToJavaScriptError> {
     let param_arity = fun.param_list_id.len();
-    // TODO: Properly generate code for uniquely labeled type params.
-    let param_js_names = match fun.param_list_id {
-        NonEmptyParamListId::Unlabeled(param_list_id) => registry
-            .get_list(param_list_id)
-            .iter()
-            .map(|id| {
-                let param = registry.get(*id);
-                let param_name = &registry.get(param.name_id).name;
-                context.try_push_name(param_name.js_name());
-                let param_js_name = context.js_name(DbIndex(0));
-                param_js_name
-            })
-            .collect(),
-        NonEmptyParamListId::UniquelyLabeled(param_list_id) => registry
-            .get_list(param_list_id)
-            .iter()
-            .map(|id| {
-                let param = registry.get(*id);
-                let param_name = &registry.get(param.name_id).name;
-                context.try_push_name(param_name.js_name());
-                let param_js_name = context.js_name(DbIndex(0));
-                param_js_name
-            })
-            .collect(),
-    };
+    let params =
+        generate_code_for_params_and_leave_params_in_context(registry, context, fun.param_list_id)?;
     let fun_js_name = {
         let fun_name = &registry.get(fun.name_id).name;
         context.try_push_name(fun_name.js_name());
@@ -424,7 +432,7 @@ fn generate_code_for_fun(
     context.pop_n(param_arity + 1);
     Ok(Expression::Function(Box::new(Function {
         name: fun_js_name,
-        params: param_js_names,
+        params,
         body: vec![FunctionStatement::Return(return_value)],
     })))
 }
@@ -450,7 +458,7 @@ fn generate_code_for_match(
     Ok(Expression::Call(Box::new(Call {
         callee: Expression::Function(Box::new(Function {
             name: fun_temp_name,
-            params: vec![matchee_temp_name.clone()],
+            params: Params::Standard(vec![matchee_temp_name.clone()]),
             body: cases.into_iter().map(FunctionStatement::If).collect(),
         })),
         args: vec![matchee],
@@ -479,10 +487,12 @@ fn generate_code_for_match_case(
     };
 
     let body = {
-        let arity = case.param_list_id.len();
-        let mut body = Vec::with_capacity(arity + 1);
+        let explicit_arity = case
+            .param_list_id
+            .map(|list_id| list_id.explicit_len())
+            .unwrap_or(0);
+        let mut body = Vec::with_capacity(explicit_arity + 1);
 
-        // TODO: Properly generate code for labeled args
         match case.param_list_id {
             None => {}
             Some(NonEmptyMatchCaseParamListId::Unlabeled(param_list_id)) => {
@@ -509,21 +519,25 @@ fn generate_code_for_match_case(
                 param_list_id,
                 triple_dot: _,
             }) => {
-                for (param_index, param_id) in registry
+                let args_obj = Expression::BinaryOp(Box::new(BinaryOp {
+                    left: Expression::Identifier(matchee_js_name.clone()),
+                    op: BinaryOpKind::Index,
+                    right: Expression::Literal(Literal::Number(1)),
+                }));
+                for param_id in registry
                     .get_possibly_empty_list(param_list_id)
                     .iter()
                     .copied()
-                    .enumerate()
                 {
-                    let param_name = &registry.get(registry.get(param_id).name_id).name;
+                    let param_name_id = registry.get(param_id).name_id;
+                    let param_name = &registry.get(param_name_id).name;
                     context.try_push_name(param_name.js_name());
                     let param_js_name = context.js_name(DbIndex(0));
-                    let field_index = i32::try_from(1 + param_index)
-                        .expect("The param index should not be absurdly large.");
-                    let param_value = Expression::BinaryOp(Box::new(BinaryOp {
-                        left: Expression::Identifier(matchee_js_name.clone()),
-                        op: BinaryOpKind::Index,
-                        right: Expression::Literal(Literal::Number(field_index)),
+                    let param_label_id = registry.get(param_id).label_identifier_id();
+                    let param_label_name = &registry.get(param_label_id).name;
+                    let param_value = Expression::Dot(Box::new(Dot {
+                        left: args_obj.clone(),
+                        right: param_label_name.js_name(),
                     }));
                     body.push(FunctionStatement::Const(ConstStatement {
                         name: param_js_name,
@@ -539,7 +553,7 @@ fn generate_code_for_match_case(
             case.output_id,
         )?));
 
-        context.pop_n(arity);
+        context.pop_n(explicit_arity);
 
         body
     };

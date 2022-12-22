@@ -125,14 +125,8 @@ fn write_new_call(out: &mut Writer, call: &Call, options: &FormatOptions) {
 fn write_simple_function(out: &mut Writer, function: &Function, options: &FormatOptions) {
     out.push_str("function ");
     out.push_str(&function.name.0);
-    out.push_str("(");
-    for (i, param) in function.params.iter().enumerate() {
-        if i > 0 {
-            out.push_str(", ");
-        }
-        out.push_str(&param.0);
-    }
-    out.push_str(") {");
+    write_params(out, &function.params, options);
+    out.push_str(" {");
 
     if function.body.is_empty() {
         out.push_str("}");
@@ -148,6 +142,43 @@ fn write_simple_function(out: &mut Writer, function: &Function, options: &Format
         out.indent();
         out.push_str("}");
     }
+}
+
+fn write_params(out: &mut Writer, params: &Params, options: &FormatOptions) {
+    match params {
+        Params::Standard(params) => write_standard_params(out, params, options),
+        Params::DestructuredSingleton(params) => {
+            write_destructured_singleton_param(out, params, options)
+        }
+    }
+}
+
+fn write_standard_params(out: &mut Writer, params: &[ValidJsIdentifierName], _: &FormatOptions) {
+    out.push_str("(");
+    for (i, param) in params.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&param.0);
+    }
+    out.push_str(")");
+}
+
+fn write_destructured_singleton_param(
+    out: &mut Writer,
+    params: &[ObjectDestructureEntry],
+    _: &FormatOptions,
+) {
+    out.push_str("({");
+    for (i, param) in params.iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        out.push_str(&param.in_name.0);
+        out.push_str(": ");
+        out.push_str(&param.out_name.0);
+    }
+    out.push_str("})");
 }
 
 fn write_function_statement(

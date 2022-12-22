@@ -50,8 +50,29 @@ pub struct Call {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Function {
     pub name: ValidJsIdentifierName,
-    pub params: Vec<ValidJsIdentifierName>,
+    pub params: Params,
     pub body: Vec<FunctionStatement>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Params {
+    Standard(Vec<ValidJsIdentifierName>),
+    DestructuredSingleton(Vec<ObjectDestructureEntry>),
+}
+
+impl Params {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Params::Standard(params) => params.is_empty(),
+            Params::DestructuredSingleton(entries) => entries.is_empty(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ObjectDestructureEntry {
+    pub in_name: ValidJsIdentifierName,
+    pub out_name: ValidJsIdentifierName,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
