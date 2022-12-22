@@ -162,7 +162,7 @@ fn generate_code_for_type_constructor(
     context.pop_n(type_.param_list_id.len());
 
     let type_name = &registry.get(type_.name_id).name;
-    context.try_push_name(type_name.js_name());
+    context.try_push_name(type_name.preferred_js_name());
     let type_js_name = context.js_name(DbIndex(0));
 
     let type_args = match &params {
@@ -235,7 +235,7 @@ fn generate_code_for_params_and_leave_params_in_context(
                 .map(|id| {
                     let param = registry.get(*id);
                     let param_name = &registry.get(param.name_id).name;
-                    context.try_push_name(param_name.js_name());
+                    context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
                     param_js_name
                 })
@@ -249,11 +249,11 @@ fn generate_code_for_params_and_leave_params_in_context(
                 .map(|&id| {
                     let param = registry.get(id);
                     let param_name = &registry.get(param.name_id).name;
-                    context.try_push_name(param_name.js_name());
+                    context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
 
                     let param_label_name = &registry.get(param.label_identifier_id()).name;
-                    let param_label_js_name = param_label_name.js_name();
+                    let param_label_js_name = param_label_name.preferred_js_name();
                     ObjectDestructureEntry {
                         in_name: param_label_js_name,
                         out_name: param_js_name,
@@ -305,7 +305,7 @@ fn generate_code_for_variant_constructor(
             // the type checker doesn't store its results,
             // so we don't have that information during code generation).
             // Later, we can fix this.
-            unescaped: registry.get(variant.name_id).name.js_name().0,
+            unescaped: registry.get(variant.name_id).name.preferred_js_name().0,
             // TODO: What if 2 variant names have the same JS name?
         })));
         items.extend(type_args);
@@ -318,7 +318,7 @@ fn generate_code_for_variant_constructor(
     context.try_push_name(ValidJsIdentifierName(format!(
         "{}_{}",
         &type_constructor_js_name.0,
-        variant_name.js_name().0,
+        variant_name.preferred_js_name().0,
     )));
     let variant_symbol_js_name = context.js_name(DbIndex(0));
 
@@ -343,7 +343,7 @@ fn generate_code_for_let_statement(
     let value = generate_code_for_expression(registry, context, let_statement.value_id)?;
 
     let let_statement_name = &registry.get(let_statement.name_id).name;
-    context.try_push_name(let_statement_name.js_name());
+    context.try_push_name(let_statement_name.preferred_js_name());
     let let_statement_js_name = context.js_name(DbIndex(0));
     Ok(ConstStatement {
         name: let_statement_js_name,
@@ -399,12 +399,12 @@ fn generate_code_for_call(
                 .map(|arg_id| {
                     Ok(match arg_id {
                         LabeledCallArgId::Implicit { label_id, db_index } => {
-                            let key = registry.get(*label_id).name.js_name();
+                            let key = registry.get(*label_id).name.preferred_js_name();
                             let value = Expression::Identifier(context.js_name(*db_index));
                             ObjectEntry { key, value }
                         }
                         LabeledCallArgId::Explicit { label_id, value_id } => {
-                            let key = registry.get(*label_id).name.js_name();
+                            let key = registry.get(*label_id).name.preferred_js_name();
                             let value = generate_code_for_expression(registry, context, *value_id)?;
                             ObjectEntry { key, value }
                         }
@@ -427,7 +427,7 @@ fn generate_code_for_fun(
         generate_code_for_params_and_leave_params_in_context(registry, context, fun.param_list_id)?;
     let fun_js_name = {
         let fun_name = &registry.get(fun.name_id).name;
-        context.try_push_name(fun_name.js_name());
+        context.try_push_name(fun_name.preferred_js_name());
         context.js_name(DbIndex(0))
     };
     let return_value = generate_code_for_expression(registry, context, fun.body_id)?;
@@ -474,7 +474,7 @@ fn generate_code_for_match_case(
     matchee_js_name: &ValidJsIdentifierName,
 ) -> Result<IfStatement, CompileToJavaScriptError> {
     let condition = {
-        let case_js_name = registry.get(case.variant_name_id).name.js_name();
+        let case_js_name = registry.get(case.variant_name_id).name.preferred_js_name();
         Expression::BinaryOp(Box::new(BinaryOp {
             left: Expression::BinaryOp(Box::new(BinaryOp {
                 left: Expression::Identifier(matchee_js_name.clone()),
@@ -502,7 +502,7 @@ fn generate_code_for_match_case(
                     registry.get_list(param_list_id).iter().copied().enumerate()
                 {
                     let param_name = &registry.get(param_id).name;
-                    context.try_push_name(param_name.js_name());
+                    context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
                     let field_index = i32::try_from(1 + param_index)
                         .expect("The param index should not be absurdly large.");
@@ -533,13 +533,13 @@ fn generate_code_for_match_case(
                 {
                     let param_name_id = registry.get(param_id).name_id;
                     let param_name = &registry.get(param_name_id).name;
-                    context.try_push_name(param_name.js_name());
+                    context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
                     let param_label_id = registry.get(param_id).label_identifier_id();
                     let param_label_name = &registry.get(param_label_id).name;
                     let param_value = Expression::Dot(Box::new(Dot {
                         left: args_obj.clone(),
-                        right: param_label_name.js_name(),
+                        right: param_label_name.preferred_js_name(),
                     }));
                     body.push(FunctionStatement::Const(ConstStatement {
                         name: param_js_name,
@@ -610,9 +610,9 @@ impl Function {
 }
 
 impl light::IdentifierName {
-    fn js_name(&self) -> ValidJsIdentifierName {
+    fn preferred_js_name(&self) -> ValidJsIdentifierName {
         match self {
-            light::IdentifierName::Standard(s) => sanitize_js_identifier_name(s),
+            light::IdentifierName::Standard(s) => bijectively_sanitize_js_identifier_name(s),
             light::IdentifierName::Reserved(light::ReservedIdentifierName::Underscore) => {
                 ValidJsIdentifierName("_".to_string())
             }
@@ -623,24 +623,38 @@ impl light::IdentifierName {
     }
 }
 
-fn sanitize_js_identifier_name(s: &str) -> ValidJsIdentifierName {
+fn bijectively_sanitize_js_identifier_name(s: &str) -> ValidJsIdentifierName {
     let mut out = String::new();
 
     // The first character cannot be a digit
     for c in s.chars().take(1) {
-        if c.is_ascii_alphabetic() || c == '_' || c == '$' {
+        // '$' would also be a legal character.
+        // However, we use it for escape sequences,
+        // so we escape it to avoid name collisions.
+        //
+        // For example, if we didn't escape '$', then
+        // the Pamlihu names `a$u0027$` and `a'` would both
+        // be translated to the JavaScript name `a$u0027$`.
+        if c.is_ascii_alphabetic() || c == '_' {
             out.push(c);
         } else {
-            out.push('_');
+            out.push_str(&format!("$u{:04x}$", u32::from(c)));
         }
     }
 
     // ...but the rest can be digits.
     for c in s.chars().skip(1) {
-        if c.is_ascii_alphanumeric() || c == '_' || c == '$' {
+        // '$' would also be a legal character.
+        // However, we use it for escape sequences,
+        // so we escape it to avoid name collisions.
+        //
+        // For example, if we didn't escape '$', then
+        // the Pamlihu names `a$u0027$` and `a'` would both
+        // be translated to the JavaScript name `a$u0027$`.
+        if c.is_ascii_alphanumeric() || c == '_' {
             out.push(c);
         } else {
-            out.push('_');
+            out.push_str(&format!("$u{:04x}$", u32::from(c)));
         }
     }
 
