@@ -62,9 +62,9 @@ fn generate_code_for_type1_and_type0_without_adding_to_context() -> Vec<FileItem
             value: Expression::Object(Box::new(Object {
                 entries: vec![ObjectEntry {
                     key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
-                    value: Expression::Literal(Literal::String {
+                    value: Expression::Literal(Literal::String(JsStringLiteral {
                         unescaped: TYPE_SPECIES_VALUE__TYPE1.to_string(),
-                    }),
+                    })),
                 }],
             })),
         }),
@@ -73,9 +73,9 @@ fn generate_code_for_type1_and_type0_without_adding_to_context() -> Vec<FileItem
             value: Expression::Object(Box::new(Object {
                 entries: vec![ObjectEntry {
                     key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
-                    value: Expression::Literal(Literal::String {
+                    value: Expression::Literal(Literal::String(JsStringLiteral {
                         unescaped: TYPE_SPECIES_VALUE__TYPE0.to_string(),
-                    }),
+                    })),
                 }],
             })),
         }),
@@ -91,9 +91,9 @@ fn generate_code_for_explosion_thrower() -> Vec<FileItem> {
             params: Params::Standard(vec![]),
             body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
                 callee: Expression::Identifier(ValidJsIdentifierName("Error".to_string())),
-                args: vec![Expression::Literal(Literal::String {
+                args: vec![Expression::Literal(Literal::String(JsStringLiteral {
                     unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions.".to_string(),
-                })],
+                }))],
             })))],
         })),
     })]
@@ -187,9 +187,9 @@ fn generate_code_for_type_constructor(
         entries: vec![
             ObjectEntry {
                 key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
-                value: Expression::Literal(Literal::String {
+                value: Expression::Literal(Literal::String(JsStringLiteral {
                     unescaped: type_js_name.0.clone(),
-                }),
+                })),
             },
             ObjectEntry {
                 key: ValidJsIdentifierName(TYPE_ARGS_KEY.to_string()),
@@ -298,14 +298,16 @@ fn generate_code_for_variant_constructor(
 
     let return_value = {
         let mut items = Vec::with_capacity(arity + 1);
-        items.push(Expression::Literal(Literal::String {
-            // We must use the JS name instead of the Symbol JS name
-            // since we won't know the Symbol of the match case patterns
-            // (at the time of writing, the type checker isn't complete,
+        items.push(Expression::Literal(Literal::String(JsStringLiteral {
+            // We must use the variant JS name instead of the DB index's JS name
+            // since we won't know the DB index of the match case patterns
+            // (at the time of writing,
+            // the type checker doesn't store its results,
             // so we don't have that information during code generation).
             // Later, we can fix this.
             unescaped: registry.get(variant.name_id).name.js_name().0,
-        }));
+            // TODO: What if 2 variant names have the same JS name?
+        })));
         items.extend(type_args);
         Expression::Array(Box::new(Array { items }))
     };
@@ -480,9 +482,9 @@ fn generate_code_for_match_case(
                 right: Expression::Literal(Literal::Number(0)),
             })),
             op: BinaryOpKind::TripleEqual,
-            right: Expression::Literal(Literal::String {
+            right: Expression::Literal(Literal::String(JsStringLiteral {
                 unescaped: case_js_name.0,
-            }),
+            })),
         }))
     };
 
@@ -577,9 +579,9 @@ fn generate_code_for_forall(
     Ok(Expression::Object(Box::new(Object {
         entries: vec![ObjectEntry {
             key: ValidJsIdentifierName(TYPE_SPECIES_KEY.to_string()),
-            value: Expression::Literal(Literal::String {
+            value: Expression::Literal(Literal::String(JsStringLiteral {
                 unescaped: TYPE_SPECIES_VALUE__FORALL.to_string(),
-            }),
+            })),
         }],
     })))
 }

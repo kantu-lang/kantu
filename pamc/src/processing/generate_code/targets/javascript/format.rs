@@ -54,7 +54,7 @@ fn write_literal(out: &mut Writer, literal: &Literal) {
             false => "false",
         }),
         Literal::Number(number) => out.push_str(&number.to_string()),
-        Literal::String { unescaped } => {
+        Literal::String(JsStringLiteral { unescaped }) => {
             out.push_str("\"");
             out.push_str(&escape_string_contents(unescaped));
             out.push_str("\"");

@@ -38,7 +38,12 @@ pub struct ValidJsIdentifierName(pub String);
 pub enum Literal {
     Boolean(bool),
     Number(i32),
-    String { unescaped: String },
+    String(JsStringLiteral),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct JsStringLiteral {
+    pub unescaped: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
