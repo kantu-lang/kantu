@@ -81,10 +81,8 @@ pub enum TypeCheckError {
         existing_match_case_id: NodeId<MatchCase>,
         new_match_case_id: NodeId<MatchCase>,
     },
-    MissingMatchCase {
-        // TODO: Make this a list, so the user can
-        // see all the missing match cases at once.
-        variant_name_id: NodeId<Identifier>,
+    MissingMatchCases {
+        missing_variant_name_list_id: NonEmptyListId<NodeId<Identifier>>,
     },
     ExtraneousMatchCase {
         case_id: NodeId<MatchCase>,

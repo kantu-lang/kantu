@@ -244,7 +244,7 @@ pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
 }
 
 pub fn verify_variant_to_case_bijection(
-    registry: &NodeRegistry,
+    registry: &mut NodeRegistry,
     variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
     case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
@@ -288,23 +288,37 @@ fn verify_there_are_no_duplicate_cases(
 }
 
 fn verify_that_every_variant_has_a_case(
-    registry: &NodeRegistry,
+    registry: &mut NodeRegistry,
     variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
     case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
     let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
     let case_ids = registry.get_possibly_empty_list(case_list_id);
 
-    for &variant_name_id in variant_name_ids {
-        let variant_name = &registry.get(variant_name_id).name;
-        if !case_ids.iter().any(|&case_id| {
-            let case = registry.get(case_id);
-            let case_variant_name = &registry.get(case.variant_name_id).name;
-            case_variant_name == variant_name
-        }) {
-            return Err(TypeCheckError::MissingMatchCase { variant_name_id });
-        }
+    let missing_variant_name_ids: Vec<NodeId<Identifier>> = variant_name_ids
+        .iter()
+        .copied()
+        .filter_map(|variant_name_id| {
+            let variant_name = &registry.get(variant_name_id).name;
+            if !case_ids.iter().any(|&case_id| {
+                let case = registry.get(case_id);
+                let case_variant_name = &registry.get(case.variant_name_id).name;
+                case_variant_name == variant_name
+            }) {
+                Some(variant_name_id)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if let Ok(missing_variant_name_ids) = NonEmptyVec::try_from(missing_variant_name_ids) {
+        let missing_variant_name_list_id = registry.add_list(missing_variant_name_ids);
+        return Err(TypeCheckError::MissingMatchCases {
+            missing_variant_name_list_id,
+        });
     }
+
     Ok(())
 }
 
