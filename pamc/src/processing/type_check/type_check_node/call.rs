@@ -173,6 +173,9 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
     param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
     arg_list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+    verify_every_param_has_a_corresponding_arg(state, call_id, param_list_id, arg_list_id)?;
+    verify_every_arg_has_a_corresponding_param(state, call_id, param_list_id, arg_list_id)?;
+
     let param_ids = state.registry.get_list(param_list_id);
     let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
     let remaining_param_ids = remaining_param_ids.to_vec();
@@ -181,9 +184,8 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
     let mut are_any_args_out_of_place = false;
     let mut reordered_arg_ids = {
         let first_param_label_id = state.registry.get(first_param_id).label_identifier_id();
-        let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, first_param_label_id, arg_ids.as_ref()) else {
-            return tainted_err(TypeCheckError::MissingLabeledCallArg { call_id, label_id: first_param_label_id });
-        };
+        let (arg_index, arg_id) = get_arg_corresponding_to_label(state, first_param_label_id, arg_ids.as_ref())
+            .expect("Impossible: There is no corresponding arg even though we successfully verified that every param has a corresponding arg.");
         if arg_index != 0 {
             are_any_args_out_of_place = true;
         }
@@ -194,16 +196,13 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
     {
         let param_index = 1 + param_index_in_remaining_params;
         let param_label_id = state.registry.get(param_id).label_identifier_id();
-        let Some((arg_index, arg_id)) = get_arg_corresponding_to_label(state, param_label_id, arg_ids.as_ref()) else {
-            return tainted_err(TypeCheckError::MissingLabeledCallArg { call_id, label_id: param_label_id });
-        };
+        let (arg_index, arg_id) = get_arg_corresponding_to_label(state, param_label_id, arg_ids.as_ref())
+            .expect("Impossible: There is no corresponding arg even though we successfully verified that every param has a corresponding arg.");
         if arg_index != param_index {
             are_any_args_out_of_place = true;
         }
         reordered_arg_ids.push(arg_id);
     }
-
-    verify_there_are_no_extraneous_args(state, call_id, param_list_id, arg_list_id)?;
 
     if are_any_args_out_of_place {
         let callee_id = state.registry.get(call_id).callee_id;
@@ -223,7 +222,46 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
     }
 }
 
-fn verify_there_are_no_extraneous_args(
+fn verify_every_param_has_a_corresponding_arg(
+    state: &mut State,
+    call_id: NodeId<Call>,
+    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    arg_list_id: NonEmptyListId<LabeledCallArgId>,
+) -> Result<(), Tainted<TypeCheckError>> {
+    let param_ids = state.registry.get_list(param_list_id);
+    let arg_ids = state.registry.get_list(arg_list_id);
+    let missing_param_label_name_ids: Vec<NodeId<Identifier>> = param_ids
+        .iter()
+        .copied()
+        .filter_map(|param_id| {
+            let param_label_name_id = state.registry.get(param_id).label_identifier_id();
+            let param_label_name: &IdentifierName = &state.registry.get(param_label_name_id).name;
+
+            let has_corresponding_arg = arg_ids.iter().copied().any(|arg_id| {
+                let arg_label_id = arg_id.label_id();
+                let arg_label_name: &IdentifierName = &state.registry.get(arg_label_id).name;
+                arg_label_name == param_label_name
+            });
+            if !has_corresponding_arg {
+                Some(param_label_name_id)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if let Ok(missing_param_label_name_ids) = NonEmptyVec::try_from(missing_param_label_name_ids) {
+        let missing_label_list_id = state.registry.add_list(missing_param_label_name_ids);
+        return tainted_err(TypeCheckError::MissingLabeledCallArgs {
+            call_id,
+            missing_label_list_id,
+        });
+    }
+
+    Ok(())
+}
+
+fn verify_every_arg_has_a_corresponding_param(
     state: &State,
     call_id: NodeId<Call>,
     param_list_id: NonEmptyListId<NodeId<LabeledParam>>,

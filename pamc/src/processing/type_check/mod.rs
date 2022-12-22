@@ -44,11 +44,9 @@ pub enum TypeCheckError {
     CallLabelednessMismatch {
         call_id: NodeId<Call>,
     },
-    MissingLabeledCallArg {
+    MissingLabeledCallArgs {
         call_id: NodeId<Call>,
-        // TODO: Make this a list, so the user can
-        // see all the missing arguments at once.
-        label_id: NodeId<Identifier>,
+        missing_label_list_id: NonEmptyListId<NodeId<Identifier>>,
     },
     ExtraneousLabeledCallArg {
         call_id: NodeId<Call>,
