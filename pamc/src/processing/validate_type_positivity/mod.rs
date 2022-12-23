@@ -131,7 +131,14 @@ fn validate_type_positivity_in_variant_param_type_forall(
 ) -> Result<(), TypePositivityError> {
     let forall = registry.get(param_type).clone();
     verify_that_target_does_not_appear_in_any_param_type(registry, forall.param_list_id, target)?;
-    validate_type_positivity_in_variant_param_type(context, registry, forall.output_id, target)?;
+
+    let output_target = DbIndex(target.0 + forall.param_list_id.len());
+    validate_type_positivity_in_variant_param_type(
+        context,
+        registry,
+        forall.output_id,
+        output_target,
+    )?;
     Ok(())
 }
 
