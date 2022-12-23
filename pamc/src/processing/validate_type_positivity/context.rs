@@ -42,10 +42,14 @@ impl Context {
         self.local_stack.truncate(self.len() - n);
     }
 
-    /// We effectively return `()`, but the reason we use the `Result` type we is to
-    /// encourage the caller to only use `push` inside a function that returns `Result<_, Tainted<_>>`.
     pub fn push(&mut self, entry: ContextEntryDefinition) {
         self.local_stack.push(entry);
+    }
+
+    pub fn push_n_uninterpreted(&mut self, n: usize) {
+        for _ in 0..n {
+            self.push(ContextEntryDefinition::Uninterpreted);
+        }
     }
 
     pub fn len(&self) -> usize {
