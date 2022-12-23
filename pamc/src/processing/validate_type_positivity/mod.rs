@@ -82,30 +82,30 @@ fn validate_type_positivity_in_variant(
 
 fn validate_type_positivity_in_expression(
     context: &mut Context,
-    id: &mut NodeRegistry,
-    param_type: ExpressionId,
+    registry: &mut NodeRegistry,
+    id: ExpressionId,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    match param_type {
+    match id {
         ExpressionId::Name(_) => Ok(()),
         ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
 
         ExpressionId::Call(call_id) => {
-            validate_type_positivity_in_variant_param_type_call(context, id, call_id, target)
+            validate_type_positivity_in_call(context, registry, call_id, target)
         }
         ExpressionId::Match(match_id) => {
-            validate_type_positivity_in_variant_param_type_match(context, id, match_id, target)
+            validate_type_positivity_in_match(context, registry, match_id, target)
         }
         ExpressionId::Forall(forall_id) => {
-            validate_type_positivity_in_variant_param_type_forall(context, id, forall_id, target)
+            validate_type_positivity_in_forall(context, registry, forall_id, target)
         }
         ExpressionId::Check(check_id) => {
-            validate_type_positivity_in_variant_param_type_check(context, id, check_id, target)
+            validate_type_positivity_in_check_expression(context, registry, check_id, target)
         }
     }
 }
 
-fn validate_type_positivity_in_variant_param_type_call(
+fn validate_type_positivity_in_call(
     context: &mut Context,
     registry: &mut NodeRegistry,
     call_id: NodeId<Call>,
@@ -152,16 +152,50 @@ fn validate_type_positivity_in_variant_param_type_call(
     Ok(())
 }
 
-fn validate_type_positivity_in_variant_param_type_match(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
-    _id: NodeId<Match>,
-    _target: DbIndex,
+fn validate_type_positivity_in_match(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    id: NodeId<Match>,
+    target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    unimplemented!()
+    let match_ = registry.get(id).clone();
+
+    verify_that_target_does_not_appear_in_expression(registry, match_.matchee_id, target)?;
+
+    validate_type_positivity_in_match_case_outputs(context, registry, match_.case_list_id, target)?;
+
+    Ok(())
 }
 
-fn validate_type_positivity_in_variant_param_type_forall(
+fn validate_type_positivity_in_match_case_outputs(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    let case_ids = registry.get_possibly_empty_list(id).to_vec();
+    for case_id in case_ids {
+        validate_type_positivity_in_match_case_output(context, registry, case_id, target)?;
+    }
+    Ok(())
+}
+
+fn validate_type_positivity_in_match_case_output(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    id: NodeId<MatchCase>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    let case = registry.get(id).clone();
+    let explicit_arity = case
+        .param_list_id
+        .map(|list_id| list_id.explicit_len())
+        .unwrap_or(0);
+    let output_target = DbIndex(target.0 + explicit_arity);
+    validate_type_positivity_in_expression(context, registry, case.output_id, output_target)
+}
+
+fn validate_type_positivity_in_forall(
     context: &mut Context,
     registry: &mut NodeRegistry,
     id: NodeId<Forall>,
@@ -181,7 +215,7 @@ fn validate_type_positivity_in_variant_param_type_forall(
     Ok(())
 }
 
-fn validate_type_positivity_in_variant_param_type_check(
+fn validate_type_positivity_in_check_expression(
     context: &mut Context,
     registry: &mut NodeRegistry,
     id: NodeId<Check>,
