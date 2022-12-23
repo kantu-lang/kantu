@@ -191,10 +191,13 @@ impl GetIndexInSubregistry for LabeledCallArgId {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         match self {
             LabeledCallArgId::Implicit {
-                label_id: value_id,
+                label_id,
                 db_index,
+                // We don't need to store this because it's
+                // completely determined by `label_id` and `db_index`.
+                value_id: _,
             } => LabeledCallArgSemanticId::Implicit {
-                label_id: value_id.into_semantic_id(registry, sreg),
+                label_id: label_id.into_semantic_id(registry, sreg),
                 db_index,
             },
             LabeledCallArgId::Explicit { label_id, value_id } => {

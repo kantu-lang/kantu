@@ -2,6 +2,7 @@ mod ast_simplification;
 mod fun_recursion;
 mod lex;
 mod parse;
+mod positivity;
 mod scope;
 mod type_check;
 mod variant_return_type;
@@ -12,6 +13,7 @@ use crate::{
         light_ast::*,
         node_registry::{ExpressionRef, NodeId, NodeRegistry},
         token::TokenKind,
+        type_positivity_validation_result::TypePositivityError,
         FileId,
     },
     processing::{
@@ -26,6 +28,7 @@ use crate::{
         },
         type_check::{type_check_files, TypeCheckError},
         validate_fun_recursion::validate_fun_recursion_in_file,
+        validate_type_positivity::validate_type_positivity_in_file,
         validate_variant_return_types::validate_variant_return_types_in_file,
     },
 };

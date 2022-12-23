@@ -338,7 +338,7 @@ fn is_call_restricted(
                                         ) {
                                             let value_id =
                                                 id_of_arg_that_is_supposed_to_be_substruct
-                                                    .value_id(registry);
+                                                    .value_id();
                                             let err = Err(Tainted::new(
                                                 IllegalFunRecursionError::NonSubstructPassedToDecreasingParam {
                                                     callee_id: callee_name_id,
@@ -442,7 +442,11 @@ fn validate_fun_recursion_in_labeled_call_arg_dirty(
     arg_id: LabeledCallArgId,
 ) -> Result<LabeledCallArgId, TaintedIllegalFunRecursionError> {
     Ok(match arg_id {
-        LabeledCallArgId::Implicit { label_id, db_index } => {
+        LabeledCallArgId::Implicit {
+            label_id,
+            db_index,
+            value_id,
+        } => {
             if context.reference_restriction(db_index).is_some() {
                 let span = registry.get(label_id).span;
                 let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
@@ -458,7 +462,11 @@ fn validate_fun_recursion_in_labeled_call_arg_dirty(
                     },
                 ));
             }
-            LabeledCallArgId::Implicit { label_id, db_index }
+            LabeledCallArgId::Implicit {
+                label_id,
+                db_index,
+                value_id,
+            }
         }
         LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
             label_id,

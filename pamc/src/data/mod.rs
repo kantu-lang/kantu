@@ -7,6 +7,7 @@ pub mod node_registry;
 pub mod non_empty_vec;
 pub mod simplified_ast;
 pub mod token;
+pub mod type_positivity_validation_result;
 pub mod unsimplified_ast;
 pub mod variant_return_type_validation_result;
 

@@ -210,7 +210,11 @@ impl SubstituteWithoutRemovingSpans for LabeledCallArgId {
         state: &mut ContextlessState,
     ) -> Self::Output {
         match self {
-            LabeledCallArgId::Implicit { label_id, db_index } => match substitution.from {
+            LabeledCallArgId::Implicit {
+                label_id,
+                db_index,
+                value_id,
+            } => match substitution.from {
                 ExpressionId::Name(from_id) => {
                     let from_db_index = state.registry.get(from_id).db_index;
                     if from_db_index == db_index {
@@ -219,10 +223,18 @@ impl SubstituteWithoutRemovingSpans for LabeledCallArgId {
                             value_id: substitution.to,
                         }
                     } else {
-                        LabeledCallArgId::Implicit { label_id, db_index }
+                        LabeledCallArgId::Implicit {
+                            label_id,
+                            db_index,
+                            value_id,
+                        }
                     }
                 }
-                _ => LabeledCallArgId::Implicit { label_id, db_index },
+                _ => LabeledCallArgId::Implicit {
+                    label_id,
+                    db_index,
+                    value_id,
+                },
             },
             LabeledCallArgId::Explicit { label_id, value_id } => {
                 let substituted_value_id =

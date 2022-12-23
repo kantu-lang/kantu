@@ -398,7 +398,11 @@ fn generate_code_for_call(
                 .iter()
                 .map(|arg_id| {
                     Ok(match arg_id {
-                        LabeledCallArgId::Implicit { label_id, db_index } => {
+                        LabeledCallArgId::Implicit {
+                            label_id,
+                            db_index,
+                            value_id: _,
+                        } => {
                             let key = registry.get(*label_id).name.preferred_js_name();
                             let value = Expression::Identifier(context.js_name(*db_index));
                             ObjectEntry { key, value }

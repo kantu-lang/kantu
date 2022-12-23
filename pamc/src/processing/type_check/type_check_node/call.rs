@@ -22,10 +22,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
         }
         NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
             let arg_list = state.registry.get_list(arg_list_id).to_vec();
-            arg_list
-                .iter()
-                .map(|arg| arg.value_id(state.registry))
-                .collect()
+            arg_list.iter().map(|arg| arg.value_id()).collect()
         }
     };
     let normalized_arg_ids: Vec<NormalFormId> = arg_ids
