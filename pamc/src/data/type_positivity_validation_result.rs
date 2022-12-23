@@ -1,3 +1,5 @@
+use crate::data::{light_ast::*, node_registry::NodeId};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TypePositivityValidated<T>(T);
 
@@ -15,5 +17,5 @@ impl<T> TypePositivityValidated<T> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypePositivityError {
-    DummyVariantToPreventUninhabitedWarnings,
+    ExpectedTypeGotFun(NodeId<Fun>),
 }

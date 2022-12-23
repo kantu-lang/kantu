@@ -1,23 +1,16 @@
 use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    non_empty_vec::NonEmptyVec,
     type_positivity_validation_result::*,
 };
-
-use std::convert::Infallible;
 
 use context::*;
 mod context;
 
-type TaintedTypePositivityError = Tainted<TypePositivityError>;
-
-impl From<Tainted<Infallible>> for TaintedTypePositivityError {
-    fn from(impossible: Tainted<Infallible>) -> Self {
-        #[allow(unreachable_code)]
-        match Infallible::from(impossible) {}
-    }
-}
+use misc::*;
+mod misc;
 
 pub fn validate_type_positivity_in_file(
     registry: &mut NodeRegistry,
@@ -59,8 +52,9 @@ fn validate_type_positivity_in_type_statement(
     let variant_ids = registry
         .get_possibly_empty_list(type_.variant_list_id)
         .to_vec();
-    for &variant_id in &variant_ids {
-        validate_type_positivity_in_variant(context, registry, variant_id)?;
+    for (variant_index, variant_id) in variant_ids.iter().copied().enumerate() {
+        let target = DbIndex(variant_index);
+        validate_type_positivity_in_variant(context, registry, variant_id, target)?;
     }
     Ok(())
 }
@@ -69,16 +63,80 @@ fn validate_type_positivity_in_variant(
     context: &mut Context,
     registry: &mut NodeRegistry,
     variant_id: NodeId<Variant>,
+    target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let variant = registry.get(variant_id).clone();
+    let param_type_ids = get_possibly_empty_param_type_ids(registry, variant.param_list_id);
 
-    todo!();
+    for (param_index, param_id) in param_type_ids.iter().copied().enumerate() {
+        let shifted_target = DbIndex(target.0 + param_index);
+        validate_type_positivity_in_variant_param_type(context, registry, param_id, shifted_target);
+        context.push(ContextEntryDefinition::Uninterpreted);
+    }
+    context.pop_n(param_type_ids.len());
 
     context.push(ContextEntryDefinition::Variant(variant_id));
 
     Ok(())
 }
 
-fn dummy_id<T>() -> NodeId<T> {
-    NodeId::new(0)
+fn validate_type_positivity_in_variant_param_type(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: ExpressionId,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    match param_type {
+        ExpressionId::Name(_) => Ok(()),
+        ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
+
+        ExpressionId::Call(call_id) => {
+            validate_type_positivity_in_variant_param_type_call(context, registry, call_id, target)
+        }
+        ExpressionId::Match(match_id) => validate_type_positivity_in_variant_param_type_match(
+            context, registry, match_id, target,
+        ),
+        ExpressionId::Forall(forall_id) => validate_type_positivity_in_variant_param_type_forall(
+            context, registry, forall_id, target,
+        ),
+        ExpressionId::Check(check_id) => validate_type_positivity_in_variant_param_type_check(
+            context, registry, check_id, target,
+        ),
+    }
+}
+
+fn validate_type_positivity_in_variant_param_type_call(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: NodeId<Call>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    unimplemented!()
+}
+
+fn validate_type_positivity_in_variant_param_type_match(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: NodeId<Match>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    unimplemented!()
+}
+
+fn validate_type_positivity_in_variant_param_type_forall(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: NodeId<Forall>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    unimplemented!()
+}
+
+fn validate_type_positivity_in_variant_param_type_check(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: NodeId<Check>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    unimplemented!()
 }
