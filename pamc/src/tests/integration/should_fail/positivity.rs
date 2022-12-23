@@ -55,3 +55,10 @@ fn negative_recursion() {
     let src = include_str!("../../sample_code/should_fail/positivity/negative_recursion.ph");
     expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
 }
+
+#[test]
+fn indirect_negative_recursion() {
+    let src =
+        include_str!("../../sample_code/should_fail/positivity/indirect_negative_recursion.ph");
+    expect_illegal_variable_appearance_error(src, DbIndex(1), "T");
+}
