@@ -9,33 +9,45 @@ use crate::data::{
 use context::*;
 mod context;
 
+use trust_cache::*;
+mod trust_cache;
+
 use misc::*;
 mod misc;
 
-// TODO: Add "trusted positive indices" cache, in order to
-// avoid infinite recursion.
+// TODO: Clean up design.
+//
+// Currently, this module functions in a "tainted" way.
+// No untainting occurs, so as soon as a function that takes
+// mutable state
+// (which usually happens to be `&mut Context` and `&mut TrustCache`,
+// to be specific)
+// and returns an error, that mutable state is left in a "tainted"
+// state, meaning most of the normal invariants may no longer hold.
 
 pub fn validate_type_positivity_in_file(
     registry: &mut NodeRegistry,
     file_id: FunRecursionValidated<NodeId<File>>,
 ) -> Result<TypePositivityValidated<NodeId<File>>, TypePositivityError> {
     let mut context = Context::with_builtins();
+    let mut cache = TrustCache::empty();
     let file = registry.get(file_id.raw()).clone();
     let item_ids = registry.get_possibly_empty_list(file.item_list_id).to_vec();
     for &item_id in &item_ids {
-        validate_type_positivity_in_file_item(&mut context, registry, item_id)?;
+        validate_type_positivity_in_file_item(&mut context, &mut cache, registry, item_id)?;
     }
     Ok(TypePositivityValidated::unchecked_new(file.id))
 }
 
 fn validate_type_positivity_in_file_item(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     item_id: FileItemNodeId,
 ) -> Result<(), TypePositivityError> {
     match item_id {
         FileItemNodeId::Type(type_id) => {
-            validate_type_positivity_in_type_statement(context, registry, type_id)
+            validate_type_positivity_in_type_statement(context, cache, registry, type_id)
         }
         FileItemNodeId::Let(_) => {
             context.push(ContextEntryDefinition::Uninterpreted);
@@ -46,6 +58,7 @@ fn validate_type_positivity_in_file_item(
 
 fn validate_type_positivity_in_type_statement(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     type_id: NodeId<TypeStatement>,
 ) -> Result<(), TypePositivityError> {
@@ -57,13 +70,14 @@ fn validate_type_positivity_in_type_statement(
         .to_vec();
     for (variant_index, variant_id) in variant_ids.iter().copied().enumerate() {
         let target = DbIndex(variant_index);
-        validate_type_positivity_in_variant(context, registry, variant_id, target)?;
+        validate_type_positivity_in_variant(context, cache, registry, variant_id, target)?;
     }
     Ok(())
 }
 
 fn validate_type_positivity_in_variant(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     variant_id: NodeId<Variant>,
     target: DbIndex,
@@ -73,7 +87,7 @@ fn validate_type_positivity_in_variant(
 
     for (param_index, param_id) in param_type_ids.iter().copied().enumerate() {
         let shifted_target = DbIndex(target.0 + param_index);
-        validate_type_positivity_in_expression(context, registry, param_id, shifted_target)?;
+        validate_type_positivity_in_expression(context, cache, registry, param_id, shifted_target)?;
         context.push(ContextEntryDefinition::Uninterpreted);
     }
     context.pop_n(param_type_ids.len());
@@ -85,6 +99,7 @@ fn validate_type_positivity_in_variant(
 
 fn validate_type_positivity_in_expression(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     id: ExpressionId,
     target: DbIndex,
@@ -94,22 +109,23 @@ fn validate_type_positivity_in_expression(
         ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
 
         ExpressionId::Call(call_id) => {
-            validate_type_positivity_in_call(context, registry, call_id, target)
+            validate_type_positivity_in_call(context, cache, registry, call_id, target)
         }
         ExpressionId::Match(match_id) => {
-            validate_type_positivity_in_match(context, registry, match_id, target)
+            validate_type_positivity_in_match(context, cache, registry, match_id, target)
         }
         ExpressionId::Forall(forall_id) => {
-            validate_type_positivity_in_forall(context, registry, forall_id, target)
+            validate_type_positivity_in_forall(context, cache, registry, forall_id, target)
         }
         ExpressionId::Check(check_id) => {
-            validate_type_positivity_in_check_expression(context, registry, check_id, target)
+            validate_type_positivity_in_check_expression(context, cache, registry, check_id, target)
         }
     }
 }
 
 fn validate_type_positivity_in_call(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     call_id: NodeId<Call>,
     target: DbIndex,
@@ -150,8 +166,16 @@ fn validate_type_positivity_in_call(
 
     let mut shortened_context = context.clone_up_to_excl(callee.db_index);
 
-    for index in indices_of_appearance {
-        verify_type_param_i_is_positive(&mut shortened_context, registry, callee_def_id, index)?;
+    for param_index in indices_of_appearance {
+        verify_type_param_is_positive(
+            &mut shortened_context,
+            cache,
+            registry,
+            TypeParam {
+                type_id: callee_def_id,
+                param_index,
+            },
+        )?;
     }
 
     Ok(())
@@ -159,6 +183,7 @@ fn validate_type_positivity_in_call(
 
 fn validate_type_positivity_in_match(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     id: NodeId<Match>,
     target: DbIndex,
@@ -167,26 +192,34 @@ fn validate_type_positivity_in_match(
 
     verify_that_target_does_not_appear_in_expression(registry, match_.matchee_id, target)?;
 
-    validate_type_positivity_in_match_case_outputs(context, registry, match_.case_list_id, target)?;
+    validate_type_positivity_in_match_case_outputs(
+        context,
+        cache,
+        registry,
+        match_.case_list_id,
+        target,
+    )?;
 
     Ok(())
 }
 
 fn validate_type_positivity_in_match_case_outputs(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     id: Option<NonEmptyListId<NodeId<MatchCase>>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let case_ids = registry.get_possibly_empty_list(id).to_vec();
     for case_id in case_ids {
-        validate_type_positivity_in_match_case_output(context, registry, case_id, target)?;
+        validate_type_positivity_in_match_case_output(context, cache, registry, case_id, target)?;
     }
     Ok(())
 }
 
 fn validate_type_positivity_in_match_case_output(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     id: NodeId<MatchCase>,
     target: DbIndex,
@@ -197,11 +230,12 @@ fn validate_type_positivity_in_match_case_output(
         .map(|list_id| list_id.explicit_len())
         .unwrap_or(0);
     let output_target = DbIndex(target.0 + explicit_arity);
-    validate_type_positivity_in_expression(context, registry, case.output_id, output_target)
+    validate_type_positivity_in_expression(context, cache, registry, case.output_id, output_target)
 }
 
 fn validate_type_positivity_in_forall(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     id: NodeId<Forall>,
     target: DbIndex,
@@ -213,7 +247,13 @@ fn validate_type_positivity_in_forall(
     context.push_n_uninterpreted(arity);
 
     let output_target = DbIndex(target.0 + forall.param_list_id.len());
-    validate_type_positivity_in_expression(context, registry, forall.output_id, output_target)?;
+    validate_type_positivity_in_expression(
+        context,
+        cache,
+        registry,
+        forall.output_id,
+        output_target,
+    )?;
 
     context.pop_n(arity);
 
@@ -222,21 +262,32 @@ fn validate_type_positivity_in_forall(
 
 fn validate_type_positivity_in_check_expression(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     id: NodeId<Check>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let check = registry.get(id).clone();
-    validate_type_positivity_in_expression(context, registry, check.output_id, target)
+    validate_type_positivity_in_expression(context, cache, registry, check.output_id, target)
 }
 
-fn verify_type_param_i_is_positive(
+fn verify_type_param_is_positive(
     context_not_including_current_type_statement: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
-    type_id: NodeId<TypeStatement>,
-    index: usize,
+    param: TypeParam,
 ) -> Result<(), TypePositivityError> {
+    if cache.is_trusted(param) {
+        return Ok(());
+    }
+
+    cache.trust(param);
+
     let context = context_not_including_current_type_statement;
+    let TypeParam {
+        type_id,
+        param_index,
+    } = param;
 
     context.push(ContextEntryDefinition::Adt(type_id));
 
@@ -249,9 +300,10 @@ fn verify_type_param_i_is_positive(
     for variant_id in variant_ids {
         verify_type_param_i_is_positive_in_variant(
             context,
+            cache,
             registry,
             variant_id,
-            index,
+            param_index,
             type_param_arity,
         )?;
     }
@@ -261,6 +313,7 @@ fn verify_type_param_i_is_positive(
 
 fn verify_type_param_i_is_positive_in_variant(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     variant_id: NodeId<Variant>,
     i: usize,
@@ -268,6 +321,7 @@ fn verify_type_param_i_is_positive_in_variant(
 ) -> Result<(), TypePositivityError> {
     verify_type_param_i_is_positive_in_variant_without_pushing(
         context,
+        cache,
         registry,
         variant_id,
         i,
@@ -281,6 +335,7 @@ fn verify_type_param_i_is_positive_in_variant(
 
 fn verify_type_param_i_is_positive_in_variant_without_pushing(
     context: &mut Context,
+    cache: &mut TrustCache,
     registry: &mut NodeRegistry,
     variant_id: NodeId<Variant>,
     i: usize,
@@ -335,15 +390,19 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
     for (param_index, param_type_id) in param_type_ids.iter().copied().enumerate() {
         let Some(shifted_type_arg_db_index) = (type_arg_db_index_relative_to_return_type.0 + param_index)
             .checked_sub(variant_arity) else {
+                context.push(ContextEntryDefinition::Uninterpreted);
                 continue;
             };
         let shifted_type_arg_db_index = DbIndex(shifted_type_arg_db_index);
         validate_type_positivity_in_expression(
             context,
+            cache,
             registry,
             param_type_id,
             shifted_type_arg_db_index,
         )?;
+
+        context.push(ContextEntryDefinition::Uninterpreted);
     }
 
     Ok(())

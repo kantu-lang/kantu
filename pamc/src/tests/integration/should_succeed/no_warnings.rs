@@ -176,8 +176,6 @@ fn fun_recursion_right_label_wrong_order() {
     expect_success_with_no_warnings(src);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn recursive_index_positivity_checking() {
     let src = include_str!(
