@@ -22,10 +22,7 @@ pub enum TypePositivityError {
         call_id: NodeId<Call>,
         callee_id: ExpressionId,
     },
-    IllegalVariableAppearance {
-        var_db_index: DbIndex,
-        expression_id: ExpressionId,
-    },
+    IllegalVariableAppearance(NodeId<NameExpression>),
     VariantReturnTypeArityMismatch {
         actual: usize,
         expected: usize,
