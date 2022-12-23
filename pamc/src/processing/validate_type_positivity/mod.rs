@@ -70,12 +70,7 @@ fn validate_type_positivity_in_variant(
 
     for (param_index, param_id) in param_type_ids.iter().copied().enumerate() {
         let shifted_target = DbIndex(target.0 + param_index);
-        validate_type_positivity_in_variant_param_type(
-            context,
-            registry,
-            param_id,
-            shifted_target,
-        )?;
+        validate_type_positivity_in_expression(context, registry, param_id, shifted_target)?;
         context.push(ContextEntryDefinition::Uninterpreted);
     }
     context.pop_n(param_type_ids.len());
@@ -85,7 +80,7 @@ fn validate_type_positivity_in_variant(
     Ok(())
 }
 
-fn validate_type_positivity_in_variant_param_type(
+fn validate_type_positivity_in_expression(
     context: &mut Context,
     registry: &mut NodeRegistry,
     param_type: ExpressionId,
@@ -120,10 +115,10 @@ fn validate_type_positivity_in_variant_param_type_call(
 }
 
 fn validate_type_positivity_in_variant_param_type_match(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
-    _param_type: NodeId<Match>,
-    _target: DbIndex,
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: NodeId<Match>,
+    target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     unimplemented!()
 }
@@ -138,21 +133,17 @@ fn validate_type_positivity_in_variant_param_type_forall(
     verify_that_target_does_not_appear_in_any_param_type(registry, forall.param_list_id, target)?;
 
     let output_target = DbIndex(target.0 + forall.param_list_id.len());
-    validate_type_positivity_in_variant_param_type(
-        context,
-        registry,
-        forall.output_id,
-        output_target,
-    )?;
+    validate_type_positivity_in_expression(context, registry, forall.output_id, output_target)?;
 
     Ok(())
 }
 
 fn validate_type_positivity_in_variant_param_type_check(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
-    _param_type: NodeId<Check>,
-    _target: DbIndex,
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    param_type: NodeId<Check>,
+    target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    unimplemented!()
+    let check = registry.get(param_type).clone();
+    validate_type_positivity_in_expression(context, registry, check.output_id, target)
 }
