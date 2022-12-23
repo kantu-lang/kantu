@@ -1,9 +1,5 @@
 use super::*;
 
-pub fn dummy_id<T>() -> NodeId<T> {
-    NodeId::new(0)
-}
-
 pub fn get_possibly_empty_param_type_ids(
     registry: &NodeRegistry,
     id: Option<NonEmptyParamListId>,
@@ -216,10 +212,25 @@ pub fn verify_that_target_does_not_appear_in_any_match_case_output(
     id: Option<NonEmptyListId<NodeId<MatchCase>>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    let Some(id) = id else {
-        return Ok(());
-    };
-    unimplemented!()
+    let case_ids = registry.get_possibly_empty_list(id);
+    for &case_ids in case_ids {
+        verify_that_target_does_not_appear_in_match_case_output(registry, case_ids, target)?;
+    }
+    Ok(())
+}
+
+pub fn verify_that_target_does_not_appear_in_match_case_output(
+    registry: &NodeRegistry,
+    id: NodeId<MatchCase>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    let case = registry.get(id);
+    let explicit_arity = case
+        .param_list_id
+        .map(|param_list_id| param_list_id.explicit_len())
+        .unwrap_or(0);
+    let output_target = DbIndex(target.0 + explicit_arity);
+    verify_that_target_does_not_appear_in_expression(registry, case.output_id, output_target)
 }
 
 pub fn verify_that_target_does_not_appear_in_forall(

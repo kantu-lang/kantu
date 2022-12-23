@@ -109,28 +109,29 @@ impl Context {
 //     Ok(value)
 // }
 
-impl Context {
-    fn truncate(&mut self, new_len: usize) {
-        if new_len > self.len() {
-            panic!(
-                "Tried to truncate a context with {} elements to {} elements",
-                self.len(),
-                new_len
-            );
-        }
-        self.local_stack.truncate(new_len);
-    }
-}
+// TODO: Delete
+// impl Context {
+//     fn truncate(&mut self, new_len: usize) {
+//         if new_len > self.len() {
+//             panic!(
+//                 "Tried to truncate a context with {} elements to {} elements",
+//                 self.len(),
+//                 new_len
+//             );
+//         }
+//         self.local_stack.truncate(new_len);
+//     }
+// }
 
-impl Context {
-    pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
-        DbIndex(self.len() - level.0 - 1)
-    }
+// impl Context {
+//     pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
+//         DbIndex(self.len() - level.0 - 1)
+//     }
 
-    pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
-        DbLevel(self.len() - index.0 - 1)
-    }
-}
+//     pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
+//         DbLevel(self.len() - index.0 - 1)
+//     }
+// }
 
 impl Context {
     // TODO: Delete

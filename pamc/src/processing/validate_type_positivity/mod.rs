@@ -70,7 +70,12 @@ fn validate_type_positivity_in_variant(
 
     for (param_index, param_id) in param_type_ids.iter().copied().enumerate() {
         let shifted_target = DbIndex(target.0 + param_index);
-        validate_type_positivity_in_variant_param_type(context, registry, param_id, shifted_target);
+        validate_type_positivity_in_variant_param_type(
+            context,
+            registry,
+            param_id,
+            shifted_target,
+        )?;
         context.push(ContextEntryDefinition::Uninterpreted);
     }
     context.pop_n(param_type_ids.len());
@@ -106,19 +111,19 @@ fn validate_type_positivity_in_variant_param_type(
 }
 
 fn validate_type_positivity_in_variant_param_type_call(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    param_type: NodeId<Call>,
-    target: DbIndex,
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _param_type: NodeId<Call>,
+    _target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     unimplemented!()
 }
 
 fn validate_type_positivity_in_variant_param_type_match(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    param_type: NodeId<Match>,
-    target: DbIndex,
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _param_type: NodeId<Match>,
+    _target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     unimplemented!()
 }
@@ -144,10 +149,10 @@ fn validate_type_positivity_in_variant_param_type_forall(
 }
 
 fn validate_type_positivity_in_variant_param_type_check(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    param_type: NodeId<Check>,
-    target: DbIndex,
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _param_type: NodeId<Check>,
+    _target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     unimplemented!()
 }
