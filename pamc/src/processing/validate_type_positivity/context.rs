@@ -139,3 +139,12 @@ impl Context {
         &self.stack[level.0]
     }
 }
+
+impl Context {
+    pub fn clone_up_to_excl(&self, index: DbIndex) -> Self {
+        let level = self.index_to_level(index);
+        Self {
+            stack: self.stack[..level.0].to_vec(),
+        }
+    }
+}

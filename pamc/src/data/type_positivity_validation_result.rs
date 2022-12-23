@@ -26,4 +26,12 @@ pub enum TypePositivityError {
         var_db_index: DbIndex,
         expression_id: ExpressionId,
     },
+    VariantReturnTypeArityMismatch {
+        actual: usize,
+        expected: usize,
+    },
+    VariantReturnTypeHadNonNameElement {
+        variant_id: NodeId<Variant>,
+        type_arg_index: usize,
+    },
 }

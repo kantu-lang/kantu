@@ -28,7 +28,25 @@ fn expect_positivity_error(src: &str, panicker: impl Fn(&NodeRegistry, TypePosit
 #[test]
 fn negative_recursion() {
     let src = include_str!("../../sample_code/should_fail/positivity/negative_recursion.ph");
-    expect_positivity_error(src, |_registry, _err| {
-        todo!();
+    expect_positivity_error(src, |registry, err| match err {
+        TypePositivityError::IllegalVariableAppearance {
+            var_db_index,
+            expression_id,
+        } => {
+            assert_eq!(DbIndex(0), var_db_index);
+            match expression_id {
+                ExpressionId::Name(name_id) => {
+                    let component_list_id = &registry.get(name_id).component_list_id;
+                    assert_eq!(1, component_list_id.len.get());
+                    let component_ids = registry.get_list(*component_list_id);
+                    assert_eq!(
+                        IdentifierName::Standard("Bad".to_string()),
+                        registry.get(component_ids[0]).name
+                    );
+                }
+                _ => panic!("Unexpected expression_id: {:?}", expression_id),
+            }
+        }
+        _ => panic!("Unexpected error: {:?}", err),
     });
 }

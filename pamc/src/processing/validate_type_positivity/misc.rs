@@ -288,3 +288,34 @@ pub fn get_labeled_arg_values(
 ) -> NonEmptyVec<ExpressionId> {
     registry.get_list(id).to_mapped(|&arg_id| arg_id.value_id())
 }
+
+pub fn get_ith_call_arg_value(
+    registry: &NodeRegistry,
+    i: usize,
+    id: NonEmptyCallArgListId,
+) -> Option<ExpressionId> {
+    match id {
+        NonEmptyCallArgListId::Unlabeled(id) => get_ith_unlabeled_call_arg_value(registry, i, id),
+        NonEmptyCallArgListId::UniquelyLabeled(id) => {
+            get_ith_labeled_call_arg_value(registry, i, id)
+        }
+    }
+}
+
+pub fn get_ith_unlabeled_call_arg_value(
+    registry: &NodeRegistry,
+    i: usize,
+    id: NonEmptyListId<ExpressionId>,
+) -> Option<ExpressionId> {
+    let value_ids = registry.get_list(id);
+    value_ids.get(i).copied()
+}
+
+pub fn get_ith_labeled_call_arg_value(
+    registry: &NodeRegistry,
+    i: usize,
+    id: NonEmptyListId<LabeledCallArgId>,
+) -> Option<ExpressionId> {
+    let value_ids = registry.get_list(id);
+    value_ids.get(i).map(|arg_id| arg_id.value_id())
+}

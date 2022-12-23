@@ -2,7 +2,7 @@ use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::NonEmptyVec,
+    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
     type_positivity_validation_result::*,
 };
 
@@ -11,6 +11,9 @@ mod context;
 
 use misc::*;
 mod misc;
+
+// TODO: Add "trusted positive indices" cache, in order to
+// avoid infinite recursion.
 
 pub fn validate_type_positivity_in_file(
     registry: &mut NodeRegistry,
@@ -145,8 +148,10 @@ fn validate_type_positivity_in_call(
         })
         .collect();
 
+    let mut shortened_context = context.clone_up_to_excl(callee.db_index);
+
     for index in indices_of_appearance {
-        verify_type_param_i_is_positive(context, registry, callee_def_id, index)?;
+        verify_type_param_i_is_positive(&mut shortened_context, registry, callee_def_id, index)?;
     }
 
     Ok(())
@@ -226,10 +231,120 @@ fn validate_type_positivity_in_check_expression(
 }
 
 fn verify_type_param_i_is_positive(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
-    _type_id: NodeId<TypeStatement>,
-    _index: usize,
+    context_not_including_current_type_statement: &mut Context,
+    registry: &mut NodeRegistry,
+    type_id: NodeId<TypeStatement>,
+    index: usize,
 ) -> Result<(), TypePositivityError> {
-    unimplemented!()
+    let context = context_not_including_current_type_statement;
+
+    context.push(ContextEntryDefinition::Adt(type_id));
+
+    let type_ = registry.get(type_id).clone();
+    let type_param_arity = type_.param_list_id.len();
+    let variant_ids = registry
+        .get_possibly_empty_list(type_.variant_list_id)
+        .to_vec();
+
+    for variant_id in variant_ids {
+        verify_type_param_i_is_positive_in_variant(
+            context,
+            registry,
+            variant_id,
+            index,
+            type_param_arity,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn verify_type_param_i_is_positive_in_variant(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    variant_id: NodeId<Variant>,
+    i: usize,
+    type_param_arity: usize,
+) -> Result<(), TypePositivityError> {
+    verify_type_param_i_is_positive_in_variant_without_pushing(
+        context,
+        registry,
+        variant_id,
+        i,
+        type_param_arity,
+    )?;
+
+    context.push(ContextEntryDefinition::Variant(variant_id));
+
+    Ok(())
+}
+
+fn verify_type_param_i_is_positive_in_variant_without_pushing(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    variant_id: NodeId<Variant>,
+    i: usize,
+    type_param_arity: usize,
+) -> Result<(), TypePositivityError> {
+    let target_index = i;
+    let variant = registry.get(variant_id).clone();
+    let variant_arity = variant.param_list_id.len();
+
+    let variant_return_type_id = match variant.return_type_id {
+        ExpressionId::Name(_) => {
+            return Err(TypePositivityError::VariantReturnTypeArityMismatch {
+                actual: 0,
+                expected: type_param_arity
+            });
+        }
+        ExpressionId::Call(variant_return_type_id) => {
+            variant_return_type_id
+        }
+        _ => panic!("Impossible: The variant return type validator should have thrown an error on any return type that was neither a Name nor Call.")
+    };
+    let variant_return_type = registry.get(variant_return_type_id).clone();
+
+    let Some(type_arg_id) = get_ith_call_arg_value(registry, target_index, variant_return_type.arg_list_id) else {
+        return Err(TypePositivityError::VariantReturnTypeArityMismatch {
+            actual: 0,
+            expected: type_param_arity
+        })
+    };
+
+    let does_any_variant_param_appear_in_type_arg =
+        (0..variant_arity).into_iter().any(|raw_index| {
+            let variant_param_db_index = DbIndex(raw_index);
+            !does_target_appear_in_expression(registry, type_arg_id, variant_param_db_index)
+        });
+    if !does_any_variant_param_appear_in_type_arg {
+        return Ok(());
+    }
+
+    let ExpressionId::Name(type_arg_id) = type_arg_id else {
+        // TODO: Enable "stack trace" (e.g., so we can see the original
+        // type that required the variant return type to have a positive
+        // type arg).
+        return Err(TypePositivityError::VariantReturnTypeHadNonNameElement {
+            variant_id,
+            type_arg_index: target_index,
+        });
+    };
+    let type_arg_db_index_relative_to_return_type = registry.get(type_arg_id).db_index;
+
+    let param_type_ids = get_possibly_empty_param_type_ids(registry, variant.param_list_id);
+    for (param_index, param_type_id) in param_type_ids.iter().copied().enumerate() {
+        let Some(shifted_type_arg_db_index) = (type_arg_db_index_relative_to_return_type.0 + param_index)
+            .checked_sub(variant_arity) else {
+                continue;
+            };
+        let shifted_type_arg_db_index = DbIndex(shifted_type_arg_db_index);
+        validate_type_positivity_in_expression(
+            context,
+            registry,
+            param_type_id,
+            shifted_type_arg_db_index,
+        )?;
+    }
+
+    Ok(())
 }
