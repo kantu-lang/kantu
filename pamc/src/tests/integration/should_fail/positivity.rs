@@ -25,28 +25,33 @@ fn expect_positivity_error(src: &str, panicker: impl Fn(&NodeRegistry, TypePosit
     panicker(&registry, err);
 }
 
-#[test]
-fn negative_recursion() {
-    let src = include_str!("../../sample_code/should_fail/positivity/negative_recursion.ph");
+/// The job of `panicker` is to panic if the error is different than the expected
+/// error.
+fn expect_illegal_variable_appearance_error(
+    src: &str,
+    expected_db_index: DbIndex,
+    expected_name: &str,
+) {
     expect_positivity_error(src, |registry, err| match err {
-        TypePositivityError::IllegalVariableAppearance {
-            var_db_index,
-            expression_id,
-        } => {
-            assert_eq!(DbIndex(0), var_db_index);
-            match expression_id {
-                ExpressionId::Name(name_id) => {
-                    let component_list_id = &registry.get(name_id).component_list_id;
-                    assert_eq!(1, component_list_id.len.get());
-                    let component_ids = registry.get_list(*component_list_id);
-                    assert_eq!(
-                        IdentifierName::Standard("Bad".to_string()),
-                        registry.get(component_ids[0]).name
-                    );
-                }
-                _ => panic!("Unexpected expression_id: {:?}", expression_id),
-            }
+        TypePositivityError::IllegalVariableAppearance(name_id) => {
+            let name = registry.get(name_id);
+
+            assert_eq!(expected_db_index, name.db_index);
+
+            let component_list_id = &registry.get(name_id).component_list_id;
+            assert_eq!(1, component_list_id.len.get());
+            let component_ids = registry.get_list(*component_list_id);
+            assert_eq!(
+                IdentifierName::Standard(expected_name.to_string()),
+                registry.get(component_ids[0]).name
+            );
         }
         _ => panic!("Unexpected error: {:?}", err),
     });
+}
+
+#[test]
+fn negative_recursion() {
+    let src = include_str!("../../sample_code/should_fail/positivity/negative_recursion.ph");
+    expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
 }

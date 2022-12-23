@@ -111,10 +111,7 @@ pub fn verify_that_target_does_not_appear_in_name_expression(
 ) -> Result<(), TypePositivityError> {
     let name = registry.get(id);
     if name.db_index == target {
-        Err(TypePositivityError::IllegalVariableAppearance {
-            var_db_index: target,
-            expression_id: ExpressionId::Name(id),
-        })
+        Err(TypePositivityError::IllegalVariableAppearance(id))
     } else {
         Ok(())
     }
