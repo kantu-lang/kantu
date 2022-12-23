@@ -17,12 +17,15 @@ impl<T> TypePositivityValidated<T> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypePositivityError {
+    // TODO: Test
     ExpectedTypeGotFun(NodeId<Fun>),
+    // TODO: Test
     NonAdtCallee {
         call_id: NodeId<Call>,
         callee_id: ExpressionId,
     },
     IllegalVariableAppearance(NodeId<NameExpression>),
+    // TODO: Test
     VariantReturnTypeArityMismatch {
         actual: usize,
         expected: usize,
