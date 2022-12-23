@@ -4,7 +4,7 @@ const NUMBER_OF_BUILTIN_ENTRIES: usize = 2;
 
 #[derive(Debug, Clone)]
 pub struct Context {
-    stack: Vec<ContextEntryDefinition>,
+    local_stack: Vec<ContextEntryDefinition>,
 }
 
 #[derive(Clone, Debug)]
@@ -15,9 +15,6 @@ pub enum ContextEntryDefinition {
     Uninterpreted,
 }
 
-const TYPE1_LEVEL: DbLevel = DbLevel(0);
-const TYPE0_LEVEL: DbLevel = DbLevel(1);
-
 impl Context {
     pub fn with_builtins() -> Self {
         // We should will never retrieve the type of `Type1`, since it is undefined.
@@ -27,7 +24,7 @@ impl Context {
         let type0_def = ContextEntryDefinition::Uninterpreted;
         let builtins: [ContextEntryDefinition; NUMBER_OF_BUILTIN_ENTRIES] = [type1_def, type0_def];
         Self {
-            stack: builtins.to_vec(),
+            local_stack: builtins.to_vec(),
         }
     }
 }
@@ -42,18 +39,18 @@ impl Context {
                 self.len()
             );
         }
-        self.stack.truncate(self.len() - n);
+        self.local_stack.truncate(self.len() - n);
     }
 
     /// We effectively return `()`, but the reason we use the `Result` type we is to
     /// encourage the caller to only use `push` inside a function that returns `Result<_, Tainted<_>>`.
     pub fn push(&mut self, entry: ContextEntryDefinition) -> PushWarning {
-        self.stack.push(entry);
+        self.local_stack.push(entry);
         Ok(())
     }
 
     pub fn len(&self) -> usize {
-        self.stack.len()
+        self.local_stack.len()
     }
 }
 
@@ -121,19 +118,7 @@ impl Context {
                 new_len
             );
         }
-        self.stack.truncate(new_len);
-    }
-}
-
-impl Context {
-    /// Returns the De Bruijn index of the `Type0` expression.
-    pub fn type0_dbi(&self) -> DbIndex {
-        self.level_to_index(TYPE0_LEVEL)
-    }
-
-    /// Returns the De Bruijn index of the `Type1` expression.
-    pub fn type1_dbi(&self) -> DbIndex {
-        self.level_to_index(TYPE1_LEVEL)
+        self.local_stack.truncate(new_len);
     }
 }
 

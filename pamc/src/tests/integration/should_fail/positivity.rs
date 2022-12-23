@@ -20,7 +20,7 @@ fn expect_positivity_error(src: &str, panicker: impl Fn(&NodeRegistry, TypePosit
         .expect("Variant return type validation failed");
     let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
         .expect("Fun recursion validation failed");
-    let err = validate_type_positivity_in_file(&registry, file_id)
+    let err = validate_type_positivity_in_file(&mut registry, file_id)
         .expect_err("Type positivity validation unexpectedly succeeded");
     panicker(&registry, err);
 }
