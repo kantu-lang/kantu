@@ -139,6 +139,7 @@ fn validate_type_positivity_in_variant_param_type_forall(
         forall.output_id,
         output_target,
     )?;
+
     Ok(())
 }
 
