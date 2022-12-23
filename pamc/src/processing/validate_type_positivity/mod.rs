@@ -145,7 +145,6 @@ fn validate_type_positivity_in_call(
 
     let callee = registry.get(callee_id).clone();
     let ContextEntryDefinition::Adt(callee_def_id) = context.get_definition(callee.db_index) else {
-        println!("INDEX: {:?}\nCONTEXT:{:#?}", callee.db_index, context);
         return Err(TypePositivityError::NonAdtCallee{
             call_id,
             callee_id: call.callee_id,

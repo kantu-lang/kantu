@@ -181,58 +181,7 @@ fn recursive_index_positivity_checking() {
     let src = include_str!(
         "../../sample_code/should_succeed/should_succeed_without_warnings/recursive_index_positivity_checking.ph"
     );
-    // TODO: Delete
-    let file_id = FileId(0);
-    let tokens = lex(src).expect("Lexing failed");
-    let file = parse_file(tokens, file_id).expect("Parsing failed");
-    let file = simplify_file(file).expect("AST Simplification failed");
-    let file = bind_files(vec![file])
-        .expect("Binding failed")
-        .into_iter()
-        .next()
-        .unwrap();
-    let mut registry = NodeRegistry::empty();
-    let file_id = lighten_file(&mut registry, file);
-    let file = registry.get(file_id);
-    let file_id = validate_variant_return_types_in_file(&registry, file)
-        .expect("Variant return type validation failed");
-    let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
-        .expect("Fun recursion validation failed");
-    let file_id = match validate_type_positivity_in_file(&mut registry, file_id) {
-        Ok(file_id) => file_id,
-        Err(err) => return handle_err(&mut registry, err),
-    };
-    let warnings = type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
-    assert_eq!(0, warnings.len(), "One or more warnings were emitted");
-    let _js_ast =
-        JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
-
-    fn handle_err(registry: &mut NodeRegistry, err: TypePositivityError) {
-        use crate::data::node_registry::ExpressionId;
-        use crate::processing::test_utils::{
-            expand_lightened::expand_expression, format::format_expression_with_default_options,
-        };
-        match &err {
-            TypePositivityError::NonAdtCallee {
-                call_id,
-                callee_id: _,
-            } => {
-                println!(
-                    "Call: {}",
-                    &format_expression_with_default_options(&expand_expression(
-                        registry,
-                        ExpressionId::Call(*call_id)
-                    ))
-                );
-                println!(
-                    "Position: {:?}",
-                    expand_expression(registry, ExpressionId::Call(*call_id)).span()
-                );
-            }
-            _ => panic!("Unexpected error: {:?}", err),
-        }
-        panic!("Type positivity check failed {:?}", err);
-    }
+    expect_success_with_no_warnings(src);
 }
 
 fn expect_success_with_no_warnings(src: &str) {
