@@ -129,6 +129,7 @@ fn validate_type_positivity_in_call(
 
     let callee = registry.get(callee_id).clone();
     let ContextEntryDefinition::Adt(callee_def_id) = context.get_definition(callee.db_index) else {
+        println!("INDEX: {:?}\nCONTEXT:{:#?}", callee.db_index, context);
         return Err(TypePositivityError::NonAdtCallee{
             call_id,
             callee_id: call.callee_id,
@@ -335,6 +336,7 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
     for (param_index, param_type_id) in param_type_ids.iter().copied().enumerate() {
         let Some(shifted_type_arg_db_index) = (type_arg_db_index_relative_to_return_type.0 + param_index)
             .checked_sub(variant_arity) else {
+                context.push(ContextEntryDefinition::Uninterpreted);
                 continue;
             };
         let shifted_type_arg_db_index = DbIndex(shifted_type_arg_db_index);
@@ -344,6 +346,8 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
             param_type_id,
             shifted_type_arg_db_index,
         )?;
+
+        context.push(ContextEntryDefinition::Uninterpreted);
     }
 
     Ok(())
