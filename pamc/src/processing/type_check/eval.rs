@@ -165,7 +165,7 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
                             )));
                         subs.push(Substitution {
                             from: name.raw(),
-                            to: arg_id.value_id(state.registry),
+                            to: arg_id.value_id(),
                         });
                     }
                     subs
@@ -258,7 +258,7 @@ fn can_labeled_fun_be_applied(
         let arg_label_id = normalized_arg_id.label_id();
         let arg_label_name = &state.registry.get(arg_label_id).name;
         if decreasing_param_label_name == *arg_label_name {
-            let value_id = NormalFormId::unchecked_new(normalized_arg_id.value_id(state.registry));
+            let value_id = NormalFormId::unchecked_new(normalized_arg_id.value_id());
             Some(value_id)
         } else {
             None
@@ -317,7 +317,11 @@ fn evaluate_well_typed_labeled_call_arg(
     arg_id: LabeledCallArgId,
 ) -> LabeledCallArgId {
     match arg_id {
-        LabeledCallArgId::Implicit { label_id, db_index } => {
+        LabeledCallArgId::Implicit {
+            label_id,
+            db_index,
+            value_id,
+        } => {
             let definition = state.context.get_definition(db_index, state.registry);
             if let ContextEntryDefinition::Alias { value_id } = definition {
                 LabeledCallArgId::Explicit {
@@ -325,7 +329,11 @@ fn evaluate_well_typed_labeled_call_arg(
                     value_id: value_id.raw(),
                 }
             } else {
-                LabeledCallArgId::Implicit { label_id, db_index }
+                LabeledCallArgId::Implicit {
+                    label_id,
+                    db_index,
+                    value_id,
+                }
             }
         }
         LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
@@ -611,7 +619,7 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
                         DbIndex(explicit_arity - explicit_param_index - 1),
                     ));
                     let arg_value_id = corresponding_arg_id
-                        .value_id(state.registry)
+                        .value_id()
                         .upshift(explicit_arity, state.registry);
                     Substitution { from: param_value_id, to: arg_value_id }
                 })

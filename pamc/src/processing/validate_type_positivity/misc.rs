@@ -169,11 +169,7 @@ pub fn verify_that_target_does_not_appear_in_any_labeled_call_arg(
 ) -> Result<(), TypePositivityError> {
     let arg_ids = registry.get_list(list_id);
     for arg_id in arg_ids.iter().copied() {
-        verify_that_target_does_not_appear_in_expression(
-            registry,
-            arg_id.value_id(registry),
-            target,
-        )?;
+        verify_that_target_does_not_appear_in_expression(registry, arg_id.value_id(), target)?;
     }
     Ok(())
 }
@@ -213,6 +209,17 @@ pub fn verify_that_target_does_not_appear_in_match(
         target,
     )?;
     Ok(())
+}
+
+pub fn verify_that_target_does_not_appear_in_any_match_case_output(
+    registry: &NodeRegistry,
+    id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    let Some(id) = id else {
+        return Ok(());
+    };
+    unimplemented!()
 }
 
 pub fn verify_that_target_does_not_appear_in_forall(

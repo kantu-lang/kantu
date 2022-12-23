@@ -256,10 +256,10 @@ pub fn register_labeled_call_arg(
         heavy::LabeledCallArg::Implicit {
             label: value,
             db_index,
-        } => LabeledCallArgId::Implicit {
-            label_id: register_identifier(registry, value),
-            db_index,
-        },
+        } => {
+            let label_id = register_identifier(registry, value);
+            LabeledCallArgId::implicit(label_id, db_index, registry)
+        }
         heavy::LabeledCallArg::Explicit { label, value } => LabeledCallArgId::Explicit {
             label_id: register_identifier(registry, label),
             value_id: register_expression(registry, value),

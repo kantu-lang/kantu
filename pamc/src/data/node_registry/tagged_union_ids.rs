@@ -67,11 +67,39 @@ pub enum LabeledCallArgId {
     Implicit {
         label_id: NodeId<Identifier>,
         db_index: DbIndex,
+
+        /// Guaranteed to be consistent with `label_id` and `db_index`.
+        value_id: NodeId<NameExpression>,
     },
     Explicit {
         label_id: NodeId<Identifier>,
         value_id: ExpressionId,
     },
+}
+
+impl LabeledCallArgId {
+    pub fn implicit(
+        label_id: NodeId<Identifier>,
+        db_index: DbIndex,
+        registry: &mut NodeRegistry,
+    ) -> Self {
+        fn dummy_id<T>() -> NodeId<T> {
+            NodeId::new(0)
+        }
+        let span = registry.get(label_id).span;
+        let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
+        let value_id = registry.add_and_overwrite_id(NameExpression {
+            id: dummy_id(),
+            span,
+            component_list_id,
+            db_index,
+        });
+        Self::Implicit {
+            label_id,
+            db_index,
+            value_id,
+        }
+    }
 }
 
 impl LabeledCallArgId {
@@ -82,22 +110,9 @@ impl LabeledCallArgId {
         }
     }
 
-    pub fn value_id(&self, registry: &mut NodeRegistry) -> ExpressionId {
-        fn dummy_id<T>() -> NodeId<T> {
-            NodeId::new(0)
-        }
-
+    pub fn value_id(&self) -> ExpressionId {
         match *self {
-            LabeledCallArgId::Implicit { label_id, db_index } => {
-                let span = registry.get(label_id).span;
-                let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
-                ExpressionId::Name(registry.add_and_overwrite_id(NameExpression {
-                    id: dummy_id(),
-                    span,
-                    component_list_id,
-                    db_index,
-                }))
-            }
+            LabeledCallArgId::Implicit { value_id, .. } => ExpressionId::Name(value_id),
             LabeledCallArgId::Explicit { value_id, .. } => value_id,
         }
     }

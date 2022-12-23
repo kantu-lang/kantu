@@ -252,7 +252,11 @@ pub fn expand_labeled_call_arg_list(
 
 pub fn expand_labeled_call_arg(registry: &NodeRegistry, id: LabeledCallArgId) -> LabeledCallArg {
     match id {
-        LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArg::Implicit {
+        LabeledCallArgId::Implicit {
+            label_id,
+            db_index,
+            value_id: _,
+        } => LabeledCallArg::Implicit {
             label: expand_identifier(registry, label_id),
             db_index,
         },

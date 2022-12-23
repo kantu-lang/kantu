@@ -495,7 +495,7 @@ fn does_right_call_arg_list_contain_left(
         NonEmptyCallArgListId::UniquelyLabeled(right) => {
             let right_arg_ids = state.registry.get_list(right).to_vec();
             right_arg_ids.iter().copied().any(|right_arg_id| {
-                let right_value_id = right_arg_id.value_id(state.registry);
+                let right_value_id = right_arg_id.value_id();
                 is_left_inclusive_subterm_of_right(state, left, right_value_id)
             })
         }
@@ -921,8 +921,7 @@ fn expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
 
     let mut subs = vec![];
     for &normalized_left_arg_id in normalized_left_arg_ids.iter() {
-        let left_value_id =
-            NormalFormId::unchecked_new(normalized_left_arg_id.value_id(state.registry));
+        let left_value_id = NormalFormId::unchecked_new(normalized_left_arg_id.value_id());
         let left_label_id = normalized_left_arg_id.label_id();
         let left_label_name = &state.registry.get(left_label_id).name;
         let corresponding_normalized_right_arg = normalized_right_arg_ids
@@ -934,9 +933,8 @@ fn expand_dynamic_normal_form_labeled_call_arg_list_substitution_shallow(
             .expect(
                 "Two well-typed Call expressions with the same callee should have the same labels.",
             );
-        let right_value_id = NormalFormId::unchecked_new(
-            corresponding_normalized_right_arg.value_id(state.registry),
-        );
+        let right_value_id =
+            NormalFormId::unchecked_new(corresponding_normalized_right_arg.value_id());
         subs.push(DynamicSubstitution(left_value_id, right_value_id))
     }
     DynamicSubstitutionExpansionResult::Replace(subs)

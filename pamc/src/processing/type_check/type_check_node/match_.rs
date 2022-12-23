@@ -473,10 +473,11 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 let db_index = DbIndex(variant_type_param_ids.len() - variant_param_index - 1);
 
                 if does_arg_name_equal_param_label_name {
-                    LabeledCallArgId::Implicit {
-                        label_id: variant_param_label_name_id,
+                    LabeledCallArgId::implicit(
+                        variant_param_label_name_id,
                         db_index,
-                    }
+                        state.registry,
+                    )
                 } else {
                     let value_id = ExpressionId::Name(add_name_expression(
                         state.registry,

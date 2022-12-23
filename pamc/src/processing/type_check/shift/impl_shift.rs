@@ -241,9 +241,14 @@ impl ShiftDbIndices for LabeledCallArgId {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArgId::Implicit {
+            LabeledCallArgId::Implicit {
+                label_id,
+                db_index,
+                value_id,
+            } => LabeledCallArgId::Implicit {
                 label_id,
                 db_index: f.try_apply(db_index, cutoff)?,
+                value_id: value_id.try_shift_with_cutoff(f, cutoff, registry)?,
             },
             LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
                 label_id,

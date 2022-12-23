@@ -180,9 +180,14 @@ impl WithoutSpans for NonEmptyListId<LabeledCallArgId> {
 impl WithoutSpans for LabeledCallArgId {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         match self {
-            LabeledCallArgId::Implicit { label_id, db_index } => LabeledCallArgId::Implicit {
+            LabeledCallArgId::Implicit {
+                label_id,
+                db_index,
+                value_id,
+            } => LabeledCallArgId::Implicit {
                 label_id: label_id.without_spans(registry),
                 db_index,
+                value_id: value_id.without_spans(registry),
             },
             LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
                 label_id: label_id.without_spans(registry),
