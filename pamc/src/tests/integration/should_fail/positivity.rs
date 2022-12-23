@@ -25,8 +25,6 @@ fn expect_positivity_error(src: &str, panicker: impl Fn(&NodeRegistry, TypePosit
     panicker(&registry, err);
 }
 
-/// The job of `panicker` is to panic if the error is different than the expected
-/// error.
 fn expect_illegal_variable_appearance_error(
     src: &str,
     expected_db_index: DbIndex,
@@ -61,4 +59,35 @@ fn indirect_negative_recursion() {
     let src =
         include_str!("../../sample_code/should_fail/positivity/indirect_negative_recursion.ph");
     expect_illegal_variable_appearance_error(src, DbIndex(1), "T");
+}
+
+fn expect_non_name_variant_return_type_error(
+    src: &str,
+    expected_variant_name: &str,
+    expected_type_arg_index: usize,
+) {
+    expect_positivity_error(src, |registry, err| match err {
+        TypePositivityError::VariantReturnTypeHadNonNameElement {
+            variant_id,
+            type_arg_index,
+        } => {
+            let variant_name_id = registry.get(variant_id).name_id;
+            let actual_variant_name = &registry.get(variant_name_id).name;
+            assert_eq!(
+                IdentifierName::Standard(expected_variant_name.to_string()),
+                *actual_variant_name,
+            );
+
+            assert_eq!(expected_type_arg_index, type_arg_index);
+        }
+        _ => panic!("Unexpected error: {:?}", err),
+    });
+}
+
+#[test]
+fn obscured_indirect_negative_recursion() {
+    let src = include_str!(
+        "../../sample_code/should_fail/positivity/obscured_indirect_negative_recursion.ph"
+    );
+    expect_non_name_variant_return_type_error(src, "NotC", 0);
 }
