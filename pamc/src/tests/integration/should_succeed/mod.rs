@@ -1,7 +1,5 @@
 use crate::{
-    data::{
-        node_registry::NodeRegistry, type_positivity_validation_result::TypePositivityError, FileId,
-    },
+    data::{node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
         generate_code::{targets::javascript::JavaScript, CompileTarget},
