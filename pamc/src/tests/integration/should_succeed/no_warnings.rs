@@ -176,6 +176,16 @@ fn fun_recursion_right_label_wrong_order() {
     expect_success_with_no_warnings(src);
 }
 
+// TODO: Fix
+#[ignore]
+#[test]
+fn recursive_index_positivity_checking() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_without_warnings/recursive_index_positivity_checking.ph"
+    );
+    expect_success_with_no_warnings(src);
+}
+
 fn expect_success_with_no_warnings(src: &str) {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
