@@ -1,9 +1,9 @@
 use crate::data::{
-    fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    type_positivity_validation_result::TypePositivityValidated,
     TextSpan,
 };
 

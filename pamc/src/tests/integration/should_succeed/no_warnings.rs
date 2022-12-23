@@ -193,6 +193,8 @@ fn expect_success_with_no_warnings(src: &str) {
         .expect("Variant return type validation failed");
     let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
         .expect("Fun recursion validation failed");
+    let file_id = validate_type_positivity_in_file(&mut registry, file_id)
+        .expect("Type positivity validation failed");
     let warnings = type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
     assert_eq!(0, warnings.len(), "One or more warnings were emitted");
     let _js_ast =

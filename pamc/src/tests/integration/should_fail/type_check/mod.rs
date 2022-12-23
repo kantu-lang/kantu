@@ -34,6 +34,8 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
         .expect("Variant return type validation failed");
     let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
         .expect("Fun recursion validation failed");
+    let file_id = validate_type_positivity_in_file(&mut registry, file_id)
+        .expect("Type positivity validation failed");
     let err = type_check_files(&mut registry, &[file_id])
         .expect_err("Type checking unexpected succeeded");
     panicker(&registry, err);

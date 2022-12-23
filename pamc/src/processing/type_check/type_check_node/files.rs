@@ -2,7 +2,7 @@ use super::*;
 
 pub fn type_check_files(
     registry: &mut NodeRegistry,
-    file_ids: &[FunRecursionValidated<NodeId<File>>],
+    file_ids: &[TypePositivityValidated<NodeId<File>>],
 ) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
     let mut context = Context::with_builtins(registry);
     let mut substitution_context = SubstitutionContext::empty();

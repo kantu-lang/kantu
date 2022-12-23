@@ -15,6 +15,7 @@ use pamc::{
         simplify_ast::simplify_file,
         type_check::type_check_files,
         validate_fun_recursion::validate_fun_recursion_in_file,
+        validate_type_positivity::validate_type_positivity_in_file,
         validate_variant_return_types::validate_variant_return_types_in_file,
     },
 };
@@ -55,6 +56,8 @@ fn main() {
         .expect("Variant return type validation failed");
     let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
         .expect("Fun recursion validation failed");
+    let file_id = validate_type_positivity_in_file(&mut registry, file_id)
+        .expect("Type positivity validation failed");
     type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
     let js_ast =
         JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
