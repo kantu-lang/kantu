@@ -1,7 +1,7 @@
 use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry, NonEmptyListId},
+    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::NonEmptyVec,
     type_positivity_validation_result::*,
 };
@@ -129,7 +129,10 @@ fn validate_type_positivity_in_variant_param_type_forall(
     param_type: NodeId<Forall>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    unimplemented!()
+    let forall = registry.get(param_type).clone();
+    verify_that_target_does_not_appear_in_any_param_type(registry, forall.param_list_id, target)?;
+    validate_type_positivity_in_variant_param_type(context, registry, forall.output_id, target)?;
+    Ok(())
 }
 
 fn validate_type_positivity_in_variant_param_type_check(

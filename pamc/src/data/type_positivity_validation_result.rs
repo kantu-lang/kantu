@@ -18,4 +18,8 @@ impl<T> TypePositivityValidated<T> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypePositivityError {
     ExpectedTypeGotFun(NodeId<Fun>),
+    IllegalVariableAppearance {
+        var_db_index: DbIndex,
+        expression_id: ExpressionId,
+    },
 }
