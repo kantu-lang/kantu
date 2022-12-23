@@ -4,7 +4,7 @@ const NUMBER_OF_BUILTIN_ENTRIES: usize = 2;
 
 #[derive(Debug, Clone)]
 pub struct Context {
-    local_stack: Vec<ContextEntryDefinition>,
+    stack: Vec<ContextEntryDefinition>,
 }
 
 #[derive(Clone, Debug)]
@@ -24,7 +24,7 @@ impl Context {
         let type0_def = ContextEntryDefinition::Uninterpreted;
         let builtins: [ContextEntryDefinition; NUMBER_OF_BUILTIN_ENTRIES] = [type1_def, type0_def];
         Self {
-            local_stack: builtins.to_vec(),
+            stack: builtins.to_vec(),
         }
     }
 }
@@ -39,11 +39,11 @@ impl Context {
                 self.len()
             );
         }
-        self.local_stack.truncate(self.len() - n);
+        self.stack.truncate(self.len() - n);
     }
 
     pub fn push(&mut self, entry: ContextEntryDefinition) {
-        self.local_stack.push(entry);
+        self.stack.push(entry);
     }
 
     pub fn push_n_uninterpreted(&mut self, n: usize) {
@@ -53,7 +53,7 @@ impl Context {
     }
 
     pub fn len(&self) -> usize {
-        self.local_stack.len()
+        self.stack.len()
     }
 }
 
@@ -127,26 +127,15 @@ impl Context {
 //     }
 // }
 
-// impl Context {
-//     pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
-//         DbIndex(self.len() - level.0 - 1)
-//     }
-
-//     pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
-//         DbLevel(self.len() - index.0 - 1)
-//     }
-// }
+impl Context {
+    pub fn index_to_level(&self, index: DbIndex) -> DbLevel {
+        DbLevel(self.len() - index.0 - 1)
+    }
+}
 
 impl Context {
-    // TODO: Delete
-    // pub fn get_definition(
-    //     &self,
-    //     index: DbIndex,
-    //     registry: &mut NodeRegistry,
-    // ) -> ContextEntryDefinition {
-    //     let level = self.index_to_level(index);
-    //     self.local_type_stack[level.0]
-    //         .definition
-    //         .upshift(index.0 + 1, registry)
-    // }
+    pub fn get_definition(&self, index: DbIndex) -> &ContextEntryDefinition {
+        let level = self.index_to_level(index);
+        &self.stack[level.0]
+    }
 }

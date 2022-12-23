@@ -82,7 +82,7 @@ fn validate_type_positivity_in_variant(
 
 fn validate_type_positivity_in_expression(
     context: &mut Context,
-    registry: &mut NodeRegistry,
+    id: &mut NodeRegistry,
     param_type: ExpressionId,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
@@ -91,34 +91,72 @@ fn validate_type_positivity_in_expression(
         ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
 
         ExpressionId::Call(call_id) => {
-            validate_type_positivity_in_variant_param_type_call(context, registry, call_id, target)
+            validate_type_positivity_in_variant_param_type_call(context, id, call_id, target)
         }
-        ExpressionId::Match(match_id) => validate_type_positivity_in_variant_param_type_match(
-            context, registry, match_id, target,
-        ),
-        ExpressionId::Forall(forall_id) => validate_type_positivity_in_variant_param_type_forall(
-            context, registry, forall_id, target,
-        ),
-        ExpressionId::Check(check_id) => validate_type_positivity_in_variant_param_type_check(
-            context, registry, check_id, target,
-        ),
+        ExpressionId::Match(match_id) => {
+            validate_type_positivity_in_variant_param_type_match(context, id, match_id, target)
+        }
+        ExpressionId::Forall(forall_id) => {
+            validate_type_positivity_in_variant_param_type_forall(context, id, forall_id, target)
+        }
+        ExpressionId::Check(check_id) => {
+            validate_type_positivity_in_variant_param_type_check(context, id, check_id, target)
+        }
     }
 }
 
 fn validate_type_positivity_in_variant_param_type_call(
-    _context: &mut Context,
-    _registry: &mut NodeRegistry,
-    _param_type: NodeId<Call>,
-    _target: DbIndex,
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    call_id: NodeId<Call>,
+    target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    unimplemented!()
+    if !does_target_appear_in_expression(registry, ExpressionId::Call(call_id), target) {
+        return Ok(());
+    }
+
+    let call = registry.get(call_id).clone();
+
+    let ExpressionId::Name(callee_id) = call.callee_id else {
+        return Err(TypePositivityError::NonAdtCallee{
+            call_id,
+            callee_id: call.callee_id,
+        });
+    };
+
+    let callee = registry.get(callee_id).clone();
+    let ContextEntryDefinition::Adt(callee_def_id) = context.get_definition(callee.db_index) else {
+        return Err(TypePositivityError::NonAdtCallee{
+            call_id,
+            callee_id: call.callee_id,
+        });
+    };
+    let callee_def_id = *callee_def_id;
+
+    let indices_of_appearance: Vec<usize> = get_arg_values(registry, call.arg_list_id)
+        .into_iter()
+        .enumerate()
+        .filter_map(|(index, arg_value_id)| {
+            if does_target_appear_in_expression(registry, arg_value_id, target) {
+                Some(index)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    for index in indices_of_appearance {
+        verify_type_param_i_is_positive(context, registry, callee_def_id, index)?;
+    }
+
+    Ok(())
 }
 
 fn validate_type_positivity_in_variant_param_type_match(
-    context: &mut Context,
-    registry: &mut NodeRegistry,
-    param_type: NodeId<Match>,
-    target: DbIndex,
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _id: NodeId<Match>,
+    _target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     unimplemented!()
 }
@@ -126,10 +164,10 @@ fn validate_type_positivity_in_variant_param_type_match(
 fn validate_type_positivity_in_variant_param_type_forall(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    param_type: NodeId<Forall>,
+    id: NodeId<Forall>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    let forall = registry.get(param_type).clone();
+    let forall = registry.get(id).clone();
     let arity = forall.param_list_id.len();
 
     verify_that_target_does_not_appear_in_any_param_type(registry, forall.param_list_id, target)?;
@@ -146,9 +184,18 @@ fn validate_type_positivity_in_variant_param_type_forall(
 fn validate_type_positivity_in_variant_param_type_check(
     context: &mut Context,
     registry: &mut NodeRegistry,
-    param_type: NodeId<Check>,
+    id: NodeId<Check>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    let check = registry.get(param_type).clone();
+    let check = registry.get(id).clone();
     validate_type_positivity_in_expression(context, registry, check.output_id, target)
+}
+
+fn verify_type_param_i_is_positive(
+    _context: &mut Context,
+    _registry: &mut NodeRegistry,
+    _type_id: NodeId<TypeStatement>,
+    _index: usize,
+) -> Result<(), TypePositivityError> {
+    unimplemented!()
 }

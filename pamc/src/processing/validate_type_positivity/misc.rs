@@ -256,3 +256,35 @@ pub fn verify_that_target_does_not_appear_in_check_expression(
     let check = registry.get(id);
     verify_that_target_does_not_appear_in_expression(registry, check.output_id, target)
 }
+
+pub fn does_target_appear_in_expression(
+    registry: &NodeRegistry,
+    id: ExpressionId,
+    target: DbIndex,
+) -> bool {
+    verify_that_target_does_not_appear_in_expression(registry, id, target).is_err()
+}
+
+pub fn get_arg_values(
+    registry: &NodeRegistry,
+    arg_list_id: NonEmptyCallArgListId,
+) -> NonEmptyVec<ExpressionId> {
+    match arg_list_id {
+        NonEmptyCallArgListId::Unlabeled(id) => get_unlabeled_arg_values(registry, id),
+        NonEmptyCallArgListId::UniquelyLabeled(id) => get_labeled_arg_values(registry, id),
+    }
+}
+
+pub fn get_unlabeled_arg_values(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<ExpressionId>,
+) -> NonEmptyVec<ExpressionId> {
+    registry.get_list(id).to_non_empty_vec()
+}
+
+pub fn get_labeled_arg_values(
+    registry: &NodeRegistry,
+    id: NonEmptyListId<LabeledCallArgId>,
+) -> NonEmptyVec<ExpressionId> {
+    registry.get_list(id).to_mapped(|&arg_id| arg_id.value_id())
+}
