@@ -17,8 +17,10 @@ use crate::{
     },
 };
 
-mod check_warnings;
 mod no_warnings;
+
+mod check_warnings;
+mod todo_warnings;
 
 use warning_comparison::*;
 mod warning_comparison;

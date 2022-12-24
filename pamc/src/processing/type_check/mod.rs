@@ -100,6 +100,7 @@ pub enum TypeCheckError {
 pub enum TypeCheckWarning {
     TypeAssertion(TypeAssertionWarning),
     NormalFormAssertion(NormalFormAssertionWarning),
+    TodoExpression(NodeId<TodoExpression>),
 }
 
 #[derive(Clone, Debug)]

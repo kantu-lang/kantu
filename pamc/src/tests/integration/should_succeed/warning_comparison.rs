@@ -5,11 +5,34 @@ use crate::processing::{
     type_check,
 };
 
-const FORMAT_OPTIONS: FormatOptions = FormatOptions {
-    ident_size_in_spaces: 4,
-    print_db_indices: false,
-    print_fun_body_status: false,
-};
+pub fn expect_success_with_warnings(
+    src: &str,
+    expected_warnings: &[TypeCheckWarningSummary],
+) -> Vec<TypeCheckWarning> {
+    let file_id = FileId(0);
+    let tokens = lex(src).expect("Lexing failed");
+    let file = parse_file(tokens, file_id).expect("Parsing failed");
+    let file = simplify_file(file).expect("AST Simplification failed");
+    let file = bind_files(vec![file])
+        .expect("Binding failed")
+        .into_iter()
+        .next()
+        .unwrap();
+    let mut registry = NodeRegistry::empty();
+    let file_id = lighten_file(&mut registry, file);
+    let file = registry.get(file_id);
+    let file_id = validate_variant_return_types_in_file(&registry, file)
+        .expect("Variant return type validation failed");
+    let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
+        .expect("Fun recursion validation failed");
+    let file_id = validate_type_positivity_in_file(&mut registry, file_id)
+        .expect("Type positivity validation failed");
+    let warnings = type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
+    assert_expectations_match_actual_warnings(&registry, expected_warnings, &warnings);
+    let _js_ast =
+        JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
+    warnings
+}
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckWarningSummary {
@@ -49,6 +72,8 @@ pub enum TypeCheckWarningSummary {
         original_left_src: String,
         rewritten_left_src: String,
     },
+
+    TodoExpressionWarning,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,6 +82,12 @@ pub enum TypeCheckFailureReasonSummary {
     IllegalRecursionError,
     TypeCheckError,
 }
+
+const FORMAT_OPTIONS: FormatOptions = FormatOptions {
+    ident_size_in_spaces: 4,
+    print_db_indices: false,
+    print_fun_body_status: false,
+};
 
 pub fn assert_expectations_match_actual_warnings(
     registry: &NodeRegistry,
@@ -322,6 +353,8 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
                 indent_second_line_onward(rewritten_left_src, 8),
             )
         }
+
+        TypeCheckWarningSummary::TodoExpressionWarning => "TodoExpression".to_string(),
     }
 }
 
@@ -341,6 +374,7 @@ fn summarize_warning(
         TypeCheckWarning::NormalFormAssertion(warning) => {
             summarize_normal_form_assertion_warning(registry, warning)
         }
+        TypeCheckWarning::TodoExpression(_) => TypeCheckWarningSummary::TodoExpressionWarning,
     }
 }
 
