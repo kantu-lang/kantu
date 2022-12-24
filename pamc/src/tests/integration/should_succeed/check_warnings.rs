@@ -88,6 +88,23 @@ fn mismatched_types() {
 }
 
 #[test]
+fn nf_no_goal_exists() {
+    use TypeCheckWarningSummary::*;
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_no_goal_exists.ph"
+    );
+    let expected_warnings = vec![
+        NormalFormAssertionNoGoalExists {
+            assertion_src: "goal = Nat".to_string(),
+        },
+        NormalFormAssertionNoGoalExists {
+            assertion_src: "goal = ?".to_string(),
+        },
+    ];
+    expect_success_with_warnings(src, &expected_warnings);
+}
+
+#[test]
 fn mismatched_nf_comparees() {
     use TypeCheckWarningSummary::*;
     let src =
