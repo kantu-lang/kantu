@@ -3,6 +3,7 @@ use super::*;
 mod ambiguous_output_type;
 mod call_arg_labeledness_mismatch;
 mod cannot_infer_type_of_empty_match;
+mod cannot_infer_type_of_todo_expression;
 mod duplicate_match_case;
 mod extraneous_match_case;
 mod illegal_callee;
