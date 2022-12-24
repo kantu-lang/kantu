@@ -354,6 +354,37 @@ fn get_non_goal_normal_form_assertion_warnings(
             }),
             QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark,
         ) => {
+            {
+                use crate::processing::test_utils::{
+                    expand_lightened::expand_expression,
+                    format::format_expression_with_default_options,
+                };
+
+                println!(
+                    "\nNON_GOAL_NF (scon.len={})",
+                    state.substitution_context.len()
+                );
+
+                let current_context_len = state.context.len();
+                let entries = state
+                    .substitution_context
+                    .get_adjusted_substitutions(state.registry, current_context_len)
+                    .expect("Should be in sync.");
+                println!(
+                    "SUB_CON[0].0: {}",
+                    format_expression_with_default_options(&expand_expression(
+                        state.registry,
+                        entries[0].0.raw()
+                    ))
+                );
+                println!(
+                    "SUB_CON[0].1: {}",
+                    format_expression_with_default_options(&expand_expression(
+                        state.registry,
+                        entries[0].1.raw()
+                    ))
+                );
+            }
             let normalized_left_expression_id =
                 evaluate_well_typed_expression(state, left_expression_id);
             let (rewritten_left_type_id,) = match apply_substitutions_from_substitution_context(
