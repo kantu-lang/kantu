@@ -747,5 +747,3 @@ fn apply_case_output_substitutions(
         state.registry,
     )
 }
-
-// TODO: Perform `match` hunt.
