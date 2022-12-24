@@ -134,7 +134,7 @@ fn assert_all_expected_warnings_were_emitted<T: AsRef<str>, U: AsRef<str>>(
         }
         if !was_found {
             panic!(
-                "Expected warning, but it was never emitted: {}.\nMismatch reasons: {}",
+                "Expected warning, but it was never emitted.\nExpected warning: {}.\nMismatch reasons: {}",
                 expected,
                 format_mismatch_errors(&mismatch_errors),
             );
@@ -241,13 +241,13 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
     match warning {
         TypeCheckWarningSummary::TypeAssertionGoalLhs { assertion_src } => {
             format!(
-                "TypeAssertion::GoalLhs {{\nassertion: {},\n}}",
+                "TypeAssertion::GoalLhs {{\n    assertion: {},\n}}",
                 indent_second_line_onward(assertion_src, 8),
             )
         }
         TypeCheckWarningSummary::TypeAssertionCompareeTypeCheckFailure { reason } => {
             format!(
-                "TypeAssertion::CompareeTypeCheckFailure {{\nreason: {},\n}}",
+                "TypeAssertion::CompareeTypeCheckFailure {{\n    reason: {},\n}}",
                 indent_second_line_onward(&format!("{:?}", reason), 8),
             )
         }
@@ -258,7 +258,7 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
             rewritten_right_src,
         } => {
             format!(
-                "TypeAssertion::TypeMismatch {{\noriginal_left: {},\nrewritten_left_type: {},\noriginal_right: {},\nrewritten_right: {},\n}}",
+                "TypeAssertion::TypeMismatch {{\n    original_left: {},\n    rewritten_left_type: {},\n    original_right: {},\n    rewritten_right: {},\n}}",
                 indent_second_line_onward(original_left_src, 8),
                 indent_second_line_onward(rewritten_left_type_src, 8),
                 indent_second_line_onward(original_right_src, 8),
@@ -270,7 +270,7 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
             rewritten_left_type_src,
         } => {
             format!(
-                "TypeAssertion::TypeQuestionMark {{\noriginal_left: {},\nrewritten_left_type: {},\n}}",
+                "TypeAssertion::TypeQuestionMark {{\n    original_left: {},\n    rewritten_left_type: {},\n}}",
                 indent_second_line_onward(original_left_src, 8),
                 indent_second_line_onward(rewritten_left_type_src, 8),
             )
@@ -278,13 +278,13 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
 
         TypeCheckWarningSummary::NormalFormAssertionNoGoalExists { assertion_src } => {
             format!(
-                "NormalFormAssertion::NoGoalExists {{\nassertion: {},\n}}",
+                "NormalFormAssertion::NoGoalExists {{\n    assertion: {},\n}}",
                 indent_second_line_onward(assertion_src, 8),
             )
         }
         TypeCheckWarningSummary::NormalFormAssertionCompareeTypeCheckFailure { reason } => {
             format!(
-                "NormalFormAssertion::CompareeTypeCheckFailure {{\nreason: {},\n}}",
+                "NormalFormAssertion::CompareeTypeCheckFailure {{\n    reason: {},\n}}",
                 indent_second_line_onward(&format!("{:?}", reason), 8),
             )
         }
@@ -295,7 +295,7 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
             rewritten_right_src,
         } => {
             format!(
-                "NormalFormAssertion::CompareeMismatch {{\noriginal_left: {},\nrewritten_left: {},\noriginal_right: {},\nrewritten_right: {},\n}}",
+                "NormalFormAssertion::CompareeMismatch {{\n    original_left: {},\n    rewritten_left: {},\n    original_right: {},\n    rewritten_right: {},\n}}",
                 indent_second_line_onward(original_left_src, 8),
                 indent_second_line_onward(rewritten_left_src, 8),
                 indent_second_line_onward(original_right_src, 8),
@@ -307,7 +307,7 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
             rewritten_left_src,
         } => {
             format!(
-                "NormalFormAssertion::CompareeQuestionMark {{\noriginal_left: {},\nrewritten_left: {},\n}}",
+                "NormalFormAssertion::CompareeQuestionMark {{\n    original_left: {},\n    rewritten_left: {},\n}}",
                 indent_second_line_onward(original_left_src, 8),
                 indent_second_line_onward(rewritten_left_src, 8),
             )
