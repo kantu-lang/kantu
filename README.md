@@ -6,10 +6,8 @@ A simple programming language that supports dependent types.
 
 Official: /pamˈlihu/ (IPA).
 
-In practice, English speakers such as myself will often say something closer "pahm-lee-who",
-where "pahm" pronounced like "palm" without the "l",
-"lee" is pronounced like the name (i.e., rhymes with "tree"),
-and "who" is pronounced normally.
+In practice, English speakers such as myself will often say something closer "pom-lee-hoo"
+(i.e., the syllables rhyme with "mom", "glee", and "who", respectively).
 
 The name is derived from the Lojbanic word _pamli'u_, which roughly
 means "to go on a date".
