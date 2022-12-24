@@ -411,6 +411,7 @@ fn get_token_kind_of_non_underscore_keyword(s: &str) -> Option<TokenKind> {
         "Type1" => Some(TokenKind::Type1),
         "Type2" => Some(TokenKind::Type2),
         "Type3" => Some(TokenKind::Type3),
+        "BottomType" => Some(TokenKind::BottomType),
         "fun" => Some(TokenKind::Fun),
         "match" => Some(TokenKind::Match),
         "forall" => Some(TokenKind::Forall),

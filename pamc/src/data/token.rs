@@ -46,6 +46,7 @@ pub enum TokenKind {
     Type1,
     Type2,
     Type3,
+    BottomType,
     Fun,
     Match,
     Forall,
