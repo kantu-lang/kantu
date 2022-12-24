@@ -183,6 +183,7 @@ fn validate_fun_recursion_in_expression_dirty(
         ExpressionId::Name(id) => {
             validate_fun_recursion_in_name_dirty(context, registry, id).map(ExpressionId::Name)?
         }
+        ExpressionId::Todo(id) => ExpressionId::Todo(id),
         ExpressionId::Call(id) => {
             validate_fun_recursion_in_call_dirty(context, registry, id).map(ExpressionId::Call)?
         }

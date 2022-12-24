@@ -136,6 +136,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Expression {
             Expression::Identifier(identifier) => {
                 Expression::Identifier(identifier.replace_spans_and_file_ids_with_dummies())
             }
+            Expression::Todo(_) => Expression::Todo(dummy_span()),
             Expression::Dot(dot) => {
                 Expression::Dot(Box::new(dot.replace_spans_and_file_ids_with_dummies()))
             }

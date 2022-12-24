@@ -35,6 +35,13 @@ impl Accept for UnfinishedDelimitedExpression {
                         );
                         AcceptResult::ContinueToNextToken
                     }
+                    TokenKind::Todo => {
+                        let expression = Expression::Todo(span_single(file_id, &token));
+                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
+                            token, expression,
+                        );
+                        AcceptResult::ContinueToNextToken
+                    }
                     TokenKind::Fun => {
                         AcceptResult::Push(UnfinishedStackItem::Fun(UnfinishedFun::Keyword(token)))
                     }

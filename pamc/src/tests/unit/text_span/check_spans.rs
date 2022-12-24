@@ -199,6 +199,9 @@ impl DeepCheckChildSpans for Expression {
     fn deep_check_child_spans(&self, src: &str) {
         match self {
             Expression::Identifier(id) => id.deep_check_child_spans(src),
+            Expression::Todo(_) => {
+                // Do nothing, since `Todo` doesn't have any children.
+            }
             Expression::Dot(dot) => dot.deep_check_child_spans(src),
             Expression::Call(call) => call.deep_check_child_spans(src),
             Expression::Fun(fun) => fun.deep_check_child_spans(src),

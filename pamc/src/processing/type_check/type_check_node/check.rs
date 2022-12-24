@@ -1,23 +1,6 @@
 use super::*;
 
-pub(in crate::processing::type_check) fn get_type_of_expression_dirty(
-    state: &mut State,
-    coercion_target_id: Option<NormalFormId>,
-    id: ExpressionId,
-) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    match id {
-        ExpressionId::Name(name) => Ok(get_type_of_name(state, name)),
-        ExpressionId::Call(call) => get_type_of_call_dirty(state, call),
-        ExpressionId::Fun(fun) => get_type_of_fun_dirty(state, fun),
-        ExpressionId::Match(match_) => get_type_of_match_dirty(state, coercion_target_id, match_),
-        ExpressionId::Forall(forall) => get_type_of_forall_dirty(state, forall),
-        ExpressionId::Check(check) => {
-            get_type_of_check_expression_dirty(state, coercion_target_id, check)
-        }
-    }
-}
-
-fn get_type_of_check_expression_dirty(
+pub(in crate::processing::type_check) fn get_type_of_check_expression_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     check_id: NodeId<Check>,

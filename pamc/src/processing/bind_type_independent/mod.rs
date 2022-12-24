@@ -243,6 +243,7 @@ fn bind_expression_dirty(
 ) -> Result<Expression, BindError> {
     match expression {
         ub::Expression::Name(name) => bind_name_expression_dirty(context, name),
+        ub::Expression::Todo(span) => Ok(Expression::Todo(Some(span))),
         ub::Expression::Call(call) => bind_call_expression_dirty(context, *call),
         ub::Expression::Fun(fun) => bind_fun_dirty(context, *fun),
         ub::Expression::Match(match_) => bind_match_dirty(context, *match_),

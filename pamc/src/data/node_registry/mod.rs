@@ -33,6 +33,7 @@ pub struct NodeRegistry {
     variants: Subregistry<Variant>,
     let_statements: Subregistry<LetStatement>,
     name_expressions: Subregistry<NameExpression>,
+    todo_expressions: Subregistry<TodoExpression>,
     calls: Subregistry<Call>,
     funs: Subregistry<Fun>,
     matches: Subregistry<Match>,
@@ -67,6 +68,7 @@ impl NodeRegistry {
             variants: Subregistry::new(),
             let_statements: Subregistry::new(),
             name_expressions: Subregistry::new(),
+            todo_expressions: Subregistry::new(),
             calls: Subregistry::new(),
             funs: Subregistry::new(),
             matches: Subregistry::new(),
@@ -167,6 +169,7 @@ impl NodeRegistry {
     pub fn expression_ref(&self, id: ExpressionId) -> ExpressionRef<'_> {
         match id {
             ExpressionId::Name(id) => ExpressionRef::Name(self.get(id)),
+            ExpressionId::Todo(id) => ExpressionRef::Todo(self.get(id)),
             ExpressionId::Call(id) => ExpressionRef::Call(self.get(id)),
             ExpressionId::Fun(id) => ExpressionRef::Fun(self.get(id)),
             ExpressionId::Match(id) => ExpressionRef::Match(self.get(id)),
@@ -179,6 +182,7 @@ impl NodeRegistry {
 #[derive(Clone, Copy, Debug)]
 pub enum ExpressionRef<'a> {
     Name(&'a NameExpression),
+    Todo(&'a TodoExpression),
     Call(&'a Call),
     Fun(&'a Fun),
     Match(&'a Match),
@@ -365,6 +369,16 @@ mod registerable_node {
 
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
             &mut registry.name_expressions
+        }
+    }
+
+    impl RegisterableNode for TodoExpression {
+        fn subregistry(registry: &NodeRegistry) -> &Subregistry<Self> {
+            &registry.todo_expressions
+        }
+
+        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
+            &mut registry.todo_expressions
         }
     }
 
@@ -634,6 +648,12 @@ mod set_id {
     }
 
     impl SetId for NameExpression {
+        fn set_id(&mut self, id: NodeId<Self>) {
+            self.id = id;
+        }
+    }
+
+    impl SetId for TodoExpression {
         fn set_id(&mut self, id: NodeId<Self>) {
             self.id = id;
         }

@@ -90,6 +90,7 @@ pub fn verify_that_target_does_not_appear_in_expression(
         ExpressionId::Name(id) => {
             verify_that_target_does_not_appear_in_name_expression(registry, id, target)
         }
+        ExpressionId::Todo(_) => Ok(()),
         ExpressionId::Call(id) => verify_that_target_does_not_appear_in_call(registry, id, target),
         ExpressionId::Fun(id) => verify_that_target_does_not_appear_in_fun(registry, id, target),
         ExpressionId::Match(id) => {

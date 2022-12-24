@@ -5,6 +5,7 @@ use super::*;
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
     match id {
         ExpressionId::Name(name_id) => evaluate_well_typed_name_expression(state, name_id),
+        ExpressionId::Todo(todo_id) => evaluate_well_typed_todo_expression(state, todo_id),
         ExpressionId::Call(call_id) => evaluate_well_typed_call(state, call_id),
         ExpressionId::Fun(fun_id) => evaluate_well_typed_fun(state, fun_id),
         ExpressionId::Match(match_id) => evaluate_well_typed_match(state, match_id),
@@ -30,6 +31,14 @@ fn evaluate_well_typed_name_expression(
             NormalFormId::unchecked_new(ExpressionId::Name(name_id))
         }
     }
+}
+
+fn evaluate_well_typed_todo_expression(
+    _: &mut State,
+    todo_id: NodeId<TodoExpression>,
+) -> NormalFormId {
+    // `todo` expressions are, by definition, normal forms.
+    NormalFormId::unchecked_new(ExpressionId::Todo(todo_id))
 }
 
 fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalFormId {
@@ -178,13 +187,14 @@ fn evaluate_well_typed_call(state: &mut State, call_id: NodeId<Call>) -> NormalF
             let shifted_body_id = body_id.downshift(param_arity + 1, state.registry);
             evaluate_well_typed_expression(state, shifted_body_id)
         }
-        ExpressionId::Name(_) | ExpressionId::Call(_) | ExpressionId::Match(_) => {
-            register_normalized_nonsubstituted_call(
-                state.registry,
-                normalized_callee_id,
-                normalized_arg_list_id,
-            )
-        }
+        ExpressionId::Name(_)
+        | ExpressionId::Call(_)
+        | ExpressionId::Match(_)
+        | ExpressionId::Todo(_) => register_normalized_nonsubstituted_call(
+            state.registry,
+            normalized_callee_id,
+            normalized_arg_list_id,
+        ),
         ExpressionId::Forall(_) => {
             panic!("A well-typed Call cannot have a Forall as its callee.")
         }

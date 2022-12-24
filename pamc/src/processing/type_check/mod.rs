@@ -93,6 +93,7 @@ pub enum TypeCheckError {
     AmbiguousOutputType {
         case_id: NodeId<MatchCase>,
     },
+    CannotInferTypeOfTodoExpression(NodeId<TodoExpression>),
 }
 
 #[derive(Clone, Debug)]

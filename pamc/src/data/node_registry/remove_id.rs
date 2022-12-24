@@ -281,6 +281,26 @@ pub use crate::data::simplified_ast::IdentifierName;
 pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TodoExpression {
+    pub span: Option<TextSpan>,
+}
+impl RemoveId for with_id::TodoExpression {
+    type Output = TodoExpression;
+    fn remove_id(&self) -> Self::Output {
+        TodoExpression { span: self.span }
+    }
+}
+impl AddId for TodoExpression {
+    type Output = with_id::TodoExpression;
+    fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
+        with_id::TodoExpression {
+            id,
+            span: self.span,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Call {
     pub span: Option<TextSpan>,
     pub callee_id: ExpressionId,

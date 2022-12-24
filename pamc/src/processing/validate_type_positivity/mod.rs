@@ -112,6 +112,7 @@ fn validate_type_positivity_in_expression(
 ) -> Result<(), TypePositivityError> {
     match id {
         ExpressionId::Name(_) => Ok(()),
+        ExpressionId::Todo(_) => Ok(()),
         ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
 
         ExpressionId::Call(call_id) => {

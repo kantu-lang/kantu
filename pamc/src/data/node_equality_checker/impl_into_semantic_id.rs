@@ -43,6 +43,7 @@ impl IntoSemanticId for ExpressionId {
             ExpressionId::Name(id) => {
                 ExpressionSemanticId::Name(id.into_semantic_id(registry, sreg))
             }
+            ExpressionId::Todo(_) => ExpressionSemanticId::Todo,
             ExpressionId::Call(id) => {
                 ExpressionSemanticId::Call(id.into_semantic_id(registry, sreg))
             }

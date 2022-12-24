@@ -184,6 +184,7 @@ pub fn expand_let_statement(
 pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionId) -> Expression {
     match id {
         light::ExpressionId::Name(id) => Expression::Name(expand_name_expression(registry, id)),
+        light::ExpressionId::Todo(id) => Expression::Todo(registry.get(id).span),
         light::ExpressionId::Call(id) => Expression::Call(Box::new(expand_call(registry, id))),
         light::ExpressionId::Fun(id) => Expression::Fun(Box::new(expand_fun(registry, id))),
         light::ExpressionId::Match(id) => Expression::Match(Box::new(expand_match(registry, id))),

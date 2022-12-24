@@ -9,6 +9,9 @@ mod file_item;
 pub(in crate::processing::type_check) use name_expression::*;
 mod name_expression;
 
+pub(in crate::processing::type_check) use todo_expression::*;
+mod todo_expression;
+
 pub(in crate::processing::type_check) use call::*;
 mod call;
 
@@ -50,4 +53,22 @@ fn get_type_of_expression(
     }
 
     untaint_err(state, (coercion_target_id, id), f)
+}
+
+pub(in crate::processing::type_check) fn get_type_of_expression_dirty(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    id: ExpressionId,
+) -> Result<NormalFormId, Tainted<TypeCheckError>> {
+    match id {
+        ExpressionId::Name(name) => Ok(get_type_of_name(state, name)),
+        ExpressionId::Todo(todo) => get_type_of_todo_dirty(state, coercion_target_id, todo),
+        ExpressionId::Call(call) => get_type_of_call_dirty(state, call),
+        ExpressionId::Fun(fun) => get_type_of_fun_dirty(state, fun),
+        ExpressionId::Match(match_) => get_type_of_match_dirty(state, coercion_target_id, match_),
+        ExpressionId::Forall(forall) => get_type_of_forall_dirty(state, forall),
+        ExpressionId::Check(check) => {
+            get_type_of_check_expression_dirty(state, coercion_target_id, check)
+        }
+    }
 }

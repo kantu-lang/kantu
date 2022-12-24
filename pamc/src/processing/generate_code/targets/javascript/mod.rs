@@ -5,7 +5,7 @@ use crate::data::{
         NonEmptyMatchCaseParamListId, NonEmptyParamListId,
     },
     non_empty_vec::OptionalNonEmptyVecLen,
-    FileId,
+    FileId, TextSpan,
 };
 use crate::processing::generate_code::CompileTarget;
 

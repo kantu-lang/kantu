@@ -29,6 +29,7 @@ fn generate_code_for_file(
         let mut out = vec![];
         out.extend(generate_code_for_type1_and_type0_without_adding_to_context());
         out.extend(generate_code_for_explosion_thrower());
+        out.extend(generate_code_for_todo_error_thrower());
         for item_id in item_ids {
             match *item_id {
                 light::FileItemNodeId::Type(type_id) => {
@@ -93,6 +94,32 @@ fn generate_code_for_explosion_thrower() -> Vec<FileItem> {
                 callee: Expression::Identifier(ValidJsIdentifierName("Error".to_string())),
                 args: vec![Expression::Literal(Literal::String(JsStringLiteral {
                     unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions.".to_string(),
+                }))],
+            })))],
+        })),
+    })]
+}
+
+fn generate_code_for_todo_error_thrower() -> Vec<FileItem> {
+    let thrower_name = ValidJsIdentifierName(TODO_ERROR_THROWER_NAME.to_string());
+    vec![FileItem::Const(ConstStatement {
+        name: thrower_name.clone(),
+        value: Expression::Function(Box::new(Function {
+            name: thrower_name,
+            params: Params::Standard(vec![ValidJsIdentifierName(
+                TODO_ERROR_THROWER_PARAM0_NAME.to_string(),
+            )]),
+            body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
+                callee: Expression::Identifier(ValidJsIdentifierName("Error".to_string())),
+                args: vec![Expression::BinaryOp(Box::new(BinaryOp {
+                    op: BinaryOpKind::Plus,
+                    left: Expression::Literal(Literal::String(JsStringLiteral {
+                        unescaped: "This functionality is not implemented. Source span: "
+                            .to_string(),
+                    })),
+                    right: Expression::Identifier(ValidJsIdentifierName(
+                        TODO_ERROR_THROWER_PARAM0_NAME.to_string(),
+                    )),
                 }))],
             })))],
         })),
@@ -359,6 +386,7 @@ fn generate_code_for_expression(
     let expression = registry.expression_ref(id);
     match expression {
         ExpressionRef::Name(name) => generate_code_for_name_expression(registry, context, name),
+        ExpressionRef::Todo(todo) => generate_code_for_todo_expression(registry, context, todo),
         ExpressionRef::Call(call) => generate_code_for_call(registry, context, call),
         ExpressionRef::Fun(fun) => generate_code_for_fun(registry, context, fun),
         ExpressionRef::Match(match_) => generate_code_for_match(registry, context, match_),
@@ -376,6 +404,26 @@ fn generate_code_for_name_expression(
 ) -> Result<Expression, CompileToJavaScriptError> {
     let identifier_name = context.js_name(name.db_index);
     Ok(Expression::Identifier(identifier_name))
+}
+
+fn generate_code_for_todo_expression(
+    _registry: &NodeRegistry,
+    _context: &mut Context,
+    todo: &light::TodoExpression,
+) -> Result<Expression, CompileToJavaScriptError> {
+    Ok(Expression::Call(Box::new(Call {
+        callee: Expression::Identifier(ValidJsIdentifierName(TODO_ERROR_THROWER_NAME.to_string())),
+        args: vec![Expression::Literal(Literal::String(JsStringLiteral {
+            unescaped: todo
+                .span
+                .map(format_text_span)
+                .unwrap_or_else(|| "".to_string()),
+        }))],
+    })))
+}
+
+fn format_text_span(span: TextSpan) -> String {
+    format!("{:?}", span)
 }
 
 fn generate_code_for_call(
@@ -573,6 +621,8 @@ const TYPE_SPECIES_VALUE__TYPE0: &str = "Type0";
 const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
 const TYPE_ARGS_KEY: &str = "type_args";
 const EXPLOSION_THROWER_NAME: &str = "unreachable";
+const TODO_ERROR_THROWER_NAME: &str = "unimplemented";
+const TODO_ERROR_THROWER_PARAM0_NAME: &str = "unimplemented_span";
 const DISPOSABLE_NAME_PREFIX: &str = "temp";
 
 fn generate_code_for_forall(
@@ -769,7 +819,11 @@ impl Context {
                     js_name: ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string()),
                 },
             ],
-            other_reserved_names: vec![ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string())],
+            other_reserved_names: vec![
+                ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string()),
+                ValidJsIdentifierName(TODO_ERROR_THROWER_NAME.to_string()),
+                ValidJsIdentifierName(TODO_ERROR_THROWER_PARAM0_NAME.to_string()),
+            ],
         }
     }
 }

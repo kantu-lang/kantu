@@ -60,6 +60,7 @@ impl<T> Ord for SemanticId<T> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ExpressionSemanticId {
     Name(SemanticId<stripped::NameExpression>),
+    Todo,
     Call(SemanticId<stripped::Call>),
     Fun(SemanticId<stripped::Fun>),
     Match(SemanticId<stripped::Match>),

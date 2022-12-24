@@ -104,6 +104,7 @@ impl WithoutSpans for ExpressionId {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         match self {
             ExpressionId::Name(id) => ExpressionId::Name(id.without_spans(registry)),
+            ExpressionId::Todo(id) => ExpressionId::Todo(id.without_spans(registry)),
             ExpressionId::Call(id) => ExpressionId::Call(id.without_spans(registry)),
             ExpressionId::Fun(id) => ExpressionId::Fun(id.without_spans(registry)),
             ExpressionId::Match(id) => ExpressionId::Match(id.without_spans(registry)),
@@ -131,6 +132,15 @@ impl WithoutSpans for NonEmptyListId<NodeId<Identifier>> {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
         registry.add_list(new)
+    }
+}
+
+impl WithoutSpans for NodeId<TodoExpression> {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        registry.add_and_overwrite_id(TodoExpression {
+            id: dummy_id(),
+            span: None,
+        })
     }
 }
 

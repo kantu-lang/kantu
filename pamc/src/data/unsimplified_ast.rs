@@ -72,6 +72,7 @@ pub struct LetStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
     Identifier(Identifier),
+    Todo(TextSpan),
     Dot(Box<Dot>),
     Call(Box<Call>),
     Fun(Box<Fun>),
@@ -84,6 +85,7 @@ impl Expression {
     pub fn span(&self) -> TextSpan {
         match self {
             Expression::Identifier(identifier) => identifier.span,
+            Expression::Todo(span) => *span,
             Expression::Dot(dot) => dot.span,
             Expression::Call(call) => call.span,
             Expression::Fun(fun) => fun.span,

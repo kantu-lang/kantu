@@ -32,6 +32,7 @@ pub fn format_expression(
 ) -> String {
     match expression {
         Expression::Name(name) => format_name(name, indent_level, options),
+        Expression::Todo(_) => format!("todo"),
         Expression::Call(call) => format_call(call, indent_level, options),
         Expression::Fun(fun) => format_fun(fun, indent_level, options),
         Expression::Match(match_) => format_match(match_, indent_level, options),

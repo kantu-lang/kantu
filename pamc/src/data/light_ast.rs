@@ -98,6 +98,12 @@ pub use crate::data::simplified_ast::IdentifierName;
 pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TodoExpression {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Call {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,

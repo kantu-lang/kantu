@@ -3,6 +3,7 @@ use crate::data::{
     light_ast::*,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::NonEmptyVec,
+    TextSpan,
 };
 
 fn dummy_id<T>() -> NodeId<T> {
@@ -180,6 +181,10 @@ pub fn register_expression(
             let id = register_name_expression(registry, unregistered);
             ExpressionId::Name(id)
         }
+        heavy::Expression::Todo(span) => {
+            let id = register_todo_expression(registry, span);
+            ExpressionId::Todo(id)
+        }
         heavy::Expression::Call(unregistered) => {
             let id = register_call(registry, *unregistered);
             ExpressionId::Call(id)
@@ -216,6 +221,16 @@ pub fn register_name_expression(
         span: unregistered.span,
         component_list_id,
         db_index: unregistered.db_index,
+    })
+}
+
+pub fn register_todo_expression(
+    registry: &mut NodeRegistry,
+    span: Option<TextSpan>,
+) -> NodeId<TodoExpression> {
+    registry.add_and_overwrite_id(TodoExpression {
+        id: dummy_id(),
+        span,
     })
 }
 

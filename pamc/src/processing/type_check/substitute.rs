@@ -71,6 +71,9 @@ impl SubstituteWithoutRemovingSpans for ExpressionId {
             ExpressionId::Name(name_id) => {
                 name_id.subst_without_removing_spans(substitution, state)
             }
+            ExpressionId::Todo(todo_id) => {
+                todo_id.subst_without_removing_spans(substitution, state)
+            }
             ExpressionId::Call(call_id) => {
                 call_id.subst_without_removing_spans(substitution, state)
             }
@@ -97,6 +100,18 @@ impl SubstituteWithoutRemovingSpans for NodeId<NameExpression> {
         state: &mut ContextlessState,
     ) -> Self::Output {
         subst_if_equal_and_get_status(ExpressionId::Name(self), substitution, state).0
+    }
+}
+
+impl SubstituteWithoutRemovingSpans for NodeId<TodoExpression> {
+    type Output = ExpressionId;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        subst_if_equal_and_get_status(ExpressionId::Todo(self), substitution, state).0
     }
 }
 

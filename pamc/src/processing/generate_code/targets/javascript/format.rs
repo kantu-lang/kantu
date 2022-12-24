@@ -238,6 +238,13 @@ fn write_binary_op(out: &mut Writer, binary_op: &BinaryOp, options: &FormatOptio
             write_expression(out, &binary_op.right, options);
             out.push_str(")");
         }
+        BinaryOpKind::Plus => {
+            out.push_str("(");
+            write_expression(out, &binary_op.left, options);
+            out.push_str(" + ");
+            write_expression(out, &binary_op.right, options);
+            out.push_str(")");
+        }
         BinaryOpKind::Index => {
             write_expression(out, &binary_op.left, options);
             out.push_str("[");

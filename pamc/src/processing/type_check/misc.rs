@@ -386,6 +386,10 @@ fn is_left_inclusive_subterm_of_right(
             // This must be false because we already checked for equality.
             false
         }
+        ExpressionId::Todo(_) => {
+            // This must be false because we already checked for equality.
+            false
+        }
         ExpressionId::Call(right_id) => {
             let right = state.registry.get(right_id).clone();
 
@@ -1036,6 +1040,7 @@ fn min_db_index_in_expression_relative_to_cutoff(
 ) -> MinDbIndex {
     match id {
         ExpressionId::Name(id) => min_db_index_in_name_relative_to_cutoff(registry, id, cutoff),
+        ExpressionId::Todo(_) => MinDbIndex::Infinity,
         ExpressionId::Call(id) => min_db_index_in_call_relative_to_cutoff(registry, id, cutoff),
         ExpressionId::Fun(id) => min_db_index_in_fun_relative_to_cutoff(registry, id, cutoff),
         ExpressionId::Match(id) => min_db_index_in_match_relative_to_cutoff(registry, id, cutoff),

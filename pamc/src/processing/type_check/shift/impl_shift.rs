@@ -114,6 +114,9 @@ impl ShiftDbIndices for ExpressionId {
             ExpressionId::Name(name_id) => {
                 ExpressionId::Name(name_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
+            ExpressionId::Todo(todo_id) => {
+                ExpressionId::Todo(todo_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            }
             ExpressionId::Call(call_id) => {
                 ExpressionId::Call(call_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
@@ -149,6 +152,19 @@ impl ShiftDbIndices for NodeId<NameExpression> {
             ..*name
         };
         Ok(registry.add_and_overwrite_id(shifted_with_dummy_id))
+    }
+}
+
+impl ShiftDbIndices for NodeId<TodoExpression> {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        _f: F,
+        _cutoff: usize,
+        _registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        Ok(self)
     }
 }
 
