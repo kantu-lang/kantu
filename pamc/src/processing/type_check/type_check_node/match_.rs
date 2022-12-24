@@ -70,6 +70,19 @@ fn get_type_of_match_case_dirty(
     matchee_type_id: NormalFormId,
     matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
+    {
+        use crate::processing::test_utils::{
+            expand_lightened::expand_expression, format::format_expression_with_default_options,
+        };
+
+        println!(
+            "NORMALIZED_MATCHEE: {}",
+            format_expression_with_default_options(&expand_expression(
+                state.registry,
+                normalized_matchee_id.raw()
+            ))
+        );
+    }
     let case = state.registry.get(case_id).clone();
     let ParameterizedTerms {
         matchee_id: parameterized_matchee_id,

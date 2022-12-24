@@ -20,14 +20,15 @@ let mismatched_comparees_non_question = fun _(n: Nat): Nat {
     }
 };
 
-let m = Nat.O;
-let mismatched_comparees_question = match m {
-    // WARNING
-    .O => check (m = ?) {
-        Nat.O
-    },
-    // WARNING
-    .S(m') => check (m = ?) {
-        Nat.O
-    },
+let mismatched_comparees_question = fun _(m: Nat): Nat {
+    match m {
+        // WARNING
+        .O => check (m = ?) {
+            Nat.O
+        },
+        // WARNING
+        .S(m') => check (m = ?) {
+            Nat.O
+        },
+    }
 };
