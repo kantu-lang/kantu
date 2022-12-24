@@ -4,10 +4,12 @@ A simple programming language that supports dependent types.
 
 ## Pronunciation
 
-Official: /pamˈlihu/ (IPA).
+In practice, "pom-LEE-hoo" is good enough.
+In this case, the syllables would rhyme with "mom", "glee", and "who", respectively.
+The second syllable is emphasized (which is why "LEE" is written in all capital letters).
 
-In practice, English speakers such as myself will often say something closer "pom-lee-hoo"
-(i.e., the syllables rhyme with "mom", "glee", and "who", respectively).
+Officially, any valid [Lojbanic pronunciation](https://lojban.org/publications/cll/cll_v1.1_xhtml-section-chunks/section-basic-phonetics.html) is correct.
+For example, /pamˈlihu/ (IPA).
 
 The name is derived from the Lojbanic word _pamli'u_, which roughly
 means "to go on a date".
