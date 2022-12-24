@@ -1,9 +1,5 @@
 use crate::{
-    data::{
-        light_ast::*,
-        node_registry::{NodeId, NodeRegistry},
-        FileId,
-    },
+    data::{light_ast::*, node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
         generate_code::{targets::javascript::JavaScript, CompileTarget},
@@ -12,7 +8,7 @@ use crate::{
         parse::parse_file,
         simplify_ast::simplify_file,
         type_check::{
-            type_check_files, LhsIsGoalKw, NormalFormAssertionWarning, TypeAssertionWarning,
+            type_check_files, NormalFormAssertionWarning, TypeAssertionWarning,
             TypeCheckFailureReason, TypeCheckWarning,
         },
         validate_fun_recursion::validate_fun_recursion_in_file,
