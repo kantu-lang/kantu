@@ -16,6 +16,9 @@ pub enum TypeCheckWarningSummary {
     TypeAssertionGoalLhs {
         assertion_src: String,
     },
+    TypeAssertionLhsTypeIsType1 {
+        assertion_src: String,
+    },
     TypeAssertionCompareeTypeCheckFailure {
         reason: TypeCheckFailureReasonSummary,
     },
@@ -245,6 +248,13 @@ fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) 
                 indent_second_line_onward(assertion_src, 8),
             )
         }
+
+        TypeCheckWarningSummary::TypeAssertionLhsTypeIsType1 { assertion_src } => {
+            format!(
+                "TypeAssertion::LhsTypeIsType1 {{\n    assertion: {},\n}}",
+                indent_second_line_onward(assertion_src, 8),
+            )
+        }
         TypeCheckWarningSummary::TypeAssertionCompareeTypeCheckFailure { reason } => {
             format!(
                 "TypeAssertion::CompareeTypeCheckFailure {{\n    reason: {},\n}}",
@@ -341,6 +351,15 @@ fn summarize_type_assertion_warning(
     match warning {
         TypeAssertionWarning::GoalLhs(assertion_id) => {
             TypeCheckWarningSummary::TypeAssertionGoalLhs {
+                assertion_src: format_check_assertion(
+                    &expand_check_assertion(registry, *assertion_id),
+                    0,
+                    &FORMAT_OPTIONS,
+                ),
+            }
+        }
+        TypeAssertionWarning::LhsTypeIsType1(assertion_id) => {
+            TypeCheckWarningSummary::TypeAssertionLhsTypeIsType1 {
                 assertion_src: format_check_assertion(
                     &expand_check_assertion(registry, *assertion_id),
                     0,

@@ -101,6 +101,7 @@ pub enum TypeCheckWarning {
 #[derive(Clone, Debug)]
 pub enum TypeAssertionWarning {
     GoalLhs(NodeId<CheckAssertion>),
+    LhsTypeIsType1(NodeId<CheckAssertion>),
     CompareeTypeCheckFailure(TypeCheckFailureReason),
     TypesDoNotMatch {
         left_id: ExpressionId,

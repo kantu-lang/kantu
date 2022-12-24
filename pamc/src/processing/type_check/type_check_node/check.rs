@@ -130,6 +130,8 @@ fn get_non_goal_type_assertion_warnings(
                         rewritten_right_id,
                     ) {
                         vec![]
+                    } else if is_term_equal_to_type1(state, rewritten_left_type_id) {
+                        vec![TypeAssertionWarning::LhsTypeIsType1(assertion.id)]
                     } else {
                         vec![TypeAssertionWarning::TypesDoNotMatch {
                             left_id: left_expression_id,
@@ -156,11 +158,15 @@ fn get_non_goal_type_assertion_warnings(
                     Ok(rewritten) => rewritten,
                     Err(Exploded) => (left_type_id,),
                 };
-            vec![TypeAssertionWarning::TypesDoNotMatch {
-                left_id: left_expression_id,
-                rewritten_left_type_id,
-                original_and_rewritten_right_ids: Err(RhsIsQuestionMark),
-            }]
+            if is_term_equal_to_type1(state, rewritten_left_type_id) {
+                vec![TypeAssertionWarning::LhsTypeIsType1(assertion.id)]
+            } else {
+                vec![TypeAssertionWarning::TypesDoNotMatch {
+                    left_id: left_expression_id,
+                    rewritten_left_type_id,
+                    original_and_rewritten_right_ids: Err(RhsIsQuestionMark),
+                }]
+            }
         }
         (other_left, other_right) => {
             let mut out = vec![];

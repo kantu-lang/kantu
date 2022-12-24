@@ -106,6 +106,16 @@ pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId)
     }
 }
 
+pub(super) fn is_term_equal_to_type1(state: &State, term: NormalFormId) -> bool {
+    if let ExpressionId::Name(name_id) = term.raw() {
+        let name = state.registry.get(name_id);
+        let i = name.db_index;
+        i == state.context.type1_dbi()
+    } else {
+        false
+    }
+}
+
 pub(super) fn are_types_mutually_assignable(
     state: &mut State,
     left: NormalFormId,

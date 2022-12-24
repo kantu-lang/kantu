@@ -46,6 +46,18 @@ fn type_assertion_goal_lhs() {
 }
 
 #[test]
+fn type_of_type0() {
+    use TypeCheckWarningSummary::*;
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/type_of_type0.ph"
+    );
+    let expected_warnings = vec![TypeAssertionLhsTypeIsType1 {
+        assertion_src: "Type: ?".to_string(),
+    }];
+    expect_success_with_warnings(src, &expected_warnings);
+}
+
+#[test]
 fn type_assertion_type_check_failure() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
