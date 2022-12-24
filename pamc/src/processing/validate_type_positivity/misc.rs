@@ -184,7 +184,7 @@ pub fn verify_that_target_does_not_appear_in_fun(
     )?;
 
     let body_target = DbIndex(target.0 + fun.param_list_id.len() + 1);
-    verify_that_target_does_not_appear_in_expression(registry, fun.return_type_id, body_target)?;
+    verify_that_target_does_not_appear_in_expression(registry, fun.body_id, body_target)?;
 
     Ok(())
 }

@@ -113,8 +113,6 @@ fn expect_non_adt_callee_error(src: &str, expected_call_src: &str) {
     });
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn non_adt_callee() {
     let src = include_str!("../../sample_code/should_fail/positivity/non_adt_callee.ph");
