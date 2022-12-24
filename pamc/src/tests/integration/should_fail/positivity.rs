@@ -122,7 +122,7 @@ fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
             call_id: _,
             callee_id,
         } => {
-            let actual_extraneous_match_case_src = format_expression(
+            let actual_src = format_expression(
                 &expand_expression(registry, callee_id),
                 0,
                 &FormatOptions {
@@ -131,7 +131,7 @@ fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
                     print_fun_body_status: false,
                 },
             );
-            assert_eq_up_to_white_space(expected_callee_src, &actual_extraneous_match_case_src);
+            assert_eq_up_to_white_space(expected_callee_src, &actual_src);
         }
         _ => panic!("Unexpected error: {:?}", err),
     });
@@ -160,4 +160,45 @@ fn expected_type_got_fun() {
     let src = include_str!("../../sample_code/should_fail/positivity/expected_type_got_fun.ph");
     let expected_fun_name = IdentifierName::Standard("this_should_not_be_here".to_string());
     expect_expected_type_got_fun_error(src, &expected_fun_name);
+}
+
+fn expect_variant_return_type_type_arg_arity_mismatch_error(
+    src: &str,
+    expected_expected_arity: usize,
+    expected_return_type_src: &str,
+) {
+    expect_positivity_error(src, |registry, err| match err {
+        TypePositivityError::VariantReturnTypeTypeArgArityMismatch {
+            actual: _,
+            expected,
+            return_type_id,
+        } => {
+            assert_eq!(expected, expected_expected_arity);
+
+            let actual_src = format_expression(
+                &expand_expression(registry, return_type_id),
+                0,
+                &FormatOptions {
+                    ident_size_in_spaces: 4,
+                    print_db_indices: false,
+                    print_fun_body_status: false,
+                },
+            );
+            assert_eq_up_to_white_space(expected_return_type_src, &actual_src);
+        }
+        _ => panic!("Unexpected error: {:?}", err),
+    });
+}
+
+#[test]
+fn expected_1_type_arg_got_0() {
+    let src = include_str!("../../sample_code/should_fail/positivity/expected_1_type_arg_got_0.ph");
+    expect_variant_return_type_type_arg_arity_mismatch_error(src, 1, "Not");
+}
+
+#[test]
+fn expected_2_type_args_got_1() {
+    let src =
+        include_str!("../../sample_code/should_fail/positivity/expected_2_type_args_got_1.ph");
+    expect_variant_return_type_type_arg_arity_mismatch_error(src, 2, "Not(Unit.C,)");
 }
