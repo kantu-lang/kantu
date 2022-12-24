@@ -353,9 +353,10 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
 
     let variant_return_type_id = match variant.return_type_id {
         ExpressionId::Name(_) => {
-            return Err(TypePositivityError::VariantReturnTypeArityMismatch {
+            return Err(TypePositivityError::VariantReturnTypeTypeArgArityMismatch {
                 actual: 0,
-                expected: type_param_arity
+                expected: type_param_arity,
+                return_type_id: variant.return_type_id,
             });
         }
         ExpressionId::Call(variant_return_type_id) => {
@@ -366,9 +367,10 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
     let variant_return_type = registry.get(variant_return_type_id).clone();
 
     let Some(type_arg_id) = get_ith_call_arg_value(registry, target_index, variant_return_type.arg_list_id) else {
-        return Err(TypePositivityError::VariantReturnTypeArityMismatch {
+        return Err(TypePositivityError::VariantReturnTypeTypeArgArityMismatch {
             actual: 0,
-            expected: type_param_arity
+            expected: type_param_arity,
+            return_type_id: variant.return_type_id,
         })
     };
 

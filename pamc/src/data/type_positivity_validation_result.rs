@@ -23,8 +23,8 @@ pub enum TypePositivityError {
         callee_id: ExpressionId,
     },
     IllegalVariableAppearance(NodeId<NameExpression>),
-    // TODO: Test
-    VariantReturnTypeArityMismatch {
+    VariantReturnTypeTypeArgArityMismatch {
+        return_type_id: ExpressionId,
         actual: usize,
         expected: usize,
     },
