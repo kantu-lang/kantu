@@ -105,10 +105,10 @@ fn nf_no_goal_exists() {
 }
 
 #[test]
-fn nf_assertion_type_check_failure() {
+fn nf_non_goal_assertion_type_check_failure() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_assertion_type_check_failure.ph"
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_non_goal_assertion_type_check_failure.ph"
     );
     let expected_warnings = vec![
         NormalFormAssertionCompareeTypeCheckFailure {
