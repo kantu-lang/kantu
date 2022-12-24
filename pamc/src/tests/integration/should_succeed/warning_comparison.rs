@@ -1,6 +1,9 @@
 use super::*;
 
-use crate::processing::test_utils::{expand_lightened::*, format::*};
+use crate::processing::{
+    test_utils::{expand_lightened::*, format::*},
+    type_check,
+};
 
 const FORMAT_OPTIONS: FormatOptions = FormatOptions {
     ident_size_in_spaces: 4,
@@ -13,18 +16,18 @@ pub enum TypeCheckWarningSummary {
     TypeAssertionGoalLhs {
         assertion_src: String,
     },
-    TypeAssertionTypeCheckFailure {
+    TypeAssertionCompareeTypeCheckFailure {
         reason: TypeCheckFailureReasonSummary,
     },
     TypeAssertionTypeMismatch {
         original_left_src: String,
-        rewritten_left_src: String,
+        rewritten_left_type_src: String,
         original_right_src: String,
         rewritten_right_src: String,
     },
     TypeAssertionTypeQuestionMark {
         original_left_src: String,
-        rewritten_left_src: String,
+        rewritten_left_type_src: String,
     },
 
     NormalFormAssertionNoGoalExists {
@@ -50,22 +53,6 @@ pub enum TypeCheckFailureReasonSummary {
     BindError,
     IllegalRecursionError,
     TypeCheckError,
-}
-
-impl TypeCheckFailureReasonSummary {
-    pub fn new(reason: &TypeCheckFailureReason) -> Self {
-        match reason {
-            TypeCheckFailureReason::CannotTypeCheck(InvalidExpressionId::SymbolicallyInvalid(
-                _,
-            )) => Self::BindError,
-
-            TypeCheckFailureReason::CannotTypeCheck(InvalidExpressionId::IllegalFunRecursion(
-                _,
-            )) => Self::IllegalRecursionError,
-
-            TypeCheckFailureReason::TypeCheckError(_, _) => Self::TypeCheckError,
-        }
-    }
 }
 
 pub fn assert_expectations_match_actual_warnings(
@@ -250,7 +237,85 @@ fn summarize_warning(
     registry: &NodeRegistry,
     warning: &TypeCheckWarning,
 ) -> TypeCheckWarningSummary {
-    unimplemented!()
+    match warning {
+        TypeCheckWarning::TypeAssertion(warning) => {
+            summarize_type_assertion_warning(registry, warning)
+        }
+        TypeCheckWarning::NormalFormAssertion(warning) => {
+            summarize_normal_form_assertion_warning(registry, warning)
+        }
+    }
+}
+
+fn summarize_type_assertion_warning(
+    registry: &NodeRegistry,
+    warning: &TypeAssertionWarning,
+) -> TypeCheckWarningSummary {
+    match warning {
+        TypeAssertionWarning::GoalLhs(assertion_id) => {
+            TypeCheckWarningSummary::TypeAssertionGoalLhs {
+                assertion_src: format_check_assertion(
+                    &expand_check_assertion(registry, *assertion_id),
+                    0,
+                    &FORMAT_OPTIONS,
+                ),
+            }
+        }
+        TypeAssertionWarning::CompareeTypeCheckFailure(reason) => {
+            TypeCheckWarningSummary::TypeAssertionCompareeTypeCheckFailure {
+                reason: summarize_type_check_failure_reason(reason),
+            }
+        }
+        TypeAssertionWarning::TypesDoNotMatch {
+            left_id,
+            rewritten_left_type_id,
+            original_and_rewritten_right_ids: Ok((original_right_id, rewritten_right_id)),
+        } => TypeCheckWarningSummary::TypeAssertionTypeMismatch {
+            original_left_src: format_expr(registry, *left_id),
+            rewritten_left_type_src: format_expr(registry, rewritten_left_type_id.raw()),
+            original_right_src: format_expr(registry, *original_right_id),
+            rewritten_right_src: format_expr(registry, rewritten_right_id.raw()),
+        },
+        TypeAssertionWarning::TypesDoNotMatch {
+            left_id,
+            rewritten_left_type_id,
+            original_and_rewritten_right_ids: Err(type_check::RhsIsQuestionMark),
+        } => TypeCheckWarningSummary::TypeAssertionTypeQuestionMark {
+            original_left_src: format_expr(registry, *left_id),
+            rewritten_left_type_src: format_expr(registry, rewritten_left_type_id.raw()),
+        },
+    }
+}
+
+fn format_expr(registry: &NodeRegistry, id: ExpressionId) -> String {
+    format_expression(&expand_expression(registry, id), 0, &FORMAT_OPTIONS)
+}
+
+fn summarize_normal_form_assertion_warning(
+    registry: &NodeRegistry,
+    warning: &NormalFormAssertionWarning,
+) -> TypeCheckWarningSummary {
+    match warning {
+        _ => unimplemented!(),
+    }
+}
+
+pub fn summarize_type_check_failure_reason(
+    reason: &TypeCheckFailureReason,
+) -> TypeCheckFailureReasonSummary {
+    match reason {
+        TypeCheckFailureReason::CannotTypeCheck(InvalidExpressionId::SymbolicallyInvalid(_)) => {
+            TypeCheckFailureReasonSummary::BindError
+        }
+
+        TypeCheckFailureReason::CannotTypeCheck(InvalidExpressionId::IllegalFunRecursion(_)) => {
+            TypeCheckFailureReasonSummary::IllegalRecursionError
+        }
+
+        TypeCheckFailureReason::TypeCheckError(_, _) => {
+            TypeCheckFailureReasonSummary::TypeCheckError
+        }
+    }
 }
 
 // TODO: Delete
