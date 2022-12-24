@@ -109,3 +109,10 @@ fn misordered_fun_params() {
         "forall(~x: Nat, ~y: Nat,) { Nat }",
     );
 }
+
+#[test]
+fn wrong_empty() {
+    let src =
+        include_str!("../../../sample_code/should_fail/type_check/type_mismatch/wrong_empty.ph");
+    expect_type_mismatch_error(src, "e1", "Empty2", "Empty1");
+}

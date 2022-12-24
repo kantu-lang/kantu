@@ -138,15 +138,6 @@ pub(super) fn is_left_type_assignable_to_right_type(
     state
         .equality_checker
         .eq(left.raw(), right.raw(), state.registry)
-        || is_term_equal_to_a_trivially_empty_type(state, left)
-}
-
-fn is_term_equal_to_a_trivially_empty_type(state: &mut State, term_id: NormalFormId) -> bool {
-    if let Some(adt) = try_as_normal_form_adt_expression(state, term_id) {
-        adt.variant_name_list_id.len() == 0
-    } else {
-        false
-    }
 }
 
 pub use std::convert::Infallible;

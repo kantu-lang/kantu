@@ -17,8 +17,8 @@ fn optional_commas() {
 }
 
 #[test]
-fn empty_implies_anything() {
-    let src = include_str!("../../sample_code/should_succeed/should_succeed_without_warnings/empty_implies_anything.ph");
+fn empty_match_can_be_assigned_to_anything() {
+    let src = include_str!("../../sample_code/should_succeed/should_succeed_without_warnings/empty_match_can_be_assigned_to_anything.ph");
     expect_success_with_no_warnings(src);
 }
 

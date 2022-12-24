@@ -31,5 +31,5 @@ let empty_implies_unit3 = fun empty_implies_unit3_(e1: Empty, e2: Empty2, b: Boo
 };
 
 let empty_implies_empty2 = fun empty_implies_empty2(e: Empty): Empty2 {
-    e
+    match e {}
 };
