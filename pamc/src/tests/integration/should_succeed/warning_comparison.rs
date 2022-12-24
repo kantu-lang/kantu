@@ -62,8 +62,8 @@ pub fn assert_expectations_match_actual_warnings(
 ) {
     let expected_warnings = format_expected_warnings(registry, expected_warnings);
     let actual_warnings = format_actual_warnings(registry, actual_warnings);
-    assert_all_emitted_warnings_were_expected(registry, &expected_warnings, &actual_warnings);
-    assert_all_expected_warnings_were_emitted(registry, &expected_warnings, &actual_warnings);
+    assert_all_emitted_warnings_were_expected(&expected_warnings, &actual_warnings);
+    assert_all_expected_warnings_were_emitted(&expected_warnings, &actual_warnings);
 }
 
 fn format_expected_warnings(
@@ -87,7 +87,6 @@ fn format_actual_warnings(
 }
 
 fn assert_all_emitted_warnings_were_expected<T: AsRef<str>, U: AsRef<str>>(
-    registry: &NodeRegistry,
     expected_warnings: &[T],
     actual_warnings: &[U],
 ) {
@@ -116,7 +115,6 @@ fn assert_all_emitted_warnings_were_expected<T: AsRef<str>, U: AsRef<str>>(
 }
 
 fn assert_all_expected_warnings_were_emitted<T: AsRef<str>, U: AsRef<str>>(
-    registry: &NodeRegistry,
     expected_warnings: &[T],
     actual_warnings: &[U],
 ) {
@@ -173,6 +171,21 @@ fn indent(s: &str, n: usize) -> String {
         .join("\n")
 }
 
+fn indent_second_line_onward(s: &str, n: usize) -> String {
+    let indent = " ".repeat(n);
+    s.lines()
+        .enumerate()
+        .map(|(i, line)| {
+            if i == 0 {
+                line.to_string()
+            } else {
+                format!("{}{}", indent, line)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn try_assert_eq_up_to_white_space(left: &str, right: &str) -> Result<(), String> {
     let mut left_non_whitespace = left.chars().enumerate().filter(|(_, c)| !c.is_whitespace());
     let left_non_whitespace_len = left_non_whitespace.clone().count();
@@ -224,8 +237,82 @@ fn try_assert_eq_up_to_white_space(left: &str, right: &str) -> Result<(), String
     }
 }
 
-fn format_expected_warning(registry: &NodeRegistry, warning: &TypeCheckWarningSummary) -> String {
-    unimplemented!()
+fn format_expected_warning(_: &NodeRegistry, warning: &TypeCheckWarningSummary) -> String {
+    match warning {
+        TypeCheckWarningSummary::TypeAssertionGoalLhs { assertion_src } => {
+            format!(
+                "TypeAssertion::GoalLhs {{\nassertion: {},\n}}",
+                indent_second_line_onward(assertion_src, 8),
+            )
+        }
+        TypeCheckWarningSummary::TypeAssertionCompareeTypeCheckFailure { reason } => {
+            format!(
+                "TypeAssertion::CompareeTypeCheckFailure {{\nreason: {},\n}}",
+                indent_second_line_onward(&format!("{:?}", reason), 8),
+            )
+        }
+        TypeCheckWarningSummary::TypeAssertionTypeMismatch {
+            original_left_src,
+            rewritten_left_type_src,
+            original_right_src,
+            rewritten_right_src,
+        } => {
+            format!(
+                "TypeAssertion::TypeMismatch {{\noriginal_left: {},\nrewritten_left_type: {},\noriginal_right: {},\nrewritten_right: {},\n}}",
+                indent_second_line_onward(original_left_src, 8),
+                indent_second_line_onward(rewritten_left_type_src, 8),
+                indent_second_line_onward(original_right_src, 8),
+                indent_second_line_onward(rewritten_right_src, 8),
+            )
+        }
+        TypeCheckWarningSummary::TypeAssertionTypeQuestionMark {
+            original_left_src,
+            rewritten_left_type_src,
+        } => {
+            format!(
+                "TypeAssertion::TypeQuestionMark {{\noriginal_left: {},\nrewritten_left_type: {},\n}}",
+                indent_second_line_onward(original_left_src, 8),
+                indent_second_line_onward(rewritten_left_type_src, 8),
+            )
+        }
+
+        TypeCheckWarningSummary::NormalFormAssertionNoGoalExists { assertion_src } => {
+            format!(
+                "NormalFormAssertion::NoGoalExists {{\nassertion: {},\n}}",
+                indent_second_line_onward(assertion_src, 8),
+            )
+        }
+        TypeCheckWarningSummary::NormalFormAssertionCompareeTypeCheckFailure { reason } => {
+            format!(
+                "NormalFormAssertion::CompareeTypeCheckFailure {{\nreason: {},\n}}",
+                indent_second_line_onward(&format!("{:?}", reason), 8),
+            )
+        }
+        TypeCheckWarningSummary::NormalFormAssertionCompareeMismatch {
+            original_left_src,
+            rewritten_left_src,
+            original_right_src,
+            rewritten_right_src,
+        } => {
+            format!(
+                "NormalFormAssertion::CompareeMismatch {{\noriginal_left: {},\nrewritten_left: {},\noriginal_right: {},\nrewritten_right: {},\n}}",
+                indent_second_line_onward(original_left_src, 8),
+                indent_second_line_onward(rewritten_left_src, 8),
+                indent_second_line_onward(original_right_src, 8),
+                indent_second_line_onward(rewritten_right_src, 8),
+            )
+        }
+        TypeCheckWarningSummary::NormalFormAssertionCompareeQuestionMark {
+            original_left_src,
+            rewritten_left_src,
+        } => {
+            format!(
+                "NormalFormAssertion::CompareeQuestionMark {{\noriginal_left: {},\nrewritten_left: {},\n}}",
+                indent_second_line_onward(original_left_src, 8),
+                indent_second_line_onward(rewritten_left_src, 8),
+            )
+        }
+    }
 }
 
 fn format_actual_warning(registry: &NodeRegistry, warning: &TypeCheckWarning) -> String {
