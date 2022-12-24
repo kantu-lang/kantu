@@ -360,30 +360,36 @@ fn get_non_goal_normal_form_assertion_warnings(
                     format::format_expression_with_default_options,
                 };
 
-                println!(
-                    "\nNON_GOAL_NF (scon.len={})",
-                    state.substitution_context.len()
-                );
-
                 let current_context_len = state.context.len();
                 let entries = state
                     .substitution_context
                     .get_adjusted_substitutions(state.registry, current_context_len)
                     .expect("Should be in sync.");
+
                 println!(
-                    "SUB_CON[0].0: {}",
-                    format_expression_with_default_options(&expand_expression(
-                        state.registry,
-                        entries[0].0.raw()
-                    ))
+                    "\nNON_GOAL_NF (scon.len={}, scon_ent.len={})",
+                    state.substitution_context.len(),
+                    entries.len(),
                 );
-                println!(
-                    "SUB_CON[0].1: {}",
-                    format_expression_with_default_options(&expand_expression(
-                        state.registry,
-                        entries[0].1.raw()
-                    ))
-                );
+
+                for (i, entry) in entries.iter().copied().enumerate() {
+                    println!(
+                        "SUB_CON_ENT[{}].0: {}",
+                        i,
+                        format_expression_with_default_options(&expand_expression(
+                            state.registry,
+                            entry.0.raw()
+                        ))
+                    );
+                    println!(
+                        "SUB_CON_ENT[{}].1: {}",
+                        i,
+                        format_expression_with_default_options(&expand_expression(
+                            state.registry,
+                            entry.1.raw()
+                        ))
+                    );
+                }
             }
             let normalized_left_expression_id =
                 evaluate_well_typed_expression(state, left_expression_id);
