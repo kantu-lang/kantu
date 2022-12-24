@@ -91,3 +91,33 @@ fn obscured_indirect_negative_recursion() {
     );
     expect_non_name_variant_return_type_error(src, "NotC", 0);
 }
+
+fn expect_non_adt_callee_error(src: &str, expected_call_src: &str) {
+    expect_positivity_error(src, |registry, err| match err {
+        TypePositivityError::NonAdtCallee {
+            call_id,
+            callee_id: _,
+        } => {
+            let actual_extraneous_match_case_src = format_expression(
+                &expand_expression(registry, ExpressionId::Call(call_id)),
+                0,
+                &FormatOptions {
+                    ident_size_in_spaces: 4,
+                    print_db_indices: false,
+                    print_fun_body_status: false,
+                },
+            );
+            assert_eq_up_to_white_space(expected_call_src, &actual_extraneous_match_case_src);
+        }
+        _ => panic!("Unexpected error: {:?}", err),
+    });
+}
+
+// TODO: Fix
+#[ignore]
+#[test]
+fn non_adt_callee() {
+    let src = include_str!("../../sample_code/should_fail/positivity/non_adt_callee.ph");
+    let expected_call_src = "";
+    expect_non_adt_callee_error(src, expected_call_src);
+}
