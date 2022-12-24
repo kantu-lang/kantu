@@ -1,5 +1,3 @@
-use crate::processing::test_utils::expand_lightened::expand_check_assertion;
-
 use super::*;
 
 fn expect_success_with_one_or_more_warnings(
