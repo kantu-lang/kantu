@@ -44,7 +44,7 @@ fn type_assertion_goal_lhs() {
     expect_success_with_one_or_more_warnings(src, &expected_warnings);
 }
 
-// TODO
+// TODO: Fix
 #[ignore]
 #[test]
 fn mismatched_nf_comparees() {
@@ -61,10 +61,10 @@ fn mismatched_nf_comparees() {
         NormalFormAssertionCompareeMismatch {
             original_left_src: "n",
             // TODO: Check
-            rewritten_left_src: "Nat.S(n')",
-            original_right_src: "Nat.S(n)",
+            rewritten_left_src: "Nat.S(n',)",
+            original_right_src: "Nat.S(n,)",
             // TODO: Check
-            rewritten_right_src: "Nat.S(Nat.S(n'))",
+            rewritten_right_src: "Nat.S(Nat.S(n',),)",
         },
         NormalFormAssertionCompareeQuestionMark {
             original_left_src: "m",
@@ -74,7 +74,7 @@ fn mismatched_nf_comparees() {
         NormalFormAssertionCompareeQuestionMark {
             original_left_src: "m",
             // TODO: Check
-            rewritten_left_src: "Nat.S(m')",
+            rewritten_left_src: "Nat.S(m',)",
         },
     ];
     expect_success_with_one_or_more_warnings(src, &expected_warnings);
