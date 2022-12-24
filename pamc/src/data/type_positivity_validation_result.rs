@@ -19,7 +19,6 @@ impl<T> TypePositivityValidated<T> {
 pub enum TypePositivityError {
     // TODO: Test
     ExpectedTypeGotFun(NodeId<Fun>),
-    // TODO: Test
     NonAdtCallee {
         call_id: NodeId<Call>,
         callee_id: ExpressionId,
