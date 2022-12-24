@@ -126,6 +126,27 @@ fn nf_non_goal_assertion_type_check_failure() {
 }
 
 #[test]
+fn nf_goal_assertion_type_check_failure() {
+    use TypeCheckWarningSummary::*;
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_goal_assertion_type_check_failure.ph"
+    );
+    let expected_warnings = vec![
+        NormalFormAssertionCompareeTypeCheckFailure {
+            reason: TypeCheckFailureReasonSummary::BindError,
+        },
+        NormalFormAssertionCompareeTypeCheckFailure {
+            reason: TypeCheckFailureReasonSummary::IllegalRecursionError,
+        },
+        NormalFormAssertionCompareeTypeCheckFailure {
+            reason: TypeCheckFailureReasonSummary::TypeCheckError,
+        },
+    ];
+    let warnings = expect_success_with_warnings(src, &expected_warnings);
+    assert_eq!(5, warnings.len());
+}
+
+#[test]
 fn mismatched_nf_comparees() {
     use TypeCheckWarningSummary::*;
     let src =
