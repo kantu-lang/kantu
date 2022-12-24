@@ -33,7 +33,7 @@ pub enum TypeCheckWarningSummary {
     NormalFormAssertionNoGoalExists {
         assertion_src: String,
     },
-    NormalFormAssertionTypeCheckFailure {
+    NormalFormAssertionCompareeTypeCheckFailure {
         reason: TypeCheckFailureReasonSummary,
     },
     NormalFormAssertionCompareeMismatch {
@@ -287,17 +287,58 @@ fn summarize_type_assertion_warning(
     }
 }
 
-fn format_expr(registry: &NodeRegistry, id: ExpressionId) -> String {
-    format_expression(&expand_expression(registry, id), 0, &FORMAT_OPTIONS)
-}
-
 fn summarize_normal_form_assertion_warning(
     registry: &NodeRegistry,
     warning: &NormalFormAssertionWarning,
 ) -> TypeCheckWarningSummary {
     match warning {
-        _ => unimplemented!(),
+        NormalFormAssertionWarning::NoGoalExists(assertion_id) => {
+            TypeCheckWarningSummary::NormalFormAssertionNoGoalExists {
+                assertion_src: format_check_assertion(
+                    &expand_check_assertion(registry, *assertion_id),
+                    0,
+                    &FORMAT_OPTIONS,
+                ),
+            }
+        }
+        NormalFormAssertionWarning::CompareeTypeCheckFailure(reason) => {
+            TypeCheckWarningSummary::NormalFormAssertionCompareeTypeCheckFailure {
+                reason: summarize_type_check_failure_reason(reason),
+            }
+        }
+        NormalFormAssertionWarning::CompareesDoNotMatch {
+            left_id,
+            rewritten_left_id,
+            original_and_rewritten_right_ids: Ok((original_right_id, rewritten_right_id)),
+        } => TypeCheckWarningSummary::NormalFormAssertionCompareeMismatch {
+            original_left_src: format_goal_kw_or_expr(registry, *left_id),
+            rewritten_left_src: format_expr(registry, rewritten_left_id.raw()),
+            original_right_src: format_expr(registry, *original_right_id),
+            rewritten_right_src: format_expr(registry, rewritten_right_id.raw()),
+        },
+        NormalFormAssertionWarning::CompareesDoNotMatch {
+            left_id,
+            rewritten_left_id,
+            original_and_rewritten_right_ids: Err(type_check::RhsIsQuestionMark),
+        } => TypeCheckWarningSummary::NormalFormAssertionCompareeQuestionMark {
+            original_left_src: format_goal_kw_or_expr(registry, *left_id),
+            rewritten_left_src: format_expr(registry, rewritten_left_id.raw()),
+        },
     }
+}
+
+fn format_goal_kw_or_expr(
+    registry: &NodeRegistry,
+    id: Result<ExpressionId, type_check::LhsIsGoalKw>,
+) -> String {
+    match id {
+        Ok(id) => format_expr(registry, id),
+        Err(type_check::LhsIsGoalKw) => "goal".to_string(),
+    }
+}
+
+fn format_expr(registry: &NodeRegistry, id: ExpressionId) -> String {
+    format_expression(&expand_expression(registry, id), 0, &FORMAT_OPTIONS)
 }
 
 pub fn summarize_type_check_failure_reason(
