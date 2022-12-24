@@ -56,9 +56,17 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
         Ok(first_case_type_id)
     } else {
         // If `first_case_type_id` is `None`, then `case_ids` is empty, which
-        // means the matchee has any empty type.
-        // Thus, the match should have an empty type.
-        Ok(matchee_type_id)
+        // means the matchee has an empty type.
+        // This means a contradiction exists in the context, so any proposition
+        // can be proved.
+        if let Some(coercion_target_id) = coercion_target_id {
+            // Thus, if we have a goal, we can prove it.
+            Ok(coercion_target_id)
+        } else {
+            // But if we don't have a goal, then we can't infer the type of the
+            // Match expression, since there are no MatchCases to infer it from.
+            tainted_err(TypeCheckError::CannotInferTypeOfEmptyMatch { match_id })
+        }
     }
 }
 
