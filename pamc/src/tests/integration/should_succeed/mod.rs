@@ -7,7 +7,7 @@ use crate::{
         lighten_ast::lighten_file,
         parse::parse_file,
         simplify_ast::simplify_file,
-        type_check::type_check_files,
+        type_check::{type_check_files, TypeAssertionWarning, TypeCheckWarning},
         validate_fun_recursion::validate_fun_recursion_in_file,
         validate_type_positivity::validate_type_positivity_in_file,
         validate_variant_return_types::validate_variant_return_types_in_file,
