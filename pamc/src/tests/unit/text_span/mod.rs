@@ -57,8 +57,9 @@ fn exists() {
 
 #[test]
 fn check() {
-    let src =
-        include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check.ph");
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/many_warnings.ph"
+    );
     verify_that_spans_are_correct(src);
 }
 

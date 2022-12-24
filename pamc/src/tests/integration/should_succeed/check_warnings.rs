@@ -158,51 +158,67 @@ fn try_match_warnings(
 // TODO: Fix
 #[ignore]
 #[test]
-fn check() {
+fn type_assertion_goal_lhs() {
     use TypeCheckWarningExpectation::*;
     let src =
-        include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check.ph");
+        include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check/type_assertion_goal_lhs.ph");
     let expected_warnings = vec![
-        // type_assertion_goal_lhs
         TypeAssertionGoalLhs {
             assertion_src: "goal: Nat",
         },
         TypeAssertionGoalLhs {
             assertion_src: "goal: ?",
         },
-        // mismatched_comparees
-        NormalFormCompareeMismatch {
-            original_left_src: "goal",
-            rewritten_left_src: "Nat",
-            original_right_src: "Eq(Nat, Nat.O, Nat.O,)",
-            rewritten_right_src: "Eq(Nat, Nat.O, Nat.O,)",
-        },
-        NormalFormCompareeMismatch {
-            original_left_src: "n",
-            // TODO: Check
-            rewritten_left_src: "Nat.S(n')",
-            original_right_src: "Nat.S(n)",
-            // TODO: Check
-            rewritten_right_src: "Nat.S(Nat.S(n'))",
-        },
-        // question_mark_rhs
-        NormalFormCompareeQuestionMark {
-            original_left_src: "m",
-            // TODO: Check
-            rewritten_left_src: "Nat.O",
-        },
-        NormalFormCompareeQuestionMark {
-            original_left_src: "m",
-            // TODO: Check
-            rewritten_left_src: "Nat.S(m')",
-        },
-        // goal_checkee
-        NormalFormCompareeQuestionMark {
-            original_left_src: "goal",
-            rewritten_left_src: "Nat",
-        },
-        // symbolically_invalid_annotations1
-        // TODO
     ];
     expect_success_with_one_or_more_warnings(src, &expected_warnings);
 }
+
+// TODO: Delete
+// fn check() {
+//     use TypeCheckWarningExpectation::*;
+//     let src =
+//         include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check/type_assertion_goal_lhs.ph");
+//     let expected_warnings = vec![
+//         // type_assertion_goal_lhs
+//         TypeAssertionGoalLhs {
+//             assertion_src: "goal: Nat",
+//         },
+//         TypeAssertionGoalLhs {
+//             assertion_src: "goal: ?",
+//         },
+//         // mismatched_comparees
+//         NormalFormCompareeMismatch {
+//             original_left_src: "goal",
+//             rewritten_left_src: "Nat",
+//             original_right_src: "Eq(Nat, Nat.O, Nat.O,)",
+//             rewritten_right_src: "Eq(Nat, Nat.O, Nat.O,)",
+//         },
+//         NormalFormCompareeMismatch {
+//             original_left_src: "n",
+//             // TODO: Check
+//             rewritten_left_src: "Nat.S(n')",
+//             original_right_src: "Nat.S(n)",
+//             // TODO: Check
+//             rewritten_right_src: "Nat.S(Nat.S(n'))",
+//         },
+//         // question_mark_rhs
+//         NormalFormCompareeQuestionMark {
+//             original_left_src: "m",
+//             // TODO: Check
+//             rewritten_left_src: "Nat.O",
+//         },
+//         NormalFormCompareeQuestionMark {
+//             original_left_src: "m",
+//             // TODO: Check
+//             rewritten_left_src: "Nat.S(m')",
+//         },
+//         // goal_checkee
+//         NormalFormCompareeQuestionMark {
+//             original_left_src: "goal",
+//             rewritten_left_src: "Nat",
+//         },
+//         // symbolically_invalid_annotations1
+//         // TODO
+//     ];
+//     expect_success_with_one_or_more_warnings(src, &expected_warnings);
+// }
