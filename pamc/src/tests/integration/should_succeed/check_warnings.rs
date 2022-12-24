@@ -1,9 +1,9 @@
 use super::*;
 
-fn expect_success_with_one_or_more_warnings(
+fn expect_success_with_warnings(
     src: &str,
     expected_warnings: &[TypeCheckWarningSummary],
-) {
+) -> Vec<TypeCheckWarning> {
     let file_id = FileId(0);
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
@@ -26,6 +26,7 @@ fn expect_success_with_one_or_more_warnings(
     assert_expectations_match_actual_warnings(&registry, expected_warnings, &warnings);
     let _js_ast =
         JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
+    warnings
 }
 
 #[test]
@@ -41,7 +42,28 @@ fn type_assertion_goal_lhs() {
             assertion_src: "goal: ?".to_string(),
         },
     ];
-    expect_success_with_one_or_more_warnings(src, &expected_warnings);
+    expect_success_with_warnings(src, &expected_warnings);
+}
+
+#[test]
+fn type_assertion_type_check_failure() {
+    use TypeCheckWarningSummary::*;
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/type_assertion_type_check_failure.ph"
+    );
+    let expected_warnings = vec![
+        TypeAssertionCompareeTypeCheckFailure {
+            reason: TypeCheckFailureReasonSummary::BindError,
+        },
+        TypeAssertionCompareeTypeCheckFailure {
+            reason: TypeCheckFailureReasonSummary::IllegalRecursionError,
+        },
+        TypeAssertionCompareeTypeCheckFailure {
+            reason: TypeCheckFailureReasonSummary::TypeCheckError,
+        },
+    ];
+    let warnings = expect_success_with_warnings(src, &expected_warnings);
+    assert_eq!(7, warnings.len());
 }
 
 #[test]
@@ -62,7 +84,7 @@ fn mismatched_types() {
             rewritten_left_type_src: "Nat".to_string(),
         },
     ];
-    expect_success_with_one_or_more_warnings(src, &expected_warnings);
+    expect_success_with_warnings(src, &expected_warnings);
 }
 
 #[test]
@@ -92,7 +114,7 @@ fn mismatched_nf_comparees() {
             rewritten_left_src: "Nat.S(m',)".to_string(),
         },
     ];
-    expect_success_with_one_or_more_warnings(src, &expected_warnings);
+    expect_success_with_warnings(src, &expected_warnings);
 }
 
 // TODO: Delete
