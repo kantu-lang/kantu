@@ -108,7 +108,10 @@ fn get_non_goal_type_assertion_warnings(
 
     match (left_correctness, right_correctness) {
         (
-            Ok((left_expression_id, left_type_id)),
+            Ok(CorrectlyTyped {
+                expression_id: left_expression_id,
+                type_id: left_type_id,
+            }),
             QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(
                 right_expression_id,
                 _right_type_id,
@@ -142,7 +145,10 @@ fn get_non_goal_type_assertion_warnings(
             }
         }
         (
-            Ok((left_expression_id, left_type_id)),
+            Ok(CorrectlyTyped {
+                expression_id: left_expression_id,
+                type_id: left_type_id,
+            }),
             QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark,
         ) => {
             let (rewritten_left_type_id,) =
@@ -300,7 +306,10 @@ fn get_non_goal_normal_form_assertion_warnings(
 
     match (left_correctness, right_correctness) {
         (
-            Ok((left_expression_id, _left_type_id)),
+            Ok(CorrectlyTyped {
+                expression_id: left_expression_id,
+                type_id: _,
+            }),
             QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::Correct(
                 right_expression_id,
                 _right_type_id,
@@ -339,14 +348,21 @@ fn get_non_goal_normal_form_assertion_warnings(
             }
         }
         (
-            Ok((left_expression_id, left_type_id)),
+            Ok(CorrectlyTyped {
+                expression_id: left_expression_id,
+                type_id: _,
+            }),
             QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness::QuestionMark,
         ) => {
-            let (rewritten_left_type_id,) =
-                match apply_substitutions_from_substitution_context(state, (left_type_id,)) {
-                    Ok(rewritten) => rewritten,
-                    Err(Exploded) => (left_type_id,),
-                };
+            let normalized_left_expression_id =
+                evaluate_well_typed_expression(state, left_expression_id);
+            let (rewritten_left_type_id,) = match apply_substitutions_from_substitution_context(
+                state,
+                (normalized_left_expression_id,),
+            ) {
+                Ok(rewritten) => rewritten,
+                Err(Exploded) => (normalized_left_expression_id,),
+            };
             vec![NormalFormAssertionWarning::CompareesDoNotMatch {
                 left_id: Ok(left_expression_id),
                 rewritten_left_id: rewritten_left_type_id,
@@ -370,11 +386,17 @@ fn get_non_goal_normal_form_assertion_warnings(
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+struct CorrectlyTyped {
+    expression_id: ExpressionId,
+    type_id: NormalFormId,
+}
+
 fn get_type_correctness_of_possibly_invalid_expression(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
     id: PossiblyInvalidExpressionId,
-) -> Result<(ExpressionId, NormalFormId), TypeCheckFailureReason> {
+) -> Result<CorrectlyTyped, TypeCheckFailureReason> {
     match id {
         PossiblyInvalidExpressionId::Invalid(untypecheckable) => {
             Err(TypeCheckFailureReason::CannotTypeCheck(untypecheckable))
@@ -382,7 +404,10 @@ fn get_type_correctness_of_possibly_invalid_expression(
         PossiblyInvalidExpressionId::Valid(expression_id) => {
             let type_id_or_err = get_type_of_expression(state, coercion_target_id, expression_id);
             match type_id_or_err {
-                Ok(type_id) => Ok((expression_id, type_id)),
+                Ok(type_id) => Ok(CorrectlyTyped {
+                    expression_id,
+                    type_id,
+                }),
                 Err(type_check_err) => Err(TypeCheckFailureReason::TypeCheckError(
                     expression_id,
                     type_check_err,
