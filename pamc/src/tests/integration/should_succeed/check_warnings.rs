@@ -58,21 +58,38 @@ fn mismatched_nf_comparees() {
         },
         NormalFormAssertionCompareeMismatch {
             original_left_src: "n".to_string(),
-            // TODO: Check
             rewritten_left_src: "Nat.S(n',)".to_string(),
             original_right_src: "Nat.S(n,)".to_string(),
-            // TODO: Check
             rewritten_right_src: "Nat.S(Nat.S(n',),)".to_string(),
         },
         NormalFormAssertionCompareeQuestionMark {
             original_left_src: "m".to_string(),
-            // TODO: Check
             rewritten_left_src: "Nat.O".to_string(),
         },
         NormalFormAssertionCompareeQuestionMark {
             original_left_src: "m".to_string(),
-            // TODO: Check
             rewritten_left_src: "Nat.S(m',)".to_string(),
+        },
+    ];
+    expect_success_with_one_or_more_warnings(src, &expected_warnings);
+}
+
+#[test]
+fn mismatched_types() {
+    use TypeCheckWarningSummary::*;
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_succeed_with_warnings/check/mismatched_types.ph"
+    );
+    let expected_warnings = vec![
+        TypeAssertionTypeMismatch {
+            original_left_src: "m".to_string(),
+            rewritten_left_type_src: "Nat".to_string(),
+            original_right_src: "Unit".to_string(),
+            rewritten_right_src: "Unit".to_string(),
+        },
+        TypeAssertionTypeQuestionMark {
+            original_left_src: "m".to_string(),
+            rewritten_left_type_src: "Nat".to_string(),
         },
     ];
     expect_success_with_one_or_more_warnings(src, &expected_warnings);
