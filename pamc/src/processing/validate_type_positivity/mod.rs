@@ -387,7 +387,7 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
         // TODO: Enable "stack trace" (e.g., so we can see the original
         // type that required the variant return type to have a positive
         // type arg).
-        return Err(TypePositivityError::VariantReturnTypeHadNonNameElement {
+        return Err(TypePositivityError::VariantReturnTypeHadNonNameTypeArg {
             variant_id,
             type_arg_index: target_index,
         });

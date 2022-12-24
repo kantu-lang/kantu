@@ -28,7 +28,7 @@ pub enum TypePositivityError {
         actual: usize,
         expected: usize,
     },
-    VariantReturnTypeHadNonNameElement {
+    VariantReturnTypeHadNonNameTypeArg {
         variant_id: NodeId<Variant>,
         type_arg_index: usize,
     },

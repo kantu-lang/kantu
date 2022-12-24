@@ -91,7 +91,7 @@ fn expect_non_name_variant_return_type_error(
     expected_type_arg_index: usize,
 ) {
     expect_positivity_error(src, |registry, err| match err {
-        TypePositivityError::VariantReturnTypeHadNonNameElement {
+        TypePositivityError::VariantReturnTypeHadNonNameTypeArg {
             variant_id,
             type_arg_index,
         } => {
