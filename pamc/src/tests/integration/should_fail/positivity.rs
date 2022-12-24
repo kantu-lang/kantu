@@ -79,6 +79,12 @@ fn bad_forall_output() {
     expect_illegal_variable_appearance_error(src, DbIndex(1), "Bad");
 }
 
+#[test]
+fn bad_check_output() {
+    let src = include_str!("../../sample_code/should_fail/positivity/bad_check_output.ph");
+    expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
+}
+
 fn expect_non_name_variant_return_type_error(
     src: &str,
     expected_variant_name: &str,
