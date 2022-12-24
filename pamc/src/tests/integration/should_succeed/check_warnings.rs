@@ -44,8 +44,6 @@ fn type_assertion_goal_lhs() {
     expect_success_with_one_or_more_warnings(src, &expected_warnings);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn mismatched_nf_comparees() {
     use TypeCheckWarningSummary::*;

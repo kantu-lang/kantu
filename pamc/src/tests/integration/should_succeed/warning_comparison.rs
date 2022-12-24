@@ -106,7 +106,7 @@ fn assert_all_emitted_warnings_were_expected<T: AsRef<str>, U: AsRef<str>>(
         }
         if !was_found {
             panic!(
-                "Unexpected warning: {:?}.\nMismatch reasons: {}",
+                "Unexpected warning: {}.\nMismatch reasons: {}",
                 actual,
                 format_mismatch_errors(&mismatch_errors),
             );
@@ -134,7 +134,7 @@ fn assert_all_expected_warnings_were_emitted<T: AsRef<str>, U: AsRef<str>>(
         }
         if !was_found {
             panic!(
-                "Expected warning, but it was never emitted: {:?}.\nMismatch reasons: {}",
+                "Expected warning, but it was never emitted: {}.\nMismatch reasons: {}",
                 expected,
                 format_mismatch_errors(&mismatch_errors),
             );
