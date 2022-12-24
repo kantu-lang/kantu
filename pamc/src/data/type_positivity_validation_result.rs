@@ -17,7 +17,6 @@ impl<T> TypePositivityValidated<T> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TypePositivityError {
-    // TODO: Test
     ExpectedTypeGotFun(NodeId<Fun>),
     NonAdtCallee {
         call_id: NodeId<Call>,

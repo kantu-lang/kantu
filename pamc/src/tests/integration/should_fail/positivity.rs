@@ -143,3 +143,21 @@ fn non_adt_callee() {
     let expected_call_src = "fun _(_: Unit,): Type { forall(b: Bad,) { Empty } }";
     expect_non_adt_callee_error(src, expected_call_src);
 }
+
+fn expect_expected_type_got_fun_error(src: &str, expected_fun_name: &IdentifierName) {
+    expect_positivity_error(src, |registry, err| match err {
+        TypePositivityError::ExpectedTypeGotFun(fun_id) => {
+            let fun = registry.get(fun_id);
+            let actual_fun_name = &registry.get(fun.name_id).name;
+            assert_eq!(expected_fun_name, actual_fun_name);
+        }
+        _ => panic!("Unexpected error: {:?}", err),
+    });
+}
+
+#[test]
+fn expected_type_got_fun() {
+    let src = include_str!("../../sample_code/should_fail/positivity/expected_type_got_fun.ph");
+    let expected_fun_name = IdentifierName::Standard("this_should_not_be_here".to_string());
+    expect_expected_type_got_fun_error(src, &expected_fun_name);
+}
