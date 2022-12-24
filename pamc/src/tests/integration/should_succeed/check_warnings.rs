@@ -1,3 +1,5 @@
+use crate::processing::test_utils::expand_lightened::expand_check_assertion;
+
 use super::*;
 
 fn expect_success_with_one_or_more_warnings(
@@ -23,7 +25,7 @@ fn expect_success_with_one_or_more_warnings(
     let file_id = validate_type_positivity_in_file(&mut registry, file_id)
         .expect("Type positivity validation failed");
     let warnings = type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
-    assert_expectations_match_actual_warnings(expected_warnings, &warnings);
+    assert_expectations_match_actual_warnings(&registry, expected_warnings, &warnings);
     let _js_ast =
         JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
 }
@@ -73,14 +75,16 @@ enum TypeCheckFailureReasonExpectation {
 }
 
 fn assert_expectations_match_actual_warnings(
+    registry: &NodeRegistry,
     expected_warnings: &[TypeCheckWarningExpectation],
     actual_warnings: &[TypeCheckWarning],
 ) {
-    assert_all_emitted_warnings_were_expected(expected_warnings, actual_warnings);
-    assert_all_expected_warnings_were_emitted(expected_warnings, actual_warnings);
+    assert_all_emitted_warnings_were_expected(registry, expected_warnings, actual_warnings);
+    assert_all_expected_warnings_were_emitted(registry, expected_warnings, actual_warnings);
 }
 
 fn assert_all_emitted_warnings_were_expected(
+    registry: &NodeRegistry,
     expected_warnings: &[TypeCheckWarningExpectation],
     actual_warnings: &[TypeCheckWarning],
 ) {
@@ -88,7 +92,7 @@ fn assert_all_emitted_warnings_were_expected(
         let mut mismatch_reasons = vec![];
         let mut was_found = false;
         for expected in expected_warnings {
-            match try_match_warnings(expected, actual) {
+            match try_match_warnings(registry, expected, actual) {
                 WarningMatchResult::Ok => {
                     was_found = true;
                     break;
@@ -99,14 +103,16 @@ fn assert_all_emitted_warnings_were_expected(
         }
         if !was_found {
             panic!(
-                "Unexpected warning: {:?}. Mismatch reasons: {:#?}",
-                actual, &mismatch_reasons
+                "Unexpected warning: {:?}.\nMismatch reasons: {}",
+                actual,
+                format_reasons(&mismatch_reasons),
             );
         }
     }
 }
 
 fn assert_all_expected_warnings_were_emitted(
+    registry: &NodeRegistry,
     expected_warnings: &[TypeCheckWarningExpectation],
     actual_warnings: &[TypeCheckWarning],
 ) {
@@ -114,7 +120,7 @@ fn assert_all_expected_warnings_were_emitted(
         let mut mismatch_reasons = vec![];
         let mut was_found = false;
         for actual in actual_warnings {
-            match try_match_warnings(expected, actual) {
+            match try_match_warnings(registry, expected, actual) {
                 WarningMatchResult::Ok => {
                     was_found = true;
                     break;
@@ -125,10 +131,22 @@ fn assert_all_expected_warnings_were_emitted(
         }
         if !was_found {
             panic!(
-                "Expected warning, but it was never emitted: {:?}. Mismatch reasons: {:#?}",
-                expected, &mismatch_reasons
+                "Expected warning, but it was never emitted: {:?}.\nMismatch reasons: {}",
+                expected,
+                format_reasons(&mismatch_reasons),
             );
         }
+    }
+}
+
+fn format_reasons(mismatch_reasons: &[String]) -> String {
+    if mismatch_reasons.is_empty() {
+        "[]".to_string()
+    } else {
+        format!(
+            "[\n{} <<<END_REASON>>>\n]",
+            mismatch_reasons.join(" <<<END_REASON>>>\n")
+        )
     }
 }
 
@@ -140,23 +158,93 @@ enum WarningMatchResult {
 }
 
 fn try_match_warnings(
+    registry: &NodeRegistry,
     expected: &TypeCheckWarningExpectation,
     actual: &TypeCheckWarning,
 ) -> WarningMatchResult {
+    use crate::processing::test_utils::{expand_lightened::*, format::*};
+
+    const FORMAT_OPTIONS: FormatOptions = FormatOptions {
+        ident_size_in_spaces: 4,
+        print_db_indices: false,
+        print_fun_body_status: false,
+    };
+
     match (expected, actual) {
         (
-            TypeCheckWarningExpectation::TypeAssertionGoalLhs { assertion_src },
+            TypeCheckWarningExpectation::TypeAssertionGoalLhs {
+                assertion_src: expected_assertion_src,
+            },
             TypeCheckWarning::TypeAssertion(TypeAssertionWarning::GoalLhs(assertion_id)),
         ) => {
-            unimplemented!()
+            let actual_assertion_src = format_check_assertion(
+                &expand_check_assertion(registry, *assertion_id),
+                0,
+                &FORMAT_OPTIONS,
+            );
+            if let Err(err) =
+                try_assert_eq_up_to_white_space(expected_assertion_src, &actual_assertion_src)
+            {
+                return WarningMatchResult::Mismatch(format!("Check assertion differs:\n{}", err));
+            }
+            WarningMatchResult::Ok
         }
 
         _ => WarningMatchResult::WrongCategory,
     }
 }
 
-// TODO: Fix
-#[ignore]
+fn try_assert_eq_up_to_white_space(left: &str, right: &str) -> Result<(), String> {
+    let mut left_non_whitespace = left.chars().enumerate().filter(|(_, c)| !c.is_whitespace());
+    let left_non_whitespace_len = left_non_whitespace.clone().count();
+    let mut right_non_whitespace = right
+        .chars()
+        .enumerate()
+        .filter(|(_, c)| !c.is_whitespace());
+    let right_non_whitespace_len = right_non_whitespace.clone().count();
+
+    loop {
+        let left_char = left_non_whitespace.next();
+        let right_char = right_non_whitespace.next();
+
+        match (left_char, right_char) {
+            (Some((left_original_index, left_char)), Some((right_original_index, right_char))) => {
+                if left_char != right_char {
+                    return Err(format!(
+                        "Strings differ (after removing whitespace): left_index = {}; right_index = {};\nleft = {:?};\nright = {:?};\nleft_remaining = {:?};\nright_remaining = {:?}",
+                        left_original_index, right_original_index, left, right, &left[left_original_index..], &right[right_original_index..]
+                    ));
+                }
+            }
+            (None, None) => {
+                break Ok(());
+            }
+            (Some((left_original_index, _)), None) => {
+                return Err(format!(
+                    "Strings differ in length after removing whitespace: left_len = {}; right_len = {};\nleft = {:?};\nright = {:?};\nleft_remaining = {:?};\nright_remaining = {:?}",
+                    left_non_whitespace_len,
+                    right_non_whitespace_len,
+                    left,
+                    right,
+                    &left[left_original_index..],
+                    "",
+                ));
+            }
+            (None, Some((right_original_index, _))) => {
+                return Err(format!(
+                    "Strings differ in length after removing whitespace: left_len = {}; right_len = {};\nleft = {:?};\nright = {:?};\nleft_remaining = {:?};\nright_remaining = {:?}",
+                    left_non_whitespace_len,
+                    right_non_whitespace_len,
+                    left,
+                    right,
+                    "",
+                    &right[right_original_index..],
+                ));
+            }
+        }
+    }
+}
+
 #[test]
 fn type_assertion_goal_lhs() {
     use TypeCheckWarningExpectation::*;
