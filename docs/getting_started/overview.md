@@ -525,8 +525,40 @@ Call arguments should be labeled if and only if the function's parameters are la
 Both labeling arguments to an unlabeled function
 or not labeling arguments to a labeled function is an error.
 
-If you call a labeled function with the correct labels but in the wrong order, a warning will be
-emitted, but it will not be an error.
+It is good practice to pass labeled arguments in the same order that
+the labels appear in the parameters of the defining type.
+
+For example:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(_: Nat): Nat,
+}
+
+type Color {
+    // Observe that the param label order is
+    // "r,g,b".
+    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+}
+
+let O = Nat.O;
+
+// In this call expression, the argument label
+// order matches the param label order (i.e.,
+// both are "r,g,b")
+let good = Color.C(r: O, g: O, b: O);
+
+// In this call expression, the argument label
+// order does NOT match the param label order (i.e.,
+// param order is "r,g,b" but the arg order is
+// "b,g,r").
+let still_legal_but_frowned_upon = Color.C(b: O, g: O, r: O);
+```
+
+Calling a labeled function with correctly labeled but misordered arguments (e.g., like `still_legal_but_frowned_upon` in the above example) will **always be legal**.
+
+However, in a future version of Pamlihu, this may result in warnings.
 
 #### Order of `~` and `-`
 
@@ -668,6 +700,48 @@ let redness3 = fun _(c: Color): Nat {
     }
 };
 ```
+
+##### Matching param label order is strongly encouraged (but not required)
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(_: Nat): Nat,
+}
+
+type Color {
+    // Observe that the param label order is
+    // "r,g,b".
+    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+}
+
+let O = Nat.O;
+
+let good = fun _(c: Color): Nat {
+    match c {
+        // In this match case, the match case param label
+        // order matches the type variant param label order (i.e.,
+        // both are "r,g,b")
+        .C(:r, :g, :b): r,
+    }
+};
+
+let still_legal_but_frowned_upon = fun _(c: Color): Nat {
+    match c {
+        // In this match case, the match case param label
+        // order does NOT match the type variant param label order
+        // (i.e., the variant's order "r,g,b", but the case's
+        // order is "b,g,r").
+        .C(:b, :g, :r): r,
+    }
+};
+```
+
+It will always be legal to declare correctly labeled but misordered
+match case parameters (e.g., like in `still_legal_but_frowned_upon` in the
+above example).
+
+However, in a future version of Pamlihu, doing this may trigger some warnings.
 
 ## `forall` Expressions
 
