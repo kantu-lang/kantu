@@ -86,16 +86,6 @@ fn validate_type_positivity_in_variant(
     let param_type_ids = get_possibly_empty_param_type_ids(registry, variant.param_list_id);
 
     for (param_index, param_type_id) in param_type_ids.iter().copied().enumerate() {
-        {
-            use crate::processing::test_utils::{
-                expand_lightened::expand_expression, format::format_expression_with_default_options,
-            };
-            println!(
-                "PARAM_TYPE: {}",
-                format_expression_with_default_options(&expand_expression(registry, param_type_id))
-            );
-        }
-
         let shifted_target = DbIndex(target.0 + param_index);
         validate_type_positivity_in_expression(
             context,
@@ -120,16 +110,6 @@ fn validate_type_positivity_in_expression(
     id: ExpressionId,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    {
-        use crate::processing::test_utils::{
-            expand_lightened::expand_expression, format::format_expression_with_default_options,
-        };
-        println!(
-            "EXPR: {}",
-            format_expression_with_default_options(&expand_expression(registry, id))
-        );
-    }
-
     match id {
         ExpressionId::Name(_) => Ok(()),
         ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
@@ -157,36 +137,17 @@ fn validate_type_positivity_in_call(
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     if !does_target_appear_in_expression(registry, ExpressionId::Call(call_id), target) {
-        println!("SHORTCIRCUITING (target={:?})", target);
         return Ok(());
     }
 
     let call = registry.get(call_id).clone();
 
-    {
-        use crate::processing::test_utils::{
-            expand_lightened::expand_expression, format::format_expression_with_default_options,
-        };
-        println!(
-            "CALL: {}",
-            format_expression_with_default_options(&expand_expression(
-                registry,
-                ExpressionId::Call(call_id)
-            ))
-        );
-    }
-
-    println!("CALLEE_ID: {:?}", call_id);
-
     let ExpressionId::Name(callee_id) = call.callee_id else {
-        println!("NON_NAME_CALLEE");
         return Err(TypePositivityError::NonAdtCallee{
             call_id,
             callee_id: call.callee_id,
         });
     };
-
-    println!("NAME_CALLEE");
 
     let callee = registry.get(callee_id).clone();
     let ContextEntryDefinition::Adt(callee_def_id) = context.get_definition(callee.db_index) else {
