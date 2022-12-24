@@ -92,14 +92,14 @@ fn obscured_indirect_negative_recursion() {
     expect_non_name_variant_return_type_error(src, "NotC", 0);
 }
 
-fn expect_non_adt_callee_error(src: &str, expected_call_src: &str) {
+fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
     expect_positivity_error(src, |registry, err| match err {
         TypePositivityError::NonAdtCallee {
-            call_id,
-            callee_id: _,
+            call_id: _,
+            callee_id,
         } => {
             let actual_extraneous_match_case_src = format_expression(
-                &expand_expression(registry, ExpressionId::Call(call_id)),
+                &expand_expression(registry, callee_id),
                 0,
                 &FormatOptions {
                     ident_size_in_spaces: 4,
@@ -107,7 +107,7 @@ fn expect_non_adt_callee_error(src: &str, expected_call_src: &str) {
                     print_fun_body_status: false,
                 },
             );
-            assert_eq_up_to_white_space(expected_call_src, &actual_extraneous_match_case_src);
+            assert_eq_up_to_white_space(expected_callee_src, &actual_extraneous_match_case_src);
         }
         _ => panic!("Unexpected error: {:?}", err),
     });
@@ -116,6 +116,6 @@ fn expect_non_adt_callee_error(src: &str, expected_call_src: &str) {
 #[test]
 fn non_adt_callee() {
     let src = include_str!("../../sample_code/should_fail/positivity/non_adt_callee.ph");
-    let expected_call_src = "";
+    let expected_call_src = "fun _(_: Unit,): Type { forall(b: Bad,) { Empty } }";
     expect_non_adt_callee_error(src, expected_call_src);
 }
