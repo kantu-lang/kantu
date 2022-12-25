@@ -45,12 +45,21 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
             continue;
         };
         if let Some(first_case_type_id) = first_case_type_id {
-            if !is_left_type_assignable_to_right_type(state, case_type_id, first_case_type_id) {
-                return tainted_err(TypeCheckError::TypeMismatch {
-                    expression_id: case_output_id,
-                    expected_type_id: first_case_type_id,
-                    actual_type_id: case_type_id,
-                });
+            let equality_status =
+                get_rewritten_term_equality_status(state, case_type_id, first_case_type_id);
+
+            match equality_status {
+                RewrittenTermEqualityStatus::Equal => (),
+                RewrittenTermEqualityStatus::Exploded => {
+                    return tainted_err(TypeCheckError::UnreachableExpression(case_output_id));
+                }
+                RewrittenTermEqualityStatus::NotEqual => {
+                    return tainted_err(TypeCheckError::TypeMismatch {
+                        expression_id: case_output_id,
+                        expected_type_id: first_case_type_id,
+                        actual_type_id: case_type_id,
+                    });
+                }
             }
         } else {
             first_case_type_id = Some(case_type_id);
@@ -161,24 +170,28 @@ fn get_type_of_allegedly_non_impossible_match_case_dirty(
         get_type_of_expression_dirty(state, coercion_target_id, shifted_output_id)?;
 
     if let Some(coercion_target_id) = coercion_target_id {
-        let can_be_coerced =
-            is_left_type_assignable_to_right_type(state, output_type_id, coercion_target_id);
+        let equality_status =
+            get_rewritten_term_equality_status(state, output_type_id, coercion_target_id);
 
         state.context.pop_n(variant_arity);
         state.substitution_context.pop();
 
-        return if can_be_coerced {
-            Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
-        } else {
-            tainted_err(TypeCheckError::TypeMismatch {
-                expression_id: case_output_id,
-                actual_type_id: output_type_id,
-                // TODO: This might be confusing to the user since it's
-                // undergone substitution.
-                // In the future, we'll include this in substitution
-                // tracking (if we implement it).
-                expected_type_id: coercion_target_id,
-            })
+        return match equality_status {
+            RewrittenTermEqualityStatus::Equal =>  Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some")),
+            RewrittenTermEqualityStatus::Exploded => {
+                tainted_err(TypeCheckError::UnreachableExpression(case_output_id))
+            }
+            RewrittenTermEqualityStatus::NotEqual => {
+                tainted_err(TypeCheckError::TypeMismatch {
+                    expression_id: case_output_id,
+                    actual_type_id: output_type_id,
+                    // TODO: This might be confusing to the user since it's
+                    // undergone substitution.
+                    // In the future, we'll include this in substitution
+                    // tracking (if we implement it).
+                    expected_type_id: coercion_target_id,
+                })
+            }
         };
     }
 

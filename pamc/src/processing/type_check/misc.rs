@@ -116,28 +116,42 @@ pub(super) fn is_term_equal_to_type1(state: &State, term: NormalFormId) -> bool 
     }
 }
 
-pub(super) fn are_types_mutually_assignable(
-    state: &mut State,
-    left: NormalFormId,
-    right: NormalFormId,
-) -> bool {
-    is_left_type_assignable_to_right_type(state, left, right)
-        && is_left_type_assignable_to_right_type(state, right, left)
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RewrittenTermEqualityStatus {
+    Equal,
+    NotEqual,
+    Exploded,
 }
 
-pub(super) fn is_left_type_assignable_to_right_type(
+impl RewrittenTermEqualityStatus {
+    pub fn is_equal_or_exploded(self) -> bool {
+        match self {
+            RewrittenTermEqualityStatus::Equal => true,
+            RewrittenTermEqualityStatus::NotEqual => false,
+            RewrittenTermEqualityStatus::Exploded => true,
+        }
+    }
+}
+
+pub(super) fn get_rewritten_term_equality_status(
     state: &mut State,
     left: NormalFormId,
     right: NormalFormId,
-) -> bool {
+) -> RewrittenTermEqualityStatus {
     let ((left,), (right,)) =
         match apply_substitutions_from_substitution_context(state, ((left,), (right,))) {
             Ok(x) => x,
-            Err(self::Exploded) => return true,
+            Err(self::Exploded) => return RewrittenTermEqualityStatus::Exploded,
         };
-    state
+
+    if state
         .equality_checker
         .eq(left.raw(), right.raw(), state.registry)
+    {
+        RewrittenTermEqualityStatus::Equal
+    } else {
+        RewrittenTermEqualityStatus::NotEqual
+    }
 }
 
 pub use std::convert::Infallible;
