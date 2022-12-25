@@ -1160,3 +1160,123 @@ This is what warnings are for.
 On the other hand, we also have times when
 code problems are so severe there is no sane way
 to build an executable (e.g., we reference and undefined name). These are errors.
+
+## Projects with multiple files
+
+We'll begin this section by examining an example project.
+
+### Example project:
+
+#### File layout:
+
+```text
+src/
+    pack.omlet
+    mod.ph
+    foo.ph
+    bar/
+        mod.ph
+        baz.ph
+```
+
+In Pamlihu, the smallest "shareable" unit of code is the _package_.
+Pamlihu packages are roughly analogous to npm packages or Rust crates.
+
+A package consists of a `pack.omlet` file and one or more
+`.ph` files.
+
+Packages are broken down into a tree of smaller components called _modules_.
+In fact, the package _is itself_ a module.
+We will subsequently refer to this module as "the package's root module",
+or simply "the package".
+
+Generally, each `.ph` file corresponds to a module.
+
+The top-level `mod.ph` file (i.e., the one in the same directory as `pack.omlet`) corresponds to the root module.
+
+#### `pack.omlet`:
+
+```omlet
+{}
+```
+
+`pack.omlet` can be used to list external dependencies and specify
+compiler options.
+In this example project, we do not have any external dependencies, and
+we use all the default compiler options, so we simply write `{}` to
+denote an "empty" config.
+
+#### `mod.ph`:
+
+```pamlihu
+mod foo;
+pub mod bar;
+
+let Nat = foo.Nat;
+let O = foo.Nat.O;
+let S = foo.Nat.S;
+let mult = bar.mult;
+
+pub let factorial = fun f(-a: Nat): Nat {
+    match a {
+        .O => S(O),
+        .S(a') => mult(a, fact(a')),
+    }
+};
+```
+
+This is file corresponding to the package.
+If you want any items to be accessible to
+consumers of this package, you need to
+export them here
+(in this example, we export the module `bar`
+and the constant `factorial`).
+
+"Exporting" an item simply means taking an existing item
+and changing its visibility level.
+This is done with the `pub` keyword.
+In this example, the `bar` module and the `factorial` constant
+have `pub` before their declarations, which is why they are
+exported.
+
+By default, `pub` makes an item _globally_ visible, meaning that
+any module in the world can use it.
+A later section will explain how to modify `pub` to restrict its
+visibility.
+
+If an item does not have a `pub` prefix, its visibility defaults to
+`pub(mod)`, meaning only items in the same module (or a submodule) can
+access that item.
+In this example, `foo`, `Nat`, `O`, `S`, and `mult`
+all have this visibility.
+
+#### `foo.ph`:
+
+```pamlihu
+pub type Nat {
+    .O: Nat,
+    .S(_: Nat): Nat,
+}
+```
+
+`bar/mod.ph`:
+
+```pamlihu
+let Nat = super.foo.Nat;
+let O = super.foo.Nat.O;
+let S = super.foo.Nat.S;
+
+pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => b,
+        .S(a') => S(plus(a', b)),
+    }
+};
+
+pub let mult = fun f(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => O,
+        .S(a') => plus(b, plus(a', b)),
+    }
+};
+```
