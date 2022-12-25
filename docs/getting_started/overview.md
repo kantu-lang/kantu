@@ -68,8 +68,8 @@ However, keep in mind that the binding declared by a `let` statement does not go
 let foo = fun foo(n: Nat): Nat {
     // The `let foo` statement is not complete,
     // so that `foo` is not in scope.
-    // Only the `identity` defined by the `fun`
-    // is in scope.
+    // Only the `foo` defined by the `fun foo<...>`
+    // expression is in scope.
     // Thus, there are no conflicting names,
     // and this code is legal.
 
@@ -113,7 +113,7 @@ Also, keep in mind that type parameters are not in scope within the type variant
 
 ```pamlihu
 type List(T: Type /* The `T` defined here...*/) {
-    // ...is NOT in scope here.
+    // ...and is NOT in scope here.
     .Nil(
         // Thus, we are free to name another
         // parameter `T`, since this does NOT
@@ -180,7 +180,7 @@ type Rgb {
     .C(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
 }
 
-type False {}
+type Empty {}
 
 type List(T: Type) {
     .Nil(T: Type): List(T),
@@ -199,7 +199,7 @@ type Or(L: Type, R: Type) {
 
 let In = fun In(T: Type, item: T, list: List(T)): Type {
     match list {
-        List.Nil(_T) => False,
+        List.Nil(_T) => Empty,
         List.Cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
     }
 };
@@ -214,7 +214,12 @@ type ListOfEvenNats {
 }
 ```
 
-Note that empty parameter lists are always omitted (so there is never `()`, outside of invocations).
+Pamlihu does not have the concept of a nullary function.
+As a result, empty parameter lists `()` are syntactically invalid.
+
+Since Pamlihu is pure and total, there is no need for nullary
+functions--any time you want to write `fun _() { some_val }`,
+you should simply write `some_val`.
 
 ### Type definition restrictions
 
