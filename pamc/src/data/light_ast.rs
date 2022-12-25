@@ -143,10 +143,12 @@ pub struct MatchCase {
     pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<Identifier>,
     pub param_list_id: Option<NonEmptyMatchCaseParamListId>,
-    pub output_id: ExpressionId,
+    pub output_id: MatchCaseOutputId,
 }
 
 pub use crate::data::node_registry::NonEmptyMatchCaseParamListId;
+
+pub use crate::data::node_registry::MatchCaseOutputId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledMatchCaseParam {

@@ -219,12 +219,12 @@ fn validate_type_positivity_in_match_case_outputs(
 ) -> Result<(), TypePositivityError> {
     let case_ids = registry.get_possibly_empty_list(id).to_vec();
     for case_id in case_ids {
-        validate_type_positivity_in_match_case_output(context, cache, registry, case_id, target)?;
+        validate_type_positivity_in_match_case(context, cache, registry, case_id, target)?;
     }
     Ok(())
 }
 
-fn validate_type_positivity_in_match_case_output(
+fn validate_type_positivity_in_match_case(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &mut NodeRegistry,
@@ -237,7 +237,28 @@ fn validate_type_positivity_in_match_case_output(
         .map(|list_id| list_id.explicit_len())
         .unwrap_or(0);
     let output_target = DbIndex(target.0 + explicit_arity);
-    validate_type_positivity_in_expression(context, cache, registry, case.output_id, output_target)
+    validate_type_positivity_in_match_case_output(
+        context,
+        cache,
+        registry,
+        case.output_id,
+        output_target,
+    )
+}
+
+fn validate_type_positivity_in_match_case_output(
+    context: &mut Context,
+    cache: &mut TrustCache,
+    registry: &mut NodeRegistry,
+    id: MatchCaseOutputId,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    match id {
+        MatchCaseOutputId::Some(id) => {
+            validate_type_positivity_in_expression(context, cache, registry, id, target)
+        }
+        MatchCaseOutputId::ImpossibilityClaim(_) => Ok(()),
+    }
 }
 
 fn validate_type_positivity_in_forall(

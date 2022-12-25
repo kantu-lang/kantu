@@ -30,7 +30,7 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
         .to_vec();
     let mut first_case_type_id = None;
     for case_id in case_ids {
-        let case_type_id = get_type_of_match_case_dirty(
+        let case_type_check_success = get_type_of_match_case_dirty(
             state,
             coercion_target_id,
             case_id,
@@ -38,11 +38,16 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
             matchee_type_id,
             matchee_type,
         )?;
+        let MatchCaseOutputTypeCheckSuccess::NotObviouslyImpossible{
+            output_id: case_output_id,
+            output_type_id: case_type_id,
+        } = case_type_check_success else {
+            continue;
+        };
         if let Some(first_case_type_id) = first_case_type_id {
             if !is_left_type_assignable_to_right_type(state, case_type_id, first_case_type_id) {
-                let case = state.registry.get(case_id);
                 return tainted_err(TypeCheckError::TypeMismatch {
-                    expression_id: case.output_id,
+                    expression_id: case_output_id,
                     expected_type_id: first_case_type_id,
                     actual_type_id: case_type_id,
                 });
@@ -55,8 +60,8 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
     if let Some(first_case_type_id) = first_case_type_id {
         Ok(first_case_type_id)
     } else {
-        // If `first_case_type_id` is `None`, then `case_ids` is empty, which
-        // means the matchee has an empty type.
+        // If `first_case_type_id` is `None`, then there are no
+        // cases that are not obviously impossible.
         // This means a contradiction exists in the context, so any proposition
         // can be proved.
         if let Some(coercion_target_id) = coercion_target_id {
@@ -64,10 +69,19 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
             Ok(coercion_target_id)
         } else {
             // But if we don't have a goal, then we can't infer the type of the
-            // Match expression, since there are no MatchCases to infer it from.
+            // Match expression, since there are no non-impossible MatchCases to infer it from.
             tainted_err(TypeCheckError::CannotInferTypeOfEmptyMatch { match_id })
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MatchCaseOutputTypeCheckSuccess {
+    NotObviouslyImpossible {
+        output_id: ExpressionId,
+        output_type_id: NormalFormId,
+    },
+    ObviouslyImpossible,
 }
 
 fn get_type_of_match_case_dirty(
@@ -77,8 +91,45 @@ fn get_type_of_match_case_dirty(
     normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
     matchee_type: NormalFormAdtExpression,
+) -> Result<MatchCaseOutputTypeCheckSuccess, Tainted<TypeCheckError>> {
+    let case_output_id = state.registry.get(case_id).output_id;
+    Ok(match case_output_id {
+        MatchCaseOutputId::Some(case_output_id) => {
+            MatchCaseOutputTypeCheckSuccess::NotObviouslyImpossible {
+                output_id: case_output_id,
+                output_type_id: get_type_of_allegedly_non_impossible_match_case_dirty(
+                    state,
+                    coercion_target_id,
+                    case_id,
+                    case_output_id,
+                    normalized_matchee_id,
+                    matchee_type_id,
+                    matchee_type,
+                )?,
+            }
+        }
+        MatchCaseOutputId::ImpossibilityClaim(_) => {
+            verify_allegedly_impossible_match_case_is_actually_impossible_dirty(
+                state,
+                case_id,
+                normalized_matchee_id,
+                matchee_type_id,
+                matchee_type,
+            )?;
+            MatchCaseOutputTypeCheckSuccess::ObviouslyImpossible
+        }
+    })
+}
+
+fn get_type_of_allegedly_non_impossible_match_case_dirty(
+    state: &mut State,
+    coercion_target_id: Option<NormalFormId>,
+    case_id: NodeId<MatchCase>,
+    case_output_id: ExpressionId,
+    normalized_matchee_id: NormalFormId,
+    matchee_type_id: NormalFormId,
+    matchee_type: NormalFormAdtExpression,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
-    let case = state.registry.get(case_id).clone();
     let ParameterizedTerms {
         matchee_id: parameterized_matchee_id,
         matchee_type_id: parameterized_matchee_type_id,
@@ -103,7 +154,7 @@ fn get_type_of_match_case_dirty(
 
     let shifted_output_id = apply_case_output_substitutions(
         &mut state.without_context(),
-        case.output_id,
+        case_output_id,
         &case_output_substitutions,
     );
     let output_type_id =
@@ -120,7 +171,7 @@ fn get_type_of_match_case_dirty(
             Ok(original_coercion_target_id.expect("original_coercion_target_id must be Some if normalized_substituted_coercion_target_id is Some"))
         } else {
             tainted_err(TypeCheckError::TypeMismatch {
-                expression_id: case.output_id,
+                expression_id: case_output_id,
                 actual_type_id: output_type_id,
                 // TODO: This might be confusing to the user since it's
                 // undergone substitution.
@@ -137,6 +188,44 @@ fn get_type_of_match_case_dirty(
     match output_type_id.try_downshift(variant_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
         Err(_) => tainted_err(TypeCheckError::AmbiguousOutputType { case_id }),
+    }
+}
+
+fn verify_allegedly_impossible_match_case_is_actually_impossible_dirty(
+    state: &mut State,
+    case_id: NodeId<MatchCase>,
+    normalized_matchee_id: NormalFormId,
+    matchee_type_id: NormalFormId,
+    matchee_type: NormalFormAdtExpression,
+) -> Result<(), Tainted<TypeCheckError>> {
+    let ParameterizedTerms {
+        matchee_id: parameterized_matchee_id,
+        matchee_type_id: parameterized_matchee_type_id,
+        case_output_substitutions,
+    } = add_case_params_to_context_and_parameterize_terms_dirty(state, case_id, matchee_type)??;
+    let variant_arity = case_output_substitutions.variant_arity;
+
+    let normalized_matchee_id = normalized_matchee_id.upshift(variant_arity, state.registry);
+    let matchee_type_id = matchee_type_id.upshift(variant_arity, state.registry);
+
+    state.substitution_context.push(SubstitutionContextEntry {
+        context_len: state.context.len(),
+        unadjusted_substitutions: vec![
+            DynamicSubstitution(normalized_matchee_id, parameterized_matchee_id),
+            DynamicSubstitution(matchee_type_id, parameterized_matchee_type_id),
+        ],
+    });
+
+    let substitution_result = apply_substitutions_from_substitution_context(state, ());
+
+    state.context.pop_n(variant_arity);
+    state.substitution_context.pop();
+
+    match substitution_result {
+        Ok(_) => tainted_err(
+            TypeCheckError::AllegedlyImpossibleMatchCaseWasNotObviouslyImpossible { case_id },
+        ),
+        Err(self::Exploded) => Ok(()),
     }
 }
 

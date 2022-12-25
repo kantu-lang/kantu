@@ -322,6 +322,22 @@ impl DeepCheckChildSpans for MatchCaseParam {
     }
 }
 
+impl ShallowCheckOwnSpan for MatchCaseOutput {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since `MatchCaseOutput` doesn't have its own span.
+    }
+}
+impl DeepCheckChildSpans for MatchCaseOutput {
+    fn deep_check_child_spans(&self, src: &str) {
+        match self {
+            MatchCaseOutput::Some(expr) => expr.deep_check_spans(src),
+            MatchCaseOutput::ImpossibilityClaim(kw_span) => {
+                assert_eq!(Some("impossible"), get_spanned_slice(src, *kw_span));
+            }
+        }
+    }
+}
+
 impl DeepCheckChildSpans for Forall {
     fn deep_check_child_spans(&self, src: &str) {
         self.params.deep_check_spans(src);

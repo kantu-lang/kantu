@@ -54,7 +54,7 @@ pub struct Set<T> {
 pub struct MatchCase {
     pub variant_name_id: SemanticId<IdentifierName>,
     pub explicit_arity: usize,
-    pub output_id: ExpressionSemanticId,
+    pub output_id: Option<ExpressionSemanticId>,
 }
 
 pub use crate::data::light_ast::IdentifierName;

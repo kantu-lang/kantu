@@ -92,6 +92,12 @@ pub enum FinishedStackItem {
         QuestionMarkOrExpression,
         ExpressionEndDelimiter,
     ),
+    DelimitedImpossibleKwOrExpression(
+        /// First token
+        Token,
+        MatchCaseOutput,
+        ExpressionEndDelimiter,
+    ),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -151,6 +157,7 @@ impl FinishedStackItem {
             FinishedStackItem::CheckAssertion(token, _, _) => &token,
             FinishedStackItem::DelimitedGoalKwOrExpression(token, _, _) => &token,
             FinishedStackItem::DelimitedQuestionMarkOrExpression(token, _, _) => &token,
+            FinishedStackItem::DelimitedImpossibleKwOrExpression(token, _, _) => &token,
         }
     }
 }

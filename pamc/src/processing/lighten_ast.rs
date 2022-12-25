@@ -321,7 +321,7 @@ pub fn register_match_case(
 ) -> NodeId<MatchCase> {
     let variant_name_id = register_identifier(registry, unregistered.variant_name);
     let param_list_id = register_optional_match_case_params(registry, unregistered.params);
-    let output_id = register_expression(registry, unregistered.output);
+    let output_id = register_match_case_output(registry, unregistered.output);
     registry.add_and_overwrite_id(MatchCase {
         id: dummy_id(),
         span: unregistered.span,
@@ -393,6 +393,21 @@ pub fn register_labeled_match_case_param(
         label_id,
         name_id,
     })
+}
+
+pub fn register_match_case_output(
+    registry: &mut NodeRegistry,
+    unregistered: heavy::MatchCaseOutput,
+) -> MatchCaseOutputId {
+    match unregistered {
+        heavy::MatchCaseOutput::Some(unregistered) => {
+            let id = register_expression(registry, unregistered);
+            MatchCaseOutputId::Some(id)
+        }
+        heavy::MatchCaseOutput::ImpossibilityClaim(kw_span) => {
+            MatchCaseOutputId::ImpossibilityClaim(kw_span)
+        }
+    }
 }
 
 pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall) -> NodeId<Forall> {

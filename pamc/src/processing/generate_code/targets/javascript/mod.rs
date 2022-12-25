@@ -1,8 +1,8 @@
 use crate::data::{
     light_ast as light,
     node_registry::{
-        ExpressionRef, LabeledCallArgId, NodeId, NodeRegistry, NonEmptyCallArgListId,
-        NonEmptyMatchCaseParamListId, NonEmptyParamListId,
+        ExpressionRef, LabeledCallArgId, MatchCaseOutputId, NodeId, NodeRegistry,
+        NonEmptyCallArgListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId,
     },
     non_empty_vec::OptionalNonEmptyVecLen,
     FileId, TextSpan,

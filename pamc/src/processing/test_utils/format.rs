@@ -247,7 +247,7 @@ pub fn format_match_case(case: &MatchCase, indent_level: usize, options: &Format
     } else {
         format_optional_match_case_params(case.params.as_ref())
     };
-    let output = format_expression(&case.output, indent_level + 1, options);
+    let output = format_match_case_output(&case.output, indent_level + 1, options);
     format!(
         ".{}{} => {}",
         variant_name,
@@ -313,6 +313,17 @@ fn try_oneline(s: &str, indent_level: usize, options: &FormatOptions) -> String 
         format!("\n{}{}\n{}", &i1, s, &i0)
     } else {
         format!("{}", s)
+    }
+}
+
+pub fn format_match_case_output(
+    output: &MatchCaseOutput,
+    indent_level: usize,
+    options: &FormatOptions,
+) -> String {
+    match output {
+        MatchCaseOutput::Some(expression) => format_expression(expression, indent_level, options),
+        MatchCaseOutput::ImpossibilityClaim(_) => "impossible".to_string(),
     }
 }
 

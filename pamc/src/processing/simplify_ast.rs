@@ -401,7 +401,7 @@ fn simplify_match_case(unsimplified: ust::MatchCase) -> Result<MatchCase, Simpli
         span: unsimplified.span,
         variant_name: unsimplified.variant_name,
         params: simplify_optional_match_case_params(unsimplified.params, unsimplified.triple_dot)?,
-        output: simplify_expression(unsimplified.output)?,
+        output: simplify_match_case_output(unsimplified.output)?,
     })
 }
 
@@ -534,6 +534,19 @@ fn simplify_match_case_param_but_forbid_label(
     } else {
         Ok(unsimplified.name)
     }
+}
+
+fn simplify_match_case_output(
+    unsimplified: ust::MatchCaseOutput,
+) -> Result<MatchCaseOutput, SimplifyAstError> {
+    Ok(match unsimplified {
+        ust::MatchCaseOutput::Some(expression) => {
+            MatchCaseOutput::Some(simplify_expression(expression)?)
+        }
+        ust::MatchCaseOutput::ImpossibilityClaim(kw_span) => {
+            MatchCaseOutput::ImpossibilityClaim(kw_span)
+        }
+    })
 }
 
 fn simplify_forall(unsimplified: ust::Forall) -> Result<Expression, SimplifyAstError> {

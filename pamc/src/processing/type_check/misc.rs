@@ -133,7 +133,7 @@ pub(super) fn is_left_type_assignable_to_right_type(
     let ((left,), (right,)) =
         match apply_substitutions_from_substitution_context(state, ((left,), (right,))) {
             Ok(x) => x,
-            Err(Exploded) => return true,
+            Err(self::Exploded) => return true,
         };
     state
         .equality_checker
@@ -443,7 +443,16 @@ fn is_left_inclusive_subterm_of_right(
                 let case_arity = state.registry.get(right_case_id).param_list_id.len();
                 let shifted_left = left.upshift(case_arity, state.registry);
                 let right_case_output_id = state.registry.get(right_case_id).output_id;
-                is_left_inclusive_subterm_of_right(state, shifted_left, right_case_output_id)
+                match right_case_output_id {
+                    MatchCaseOutputId::Some(right_case_output_id) => {
+                        is_left_inclusive_subterm_of_right(
+                            state,
+                            shifted_left,
+                            right_case_output_id,
+                        )
+                    }
+                    MatchCaseOutputId::ImpossibilityClaim(_) => false,
+                }
             }) {
                 return true;
             }
@@ -1209,7 +1218,7 @@ fn min_db_index_in_match_relative_to_cutoff(
         .iter()
         .map(|case_id| {
             let case = registry.get(*case_id);
-            min_db_index_in_expression_relative_to_cutoff(
+            min_db_index_in_match_case_output_relative_to_cutoff(
                 registry,
                 case.output_id,
                 cutoff + case.param_list_id.len(),
@@ -1217,6 +1226,19 @@ fn min_db_index_in_match_relative_to_cutoff(
         })
         .min();
     min_or_first(matchee_min, case_outputs_min)
+}
+
+fn min_db_index_in_match_case_output_relative_to_cutoff(
+    registry: &NodeRegistry,
+    id: MatchCaseOutputId,
+    cutoff: usize,
+) -> MinDbIndex {
+    match id {
+        MatchCaseOutputId::Some(id) => {
+            min_db_index_in_expression_relative_to_cutoff(registry, id, cutoff)
+        }
+        MatchCaseOutputId::ImpossibilityClaim(_) => MinDbIndex::Infinity,
+    }
 }
 
 fn min_db_index_in_forall_relative_to_cutoff(
@@ -1408,6 +1430,14 @@ impl<I, O> Map<I, O> for Vec<I> {
 
     fn map(self, f: impl FnMut(I) -> O) -> Self::Output {
         self.into_iter().map(f).collect()
+    }
+}
+
+impl<I, O> Map<I, O> for () {
+    type Output = ();
+
+    fn map(self, _f: impl FnMut(I) -> O) -> Self::Output {
+        ()
     }
 }
 

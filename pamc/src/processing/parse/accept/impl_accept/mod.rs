@@ -7,6 +7,7 @@ mod check_assertion;
 mod check_assertions;
 mod delimited_expression;
 mod delimited_goal_kw_or_expression;
+mod delimited_impossible_kw_or_expression;
 mod delimited_question_mark_or_expression;
 mod dot;
 mod file;

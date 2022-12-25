@@ -511,6 +511,21 @@ impl IntoSemanticId for NodeId<Identifier> {
     }
 }
 
+impl IntoSemanticId for MatchCaseOutputId {
+    type Output = Option<ExpressionSemanticId>;
+
+    fn into_semantic_id(
+        self,
+        registry: &NodeRegistry,
+        sreg: &mut StrippedRegistry,
+    ) -> Self::Output {
+        match self {
+            MatchCaseOutputId::Some(id) => Some(id.into_semantic_id(registry, sreg)),
+            MatchCaseOutputId::ImpossibilityClaim(_) => None,
+        }
+    }
+}
+
 impl GetIndexInSubregistry for NodeId<Forall> {
     type Stripped = stripped::Forall;
 

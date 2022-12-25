@@ -34,9 +34,11 @@ impl Accept for UnfinishedMatchCase {
                             params: None,
                             triple_dot: None,
                         };
-                        AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
-                            UnfinishedDelimitedExpression::Empty,
-                        ))
+                        AcceptResult::Push(
+                            UnfinishedStackItem::UnfinishedDelimitedImpossibleKwOrExpression(
+                                UnfinishedDelimitedImpossibleKwOrExpression::Empty,
+                            ),
+                        )
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
@@ -117,14 +119,14 @@ impl Accept for UnfinishedMatchCase {
                 triple_dot,
             } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::FatArrow => {
-                        AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
-                            UnfinishedDelimitedExpression::Empty,
-                        ))
-                    }
+                    TokenKind::FatArrow => AcceptResult::Push(
+                        UnfinishedStackItem::UnfinishedDelimitedImpossibleKwOrExpression(
+                            UnfinishedDelimitedImpossibleKwOrExpression::Empty,
+                        ),
+                    ),
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                FinishedStackItem::DelimitedExpression(_, expression, end_delimiter) => {
+                FinishedStackItem::DelimitedImpossibleKwOrExpression(_, output, end_delimiter) => {
                     match end_delimiter.raw().kind {
                         TokenKind::Comma | TokenKind::RCurly => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::MatchCase(
@@ -138,7 +140,7 @@ impl Accept for UnfinishedMatchCase {
                                     variant_name: variant_name.clone(),
                                     params: params.clone(),
                                     triple_dot: triple_dot.clone(),
-                                    output: expression,
+                                    output,
                                 },
                                 end_delimiter,
                             ))

@@ -708,7 +708,8 @@ fn validate_fun_recursion_in_match_case_dirty(
     // list of identifiers.
     let param_list_id = case.param_list_id;
 
-    let output_id = validate_fun_recursion_in_expression_dirty(context, registry, case.output_id)?;
+    let output_id =
+        validate_fun_recursion_in_match_case_output_dirty(context, registry, case.output_id)?;
     context.pop_n(case_arity);
 
     Ok(registry.add_and_overwrite_id(MatchCase {
@@ -718,6 +719,21 @@ fn validate_fun_recursion_in_match_case_dirty(
         param_list_id,
         output_id,
     }))
+}
+
+fn validate_fun_recursion_in_match_case_output_dirty(
+    context: &mut Context,
+    registry: &mut NodeRegistry,
+    id: MatchCaseOutputId,
+) -> Result<MatchCaseOutputId, TaintedIllegalFunRecursionError> {
+    Ok(match id {
+        MatchCaseOutputId::Some(id) => MatchCaseOutputId::Some(
+            validate_fun_recursion_in_expression_dirty(context, registry, id)?,
+        ),
+        MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+            MatchCaseOutputId::ImpossibilityClaim(kw_span)
+        }
+    })
 }
 
 fn validate_fun_recursion_in_forall_dirty(
