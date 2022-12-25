@@ -133,7 +133,7 @@ pub(super) fn is_left_type_assignable_to_right_type(
     let ((left,), (right,)) =
         match apply_substitutions_from_substitution_context(state, ((left,), (right,))) {
             Ok(x) => x,
-            Err(Exploded) => return true,
+            Err(self::Exploded) => return true,
         };
     state
         .equality_checker
@@ -1430,6 +1430,14 @@ impl<I, O> Map<I, O> for Vec<I> {
 
     fn map(self, f: impl FnMut(I) -> O) -> Self::Output {
         self.into_iter().map(f).collect()
+    }
+}
+
+impl<I, O> Map<I, O> for () {
+    type Output = ();
+
+    fn map(self, _f: impl FnMut(I) -> O) -> Self::Output {
+        ()
     }
 }
 

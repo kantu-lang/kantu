@@ -87,6 +87,9 @@ pub enum TypeCheckError {
     ExtraneousMatchCase {
         case_id: NodeId<MatchCase>,
     },
+    AllegedlyImpossibleMatchCaseWasNotObviouslyImpossible {
+        case_id: NodeId<MatchCase>,
+    },
     CannotInferTypeOfEmptyMatch {
         match_id: NodeId<Match>,
     },

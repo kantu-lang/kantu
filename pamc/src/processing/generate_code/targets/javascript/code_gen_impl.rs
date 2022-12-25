@@ -89,11 +89,19 @@ fn generate_code_for_explosion_thrower() -> Vec<FileItem> {
         name: thrower_name.clone(),
         value: Expression::Function(Box::new(Function {
             name: thrower_name,
-            params: Params::Standard(vec![]),
+            params: Params::Standard(vec![
+                ValidJsIdentifierName(EXPLOSION_THROWER_PARAM0_NAME.to_string()),
+            ]),
             body: vec![FunctionStatement::Throw(Expression::New(Box::new(Call {
                 callee: Expression::Identifier(ValidJsIdentifierName("Error".to_string())),
-                args: vec![Expression::Literal(Literal::String(JsStringLiteral {
-                    unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions.".to_string(),
+                args: vec![Expression::BinaryOp(Box::new(BinaryOp {
+                    op: BinaryOpKind::Plus,
+                    left: Expression::Literal(Literal::String(JsStringLiteral {
+                        unescaped: "Reached supposedly unreachable path. This likely indicates that you passed one or more illegal arguments to one or more of the generated functions. Responsible span: ".to_string(),
+                    })),
+                    right: Expression::Identifier(ValidJsIdentifierName(
+                        EXPLOSION_THROWER_PARAM0_NAME.to_string(),
+                    )),
                 }))],
             })))],
         })),
@@ -417,7 +425,7 @@ fn generate_code_for_todo_expression(
             unescaped: todo
                 .span
                 .map(format_text_span)
-                .unwrap_or_else(|| "".to_string()),
+                .unwrap_or_else(|| "<No span found>".to_string()),
         }))],
     })))
 }
@@ -601,11 +609,9 @@ fn generate_code_for_match_case(
             }
         }
 
-        body.push(FunctionStatement::Return(generate_code_for_expression(
-            registry,
-            context,
-            case.output_id,
-        )?));
+        body.push(FunctionStatement::Return(
+            generate_code_for_match_case_output(registry, context, case.output_id)?,
+        ));
 
         context.pop_n(explicit_arity);
 
@@ -615,15 +621,29 @@ fn generate_code_for_match_case(
     Ok(IfStatement { condition, body })
 }
 
-const TYPE_SPECIES_KEY: &str = "type_species";
-const TYPE_SPECIES_VALUE__TYPE1: &str = "Type1";
-const TYPE_SPECIES_VALUE__TYPE0: &str = "Type0";
-const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
-const TYPE_ARGS_KEY: &str = "type_args";
-const EXPLOSION_THROWER_NAME: &str = "unreachable";
-const TODO_ERROR_THROWER_NAME: &str = "unimplemented";
-const TODO_ERROR_THROWER_PARAM0_NAME: &str = "unimplemented_span";
-const DISPOSABLE_NAME_PREFIX: &str = "temp";
+fn generate_code_for_match_case_output(
+    registry: &NodeRegistry,
+    context: &mut Context,
+    id: MatchCaseOutputId,
+) -> Result<Expression, CompileToJavaScriptError> {
+    match id {
+        MatchCaseOutputId::Some(id) => generate_code_for_expression(registry, context, id),
+        MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+            Ok(generate_code_to_throw_explosion(kw_span))
+        }
+    }
+}
+
+fn generate_code_to_throw_explosion(responsible_span: Option<TextSpan>) -> Expression {
+    Expression::Call(Box::new(Call {
+        callee: Expression::Identifier(ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string())),
+        args: vec![Expression::Literal(Literal::String(JsStringLiteral {
+            unescaped: responsible_span
+                .map(format_text_span)
+                .unwrap_or_else(|| "<No span found>".to_string()),
+        }))],
+    }))
+}
 
 fn generate_code_for_forall(
     _registry: &NodeRegistry,
@@ -639,6 +659,17 @@ fn generate_code_for_forall(
         }],
     })))
 }
+
+const TYPE_SPECIES_KEY: &str = "type_species";
+const TYPE_SPECIES_VALUE__TYPE1: &str = "Type1";
+const TYPE_SPECIES_VALUE__TYPE0: &str = "Type0";
+const TYPE_SPECIES_VALUE__FORALL: &str = "forall";
+const TYPE_ARGS_KEY: &str = "type_args";
+const EXPLOSION_THROWER_NAME: &str = "unreachable";
+const EXPLOSION_THROWER_PARAM0_NAME: &str = "unreachable_span";
+const TODO_ERROR_THROWER_NAME: &str = "unimplemented";
+const TODO_ERROR_THROWER_PARAM0_NAME: &str = "unimplemented_span";
+const DISPOSABLE_NAME_PREFIX: &str = "temp";
 
 impl Function {
     /// A "simple" function is one that has a body that has a return statement
@@ -821,6 +852,7 @@ impl Context {
             ],
             other_reserved_names: vec![
                 ValidJsIdentifierName(EXPLOSION_THROWER_NAME.to_string()),
+                ValidJsIdentifierName(EXPLOSION_THROWER_PARAM0_NAME.to_string()),
                 ValidJsIdentifierName(TODO_ERROR_THROWER_NAME.to_string()),
                 ValidJsIdentifierName(TODO_ERROR_THROWER_PARAM0_NAME.to_string()),
             ],
