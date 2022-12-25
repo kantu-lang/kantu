@@ -105,7 +105,7 @@ fn nf_non_goal_assertion_type_check_failure() {
         },
     ];
     let warnings = expect_success_with_warnings(src, &expected_warnings);
-    assert_eq!(7, warnings.len());
+    assert_eq!(8, warnings.len());
 }
 
 #[test]

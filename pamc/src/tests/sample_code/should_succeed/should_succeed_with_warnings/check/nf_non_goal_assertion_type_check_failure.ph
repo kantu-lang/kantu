@@ -4,7 +4,7 @@ type Nat {
 }
 
 let symbolically_invalid = fun _(n: Nat): Nat {
-    match Nat.O {
+    match n {
         // WARNING
         .O => check (n = this_symbol_doesnt_exist) {
             Nat.O
@@ -17,7 +17,7 @@ let symbolically_invalid = fun _(n: Nat): Nat {
 };
 
 let illegal_fun_rec = fun _(n: Nat): Nat {
-    match Nat.O {
+    match n {
         .O =>
         check (
             // WARNING
@@ -42,7 +42,7 @@ let illegal_fun_rec = fun _(n: Nat): Nat {
 };
 
 let type_check_error = fun _(n: Nat): Nat {
-    match Nat.O {
+    match n {
         // WARNING
         .O => check (n = Nat.S(Nat)) {
             Nat.O
@@ -55,9 +55,13 @@ let type_check_error = fun _(n: Nat): Nat {
 };
 
 let type_check_error2 = fun _(n: Nat): Nat {
-    match Nat.O {
-        // WARNING
-        .O => check (Nat.S(Nat) = Nat.S(Nat)) {
+    match n {
+        .O => check (
+            // WARNING
+            Nat.S(Nat) =
+                // WARNING
+                Nat.S(Nat)
+        ) {
             Nat.O
         },
         .S(n') => Nat.O,
