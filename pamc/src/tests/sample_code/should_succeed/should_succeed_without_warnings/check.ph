@@ -28,7 +28,7 @@ let foo = fun _(n: Nat): Nat {
 };
 
 let goal_checkee = fun _(n: Nat): Nat {
-    match Nat.O {
+    match n {
         .O => check (goal = Nat) {
             Nat.O
         },

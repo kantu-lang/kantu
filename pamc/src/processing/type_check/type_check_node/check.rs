@@ -107,11 +107,13 @@ fn get_non_goal_type_assertion_warnings(
                 ((left_type_id,), (normalized_right_expression_id,)),
             ) {
                 Ok(((rewritten_left_type_id,), (rewritten_right_id,))) => {
-                    if are_types_mutually_assignable(
+                    if get_rewritten_term_equality_status(
                         state,
                         rewritten_left_type_id,
                         rewritten_right_id,
-                    ) {
+                    )
+                    .is_equal_or_exploded()
+                    {
                         vec![]
                     } else if is_term_equal_to_type1(state, rewritten_left_type_id) {
                         vec![TypeAssertionWarning::LhsTypeIsType1(assertion.id)]
@@ -235,11 +237,13 @@ fn get_goal_normal_form_assertion_warnings_given_goal_exists(
                 ((goal_id,), (normalized_right_expression_id,)),
             ) {
                 Ok(((rewritten_goal_id,), (rewritten_right_expression_id,))) => {
-                    if are_types_mutually_assignable(
+                    if get_rewritten_term_equality_status(
                         state,
                         rewritten_goal_id,
                         rewritten_right_expression_id,
-                    ) {
+                    )
+                    .is_equal_or_exploded()
+                    {
                         vec![]
                     } else {
                         vec![NormalFormAssertionWarning::CompareesDoNotMatch {
@@ -316,11 +320,13 @@ fn get_non_goal_normal_form_assertion_warnings(
                 ),
             ) {
                 Ok(((rewritten_left_expression_id,), (rewritten_right_expression_id,))) => {
-                    if are_types_mutually_assignable(
+                    if get_rewritten_term_equality_status(
                         state,
                         rewritten_left_expression_id,
                         rewritten_right_expression_id,
-                    ) {
+                    )
+                    .is_equal_or_exploded()
+                    {
                         vec![]
                     } else {
                         vec![NormalFormAssertionWarning::CompareesDoNotMatch {

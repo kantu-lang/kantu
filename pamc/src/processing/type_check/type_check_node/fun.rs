@@ -71,16 +71,25 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
             Some(normalized_return_type_id_relative_to_body),
             fun.body_id,
         )?;
-        if !is_left_type_assignable_to_right_type(
+
+        let equality_status = get_rewritten_term_equality_status(
             state,
             normalized_body_type_id,
             normalized_return_type_id_relative_to_body,
-        ) {
-            return tainted_err(TypeCheckError::TypeMismatch {
-                expression_id: fun.body_id,
-                expected_type_id: normalized_return_type_id_relative_to_body,
-                actual_type_id: normalized_body_type_id,
-            });
+        );
+
+        match equality_status {
+            RewrittenTermEqualityStatus::Equal => (),
+            RewrittenTermEqualityStatus::Exploded => {
+                return tainted_err(TypeCheckError::UnreachableExpression(fun.body_id));
+            }
+            RewrittenTermEqualityStatus::NotEqual => {
+                return tainted_err(TypeCheckError::TypeMismatch {
+                    expression_id: fun.body_id,
+                    expected_type_id: normalized_return_type_id_relative_to_body,
+                    actual_type_id: normalized_body_type_id,
+                });
+            }
         }
     }
 

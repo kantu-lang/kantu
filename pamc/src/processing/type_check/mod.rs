@@ -97,6 +97,7 @@ pub enum TypeCheckError {
         case_id: NodeId<MatchCase>,
     },
     CannotInferTypeOfTodoExpression(NodeId<TodoExpression>),
+    UnreachableExpression(ExpressionId),
 }
 
 #[derive(Clone, Debug)]

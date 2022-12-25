@@ -79,12 +79,21 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
         let arg_type_id =
             get_type_of_expression_dirty(state, Some(substituted_param_type_id), arg_ids[i])?;
 
-        if !is_left_type_assignable_to_right_type(state, arg_type_id, substituted_param_type_id) {
-            return tainted_err(TypeCheckError::TypeMismatch {
-                expression_id: arg_ids[i],
-                expected_type_id: substituted_param_type_id,
-                actual_type_id: arg_type_id,
-            });
+        let equality_status =
+            get_rewritten_term_equality_status(state, arg_type_id, substituted_param_type_id);
+
+        match equality_status {
+            RewrittenTermEqualityStatus::Equal => (),
+            RewrittenTermEqualityStatus::Exploded => {
+                return tainted_err(TypeCheckError::UnreachableExpression(arg_ids[i]));
+            }
+            RewrittenTermEqualityStatus::NotEqual => {
+                return tainted_err(TypeCheckError::TypeMismatch {
+                    expression_id: arg_ids[i],
+                    expected_type_id: substituted_param_type_id,
+                    actual_type_id: arg_type_id,
+                });
+            }
         }
     }
 
