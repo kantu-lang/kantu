@@ -650,6 +650,12 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
         .output_id
         .subst_all(&substitutions, &mut state.without_context())
         .downshift(explicit_arity, state.registry);
+    let substituted_body = match substituted_body {
+        MatchCaseOutputId::Some(id) => id,
+        MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+            panic!("Impossible: A well-typed Match expression ended up evaluating to one of the cases that was supposedly impossible. `impossible` keyword span: {:?}", kw_span)
+        }
+    };
 
     evaluate_well_typed_expression(state, substituted_body)
 }

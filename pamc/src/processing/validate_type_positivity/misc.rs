@@ -212,12 +212,12 @@ pub fn verify_that_target_does_not_appear_in_any_match_case_output(
 ) -> Result<(), TypePositivityError> {
     let case_ids = registry.get_possibly_empty_list(id);
     for &case_ids in case_ids {
-        verify_that_target_does_not_appear_in_match_case_output(registry, case_ids, target)?;
+        verify_that_target_does_not_appear_in_match_case(registry, case_ids, target)?;
     }
     Ok(())
 }
 
-pub fn verify_that_target_does_not_appear_in_match_case_output(
+pub fn verify_that_target_does_not_appear_in_match_case(
     registry: &NodeRegistry,
     id: NodeId<MatchCase>,
     target: DbIndex,
@@ -228,7 +228,20 @@ pub fn verify_that_target_does_not_appear_in_match_case_output(
         .map(|param_list_id| param_list_id.explicit_len())
         .unwrap_or(0);
     let output_target = DbIndex(target.0 + explicit_arity);
-    verify_that_target_does_not_appear_in_expression(registry, case.output_id, output_target)
+    verify_that_target_does_not_appear_in_match_case_output(registry, case.output_id, output_target)
+}
+
+pub fn verify_that_target_does_not_appear_in_match_case_output(
+    registry: &NodeRegistry,
+    id: MatchCaseOutputId,
+    target: DbIndex,
+) -> Result<(), TypePositivityError> {
+    match id {
+        MatchCaseOutputId::Some(id) => {
+            verify_that_target_does_not_appear_in_expression(registry, id, target)
+        }
+        MatchCaseOutputId::ImpossibilityClaim(_) => Ok(()),
+    }
 }
 
 pub fn verify_that_target_does_not_appear_in_forall(

@@ -473,6 +473,26 @@ impl SubstituteWithoutRemovingSpans for NodeId<MatchCase> {
     }
 }
 
+impl SubstituteWithoutRemovingSpans for MatchCaseOutputId {
+    type Output = MatchCaseOutputId;
+
+    fn subst_without_removing_spans(
+        self,
+        substitution: Substitution,
+        state: &mut ContextlessState,
+    ) -> Self::Output {
+        match self {
+            MatchCaseOutputId::Some(id) => {
+                let substituted_id = id.subst_without_removing_spans(substitution, state);
+                MatchCaseOutputId::Some(substituted_id)
+            }
+            MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+                MatchCaseOutputId::ImpossibilityClaim(kw_span)
+            }
+        }
+    }
+}
+
 impl SubstituteWithoutRemovingSpans for NodeId<Forall> {
     type Output = ExpressionId;
 

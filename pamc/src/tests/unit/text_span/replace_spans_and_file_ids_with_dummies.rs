@@ -271,6 +271,19 @@ impl ReplaceSpansAndFileIdsWithDummies for MatchCaseParam {
     }
 }
 
+impl ReplaceSpansAndFileIdsWithDummies for MatchCaseOutput {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        match self {
+            MatchCaseOutput::Some(id) => {
+                MatchCaseOutput::Some(id.replace_spans_and_file_ids_with_dummies())
+            }
+            MatchCaseOutput::ImpossibilityClaim(_) => {
+                MatchCaseOutput::ImpossibilityClaim(dummy_span())
+            }
+        }
+    }
+}
+
 impl ReplaceSpansAndFileIdsWithDummies for Forall {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let params = self.params.replace_spans_and_file_ids_with_dummies();

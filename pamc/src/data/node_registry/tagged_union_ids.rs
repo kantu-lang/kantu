@@ -163,6 +163,12 @@ impl NonEmptyMatchCaseParamListId {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MatchCaseOutputId {
+    Some(ExpressionId),
+    ImpossibilityClaim(Option<TextSpan>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ExpressionId {
     Name(NodeId<NameExpression>),
     Todo(NodeId<TodoExpression>),

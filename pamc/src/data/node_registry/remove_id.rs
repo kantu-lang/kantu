@@ -3,8 +3,8 @@ use crate::data::{
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
     node_registry::{
-        GoalKwOrPossiblyInvalidExpressionId, NodeId, NonEmptyCallArgListId, NonEmptyListId,
-        NonEmptyMatchCaseParamListId, NonEmptyParamListId, ParamLabelId,
+        GoalKwOrPossiblyInvalidExpressionId, MatchCaseOutputId, NodeId, NonEmptyCallArgListId,
+        NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId, ParamLabelId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
     simplified_ast as unbound, FileId, TextSpan,
@@ -398,7 +398,7 @@ pub struct MatchCase {
     pub span: Option<TextSpan>,
     pub variant_name_id: NodeId<with_id::Identifier>,
     pub param_list_id: Option<NonEmptyMatchCaseParamListId>,
-    pub output_id: ExpressionId,
+    pub output_id: MatchCaseOutputId,
 }
 impl RemoveId for with_id::MatchCase {
     type Output = MatchCase;

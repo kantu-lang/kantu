@@ -346,7 +346,7 @@ fn bind_match_case(context: &mut Context, case: ub::MatchCase) -> Result<MatchCa
     let arity = case.params.len();
     let variant_name = case.variant_name.into();
     let params = bind_optional_match_case_params(context, case.params)?;
-    let output = bind_expression_dirty(context, case.output)?;
+    let output = bind_match_case_output_dirty(context, case.output)?;
 
     context.pop_n(arity);
     Ok(MatchCase {
@@ -395,6 +395,20 @@ fn bind_match_case_params(
                     .transpose()?,
                 triple_dot,
             }
+        }
+    })
+}
+
+fn bind_match_case_output_dirty(
+    context: &mut Context,
+    output: ub::MatchCaseOutput,
+) -> Result<MatchCaseOutput, BindError> {
+    Ok(match output {
+        ub::MatchCaseOutput::Some(expression) => {
+            MatchCaseOutput::Some(bind_expression_dirty(context, expression)?)
+        }
+        ub::MatchCaseOutput::ImpossibilityClaim(kw_span) => {
+            MatchCaseOutput::ImpossibilityClaim(Some(kw_span))
         }
     })
 }

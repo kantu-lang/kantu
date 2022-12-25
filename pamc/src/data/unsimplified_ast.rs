@@ -169,7 +169,7 @@ pub struct MatchCase {
     pub variant_name: Identifier,
     pub params: Option<NonEmptyVec<MatchCaseParam>>,
     pub triple_dot: Option<TextSpan>,
-    pub output: Expression,
+    pub output: MatchCaseOutput,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -186,6 +186,12 @@ impl MatchCaseParam {
             ParamLabel::Explicit(name) => &name.name,
         })
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum MatchCaseOutput {
+    Some(Expression),
+    ImpossibilityClaim(TextSpan),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

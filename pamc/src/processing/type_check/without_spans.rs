@@ -303,6 +303,15 @@ impl WithoutSpans for NodeId<LabeledMatchCaseParam> {
     }
 }
 
+impl WithoutSpans for MatchCaseOutputId {
+    fn without_spans(self, registry: &mut NodeRegistry) -> Self {
+        match self {
+            MatchCaseOutputId::Some(id) => MatchCaseOutputId::Some(id.without_spans(registry)),
+            MatchCaseOutputId::ImpossibilityClaim(_) => MatchCaseOutputId::ImpossibilityClaim(None),
+        }
+    }
+}
+
 impl WithoutSpans for NodeId<Forall> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();

@@ -218,7 +218,7 @@ pub struct MatchCase {
     pub span: Option<TextSpan>,
     pub variant_name: Identifier,
     pub params: Option<NonEmptyMatchCaseParamVec>,
-    pub output: Expression,
+    pub output: MatchCaseOutput,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -253,6 +253,12 @@ pub struct LabeledMatchCaseParam {
     pub span: Option<TextSpan>,
     pub label: ParamLabel,
     pub name: Identifier,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum MatchCaseOutput {
+    Some(Expression),
+    ImpossibilityClaim(Option<TextSpan>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

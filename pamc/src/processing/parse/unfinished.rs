@@ -23,6 +23,7 @@ pub enum UnfinishedStackItem {
     MatchCase(UnfinishedMatchCase),
     MatchCaseParam(UnfinishedMatchCaseParam),
     UnfinishedDelimitedTripleDot(UnfinishedDelimitedTripleDot),
+    UnfinishedDelimitedImpossibleKwOrExpression(UnfinishedDelimitedImpossibleKwOrExpression),
 }
 
 #[derive(Clone, Debug)]
@@ -212,4 +213,10 @@ pub enum UnfinishedMatchCaseParam {
 pub enum UnfinishedDelimitedTripleDot {
     Empty,
     WaitingForEndDelimiter(Token),
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedDelimitedImpossibleKwOrExpression {
+    Empty,
+    WaitingForEndDelimiter { impossible_kw: Token },
 }

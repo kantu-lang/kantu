@@ -3,8 +3,8 @@ use crate::data::{
     light_ast::{self as light, ParamLabelId},
     node_registry::{
         FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, LabeledCallArgId,
-        NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId, NonEmptyMatchCaseParamListId,
-        NonEmptyParamListId, PossiblyInvalidExpressionId,
+        MatchCaseOutputId, NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId,
+        NonEmptyMatchCaseParamListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
@@ -325,7 +325,7 @@ pub fn expand_match_case(registry: &NodeRegistry, id: NodeId<light::MatchCase>) 
     let light = registry.get(id);
     let variant_name = expand_identifier(registry, light.variant_name_id);
     let params = expand_optional_match_case_param_list(registry, light.param_list_id);
-    let output = expand_expression(registry, light.output_id);
+    let output = expand_match_case_output(registry, light.output_id);
     MatchCase {
         span: light.span,
         variant_name,
@@ -386,6 +386,15 @@ pub fn expand_labeled_match_case_param(
         span: light.span,
         label,
         name,
+    }
+}
+
+pub fn expand_match_case_output(registry: &NodeRegistry, id: MatchCaseOutputId) -> MatchCaseOutput {
+    match id {
+        MatchCaseOutputId::Some(id) => MatchCaseOutput::Some(expand_expression(registry, id)),
+        MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+            MatchCaseOutput::ImpossibilityClaim(kw_span)
+        }
     }
 }
 

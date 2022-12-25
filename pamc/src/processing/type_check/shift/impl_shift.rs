@@ -475,6 +475,27 @@ impl ShiftDbIndices for NodeId<MatchCase> {
     }
 }
 
+impl ShiftDbIndices for MatchCaseOutputId {
+    type Output = Self;
+
+    fn try_shift_with_cutoff<F: ShiftFn>(
+        self,
+        f: F,
+        cutoff: usize,
+        registry: &mut NodeRegistry,
+    ) -> Result<Self, F::ShiftError> {
+        match self {
+            MatchCaseOutputId::Some(id) => {
+                let shifted_id = id.try_shift_with_cutoff(f, cutoff, registry)?;
+                Ok(MatchCaseOutputId::Some(shifted_id))
+            }
+            MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+                Ok(MatchCaseOutputId::ImpossibilityClaim(kw_span))
+            }
+        }
+    }
+}
+
 impl ShiftDbIndices for NodeId<Forall> {
     type Output = Self;
 

@@ -47,6 +47,9 @@ impl Accept for UnfinishedStackItem {
             UnfinishedStackItem::UnfinishedDelimitedQuestionMarkOrExpression(expression) => {
                 expression.accept(item, file_id)
             }
+            UnfinishedStackItem::UnfinishedDelimitedImpossibleKwOrExpression(expression) => {
+                expression.accept(item, file_id)
+            }
             UnfinishedStackItem::Dot(dot) => dot.accept(item, file_id),
             UnfinishedStackItem::Call(call) => call.accept(item, file_id),
             UnfinishedStackItem::MatchCase(match_case) => match_case.accept(item, file_id),
