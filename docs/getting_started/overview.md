@@ -223,14 +223,16 @@ you should simply write `some_val`.
 
 ### Type definition restrictions
 
-Type declarations must be [_strictly positive_](https://cs.stackexchange.com/questions/55646/strict-positivity).
-If you don't know what that means, don't worry--99% of types you
-write will probably satisfy this requirement.
-Odds are, the only time you will declare a type that violates
+Type declarations must pass a _positivity test_.
+This test is based on the notion of [strict positivity](https://cs.stackexchange.com/questions/55646/strict-positivity).
+However, Pamlihu imposes additional restrictions in order to simplify the positivity testing algorithm.
+
+You can probably skip this section, since odds are, the only time you will declare a type that violates
 the strict positivity requirement is if you deliberately try to.
 
-However, if you're still curious about (and you don't already know) the
-definition of positivity, please read the article linked above.
+However, if you're still curious about this (or you got referred to
+this page by a StackOverflow answer because you were one of the unlucky
+one in a million who stumbled upon this error "out in the wild"), read on.
 
 #### Motivation of the strict positivity requirement
 
@@ -241,24 +243,122 @@ allow us to prove false. For example:
 type False {}
 
 type Broken {
-    .B(f: forall(b: Broken) { False }): Broken,
+    .C(f: forall(b: Broken) { False }): Broken,
 }
 
 let f = fun _(b: Broken): False {
     match b {
-        .B(g) => g(b),
+        .C(g) => g(b),
     }
 };
-let broken = Broken.B(f);
+let broken = Broken.C(f);
 let false = f(broken);
 // We just proved False! 😨
 ```
 
-To prevent these "broken" types, we require types to be
-strictly positive.
-For example, in the above example, the `Broken.B` type variant
-declaration would be rejected by the compiler, since `Broken`
-appears in a negative position (i.e., `b: Broken`).
+To prevent these "broken" types, we forbid recursive
+references in any `forall` parameter type.
+For example, the above example would be rejected by
+the positivity checker because...
+
+```pamlihu
+type Broken {
+    .C(
+        f:
+            // ...`Broken` appears in the parameter type
+            // of the forall parameter `b`.
+            forall(b: Broken) { False },
+    ): Broken,
+}
+```
+
+However, this restriction is not enough!
+If we only had this restriction, we could circumvent it,
+such as in the code below
+
+```pamlihu
+type False {}
+
+type Not(T: Type) {
+    .C(f: forall(_: T) { False }): Not(T),
+}
+
+type Broken {
+    // Look! `Broken` does not appear in a
+    // a forall parameter type!
+    // So this code is safe, right?...
+    .C(n: Not(Broken)): Broken,
+}
+
+let f = fun _(b: Broken): False {
+    match b {
+        .C(n) =>
+            match n {
+                .C(g) => g(b),
+            },
+    }
+};
+let not_broken = Not.C(f);
+let broken = Broken.B(not_broken);
+let false = f(broken);
+// Once again, we proved False! 😨
+```
+
+As you can see, by defining additional types such as `Not`,
+we can circumvent the direct forall restriction by getting
+the recursive reference to _indirectly_ appear in a forall
+parameter type, as we did above.
+
+To prevent sneaky techniques like the one above, we need
+to impose additional restrictions.
+
+The final list of rules is listed
+below.
+This section is already getting long, so I won't explain
+the rationale behind each rule in this article.
+
+#### Positivity rules
+
+1. A type declaration `type T(...) {...}` is considered
+   to _pass the positivity test_ if for every variant `V_i`,
+   the proposition `check_variant(V_i, T)` holds.
+2. **Definition of `check_variant(V_i, T)`:** True if and only if
+   for every param type `pt_j`, the proposition `check_expr_pos(pt_j, T)`
+   holds.
+3. **Definition of `check_expr_pos(x, T)`:**
+   1. If `x` is a name, this is true.
+   2. If `x` is a `fun`, this is false.
+   3. If `x` is a `forall`, this is true if and only if
+      `T` does not appear in any of x's param types, and
+      `x` has an output `x_output` such that
+      `check_expr_pos(x_output, T)` holds.
+   4. If `x` is a `match`, this is true if and only if
+      `T` does not appear in the matchee, and each match case
+      has an output `out_k` such that `check_expr_pos(out_k, T)`
+   5. If `x` is a `call` where `T` never appears, this is true.
+   6. If `x` is a `call` where `T` _does_ appear, and the
+      callee is a type constructor `T2`, then this is true if
+      and only if for each argument `arg_i` where `T` appears,
+      the proposition `check_type_param_pos(T2, i)` holds.
+   7. If `x` is a `call` where `T` _does_ appear, but the
+      callee is not a type constructor, this is false.
+4. **Definition of `check_type_param_pos(T, i)`:**
+   True if and only if for every variant `V`, the proposition
+   `check_type_param_pos_in_variant(V, i, T)` holds.
+5. **Definition of `check_type_param_pos_in_variant(V, i, T)`:**
+   Let `arg_i` be the `i`th argument of the variant's return type.
+   If none of `V`'s parameters appear in `arg_i`, this is true.
+   Otherwise, if `arg_i` contains at least one of `V`'s parameter
+   but is not a name, this is false.
+   Otherwise, `arg_i` must be a name AND contain at least one parameter--in
+   other words, `arg_i` _is_ a reference to some parameter, call it param `p_j`.
+   This is true if and only if for each param after param `p_j`, the param type
+   `pt_k` satisfies `check_expr_pos{i, T}(pt_k, p_j)` where `check_expr_pos{i, T}`
+   is `check_expr_pos` except it automatically substitutes "True" for any
+   use of `check_type_param_pos(T, i)` within its algorithm.
+
+Once again, this may feel like a math textbook, so don't worry too much
+about it--you'll probably never need it.
 
 ## `let` statements
 
