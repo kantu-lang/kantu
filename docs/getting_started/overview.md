@@ -1170,8 +1170,8 @@ We'll begin this section by examining an example project.
 #### File layout:
 
 ```text
+pack.omlet
 src/
-    pack.omlet
     mod.ph
     foo.ph
     bar/
@@ -1184,6 +1184,7 @@ Pamlihu packages are roughly analogous to npm packages or Rust crates.
 
 A package consists of a `pack.omlet` file and one or more
 `.ph` files.
+The `.ph` files are held in a `src` directory.
 
 Packages are broken down into a tree of smaller components called _modules_.
 In fact, the package _is itself_ a module.
@@ -1206,7 +1207,7 @@ In this example project, we do not have any external dependencies, and
 we use all the default compiler options, so we simply write `{}` to
 denote an "empty" config.
 
-#### `mod.ph` (corresponds to the `pack` module):
+#### `src/mod.ph` (corresponds to the `pack` module):
 
 ```pamlihu
 mod foo;
@@ -1233,19 +1234,7 @@ the alias `Nat`
 and the constant `factorial` public).
 
 To change the visibility of an item, use the `pub` keyword.
-
-By default, `pub` makes an item _globally_ visible, meaning that
-any module in the world can use it.
-However, you can specify more restrictive visibility levels:
-
-- `pub(pack)` - Only visible to this package.
-- `pub(mod)` - Only visible to this module (including submodules).
-- `pub(super)` - Only visible to this module's supermodule
-  (including the supermodule's submodules).
-- `pub(super.super)`, `pub(super.super.super)`, and so on - You get the idea
-- `pub(pack.some.arbitrary.path.to.ancestor)` - You can also specify a target module
-  by going "downwards" from the root (rather than "upwards" from the current module, like `super` does).
-  The target module must be an ancestor of the current module.
+More details on this will be covered in the **Module item visibility** section.
 
 If an item does not have a `pub` prefix, its visibility defaults to
 `pub(mod)`.
@@ -1262,7 +1251,7 @@ As with all file items, the visibility defaults to `pub(mod)`,
 but you can use `pub` or `pub(<insert_modifier_here>)` to
 change it.
 
-#### `foo.ph` (corresponds to the `pack.foo` module):
+#### `src/foo.ph` (corresponds to the `pack.foo` module):
 
 ```pamlihu
 pub type Nat {
@@ -1271,7 +1260,7 @@ pub type Nat {
 }
 ```
 
-#### `bar/mod.ph` (corresponds to the `pack.bar` module):
+#### `src/bar/mod.ph` (corresponds to the `pack.bar` module):
 
 ```pamlihu
 use super.Nat;
@@ -1295,7 +1284,7 @@ Note that we decline to alias `super.O`, so when we reference
 it (i.e., in the output of the match expression's `.O` case),
 we use fully qualified syntax.
 
-#### `bar/baz.ph` (corresponds to the `pack.bar.baz` module):
+#### `src/bar/baz.ph` (corresponds to the `pack.bar.baz` module):
 
 ```pamlihu
 use super.Nat;
@@ -1314,3 +1303,260 @@ Note that we have to write `use super.super.S;` instead of simply
 This is because the supermodule (i.e., `pack.bar`) does _not_ export
 an item named `S`, but the supermodule's supermodule (i.e., `pack`)
 does indeed export such an item.
+
+#### End of the example
+
+This concludes the example project.
+The following sections will summarize old topics
+and/or add additional details.
+
+### Packages and modules
+
+A package is a unit of distributable code, like a crate in Rust.
+A package is a module, called the `pack` module.
+Modules can contain zero or more submodules.
+
+### Terminology clarification: submodules, descendant modules, ancestor modules, oh my!
+
+Modules can be organized into a tree, with the `pack` module at the root.
+
+- A _submodule_ of `module_x` is a (direct) child `module_x`.
+- A _supermodule_ of `module_x` is the (direct) parent of `module_x`.
+- A _descendant module_ (or simply _descendant_ for short) of `module_x` is, as the name suggests, a descendant of `module_x`. That is, it is either a child, or a child of a child, or a child of a child of a child, etc.
+- A _ancestor module_ (or simply _ancestor_ for short) of `module_x` is, as the name suggests, an ancestor `module_x`. That is, it is either a parent, or a parent of a parent, or a parent of a parent of a parent, etc.
+
+### How to create a package
+
+1. Create a `pack.omlet` file.
+2. In the same directory, create a `src/` directory.
+3. In that `src` directory, create a `mod.ph` file.
+
+The `mod.ph` file corresponds to the `pack` module.
+The `src` directory is referred to as the package's _source directory_.
+Not surprisingly, all submodules of `pack` will go in the package's source directory, submodules of those submodules will go in subdirectories of the
+source directory, submodules of _those_ submodules will go in subdirectories of _those_ subdirectories, and so on--turtles all the way down.
+
+### How to create a module
+
+There are two ways to create a module `foo`:
+
+1. Create a file `foo.ph`. Then add `mod foo;` to the supermodule file.
+2. Create a file `foo/mod.ph`. That is, create a `foo/` directory
+   and create a `mod.ph` file inside that directory.
+
+   Then add `mod foo;` to the supermodule file.
+
+   Note: You **must** choose this option if you want `foo` to have submodules.
+
+Create the files in the directory containing the `mod.ph` file of
+`foo`'s desired parent.
+
+For example, if you to create `pack.foo` (i.e., you want `foo` to be the child of `pack`), then you should create its file(s) in the directory of the
+`mod.ph` file corresponding to `pack`.
+In other words, create the file(s) in the package's source directory (i.e., `src/`).
+Then, you would add `mod foo;` to `src/mod.ph`.
+
+As another example, if you want to create `pack.bar.baz.foo`
+(i.e., you want `foo` to be the child of `pack.bar.baz`), then
+create the file(s) in the `src/bar/baz/` directory.
+Then, you would add `mod foo;` to `src/bar/baz/mod.ph`.
+
+### Module items
+
+Each module has zero or more _items_.
+An item can be a
+
+- Constant (declared using `let`)
+- Type (declared using `type`)
+- Submodule (declared using `mod`)
+- Alias (declared using `use`)
+
+The current module's items are automatically in the current module's
+scope.
+Other modules' items must be referenced using `.` syntax.
+
+Example:
+
+`src/mod.ph`
+
+```pamlihu
+pub mod nat;
+pub mod factorial;
+```
+
+`src/nat.ph`
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(_: Nat): Nat,
+}
+```
+
+`src/factorial/mod.ph`
+
+```pamlihu
+mod plus;
+
+// `Nat` was declared by a module other than the current module,
+// so we must use `.` syntax (specifically, `super.nat.Nat`).
+let mult = fun mult(-a: super.nat.Nat, b: super.nat.Nat): super.nat.Nat {
+    match a {
+        .O => super.nat.Nat.S(super.nat.Nat.O),
+        .S(a') =>
+            // `plus` was declared by a module other than the current module,
+            // so we must use `.` syntax (specifically, `plus.plus`).
+            plus.plus(b, mult(a', b)),
+    }
+};
+
+pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
+    match a {
+        .O => super.nat.Nat.S(super.nat.Nat.O),
+        // `mult` is declared by the current module, so we don't
+        // need `.` syntax.
+        .S(a') => mult(a, factorial(a')),
+    }
+};
+```
+
+`src/factorial/plus.ph`:
+
+```pamlihu
+// `Nat` was declared by a module other than the current module,
+// so we must use `.` syntax (specifically, `super.super.nat.Nat`).
+pub let plus = fun plus(-a: super.super.nat.Nat, b: super.super.nat.Nat): super.super.nat.Nat {
+    match a {
+        .O => b,
+        .S(a') => super.super.nat.Nat.S(plus(a', b)),
+    }
+};
+```
+
+### Module item visibility
+
+By default, module items can only be accessed within
+their declaring module and all descendant modules.
+
+However, you can prefix a item declaration statement with the `pub`
+keyword to modify that item's visibility.
+
+| Visibility level                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pub`                                              | Global visibility. Any module in the world can access this item.                                                                                                                                                                                                                                                                                                                                                      |
+| `pub(mod)`                                         | Module visibility. This is the default visibility level. Only the declaring module and its descendants can access this item. You should rarely (if ever) need to explicitly specify this, since it's the default.                                                                                                                                                                                                     |
+| `pub(super)`                                       | Supermodule visibility. Only the declaring module's supermodule and the supermodule's descendants can access this.                                                                                                                                                                                                                                                                                                    |
+| `pub(super.super)`, `pub(super.super.super)`, etc. | Self explanatory. You can add as many "super"s as there are supermodules.                                                                                                                                                                                                                                                                                                                                             |
+| `pub(pack.some.arbitrary.module)`                  | The specified module _must_ be an ancestor of the declaring module (otherwise the item wouldn't be visible to itself, which obviously makes no sense). Therefore, any module you could specify with `pub(pack.some.arbitary.module)` could be equivalently specified with `pub(super.super.<...n supers>)`. However, sometimes the `pack.some.arbitary.module` syntax is cleaner,which is why we provide this option. |
+
+### Declaring aliases with `use`
+
+If you don't want to type a bunch of `.`s, you will find `use` very handy.
+
+Before:
+
+```pamlihu
+mod math;
+
+let x = math.nat.Nat.S(math.nat.Nat.O);
+```
+
+After:
+
+```pamlihu
+mod math;
+
+use math.nat.Nat;
+use Nat.O;
+use Nat.S;
+
+let x = S(O);
+```
+
+#### How to use `use`
+
+Just type something like `use foo.bar.baz;`. This will create a `baz` alias,
+which will be an item of the current module.
+Since it's an item of the current module, we don't need to use fully qualified
+syntax, so we can simply write `baz` (instead of the full-blown `foo.bar.baz`) in the subsequent code.
+
+### Ordering of modules
+
+Recall that Pamlihu forbids forward references.
+As a result, the compiler examines modules in a certain
+order.
+Items from one module cannot be referenced by modules appearing
+earlier in that order.
+
+Here are the rules for determining the order:
+
+1. A module's submodules are evaluated in the order they
+   are declared (i.e., the order in which the `mod <module name>;` statements appear in the `mod.ph` file).
+2. A module is evaluated immediately after all its submodules
+   are evaluated.
+
+So for example, recall the example project had the following
+file layout:
+
+```text
+pack.omlet
+src/
+    mod.ph
+    foo.ph
+    bar/
+        mod.ph
+        baz.ph
+```
+
+As a result, the module evaluation order would be
+
+```text
+pack.foo
+pack.bar.baz
+pack.bar
+pack
+```
+
+### Only _item_ origin is regarded during forward reference screening
+
+For example, the following is perfectly legal:
+
+`src/mod.ph`:
+
+```pamlihu
+pub mod nat;
+pub mod plus;
+
+use nat.NaturalNumber as Nat;
+```
+
+`src/nat.ph`:
+
+```pamlihu
+pub type NaturalNumber {
+    .O: NaturalNumber,
+    .S(_: NaturalNumber): NaturalNumber,
+}
+```
+
+`src/plus.ph`:
+
+```pamlihu
+// This seems like it would be illegal,
+// since the `Nat` alias was defined in the
+// `pack` module, which is only evaluated _after_
+// this module (i.e., `pack.plus`).
+//
+// However, although the _alias_ is a forward reference,
+// the underlying aliased _item_ is not, since it was defined
+// in `pack.foo`, which was evaluated before this module.
+// Thus, this is legal.
+use super.Nat;
+
+pub let plus = fun plus(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => Nat.O,
+        .S(a') => Nat.S(plus(a', b)),
+    }
+};
+```
