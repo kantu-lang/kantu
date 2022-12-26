@@ -1206,7 +1206,7 @@ In this example project, we do not have any external dependencies, and
 we use all the default compiler options, so we simply write `{}` to
 denote an "empty" config.
 
-#### `mod.ph`:
+#### `mod.ph` (corresponds to the `pack` module):
 
 ```pamlihu
 mod foo;
@@ -1224,7 +1224,7 @@ pub let factorial = fun f(-a: Nat): Nat {
 };
 ```
 
-This is file corresponding to the package.
+This is file corresponding to the `pack` module (i.e., the package).
 If you want any items to be accessible to
 consumers of this package, you need to
 mark them as _publicly visible_
@@ -1262,7 +1262,7 @@ As with all file items, the visibility defaults to `pub(mod)`,
 but you can use `pub` or `pub(<insert_modifier_here>)` to
 change it.
 
-#### `foo.ph`:
+#### `foo.ph` (corresponds to the `pack.foo` module):
 
 ```pamlihu
 pub type Nat {
@@ -1271,7 +1271,7 @@ pub type Nat {
 }
 ```
 
-`bar/mod.ph`:
+#### `bar/mod.ph` (corresponds to the `pack.bar` module):
 
 ```pamlihu
 use super.Nat;
@@ -1285,7 +1285,7 @@ pub let mult = fun f(-a: Nat, b: Nat): Nat {
 ```
 
 Note that since we created the aliases `Nat` and `O`
-back in `mod.ph`, and `mod.ph` is `bar/mod.ph`'s supermodule,
+back in `mod.ph`, and `pack` is this module's supermodule,
 we can now access those aliases here
 by writing `super.Nat` and `super.O`.
 However, if we find that that's still too long to write,
@@ -1295,7 +1295,7 @@ Note that we decline to alias `super.O`, so when we reference
 it (i.e., in the output of the match expression's `.O` case),
 we use fully qualified syntax.
 
-`bar/baz.ph`:
+#### `bar/baz.ph` (corresponds to the `pack.bar.baz` module):
 
 ```pamlihu
 use super.Nat;
@@ -1309,6 +1309,8 @@ pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
 };
 ```
 
-We have to write `use super.super.S;` instead of simply
-`use super.S;` because the supermodule (i.e., `bar/mod.ph`)
-doesn't alias `S`.
+Note that we have to write `use super.super.S;` instead of simply
+`use super.S;`.
+This is because the supermodule (i.e., `pack.bar`) does _not_ export
+an item named `S`, but the supermodule's supermodule (i.e., `pack`)
+does indeed export such an item.
