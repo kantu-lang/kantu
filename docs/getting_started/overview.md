@@ -1212,15 +1212,14 @@ denote an "empty" config.
 mod foo;
 pub mod bar;
 
-let Nat = foo.Nat;
-let O = foo.Nat.O;
-let S = foo.Nat.S;
-let mult = bar.mult;
+pub use foo.Nat;
+use Nat.O;
+use Nat.S;
 
 pub let factorial = fun f(-a: Nat): Nat {
     match a {
         .O => S(O),
-        .S(a') => mult(a, fact(a')),
+        .S(a') => bar.mult(a, f(a')),
     }
 };
 ```
@@ -1228,27 +1227,40 @@ pub let factorial = fun f(-a: Nat): Nat {
 This is file corresponding to the package.
 If you want any items to be accessible to
 consumers of this package, you need to
-export them here
-(in this example, we export the module `bar`
-and the constant `factorial`).
+mark them as _publicly visible_
+(in this example, we make the module `bar`,
+the alias `Nat`
+and the constant `factorial` public).
 
-"Exporting" an item simply means taking an existing item
-and changing its visibility level.
-This is done with the `pub` keyword.
-In this example, the `bar` module and the `factorial` constant
-have `pub` before their declarations, which is why they are
-exported.
+To change the visibility of an item, use the `pub` keyword.
 
 By default, `pub` makes an item _globally_ visible, meaning that
 any module in the world can use it.
-A later section will explain how to modify `pub` to restrict its
-visibility.
+However, you can specify more restrictive visibility levels:
+
+- `pub(pack)` - Only visible to this package.
+- `pub(mod)` - Only visible to this module (including submodules).
+- `pub(super)` - Only visible to this module's supermodule
+  (including the supermodule's submodules).
+- `pub(super.super)`, `pub(super.super.super)`, and so on - You get the idea
+- `pub(pack.some.arbitrary.path.to.ancestor)` - You can also specify a target module
+  by going "downwards" from the root (rather than "upwards" from the current module, like `super` does).
+  The target module must be an ancestor of the current module.
 
 If an item does not have a `pub` prefix, its visibility defaults to
-`pub(mod)`, meaning only items in the same module (or a submodule) can
-access that item.
-In this example, `foo`, `Nat`, `O`, `S`, and `mult`
-all have this visibility.
+`pub(mod)`.
+In this example, `foo`, `O`, `S`, and `mult`
+all implictly have `pub(mod)` visibility.
+
+To use an item that doesn't directly belong to this module, you must use fully qualified syntax (e.g., like `bar.mult`, in the above example).
+
+However, you can create aliases using the `use` keyword, like the
+above example does with `foo.Nat`, `Nat.O`, and `Nat.S`.
+Creating an alias will make the aliased item available from the
+current module's namespace.
+As with all file items, the visibility defaults to `pub(mod)`,
+but you can use `pub` or `pub(<insert_modifier_here>)` to
+change it.
 
 #### `foo.ph`:
 
@@ -1262,21 +1274,41 @@ pub type Nat {
 `bar/mod.ph`:
 
 ```pamlihu
-let Nat = super.foo.Nat;
-let O = super.foo.Nat.O;
-let S = super.foo.Nat.S;
+use super.Nat;
+
+pub let mult = fun f(-a: Nat, b: Nat): Nat {
+    match a {
+        .O => super.O,
+        .S(a') => plus(b, f(a', b)),
+    }
+};
+```
+
+Note that since we created the aliases `Nat` and `O`
+back in `mod.ph`, and `mod.ph` is `bar/mod.ph`'s supermodule,
+we can now access those aliases here
+by writing `super.Nat` and `super.O`.
+However, if we find that that's still too long to write,
+we can create an _alias to that alias_ by writing
+`use super.Nat;`.
+Note that we decline to alias `super.O`, so when we reference
+it (i.e., in the output of the match expression's `.O` case),
+we use fully qualified syntax.
+
+`bar/baz.ph`:
+
+```pamlihu
+use super.Nat;
+use super.super.S;
 
 pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
     match a {
         .O => b,
-        .S(a') => S(plus(a', b)),
-    }
-};
-
-pub let mult = fun f(-a: Nat, b: Nat): Nat {
-    match a {
-        .O => O,
-        .S(a') => plus(b, plus(a', b)),
+        .S(a') => S(f(a', b)),
     }
 };
 ```
+
+We have to write `use super.super.S;` instead of simply
+`use super.S;` because the supermodule (i.e., `bar/mod.ph`)
+doesn't alias `S`.
