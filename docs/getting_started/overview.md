@@ -1480,54 +1480,38 @@ which will be an item of the current module.
 Since it's an item of the current module, we don't need to use fully qualified
 syntax, so we can simply write `baz` (instead of the full-blown `foo.bar.baz`) in the subsequent code.
 
-### Ordering of modules
+### Ordering of item processing
 
 Recall that Pamlihu forbids forward references.
-As a result, the compiler examines modules in a certain
-order.
-Items from one module cannot be referenced by modules appearing
-earlier in that order.
 
-Here are the rules for determining the order:
+In a single file project, it is trivial to see the order of module items--simply read the code from top-to-bottom.
 
-1. A module's submodules are evaluated in the order they
-   are declared (i.e., the order in which the `mod <module name>;` statements appear in the `mod.ph` file).
-2. A module is evaluated immediately after all its submodules
-   are evaluated.
+However, with multiple files, a Pamlihu developer must understand
+the order that the compiler processes module items, so they can
+avoid forward references.
 
-So for example, recall the example project had the following
-file layout:
+Fortunately, the rules is very straight forward.
 
-```text
-pack.omlet
-src/
-    mod.ph
-    foo.ph
-    bar/
-        mod.ph
-        baz.ph
-```
+#### Rules for determining processing order:
 
-As a result, the module evaluation order would be
+1. Start at the root module (i.e., `pack`).
+   Keep processing items until you reach a submodule declaration
+   (i.e., a `mod` statement).
+2. Recursively use this algorithm to process that submodule's items.
+3. Once you're done processing that submodule's items, go to step (1), and continue processing
+   this module's items.
 
-```text
-pack.foo
-pack.bar.baz
-pack.bar
-pack
-```
+Here's an example to test your understanding.
 
-### Only _item_ origin is regarded during forward reference screening
-
-For example, the following is perfectly legal:
+#### Q: What order are the items processed in the example package below?
 
 `src/mod.ph`:
 
 ```pamlihu
 pub mod nat;
-pub mod plus;
-
 use nat.NaturalNumber as Nat;
+
+pub mod plus;
 ```
 
 `src/nat.ph`:
@@ -1542,15 +1526,6 @@ pub type NaturalNumber {
 `src/plus.ph`:
 
 ```pamlihu
-// This seems like it would be illegal,
-// since the `Nat` alias was defined in the
-// `pack` module, which is only evaluated _after_
-// this module (i.e., `pack.plus`).
-//
-// However, although the _alias_ is a forward reference,
-// the underlying aliased _item_ is not, since it was defined
-// in `pack.foo`, which was evaluated before this module.
-// Thus, this is legal.
 use super.Nat;
 
 pub let plus = fun plus(-a: Nat, b: Nat): Nat {
@@ -1559,4 +1534,15 @@ pub let plus = fun plus(-a: Nat, b: Nat): Nat {
         .S(a') => Nat.S(plus(a', b)),
     }
 };
+```
+
+#### A:
+
+```text
+pack.nat.NaturalNumber (type)
+pack.nat (module)
+pack.Nat (alias)
+pack.plus.Nat (alias)
+pack.plus.plus (constant)
+pack.plus (mod)
 ```
