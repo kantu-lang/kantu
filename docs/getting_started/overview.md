@@ -1,5 +1,11 @@
 # Pamlihu overview
 
+## Disclaimer
+
+This document is still under construction.
+It may not be 100% up-to-date (though it should be at least 90% accurate).
+It also needs to be simplified, since it's really verbose (and probably a bit intimidating to newcomers) right now.
+
 ## Identifiers
 
 Identifier names can contain the following characters:
