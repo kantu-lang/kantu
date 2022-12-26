@@ -1473,12 +1473,65 @@ use Nat.S;
 let x = S(O);
 ```
 
-#### How to use `use`
+#### `use` basic syntax
 
 Just type something like `use foo.bar.baz;`. This will create a `baz` alias,
 which will be an item of the current module.
 Since it's an item of the current module, we don't need to use fully qualified
 syntax, so we can simply write `baz` (instead of the full-blown `foo.bar.baz`) in the subsequent code.
+
+#### Renaming
+
+You can write `use foo.bar.baz as qux;` to make the alias `qux` (instead of `baz`). Example:
+
+```pamlihu
+use math.nat.Nat as Foo;
+
+let plus = fun plus(-a: Foo, b: Foo): Foo {
+    match a {
+        .O => Foo.O,
+        .S(a') => Foo.S(plus(a', b)),
+    }
+};
+```
+
+#### Wildcard imports
+
+You can write `use foo.*;` as shorthand for aliasing all
+the submodules of `foo`.
+Only the submodules of `foo` will be aliases--other descendants
+will not.
+
+For example, if we have
+
+`src/foo.ph`:
+
+```
+pub mod bar;
+pub mod baz;
+
+type Empty {}
+```
+
+`src/bar/mod.ph`:
+
+```pamlihu
+pub mod qux;
+```
+
+...then writing `use foo.*;` will be equivalent to writing
+
+```pamlihu
+use foo.bar;
+use foo.baz;
+```
+
+Note that `foo.bar.qux` is NOT included, since even though it
+is a descendant of `foo`, it is not a submodule of it.
+
+Remember that name shadowing is forbidden!
+Consequently, if a wildcard alias conflicts with an existing
+module item of the same name, the compiler will emit an error.
 
 ### Ordering of item processing
 
