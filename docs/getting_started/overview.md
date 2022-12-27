@@ -1692,3 +1692,19 @@ is `pack.my_constants`, so when evaluating the term
 `my_number` is NOT replaced with `Nat.O`.
 As a result, the `EqNat(my_number, Nat.O)` is its own normal form,
 and `EqNat.Refl(Nat.O)` cannot be judged to inhabit it.
+
+#### Modifying constant transparency
+
+Write a module after the let. Here are some examples:
+
+```pamlihu
+// Global transparency
+pub let(*) my_number_2 = Nat.O;
+
+// Transparent in supermodule (and its descendants)
+pub let(super) my_number_3 = Nat.O;
+
+// Transparent in `pack.some.arbitrary.ancestor`
+// (and its descendants)
+pub let(pack.some.arbitrary.ancestor) my_number_4 = Nat.O;
+```
