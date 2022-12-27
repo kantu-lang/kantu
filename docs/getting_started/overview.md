@@ -1605,3 +1605,90 @@ pack.plus.Nat (alias)
 pack.plus.plus (constant)
 pack.plus (mod)
 ```
+
+### Constant transparency
+
+Whether a constant declared with `let` is replaced with its
+value during term evaluation is determined by the constant's
+_transparency_.
+
+By default, constants have module-level transparency, meaning
+they will evaluate to their values in the defining module
+(and descendant modules), but be normal forms in other modules.
+
+This has significant implications for dependent types.
+
+For example, is the following code is valid.
+
+`src/mod.ph`:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type EqNat(a: Nat, b: Nat) {
+    .Refl(c: Nat): EqNat(c, c),
+}
+
+let identity = fun _(T: Type, t: T): T {
+    t
+};
+let ascribe = identity;
+
+let my_number = Nat.O;
+
+let my_number_equals_zero = identity(
+    EqNat(my_number, Nat.O),
+    EqNat.Refl(Nat.O),
+);
+```
+
+The above code is valid because `my_number` is replaced
+its value (i.e., `Nat.O`) during evaluation, therefore
+`EqNat(my_number, Nat.O)` evaluates to the normal form
+`EqNat(Nat.O, Nat.O)`, which is inhabited by the term
+`Eqnat.Refl(Nat.O)`.
+
+However, the following code is *in*valid.
+
+`src/mod.ph`:
+
+```pamlihu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type EqNat(a: Nat, b: Nat) {
+    .Refl(c: Nat): EqNat(c, c),
+}
+
+let identity = fun _(T: Type, t: T): T {
+    t
+};
+let ascribe = identity;
+
+mod my_constants;
+use my_constants.my_number;
+
+let my_number_equals_zero = identity(
+    EqNat(my_number, Nat.O),
+    EqNat.Refl(Nat.O),
+);
+```
+
+`src/my_constants.ph`:
+
+```pamlihu
+use super.*;
+pub let my_number = Nat.O;
+```
+
+This is because in this example, `my_number`'s transparency level
+is `pack.my_constants`, so when evaluating the term
+`EqNat(my_number, Nat.O)` in `pack`,
+`my_number` is NOT replaced with `Nat.O`.
+As a result, the `EqNat(my_number, Nat.O)` is its own normal form,
+and `EqNat.Refl(Nat.O)` cannot be judged to inhabit it.
