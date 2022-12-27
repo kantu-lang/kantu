@@ -1294,7 +1294,7 @@ we use fully qualified syntax.
 
 ```pamlihu
 use super.Nat;
-use super.super.S;
+use super(2).S;
 
 pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
     match a {
@@ -1304,7 +1304,7 @@ pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
 };
 ```
 
-Note that we have to write `use super.super.S;` instead of simply
+Note that we have to write `use super(2).S;` instead of simply
 `use super.S;`.
 This is because the supermodule (i.e., `pack.bar`) does _not_ export
 an item named `S`, but the supermodule's supermodule (i.e., `pack`)
@@ -1430,11 +1430,11 @@ pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
 
 ```pamlihu
 // `Nat` was declared by a module other than the current module,
-// so we must use `.` syntax (specifically, `super.super.nat.Nat`).
-pub let plus = fun plus(-a: super.super.nat.Nat, b: super.super.nat.Nat): super.super.nat.Nat {
+// so we must use `.` syntax (specifically, `super(2).nat.Nat`).
+pub let plus = fun plus(-a: super(2).nat.Nat, b: super(2).nat.Nat): super(2).nat.Nat {
     match a {
         .O => b,
-        .S(a') => super.super.nat.Nat.S(plus(a', b)),
+        .S(a') => super(2).nat.Nat.S(plus(a', b)),
     }
 };
 ```
@@ -1447,13 +1447,13 @@ their declaring module and all descendant modules.
 However, you can prefix a item declaration statement with the `pub`
 keyword to modify that item's visibility.
 
-| Visibility level                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                           |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pub`                                              | Global visibility. Any module in the world can access this item.                                                                                                                                                                                                                                                                                                                                                      |
-| `pub(mod)`                                         | Module visibility. This is the default visibility level. Only the declaring module and its descendants can access this item. You should rarely (if ever) need to explicitly specify this, since it's the default.                                                                                                                                                                                                     |
-| `pub(super)`                                       | Supermodule visibility. Only the declaring module's supermodule and the supermodule's descendants can access this.                                                                                                                                                                                                                                                                                                    |
-| `pub(super.super)`, `pub(super.super.super)`, etc. | Self explanatory. You can add as many "super"s as there are supermodules.                                                                                                                                                                                                                                                                                                                                             |
-| `pub(pack.some.arbitrary.module)`                  | The specified module _must_ be an ancestor of the declaring module (otherwise the item wouldn't be visible to itself, which obviously makes no sense). Therefore, any module you could specify with `pub(pack.some.arbitary.module)` could be equivalently specified with `pub(super.super.<...n supers>)`. However, sometimes the `pack.some.arbitary.module` syntax is cleaner,which is why we provide this option. |
+| Visibility level                       | Description                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pub`                                  | Global visibility. Any module in the world can access this item.                                                                                                                                                                                                                                                                                                                                     |
+| `pub(mod)`                             | Module visibility. This is the default visibility level. Only the declaring module and its descendants can access this item. You should rarely (if ever) need to explicitly specify this, since it's the default.                                                                                                                                                                                    |
+| `pub(super)`                           | Supermodule visibility. Only the declaring module's supermodule and the supermodule's descendants can access this.                                                                                                                                                                                                                                                                                   |
+| `pub(super(2))`, `pub(super(3))`, etc. | `super(2)` refers to the supermodule's supermodule. `super(3)` refers to the supermodule's supermodule's supermodule. And so on. You can write any `super(n)` where `n > 1` (assuming such a module exists, of course).                                                                                                                                                                              |
+| `pub(pack.some.arbitrary.module)`      | The specified module _must_ be an ancestor of the declaring module (otherwise the item wouldn't be visible to itself, which obviously makes no sense). Therefore, any module you could specify with `pub(pack.some.arbitary.module)` could be equivalently specified with `pub(super(n))`. However, sometimes the `pack.some.arbitary.module` syntax is cleaner,which is why we provide this option. |
 
 ### Declaring aliases with `use`
 
