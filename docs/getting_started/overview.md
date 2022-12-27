@@ -1708,3 +1708,193 @@ pub let(super) my_number_3 = Nat.O;
 // (and its descendants)
 pub let(pack.some.arbitrary.ancestor) my_number_4 = Nat.O;
 ```
+
+## Tamnyban (internal use only)
+
+Tamnyban is a language for describing Pamlihu declarations.
+There is no need for a Pamlihu user to learn it.
+
+### Evaluation and typechecking
+
+Evaluation (and therefore typechecking) is performed
+from a given module's perspective.
+The perspective determines what level of constant
+transparency is required to substitute the constant.
+
+### Name resolution
+
+In Pamlihu code, a name starting with `pack`, `super`, or `mod`
+is evaluated normally.
+Any other name `x.y.z` is treated as shorthand for `mod.x.y.z`.
+
+### `let` statements
+
+```pamlihu[tamnyban]
+pub(A) let(B) C.x = t;
+```
+
+Creates a constant `C.x`.
+
+Requirements:
+
+- `C` must be a module.
+- `C.x` must not already exist.
+- `B` must be a non-strict ancestor of `C`.
+- `A` must be a non-strict ancestor of `B`.
+- `t` must be well-typed when typechecked from the
+  perspective of `B`.
+- Every name in `t` must be visible to `B`.
+
+In normal Pamlihu code, `C` is the module of the `let`
+statement.
+The user is allowed, but not required to
+explicitly provide `A` and `B`.
+If one or both are omitted, they default to the
+most restrictive level (i.e., the deepest module)
+that is legal.
+
+Specifically:
+
+- If `A` and `B` both omitted: `A, B := C`
+- If `A` is omitted, `B` specified: `A := B`
+- If `A` is specified, `B` omitted: `B := C`
+
+### `type` statements
+
+```pamlihu[tamnyban]
+pub(A) type B.T(t1) { t2 }
+```
+
+Creates a type `B.T`.
+Every variant `B.T.V_i` also has visibility `A`.
+
+Requirements:
+
+- `B` must be a module.
+- `B.T` must not already exist.
+- `A` must be a non-strict ancestor of `B`.
+- Every name in `t1` and `t2` must be visible
+  to `A`, and be well-typed from the perspective
+  of `A`.
+
+In normal Pamlihu code, `B` is the module of the
+`type` statement.
+The user is allowed, but not required to
+explicitly provide `A`.
+If `A` is omitted, then it defaults to `B`.
+
+### `mod` statements
+
+```pamlihu[tamnyban]
+pub(A) mod B.M;
+```
+
+Creates a module `B.M`.
+
+Requirements
+
+- `B` must be a module.
+- `B.M` must not already exist.
+- `M` must be a single component.
+- `A` must be a non-strict ancesstor of `B`.
+
+In normal Pamlihu code, `B` is the module of the `mod` statement.
+`A` may be explicitly specified or omitted.
+If omitted, it defaults to `B`.
+
+### `use` statements
+
+#### Alias a constant
+
+```pamlihu[tamnyban]
+pub(A) use B.x as C.y&;
+```
+
+Creates alias `C.y& := B.x`.
+
+Requirements:
+
+- `C` must be a module.
+- `C.y&` must not already exist.
+- `B.x` must be visible to `C`.
+- `A` must be a non-strict ancestor of `C`.
+
+In normal Pamlihu code, `C` is the module of the `use` statement.
+The user must explicitly specify `B`.
+The user is allowed, but not required to
+explicitly provide `A`.
+If `A` is omitted, then it defaults to `C`.
+
+#### Alias a type
+
+```pamlihu[tamnyban]
+pub(A) use B.T as C.U&;
+```
+
+Creates alias
+
+```
+C.U& := B.T
+for V_i in B.T.dot_children:
+    c.U.V_i& := B.T.V_i
+```
+
+Same requirements and defaults as constant aliases.
+
+#### Alias a module
+
+```pamlihu[tamnyban]
+pub(A) use B as C.M&;
+```
+
+Creates alias
+
+```
+C.M& = B;
+for x in B.dot_children:
+    C.M.x& = B.x
+```
+
+Same requirements, plus
+
+- `M` must be exactly one component long.
+
+In normal Pamlihu code, `C` is the module of the `use` statement.
+The user must explicitly specify `B` and `M`.
+`A` may be specified or omitted (defaults to `C`).
+
+#### Alias an alias
+
+```pamlihu[tamnyban]
+pub(A) use B& as C.M&;
+```
+
+Creates alias
+
+```
+C.M& = value(B&);
+for x in B&.dot_children:
+    C.M.x& = value(B&.x)
+```
+
+#### Wildcard `use` statements
+
+```pamlihu[tamnyban]
+pub(A) use B.* as C.*;
+```
+
+Creates alias
+
+```
+for x in B.dot_children {
+    C.x := B.x
+}
+```
+
+Requirements
+
+- `C` and `B` must be a module
+- `A` must be a non-strict ancestor of `C`.
+- For all `x` in `B.dot_children`
+  - `C.x` must not already exist.
+  - `B.x` must be visible to `C`.
