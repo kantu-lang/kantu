@@ -5,7 +5,7 @@ use crate::data::{
     FileId, TextSpan,
 };
 
-use std::{collections::VecDeque, num::NonZeroUsize};
+use std::num::NonZeroUsize;
 
 // TODO: Make errors more informative.
 // For example, if possible, it would be possible
@@ -79,57 +79,34 @@ fn handle_token(
     stack: &mut Vec<UnfinishedStackItem>,
     file_id: FileId,
 ) -> Result<ReductionStatus, ParseError> {
-    let mut queue = VecDeque::from([FinishedStackItem::Token(token)]);
+    let mut finished = FinishedStackItem::Token(token);
     loop {
-        let Some(finished) = queue.pop_front() else {
-            return Ok(ReductionStatus::UnfinishedItemsRemain);
+        let Some(top_unfinished) = stack.last_mut() else {
+            return Ok(ReductionStatus::BottomStackItemFinished(finished));
         };
-
-        let mut finished = finished;
-        let reduction_status = loop {
-            let Some(top_unfinished) = stack.last_mut() else {
-                break ReductionStatus::BottomStackItemFinished(finished);
-            };
-            let accept_result = top_unfinished.accept(finished, file_id);
-            match accept_result {
-                AcceptResult::ContinueToNextToken => break ReductionStatus::UnfinishedItemsRemain,
-                AcceptResult::PopAndContinueReducing(new_finished) => {
-                    stack.pop();
-                    finished = new_finished;
-                    continue;
-                }
-                AcceptResult::PopAndEnqueueAndContinueReducing(new_finished, new_queue_item) => {
-                    stack.pop();
-                    finished = new_finished;
-                    queue.push_back(new_queue_item);
-                    continue;
-                }
-                AcceptResult::Push(item) => {
-                    stack.push(item);
-                    break ReductionStatus::UnfinishedItemsRemain;
-                }
-                AcceptResult::Push2(item1, item2) => {
-                    stack.push(item1);
-                    stack.push(item2);
-                    break ReductionStatus::UnfinishedItemsRemain;
-                }
-                AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
-                    stack.push(item);
-                    finished = new_finished;
-                    continue;
-                }
-                AcceptResult::Error(err) => return Err(err),
+        let accept_result = top_unfinished.accept(finished, file_id);
+        match accept_result {
+            AcceptResult::ContinueToNextToken => break Ok(ReductionStatus::UnfinishedItemsRemain),
+            AcceptResult::PopAndContinueReducing(new_finished) => {
+                stack.pop();
+                finished = new_finished;
+                continue;
             }
-        };
-        match reduction_status {
-            ReductionStatus::BottomStackItemFinished(item) => {
-                if let Some(queued_item) = queue.pop_front() {
-                    return Err(unexpected_finished_item_err(&queued_item));
-                } else {
-                    return Ok(ReductionStatus::BottomStackItemFinished(item));
-                }
+            AcceptResult::Push(item) => {
+                stack.push(item);
+                break Ok(ReductionStatus::UnfinishedItemsRemain);
             }
-            ReductionStatus::UnfinishedItemsRemain => continue,
+            AcceptResult::Push2(item1, item2) => {
+                stack.push(item1);
+                stack.push(item2);
+                break Ok(ReductionStatus::UnfinishedItemsRemain);
+            }
+            AcceptResult::PushAndContinueReducingWithNewTop(item, new_finished) => {
+                stack.push(item);
+                finished = new_finished;
+                continue;
+            }
+            AcceptResult::Error(err) => return Err(err),
         }
     }
 }

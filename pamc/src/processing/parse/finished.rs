@@ -8,11 +8,6 @@ pub enum FinishedStackItem {
         Token,
         File,
     ),
-    PubClause(
-        /// First token ("pub")
-        Token,
-        PubClause,
-    ),
     ParenthesizedWeakAncestor(
         /// First token
         Token,
@@ -152,7 +147,6 @@ impl FinishedStackItem {
         match self {
             FinishedStackItem::Token(token) => &token,
             FinishedStackItem::File(token, _) => &token,
-            FinishedStackItem::PubClause(token, _) => &token,
             FinishedStackItem::ParenthesizedWeakAncestor(token, _) => &token,
             FinishedStackItem::Type(token, _) => &token,
             FinishedStackItem::Let(token, _) => &token,
