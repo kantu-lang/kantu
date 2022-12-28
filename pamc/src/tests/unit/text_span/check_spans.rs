@@ -79,9 +79,8 @@ impl DeepCheckSpans for FileItem {
 }
 
 impl ShallowCheckOwnSpan for ModStatement {
-    fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since we haven't implemented `Parse` for `ModStatement` yet.
-        // TODO: Implement `Parse` for `ModStatement` and use it here.
+    fn shallow_check_own_span(&self, src: &str) {
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for ModStatement {

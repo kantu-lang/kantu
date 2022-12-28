@@ -99,6 +99,19 @@ impl Parse for ParenthesizedWeakAncestor {
     }
 }
 
+impl Parse for ModStatement {
+    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
+        vec![UnfinishedStackItem::Mod(UnfinishedModStatement::Empty)]
+    }
+
+    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
+        match bottom_item {
+            FinishedStackItem::Mod(_, mod_statement) => Ok(mod_statement),
+            other_item => Err(unexpected_finished_item_err(&other_item)),
+        }
+    }
+}
+
 impl Parse for TypeStatement {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::Type(UnfinishedTypeStatement::Empty)]
