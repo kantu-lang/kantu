@@ -132,6 +132,7 @@ impl Accept for UnfinishedTypeStatement {
                 }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
+
             UnfinishedTypeStatement::Params {
                 first_token,
                 visibility,
@@ -153,6 +154,7 @@ impl Accept for UnfinishedTypeStatement {
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
+
             UnfinishedTypeStatement::Variants {
                 first_token,
                 visibility,

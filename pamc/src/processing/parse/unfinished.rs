@@ -4,6 +4,7 @@ use super::*;
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
     ParenthesizedWeakAncestor(UnfinishedParenthesizedWeakAncestor),
+    Mod(UnfinishedModStatement),
     Type(UnfinishedTypeStatement),
     Let(UnfinishedLetStatement),
     Params(UnfinishedParams),
@@ -63,6 +64,24 @@ pub enum UnfinishedParenthesizedWeakAncestor {
     PackageRelativeAwaitingIdentifier {
         l_paren_token: Token,
         path_after_pack_kw: Vec<Identifier>,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedModStatement {
+    Empty,
+    ExplicitVisibility {
+        first_token: Token,
+        visibility: PendingPubClause,
+    },
+    Keyword {
+        first_token: Token,
+        visibility: Option<PubClause>,
+    },
+    Name {
+        first_token: Token,
+        visibility: Option<PubClause>,
+        name: Identifier,
     },
 }
 

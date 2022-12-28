@@ -17,6 +17,7 @@ mod let_statement;
 mod match_;
 mod match_case;
 mod match_case_param;
+mod mod_statement;
 mod param;
 mod params;
 mod parenthesized_weak_ancestor;
