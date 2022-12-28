@@ -3,6 +3,7 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
+    PubClause(UnfinishedPubClause),
     ParenthesizedWeakAncestor(UnfinishedParenthesizedWeakAncestor),
     Type(UnfinishedTypeStatement),
     Let(UnfinishedLetStatement),
@@ -30,26 +31,14 @@ pub enum UnfinishedStackItem {
 #[derive(Clone, Debug)]
 pub struct UnfinishedFile {
     pub first_token: Token,
-    pub pending_visibility: Option<PendingPubClause>,
+    pub pending_visibility: Option<PubClause>,
     pub items: Vec<FileItem>,
 }
 
 #[derive(Clone, Debug)]
-pub enum PendingPubClause {
+pub enum UnfinishedPubClause {
+    Empty,
     PubKw(Token),
-    Finished(PubClause),
-}
-
-impl PendingPubClause {
-    pub fn finalize(self, file_id: FileId) -> PubClause {
-        match self {
-            PendingPubClause::PubKw(pub_kw_token) => PubClause {
-                span: span_single(file_id, &pub_kw_token),
-                ancestor: None,
-            },
-            PendingPubClause::Finished(clause) => clause,
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -71,7 +60,7 @@ pub enum UnfinishedTypeStatement {
     Empty,
     ExplicitVisibility {
         first_token: Token,
-        visibility: PendingPubClause,
+        visibility: PubClause,
     },
     Keyword {
         first_token: Token,
@@ -102,7 +91,7 @@ pub enum UnfinishedLetStatement {
     Empty,
     ExplicitVisibility {
         first_token: Token,
-        visibility: PendingPubClause,
+        visibility: PubClause,
     },
     Keyword {
         first_token: Token,

@@ -5,13 +5,10 @@ impl Accept for UnfinishedLetStatement {
         match self {
             UnfinishedLetStatement::Empty => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Pub => {
-                        *self = UnfinishedLetStatement::ExplicitVisibility {
-                            first_token: token.clone(),
-                            visibility: PendingPubClause::PubKw(token),
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
+                    TokenKind::Pub => AcceptResult::PushAndContinueReducingWithNewTop(
+                        UnfinishedStackItem::PubClause(UnfinishedPubClause::Empty),
+                        FinishedStackItem::Token(token),
+                    ),
                     TokenKind::Let => {
                         *self = UnfinishedLetStatement::Keyword {
                             first_token: token,
@@ -21,6 +18,13 @@ impl Accept for UnfinishedLetStatement {
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
+                FinishedStackItem::PubClause(clause_first_token, clause) => {
+                    *self = UnfinishedLetStatement::ExplicitVisibility {
+                        first_token: clause_first_token,
+                        visibility: clause,
+                    };
+                    AcceptResult::ContinueToNextToken
+                }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
@@ -29,46 +33,15 @@ impl Accept for UnfinishedLetStatement {
                 visibility,
             } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::LParen => {
-                        if let PendingPubClause::PubKw(_) = visibility {
-                            AcceptResult::PushAndContinueReducingWithNewTop(
-                                UnfinishedStackItem::ParenthesizedWeakAncestor(
-                                    UnfinishedParenthesizedWeakAncestor::Empty,
-                                ),
-                                FinishedStackItem::Token(token),
-                            )
-                        } else {
-                            AcceptResult::Error(ParseError::unexpected_token(token))
-                        }
-                    }
                     TokenKind::Let => {
                         *self = UnfinishedLetStatement::Keyword {
                             first_token: first_token.clone(),
-                            visibility: Some(visibility.clone().finalize(file_id)),
+                            visibility: Some(visibility.clone()),
                         };
                         AcceptResult::ContinueToNextToken
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                FinishedStackItem::ParenthesizedWeakAncestor(
-                    weak_ancestor_first_token,
-                    ancestor,
-                ) => {
-                    if let PendingPubClause::PubKw(pub_kw_token) = visibility {
-                        *visibility = PendingPubClause::Finished(PubClause {
-                            span: span_single(file_id, pub_kw_token).inclusive_merge(ancestor.span),
-                            ancestor: Some(ancestor),
-                        });
-                        AcceptResult::ContinueToNextToken
-                    } else {
-                        wrapped_unexpected_finished_item_err(
-                            &FinishedStackItem::ParenthesizedWeakAncestor(
-                                weak_ancestor_first_token,
-                                ancestor,
-                            ),
-                        )
-                    }
-                }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 

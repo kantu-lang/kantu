@@ -8,27 +8,14 @@ impl Accept for UnfinishedFile {
                     if self.pending_visibility.is_some() {
                         AcceptResult::Error(ParseError::unexpected_token(token))
                     } else {
-                        self.pending_visibility = Some(PendingPubClause::PubKw(token));
-                        AcceptResult::ContinueToNextToken
-                    }
-                }
-                TokenKind::LParen => {
-                    if let Some(PendingPubClause::PubKw(_)) = &self.pending_visibility {
                         AcceptResult::PushAndContinueReducingWithNewTop(
-                            UnfinishedStackItem::ParenthesizedWeakAncestor(
-                                UnfinishedParenthesizedWeakAncestor::Empty,
-                            ),
+                            UnfinishedStackItem::PubClause(UnfinishedPubClause::Empty),
                             FinishedStackItem::Token(token),
                         )
-                    } else {
-                        AcceptResult::Error(ParseError::unexpected_token(token))
                     }
                 }
                 TokenKind::TypeLowerCase => {
-                    let visibility = self
-                        .pending_visibility
-                        .take()
-                        .map(|visibility| visibility.finalize(file_id));
+                    let visibility = self.pending_visibility.take();
                     let first_token = visibility.as_ref().map(get_pub_kw_token).unwrap_or(token);
                     AcceptResult::Push(UnfinishedStackItem::Type(
                         UnfinishedTypeStatement::Keyword {
@@ -38,10 +25,7 @@ impl Accept for UnfinishedFile {
                     ))
                 }
                 TokenKind::Let => {
-                    let visibility = self
-                        .pending_visibility
-                        .take()
-                        .map(|visibility| visibility.finalize(file_id));
+                    let visibility = self.pending_visibility.take();
                     let first_token = visibility.as_ref().map(get_pub_kw_token).unwrap_or(token);
                     AcceptResult::Push(UnfinishedStackItem::Let(UnfinishedLetStatement::Keyword {
                         first_token,
@@ -74,22 +58,15 @@ impl Accept for UnfinishedFile {
                 }
                 _ => AcceptResult::Error(ParseError::unexpected_token(token)),
             },
-            FinishedStackItem::ParenthesizedWeakAncestor(ancestor_first_token, ancestor) => {
-                if let Some(PendingPubClause::PubKw(pub_kw_token)) = self.pending_visibility.take()
-                {
-                    let visibility = PubClause {
-                        span: span_single(file_id, &pub_kw_token).inclusive_merge(ancestor.span),
-                        ancestor: Some(ancestor),
-                    };
-                    self.pending_visibility = Some(PendingPubClause::Finished(visibility));
-                    AcceptResult::ContinueToNextToken
+            FinishedStackItem::PubClause(clause_first_token, clause) => {
+                if self.pending_visibility.is_some() {
+                    wrapped_unexpected_finished_item_err(&FinishedStackItem::PubClause(
+                        clause_first_token,
+                        clause,
+                    ))
                 } else {
-                    wrapped_unexpected_finished_item_err(
-                        &FinishedStackItem::ParenthesizedWeakAncestor(
-                            ancestor_first_token,
-                            ancestor,
-                        ),
-                    )
+                    self.pending_visibility = Some(clause);
+                    AcceptResult::ContinueToNextToken
                 }
             }
             FinishedStackItem::Type(_, type_) => {

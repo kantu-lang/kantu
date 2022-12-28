@@ -8,6 +8,7 @@ pub trait Accept {
 pub enum AcceptResult {
     ContinueToNextToken,
     PopAndContinueReducing(FinishedStackItem),
+    PopAndEnqueueAndContinueReducing(FinishedStackItem, FinishedStackItem),
     Push(UnfinishedStackItem),
     Push2(UnfinishedStackItem, UnfinishedStackItem),
     PushAndContinueReducingWithNewTop(UnfinishedStackItem, FinishedStackItem),
@@ -22,6 +23,7 @@ impl Accept for UnfinishedStackItem {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
             UnfinishedStackItem::File(file) => file.accept(item, file_id),
+            UnfinishedStackItem::PubClause(clause) => clause.accept(item, file_id),
             UnfinishedStackItem::ParenthesizedWeakAncestor(ancestor) => {
                 ancestor.accept(item, file_id)
             }
