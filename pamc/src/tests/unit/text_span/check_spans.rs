@@ -41,13 +41,7 @@ where
 
 impl ShallowCheckOwnSpan for File {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
-        let reconstructed: File = parse_str(spanned_src)
-            .expect("Should be able to reconstruct a copy using the spanned slice.");
-        assert_eq!(
-            self.clone().replace_spans_and_file_ids_with_dummies(),
-            reconstructed.replace_spans_and_file_ids_with_dummies()
-        );
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for File {
@@ -56,6 +50,22 @@ impl DeepCheckChildSpans for File {
             item.deep_check_spans(src);
         }
     }
+}
+
+fn assert_reconstructed_equals_original_up_to_spans_and_file_ids<T>(
+    original: &T,
+    original_span: TextSpan,
+    src: &str,
+) where
+    T: Parse + ReplaceSpansAndFileIdsWithDummies + Clone + PartialEq + std::fmt::Debug,
+{
+    let spanned_src = get_spanned_slice(src, original_span).expect("Span should be valid");
+    let reconstructed: T = parse_str(spanned_src)
+        .expect("Should be able to reconstruct a copy using the spanned slice.");
+    assert_eq!(
+        original.clone().replace_spans_and_file_ids_with_dummies(),
+        reconstructed.replace_spans_and_file_ids_with_dummies()
+    );
 }
 
 impl DeepCheckSpans for FileItem {
@@ -94,9 +104,8 @@ impl DeepCheckChildSpans for PubClause {
 }
 
 impl ShallowCheckOwnSpan for ParenthesizedWeakAncestor {
-    fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since we haven't implemented `Parse` for `WeakAncestor` yet.
-        // TODO: Implement `Parse` for `WeakAncestor` and use it here.
+    fn shallow_check_own_span(&self, src: &str) {
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for ParenthesizedWeakAncestor {
@@ -138,13 +147,7 @@ impl DeepCheckChildSpans for Vec<Identifier> {
 
 impl ShallowCheckOwnSpan for TypeStatement {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
-        let reconstructed: Self = parse_str(spanned_src)
-            .expect("Should be able to reconstruct a copy using the spanned slice.");
-        assert_eq!(
-            self.clone().replace_spans_and_file_ids_with_dummies(),
-            reconstructed.replace_spans_and_file_ids_with_dummies()
-        );
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for TypeStatement {
@@ -188,13 +191,7 @@ impl DeepCheckChildSpans for Identifier {
 
 impl ShallowCheckOwnSpan for Param {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
-        let reconstructed: Param = parse_str(spanned_src)
-            .expect("Should be able to reconstruct a copy using the spanned slice.");
-        assert_eq!(
-            self.clone().replace_spans_and_file_ids_with_dummies(),
-            reconstructed.replace_spans_and_file_ids_with_dummies()
-        );
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for Param {
@@ -219,13 +216,7 @@ impl DeepCheckChildSpans for Vec<Variant> {
 
 impl ShallowCheckOwnSpan for Variant {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
-        let reconstructed: Variant = parse_str(spanned_src)
-            .expect("Should be able to reconstruct a copy using the spanned slice.");
-        assert_eq!(
-            self.clone().replace_spans_and_file_ids_with_dummies(),
-            reconstructed.replace_spans_and_file_ids_with_dummies()
-        );
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for Variant {
@@ -238,13 +229,7 @@ impl DeepCheckChildSpans for Variant {
 
 impl ShallowCheckOwnSpan for LetStatement {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
-        let reconstructed: Self = parse_str(spanned_src)
-            .expect("Should be able to reconstruct a copy using the spanned slice.");
-        assert_eq!(
-            self.clone().replace_spans_and_file_ids_with_dummies(),
-            reconstructed.replace_spans_and_file_ids_with_dummies()
-        );
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for LetStatement {
@@ -258,13 +243,7 @@ impl DeepCheckChildSpans for LetStatement {
 
 impl ShallowCheckOwnSpan for Expression {
     fn shallow_check_own_span(&self, src: &str) {
-        let spanned_src = get_spanned_slice(src, self.span()).expect("Span should be valid");
-        let reconstructed: Expression = parse_str(spanned_src)
-            .expect("Should be able to reconstruct a copy using the spanned slice.");
-        assert_eq!(
-            self.clone().replace_spans_and_file_ids_with_dummies(),
-            reconstructed.replace_spans_and_file_ids_with_dummies()
-        );
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span(), src);
     }
 }
 impl DeepCheckChildSpans for Expression {
