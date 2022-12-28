@@ -84,19 +84,6 @@ impl Parse for Variant {
     }
 }
 
-impl Parse for PubClause {
-    fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::PubClause(UnfinishedPubClause::Empty)]
-    }
-
-    fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
-        match bottom_item {
-            FinishedStackItem::PubClause(_, clause) => Ok(clause),
-            other_item => Err(unexpected_finished_item_err(&other_item)),
-        }
-    }
-}
-
 impl Parse for ParenthesizedWeakAncestor {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::ParenthesizedWeakAncestor(
