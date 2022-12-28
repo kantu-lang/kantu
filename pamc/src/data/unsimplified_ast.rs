@@ -45,11 +45,11 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PubClause {
     pub span: TextSpan,
-    pub ancestor: Option<WeakAncestor>,
+    pub ancestor: Option<ParenthesizedWeakAncestor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct WeakAncestor {
+pub struct ParenthesizedWeakAncestor {
     pub span: TextSpan,
     pub kind: WeakAncestorKind,
 }
@@ -98,7 +98,7 @@ pub struct Variant {
 pub struct LetStatement {
     pub span: TextSpan,
     pub visibility: Option<PubClause>,
-    pub transparency: Option<WeakAncestor>,
+    pub transparency: Option<ParenthesizedWeakAncestor>,
     pub name: Identifier,
     pub value: Expression,
 }

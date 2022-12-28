@@ -1,22 +1,22 @@
 use super::*;
 
-impl Accept for UnfinishedWeakAncestor {
+impl Accept for UnfinishedParenthesizedWeakAncestor {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedWeakAncestor::Empty => match item {
+            UnfinishedParenthesizedWeakAncestor::Empty => match item {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::LParen => {
-                    *self = UnfinishedWeakAncestor::LParen(token);
+                    *self = UnfinishedParenthesizedWeakAncestor::LParen(token);
                     AcceptResult::ContinueToNextToken
                 }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedWeakAncestor::LParen(l_paren_token) => match item {
+            UnfinishedParenthesizedWeakAncestor::LParen(l_paren_token) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Star => {
-                        *self = UnfinishedWeakAncestor::ReadyForRParen {
+                        *self = UnfinishedParenthesizedWeakAncestor::ReadyForRParen {
                             l_paren_token: l_paren_token.clone(),
-                            ancestor: WeakAncestor {
+                            ancestor: ParenthesizedWeakAncestor {
                                 span: span_single(file_id, &token),
                                 kind: WeakAncestorKind::Global,
                             },
@@ -24,9 +24,9 @@ impl Accept for UnfinishedWeakAncestor {
                         AcceptResult::ContinueToNextToken
                     }
                     TokenKind::Mod => {
-                        *self = UnfinishedWeakAncestor::ReadyForRParen {
+                        *self = UnfinishedParenthesizedWeakAncestor::ReadyForRParen {
                             l_paren_token: l_paren_token.clone(),
-                            ancestor: WeakAncestor {
+                            ancestor: ParenthesizedWeakAncestor {
                                 span: span_single(file_id, &token),
                                 kind: WeakAncestorKind::Mod,
                             },
@@ -108,9 +108,9 @@ impl Accept for UnfinishedWeakAncestor {
                     }
 
                     TokenKind::Pack => {
-                        *self = UnfinishedWeakAncestor::ReadyForRParen {
+                        *self = UnfinishedParenthesizedWeakAncestor::ReadyForRParen {
                             l_paren_token: l_paren_token.clone(),
-                            ancestor: WeakAncestor {
+                            ancestor: ParenthesizedWeakAncestor {
                                 span: span_single(file_id, &token),
                                 kind: WeakAncestorKind::PackageRelative {
                                     path_after_pack_kw: vec![],
@@ -125,23 +125,25 @@ impl Accept for UnfinishedWeakAncestor {
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedWeakAncestor::ReadyForRParen {
+            UnfinishedParenthesizedWeakAncestor::ReadyForRParen {
                 l_paren_token,
                 ancestor,
             } => match item {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::RParen => {
-                    AcceptResult::PopAndContinueReducing(FinishedStackItem::WeakAncestor(
-                        l_paren_token.clone(),
-                        WeakAncestor {
-                            span: ancestor.span.inclusive_merge(span_single(file_id, &token)),
-                            kind: ancestor.kind.clone(),
-                        },
-                    ))
+                    AcceptResult::PopAndContinueReducing(
+                        FinishedStackItem::ParenthesizedWeakAncestor(
+                            l_paren_token.clone(),
+                            ParenthesizedWeakAncestor {
+                                span: ancestor.span.inclusive_merge(span_single(file_id, &token)),
+                                kind: ancestor.kind.clone(),
+                            },
+                        ),
+                    )
                 }
                 FinishedStackItem::Token(token) if token.kind == TokenKind::Dot => {
                     match &mut ancestor.kind {
                         WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
-                            *self = UnfinishedWeakAncestor::PackageRelativeAwaitingIdentifier {
+                            *self = UnfinishedParenthesizedWeakAncestor::PackageRelativeAwaitingIdentifier {
                                 l_paren_token: l_paren_token.clone(),
                                 path_after_pack_kw: path_after_pack_kw.clone(),
                             };
@@ -153,7 +155,7 @@ impl Accept for UnfinishedWeakAncestor {
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedWeakAncestor::PackageRelativeAwaitingIdentifier {
+            UnfinishedParenthesizedWeakAncestor::PackageRelativeAwaitingIdentifier {
                 l_paren_token,
                 path_after_pack_kw,
             } => match item {
@@ -164,9 +166,9 @@ impl Accept for UnfinishedWeakAncestor {
                         name: IdentifierName::Standard(token.content),
                     };
                     path_after_pack_kw.push(component);
-                    *self = UnfinishedWeakAncestor::ReadyForRParen {
+                    *self = UnfinishedParenthesizedWeakAncestor::ReadyForRParen {
                         l_paren_token: l_paren_token.clone(),
-                        ancestor: WeakAncestor {
+                        ancestor: ParenthesizedWeakAncestor {
                             span: span_single(file_id, &l_paren_token)
                                 .inclusive_merge(component_span),
                             kind: WeakAncestorKind::PackageRelative {
@@ -182,7 +184,7 @@ impl Accept for UnfinishedWeakAncestor {
     }
 }
 
-impl UnfinishedWeakAncestor {
+impl UnfinishedParenthesizedWeakAncestor {
     fn set_to_super_n(
         &mut self,
         file_id: FileId,
@@ -190,9 +192,9 @@ impl UnfinishedWeakAncestor {
         super_n_token: &Token,
         n: NonZeroUsize,
     ) -> AcceptResult {
-        *self = UnfinishedWeakAncestor::ReadyForRParen {
+        *self = UnfinishedParenthesizedWeakAncestor::ReadyForRParen {
             l_paren_token: l_paren_token,
-            ancestor: WeakAncestor {
+            ancestor: ParenthesizedWeakAncestor {
                 span: span_single(file_id, super_n_token),
                 kind: WeakAncestorKind::Super(n),
             },

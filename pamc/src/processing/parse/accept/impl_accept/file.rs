@@ -15,7 +15,9 @@ impl Accept for UnfinishedFile {
                 TokenKind::LParen => {
                     if let Some(PendingPubClause::PubKw(_)) = &self.pending_visibility {
                         AcceptResult::PushAndContinueReducingWithNewTop(
-                            UnfinishedStackItem::WeakAncestor(UnfinishedWeakAncestor::Empty),
+                            UnfinishedStackItem::WeakAncestor(
+                                UnfinishedParenthesizedWeakAncestor::Empty,
+                            ),
                             FinishedStackItem::Token(token),
                         )
                     } else {
@@ -72,7 +74,7 @@ impl Accept for UnfinishedFile {
                 }
                 _ => AcceptResult::Error(ParseError::unexpected_token(token)),
             },
-            FinishedStackItem::WeakAncestor(ancestor_first_token, ancestor) => {
+            FinishedStackItem::ParenthesizedWeakAncestor(ancestor_first_token, ancestor) => {
                 if let Some(PendingPubClause::PubKw(pub_kw_token)) = self.pending_visibility.take()
                 {
                     let visibility = PubClause {
@@ -82,10 +84,12 @@ impl Accept for UnfinishedFile {
                     self.pending_visibility = Some(PendingPubClause::Finished(visibility));
                     AcceptResult::ContinueToNextToken
                 } else {
-                    wrapped_unexpected_finished_item_err(&FinishedStackItem::WeakAncestor(
-                        ancestor_first_token,
-                        ancestor,
-                    ))
+                    wrapped_unexpected_finished_item_err(
+                        &FinishedStackItem::ParenthesizedWeakAncestor(
+                            ancestor_first_token,
+                            ancestor,
+                        ),
+                    )
                 }
             }
             FinishedStackItem::Type(_, type_) => {

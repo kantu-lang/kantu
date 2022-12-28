@@ -32,7 +32,9 @@ impl Accept for UnfinishedTypeStatement {
                     TokenKind::LParen => {
                         if let PendingPubClause::PubKw(_) = visibility {
                             AcceptResult::PushAndContinueReducingWithNewTop(
-                                UnfinishedStackItem::WeakAncestor(UnfinishedWeakAncestor::Empty),
+                                UnfinishedStackItem::WeakAncestor(
+                                    UnfinishedParenthesizedWeakAncestor::Empty,
+                                ),
                                 FinishedStackItem::Token(token),
                             )
                         } else {
@@ -48,7 +50,10 @@ impl Accept for UnfinishedTypeStatement {
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                FinishedStackItem::WeakAncestor(weak_ancestor_first_token, ancestor) => {
+                FinishedStackItem::ParenthesizedWeakAncestor(
+                    weak_ancestor_first_token,
+                    ancestor,
+                ) => {
                     if let PendingPubClause::PubKw(pub_kw_token) = visibility {
                         *visibility = PendingPubClause::Finished(PubClause {
                             span: span_single(file_id, pub_kw_token).inclusive_merge(ancestor.span),
@@ -56,10 +61,12 @@ impl Accept for UnfinishedTypeStatement {
                         });
                         AcceptResult::ContinueToNextToken
                     } else {
-                        wrapped_unexpected_finished_item_err(&FinishedStackItem::WeakAncestor(
-                            weak_ancestor_first_token,
-                            ancestor,
-                        ))
+                        wrapped_unexpected_finished_item_err(
+                            &FinishedStackItem::ParenthesizedWeakAncestor(
+                                weak_ancestor_first_token,
+                                ancestor,
+                            ),
+                        )
                     }
                 }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),

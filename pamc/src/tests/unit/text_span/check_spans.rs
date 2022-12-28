@@ -93,13 +93,13 @@ impl DeepCheckChildSpans for PubClause {
     }
 }
 
-impl ShallowCheckOwnSpan for WeakAncestor {
+impl ShallowCheckOwnSpan for ParenthesizedWeakAncestor {
     fn shallow_check_own_span(&self, _src: &str) {
         // Do nothing, since we haven't implemented `Parse` for `WeakAncestor` yet.
         // TODO: Implement `Parse` for `WeakAncestor` and use it here.
     }
 }
-impl DeepCheckChildSpans for WeakAncestor {
+impl DeepCheckChildSpans for ParenthesizedWeakAncestor {
     fn deep_check_child_spans(&self, src: &str) {
         self.kind.deep_check_spans(src);
     }

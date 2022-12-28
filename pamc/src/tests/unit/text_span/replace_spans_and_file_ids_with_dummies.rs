@@ -88,7 +88,7 @@ impl ReplaceSpansAndFileIdsWithDummies for PubClause {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for WeakAncestor {
+impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedWeakAncestor {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let kind = self.kind.replace_spans_and_file_ids_with_dummies();
         Self {
