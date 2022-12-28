@@ -1,3 +1,14 @@
+mod mod_a;
+pub mod mod_b;
+pub(*) mod mod_c;
+pub(mod) mod mod_d;
+pub(super) mod mod_e;
+pub(super2) mod mod_f;
+pub(super8) mod mod_g;
+pub(pack) mod mod_h;
+pub(pack.some) mod mod_i;
+pub(pack.some.module) mod mod_j;
+
 type A {}
 pub type B {}
 pub(*) type C {}

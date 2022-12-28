@@ -12,7 +12,7 @@ impl Accept for UnfinishedModStatement {
                         };
                         AcceptResult::ContinueToNextToken
                     }
-                    TokenKind::TypeLowerCase => {
+                    TokenKind::Mod => {
                         *self = UnfinishedModStatement::Keyword {
                             first_token: token,
                             visibility: None,
@@ -41,7 +41,7 @@ impl Accept for UnfinishedModStatement {
                             AcceptResult::Error(ParseError::unexpected_token(token))
                         }
                     }
-                    TokenKind::TypeLowerCase => {
+                    TokenKind::Mod => {
                         *self = UnfinishedModStatement::Keyword {
                             first_token: first_token.clone(),
                             visibility: Some(visibility.clone().finalize(file_id)),

@@ -24,6 +24,17 @@ impl Accept for UnfinishedFile {
                         AcceptResult::Error(ParseError::unexpected_token(token))
                     }
                 }
+                TokenKind::Mod => {
+                    let visibility = self
+                        .pending_visibility
+                        .take()
+                        .map(|visibility| visibility.finalize(file_id));
+                    let first_token = visibility.as_ref().map(get_pub_kw_token).unwrap_or(token);
+                    AcceptResult::Push(UnfinishedStackItem::Mod(UnfinishedModStatement::Keyword {
+                        first_token,
+                        visibility,
+                    }))
+                }
                 TokenKind::TypeLowerCase => {
                     let visibility = self
                         .pending_visibility
@@ -91,6 +102,10 @@ impl Accept for UnfinishedFile {
                         ),
                     )
                 }
+            }
+            FinishedStackItem::Mod(_, mod_) => {
+                self.items.push(FileItem::Mod(mod_));
+                AcceptResult::ContinueToNextToken
             }
             FinishedStackItem::Type(_, type_) => {
                 self.items.push(FileItem::Type(type_));
