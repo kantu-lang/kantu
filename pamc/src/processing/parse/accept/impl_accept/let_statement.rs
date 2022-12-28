@@ -8,7 +8,7 @@ impl Accept for UnfinishedLetStatement {
                     TokenKind::Pub => {
                         *self = UnfinishedLetStatement::ExplicitVisibility {
                             first_token: token.clone(),
-                            visibility: PendingVisibilityClause::PubKw(token),
+                            visibility: PendingPubClause::PubKw(token),
                         };
                         AcceptResult::ContinueToNextToken
                     }
@@ -30,7 +30,7 @@ impl Accept for UnfinishedLetStatement {
             } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::LParen => {
-                        if let PendingVisibilityClause::PubKw(_) = visibility {
+                        if let PendingPubClause::PubKw(_) = visibility {
                             AcceptResult::PushAndContinueReducingWithNewTop(
                                 UnfinishedStackItem::WeakAncestor(UnfinishedWeakAncestor::Empty),
                                 FinishedStackItem::Token(token),
@@ -49,8 +49,8 @@ impl Accept for UnfinishedLetStatement {
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::WeakAncestor(weak_ancestor_first_token, ancestor) => {
-                    if let PendingVisibilityClause::PubKw(pub_kw_token) = visibility {
-                        *visibility = PendingVisibilityClause::Finished(VisibilityClause {
+                    if let PendingPubClause::PubKw(pub_kw_token) = visibility {
+                        *visibility = PendingPubClause::Finished(PubClause {
                             span: span_single(file_id, pub_kw_token).inclusive_merge(ancestor.span),
                             ancestor: Some(ancestor),
                         });
@@ -119,7 +119,6 @@ impl Accept for UnfinishedLetStatement {
                         };
                         AcceptResult::ContinueToNextToken
                     }
-                    TokenKind::LParen => unimplemented!(),
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),

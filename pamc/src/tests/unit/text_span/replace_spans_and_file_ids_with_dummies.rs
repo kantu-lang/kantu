@@ -65,7 +65,7 @@ impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for VisibilityClause {
+impl ReplaceSpansAndFileIdsWithDummies for PubClause {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let ancestor = self.ancestor.replace_spans_and_file_ids_with_dummies();
         Self {

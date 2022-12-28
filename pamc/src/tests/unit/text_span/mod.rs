@@ -109,3 +109,11 @@ fn labeled_call_args() {
     );
     verify_that_spans_are_correct(src);
 }
+
+#[test]
+fn visibility_and_transparency_modifiers() {
+    let src = include_str!(
+        "../../sample_code/should_succeed/should_parse/visibility_and_transparency_modifiers.ph"
+    );
+    verify_that_spans_are_correct(src);
+}

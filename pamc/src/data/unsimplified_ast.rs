@@ -27,14 +27,14 @@ impl FileItem {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
     pub span: TextSpan,
-    pub visibility: Option<VisibilityClause>,
+    pub visibility: Option<PubClause>,
     pub name: Identifier,
     pub params: Option<NonEmptyVec<Param>>,
     pub variants: Vec<Variant>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VisibilityClause {
+pub struct PubClause {
     pub span: TextSpan,
     pub ancestor: Option<WeakAncestor>,
 }
@@ -88,7 +88,7 @@ pub struct Variant {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
     pub span: TextSpan,
-    pub visibility: Option<VisibilityClause>,
+    pub visibility: Option<PubClause>,
     pub transparency: Option<WeakAncestor>,
     pub name: Identifier,
     pub value: Expression,

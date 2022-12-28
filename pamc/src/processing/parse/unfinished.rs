@@ -30,24 +30,24 @@ pub enum UnfinishedStackItem {
 #[derive(Clone, Debug)]
 pub struct UnfinishedFile {
     pub first_token: Token,
-    pub pending_visibility: Option<PendingVisibilityClause>,
+    pub pending_visibility: Option<PendingPubClause>,
     pub items: Vec<FileItem>,
 }
 
 #[derive(Clone, Debug)]
-pub enum PendingVisibilityClause {
+pub enum PendingPubClause {
     PubKw(Token),
-    Finished(VisibilityClause),
+    Finished(PubClause),
 }
 
-impl PendingVisibilityClause {
-    pub fn finalize(self, file_id: FileId) -> VisibilityClause {
+impl PendingPubClause {
+    pub fn finalize(self, file_id: FileId) -> PubClause {
         match self {
-            PendingVisibilityClause::PubKw(pub_kw_token) => VisibilityClause {
+            PendingPubClause::PubKw(pub_kw_token) => PubClause {
                 span: span_single(file_id, &pub_kw_token),
                 ancestor: None,
             },
-            PendingVisibilityClause::Finished(clause) => clause,
+            PendingPubClause::Finished(clause) => clause,
         }
     }
 }
@@ -71,26 +71,26 @@ pub enum UnfinishedTypeStatement {
     Empty,
     ExplicitVisibility {
         first_token: Token,
-        visibility: PendingVisibilityClause,
+        visibility: PendingPubClause,
     },
     Keyword {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
     },
     Name {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
         name: Identifier,
     },
     Params {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
         name: Identifier,
         params: Option<NonEmptyVec<Param>>,
     },
     Variants {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
         name: Identifier,
         params: Option<NonEmptyVec<Param>>,
         variants: Vec<Variant>,
@@ -102,20 +102,20 @@ pub enum UnfinishedLetStatement {
     Empty,
     ExplicitVisibility {
         first_token: Token,
-        visibility: PendingVisibilityClause,
+        visibility: PendingPubClause,
     },
     Keyword {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
     },
     ExplicitTransparency {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
         transparency: WeakAncestor,
     },
     Name {
         first_token: Token,
-        visibility: Option<VisibilityClause>,
+        visibility: Option<PubClause>,
         transparency: Option<WeakAncestor>,
         name: Identifier,
     },
