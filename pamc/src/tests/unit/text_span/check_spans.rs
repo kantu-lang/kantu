@@ -92,9 +92,8 @@ impl DeepCheckChildSpans for ModStatement {
 }
 
 impl ShallowCheckOwnSpan for PubClause {
-    fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since we haven't implemented `Parse` for `PubClause` yet.
-        // TODO: Implement `Parse` for `PubClause` and use it here.
+    fn shallow_check_own_span(&self, src: &str) {
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
 impl DeepCheckChildSpans for PubClause {

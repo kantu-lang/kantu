@@ -123,11 +123,19 @@ fn handle_token(
         };
         match reduction_status {
             ReductionStatus::BottomStackItemFinished(item) => {
-                if let Some(queued_item) = queue.pop_front() {
-                    return Err(unexpected_finished_item_err(&queued_item));
+                return if let Some(queued_item) = queue.pop_front() {
+                    let is_non_eoi = !matches!(
+                        &queued_item,
+                        FinishedStackItem::Token(token) if token.kind == TokenKind::Eoi
+                    );
+                    if is_non_eoi {
+                        Err(unexpected_finished_item_err(&queued_item))
+                    } else {
+                        Ok(ReductionStatus::BottomStackItemFinished(item))
+                    }
                 } else {
-                    return Ok(ReductionStatus::BottomStackItemFinished(item));
-                }
+                    Ok(ReductionStatus::BottomStackItemFinished(item))
+                };
             }
             ReductionStatus::UnfinishedItemsRemain => continue,
         }
