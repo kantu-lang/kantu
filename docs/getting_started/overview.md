@@ -17,7 +17,7 @@ Identifier names can contain the following characters:
 
 ...with the exception of:
 
-- The characters `;:,.@=-?~/()[]{}<>` cannot appear anywhere.
+- The characters `;:,.@=-?~/*()[]{}<>` cannot appear anywhere.
 - The characters `0123456789` cannot appear as the first character, but may appear everywhere else.
 - Whitespace cannot appear anywhere.
 

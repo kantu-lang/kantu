@@ -22,6 +22,7 @@ pub enum TokenKind {
     Question,
     Tilde,
     Slash,
+    Star,
     LParen,
     RParen,
     LSquare,
