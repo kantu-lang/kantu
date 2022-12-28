@@ -8,6 +8,11 @@ pub enum FinishedStackItem {
         Token,
         File,
     ),
+    WeakAncestor(
+        /// First token
+        Token,
+        WeakAncestor,
+    ),
     Type(
         /// First token ("type")
         Token,
@@ -142,6 +147,7 @@ impl FinishedStackItem {
         match self {
             FinishedStackItem::Token(token) => &token,
             FinishedStackItem::File(token, _) => &token,
+            FinishedStackItem::WeakAncestor(token, _) => &token,
             FinishedStackItem::Type(token, _) => &token,
             FinishedStackItem::Let(token, _) => &token,
             FinishedStackItem::Params(token, _) => &token,

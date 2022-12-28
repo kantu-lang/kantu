@@ -5,29 +5,132 @@ impl Accept for UnfinishedLetStatement {
         match self {
             UnfinishedLetStatement::Empty => match item {
                 FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Pub => {
+                        *self = UnfinishedLetStatement::ExplicitVisibility {
+                            first_token: token.clone(),
+                            visibility: PendingVisibilityClause::PubKw(token),
+                        };
+                        AcceptResult::ContinueToNextToken
+                    }
                     TokenKind::Let => {
-                        *self = UnfinishedLetStatement::Keyword(token);
+                        *self = UnfinishedLetStatement::Keyword {
+                            first_token: token,
+                            visibility: None,
+                        };
                         AcceptResult::ContinueToNextToken
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedLetStatement::Keyword(let_kw) => match item {
+
+            UnfinishedLetStatement::ExplicitVisibility {
+                first_token,
+                visibility,
+            } => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::LParen => {
+                        if let PendingVisibilityClause::PubKw(_) = visibility {
+                            AcceptResult::PushAndContinueReducingWithNewTop(
+                                UnfinishedStackItem::WeakAncestor(UnfinishedWeakAncestor::Empty),
+                                FinishedStackItem::Token(token),
+                            )
+                        } else {
+                            AcceptResult::Error(ParseError::unexpected_token(token))
+                        }
+                    }
+                    TokenKind::Let => {
+                        *self = UnfinishedLetStatement::Keyword {
+                            first_token: first_token.clone(),
+                            visibility: Some(visibility.clone().finalize(file_id)),
+                        };
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                FinishedStackItem::WeakAncestor(weak_ancestor_first_token, ancestor) => {
+                    if let PendingVisibilityClause::PubKw(pub_kw_token) = visibility {
+                        *visibility = PendingVisibilityClause::Finished(VisibilityClause {
+                            span: span_single(file_id, pub_kw_token).inclusive_merge(ancestor.span),
+                            ancestor: Some(ancestor),
+                        });
+                        AcceptResult::ContinueToNextToken
+                    } else {
+                        wrapped_unexpected_finished_item_err(&FinishedStackItem::WeakAncestor(
+                            weak_ancestor_first_token,
+                            ancestor,
+                        ))
+                    }
+                }
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
+
+            UnfinishedLetStatement::Keyword {
+                first_token,
+                visibility,
+            } => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::LParen => AcceptResult::PushAndContinueReducingWithNewTop(
+                        UnfinishedStackItem::WeakAncestor(UnfinishedWeakAncestor::Empty),
+                        FinishedStackItem::Token(token),
+                    ),
+                    TokenKind::StandardIdentifier => {
+                        let name = Identifier {
+                            span: span_single(file_id, &token),
+                            name: IdentifierName::Standard(token.content.clone()),
+                        };
+                        *self = UnfinishedLetStatement::Name {
+                            first_token: first_token.clone(),
+                            visibility: visibility.clone(),
+                            transparency: None,
+                            name,
+                        };
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                FinishedStackItem::WeakAncestor(_, transparency) => {
+                    *self = UnfinishedLetStatement::ExplicitTransparency {
+                        first_token: first_token.clone(),
+                        visibility: visibility.clone(),
+                        transparency,
+                    };
+                    AcceptResult::ContinueToNextToken
+                }
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
+
+            UnfinishedLetStatement::ExplicitTransparency {
+                first_token,
+                visibility,
+                transparency,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
-                        *self = UnfinishedLetStatement::Name(let_kw.clone(), name);
+                        *self = UnfinishedLetStatement::Name {
+                            first_token: first_token.clone(),
+                            visibility: visibility.clone(),
+                            transparency: Some(transparency.clone()),
+                            name,
+                        };
                         AcceptResult::ContinueToNextToken
                     }
+                    TokenKind::LParen => unimplemented!(),
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedLetStatement::Name(let_kw, name) => match item {
+
+            UnfinishedLetStatement::Name {
+                first_token,
+                visibility,
+                transparency,
+                name,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Equal => {
                         AcceptResult::Push(UnfinishedStackItem::UnfinishedDelimitedExpression(
@@ -40,13 +143,15 @@ impl Accept for UnfinishedLetStatement {
                     match end_delimiter.raw().kind {
                         TokenKind::Semicolon => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Let(
-                                let_kw.clone(),
+                                first_token.clone(),
                                 LetStatement {
                                     span: span_range_including_end(
                                         file_id,
-                                        &let_kw,
+                                        &first_token,
                                         end_delimiter.raw(),
                                     ),
+                                    visibility: visibility.clone(),
+                                    transparency: transparency.clone(),
                                     name: name.clone(),
                                     value: expression,
                                 },

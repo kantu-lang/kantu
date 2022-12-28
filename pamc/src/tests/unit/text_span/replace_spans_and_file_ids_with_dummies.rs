@@ -47,6 +47,7 @@ impl ReplaceSpansAndFileIdsWithDummies for FileItem {
 
 impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let visibility = self.visibility.replace_spans_and_file_ids_with_dummies();
         let name = self.name.replace_spans_and_file_ids_with_dummies();
         let params = self.params.replace_spans_and_file_ids_with_dummies();
         let variants = self
@@ -56,9 +57,47 @@ impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
             .collect();
         Self {
             span: dummy_span(),
+            visibility,
             name,
             params,
             variants,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for VisibilityClause {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let ancestor = self.ancestor.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            ancestor,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for WeakAncestor {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let kind = self.kind.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            kind,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for WeakAncestorKind {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        match self {
+            WeakAncestorKind::Global => WeakAncestorKind::Global,
+            WeakAncestorKind::Mod => WeakAncestorKind::Mod,
+            WeakAncestorKind::Super(n) => WeakAncestorKind::Super(n),
+            WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
+                let path_after_pack_kw = path_after_pack_kw
+                    .into_iter()
+                    .map(Identifier::replace_spans_and_file_ids_with_dummies)
+                    .collect();
+                WeakAncestorKind::PackageRelative { path_after_pack_kw }
+            }
         }
     }
 }
@@ -111,10 +150,14 @@ impl ReplaceSpansAndFileIdsWithDummies for Variant {
 
 impl ReplaceSpansAndFileIdsWithDummies for LetStatement {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let visibility = self.visibility.replace_spans_and_file_ids_with_dummies();
+        let transparency = self.transparency.replace_spans_and_file_ids_with_dummies();
         let name = self.name.replace_spans_and_file_ids_with_dummies();
         let value = self.value.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
+            visibility,
+            transparency,
             name,
             value,
         }

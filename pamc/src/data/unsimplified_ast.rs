@@ -1,5 +1,7 @@
 use crate::data::{non_empty_vec::NonEmptyVec, FileId, TextSpan};
 
+use std::num::NonZeroUsize;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
     pub span: TextSpan,
@@ -25,9 +27,30 @@ impl FileItem {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
     pub span: TextSpan,
+    pub visibility: Option<VisibilityClause>,
     pub name: Identifier,
     pub params: Option<NonEmptyVec<Param>>,
     pub variants: Vec<Variant>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct VisibilityClause {
+    pub span: TextSpan,
+    pub ancestor: Option<WeakAncestor>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct WeakAncestor {
+    pub span: TextSpan,
+    pub kind: WeakAncestorKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WeakAncestorKind {
+    Global,
+    Mod,
+    Super(NonZeroUsize),
+    PackageRelative { path_after_pack_kw: Vec<Identifier> },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -65,6 +88,8 @@ pub struct Variant {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
     pub span: TextSpan,
+    pub visibility: Option<VisibilityClause>,
+    pub transparency: Option<WeakAncestor>,
     pub name: Identifier,
     pub value: Expression,
 }

@@ -3,6 +3,7 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
+    WeakAncestor(UnfinishedWeakAncestor),
     Type(UnfinishedTypeStatement),
     Let(UnfinishedLetStatement),
     Params(UnfinishedParams),
@@ -29,23 +30,95 @@ pub enum UnfinishedStackItem {
 #[derive(Clone, Debug)]
 pub struct UnfinishedFile {
     pub first_token: Token,
+    pub pending_visibility: Option<PendingVisibilityClause>,
     pub items: Vec<FileItem>,
+}
+
+#[derive(Clone, Debug)]
+pub enum PendingVisibilityClause {
+    PubKw(Token),
+    Finished(VisibilityClause),
+}
+
+impl PendingVisibilityClause {
+    pub fn finalize(self, file_id: FileId) -> VisibilityClause {
+        match self {
+            PendingVisibilityClause::PubKw(pub_kw_token) => VisibilityClause {
+                span: span_single(file_id, &pub_kw_token),
+                ancestor: None,
+            },
+            PendingVisibilityClause::Finished(clause) => clause,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedWeakAncestor {
+    Empty,
+    LParen(Token),
+    ReadyForRParen {
+        l_paren_token: Token,
+        ancestor: WeakAncestor,
+    },
+    PackageRelativeAwaitingIdentifier {
+        l_paren_token: Token,
+        path_after_pack_kw: Vec<Identifier>,
+    },
 }
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedTypeStatement {
     Empty,
-    Keyword(Token),
-    Name(Token, Identifier),
-    Params(Token, Identifier, Option<NonEmptyVec<Param>>),
-    Variants(Token, Identifier, Option<NonEmptyVec<Param>>, Vec<Variant>),
+    ExplicitVisibility {
+        first_token: Token,
+        visibility: PendingVisibilityClause,
+    },
+    Keyword {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+    },
+    Name {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+        name: Identifier,
+    },
+    Params {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+        name: Identifier,
+        params: Option<NonEmptyVec<Param>>,
+    },
+    Variants {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+        name: Identifier,
+        params: Option<NonEmptyVec<Param>>,
+        variants: Vec<Variant>,
+    },
 }
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedLetStatement {
     Empty,
-    Keyword(Token),
-    Name(Token, Identifier),
+    ExplicitVisibility {
+        first_token: Token,
+        visibility: PendingVisibilityClause,
+    },
+    Keyword {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+    },
+    ExplicitTransparency {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+        transparency: WeakAncestor,
+    },
+    Name {
+        first_token: Token,
+        visibility: Option<VisibilityClause>,
+        transparency: Option<WeakAncestor>,
+        name: Identifier,
+    },
 }
 
 #[derive(Clone, Debug)]

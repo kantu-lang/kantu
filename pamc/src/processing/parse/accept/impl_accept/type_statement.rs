@@ -5,29 +5,93 @@ impl Accept for UnfinishedTypeStatement {
         match self {
             UnfinishedTypeStatement::Empty => match item {
                 FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::Pub => {
+                        *self = UnfinishedTypeStatement::ExplicitVisibility {
+                            first_token: token.clone(),
+                            visibility: PendingVisibilityClause::PubKw(token),
+                        };
+                        AcceptResult::ContinueToNextToken
+                    }
                     TokenKind::TypeLowerCase => {
-                        *self = UnfinishedTypeStatement::Keyword(token);
+                        *self = UnfinishedTypeStatement::Keyword {
+                            first_token: token,
+                            visibility: None,
+                        };
                         AcceptResult::ContinueToNextToken
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedTypeStatement::Keyword(type_kw) => match item {
+
+            UnfinishedTypeStatement::ExplicitVisibility {
+                first_token,
+                visibility,
+            } => match item {
+                FinishedStackItem::Token(token) => match token.kind {
+                    TokenKind::LParen => {
+                        if let PendingVisibilityClause::PubKw(_) = visibility {
+                            AcceptResult::PushAndContinueReducingWithNewTop(
+                                UnfinishedStackItem::WeakAncestor(UnfinishedWeakAncestor::Empty),
+                                FinishedStackItem::Token(token),
+                            )
+                        } else {
+                            AcceptResult::Error(ParseError::unexpected_token(token))
+                        }
+                    }
+                    TokenKind::TypeLowerCase => {
+                        *self = UnfinishedTypeStatement::Keyword {
+                            first_token: first_token.clone(),
+                            visibility: Some(visibility.clone().finalize(file_id)),
+                        };
+                        AcceptResult::ContinueToNextToken
+                    }
+                    _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
+                },
+                FinishedStackItem::WeakAncestor(weak_ancestor_first_token, ancestor) => {
+                    if let PendingVisibilityClause::PubKw(pub_kw_token) = visibility {
+                        *visibility = PendingVisibilityClause::Finished(VisibilityClause {
+                            span: span_single(file_id, pub_kw_token).inclusive_merge(ancestor.span),
+                            ancestor: Some(ancestor),
+                        });
+                        AcceptResult::ContinueToNextToken
+                    } else {
+                        wrapped_unexpected_finished_item_err(&FinishedStackItem::WeakAncestor(
+                            weak_ancestor_first_token,
+                            ancestor,
+                        ))
+                    }
+                }
+                other_item => wrapped_unexpected_finished_item_err(&other_item),
+            },
+
+            UnfinishedTypeStatement::Keyword {
+                first_token,
+                visibility,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
                             name: IdentifierName::Standard(token.content.clone()),
                         };
-                        *self = UnfinishedTypeStatement::Name(type_kw.clone(), name);
+                        *self = UnfinishedTypeStatement::Name {
+                            first_token: first_token.clone(),
+                            visibility: visibility.clone(),
+                            name,
+                        };
                         AcceptResult::ContinueToNextToken
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedTypeStatement::Name(type_kw, name) => match item {
+
+            UnfinishedTypeStatement::Name {
+                first_token,
+                visibility,
+                name,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::LParen => {
                         AcceptResult::Push(UnfinishedStackItem::Params(UnfinishedParams {
@@ -39,51 +103,66 @@ impl Accept for UnfinishedTypeStatement {
                         }))
                     }
                     TokenKind::LCurly => {
-                        *self = UnfinishedTypeStatement::Variants(
-                            type_kw.clone(),
-                            name.clone(),
-                            None,
-                            vec![],
-                        );
+                        *self = UnfinishedTypeStatement::Variants {
+                            first_token: first_token.clone(),
+                            visibility: visibility.clone(),
+                            name: name.clone(),
+                            params: None,
+                            variants: vec![],
+                        };
                         AcceptResult::ContinueToNextToken
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 FinishedStackItem::Params(_, params) => {
-                    *self = UnfinishedTypeStatement::Params(
-                        type_kw.clone(),
-                        name.clone(),
-                        Some(params),
-                    );
+                    *self = UnfinishedTypeStatement::Params {
+                        first_token: first_token.clone(),
+                        visibility: visibility.clone(),
+                        name: name.clone(),
+                        params: Some(params),
+                    };
                     AcceptResult::ContinueToNextToken
                 }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedTypeStatement::Params(type_kw, name, params) => match item {
+            UnfinishedTypeStatement::Params {
+                first_token,
+                visibility,
+                name,
+                params,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::LCurly => {
-                        *self = UnfinishedTypeStatement::Variants(
-                            type_kw.clone(),
-                            name.clone(),
-                            params.clone(),
-                            vec![],
-                        );
+                        *self = UnfinishedTypeStatement::Variants {
+                            first_token: first_token.clone(),
+                            visibility: visibility.clone(),
+                            name: name.clone(),
+                            params: params.clone(),
+                            variants: vec![],
+                        };
                         AcceptResult::ContinueToNextToken
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
-            UnfinishedTypeStatement::Variants(type_kw, name, params, variants) => match item {
+            UnfinishedTypeStatement::Variants {
+                first_token,
+                visibility,
+                name,
+                params,
+                variants,
+            } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::Variant(
                         UnfinishedVariant::Dot(token),
                     )),
                     TokenKind::RCurly => {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
-                            type_kw.clone(),
+                            first_token.clone(),
                             TypeStatement {
-                                span: span_range_including_end(file_id, &type_kw, &token),
+                                span: span_range_including_end(file_id, &first_token, &token),
+                                visibility: visibility.clone(),
                                 name: name.clone(),
                                 params: params.clone(),
                                 variants: variants.clone(),
@@ -98,13 +177,14 @@ impl Accept for UnfinishedTypeStatement {
                         TokenKind::Comma => AcceptResult::ContinueToNextToken,
                         TokenKind::RCurly => {
                             AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
-                                type_kw.clone(),
+                                first_token.clone(),
                                 TypeStatement {
                                     span: span_range_including_end(
                                         file_id,
-                                        &type_kw,
+                                        &first_token,
                                         end_delimiter.raw(),
                                     ),
+                                    visibility: visibility.clone(),
                                     name: name.clone(),
                                     params: params.clone(),
                                     variants: variants.clone(),

@@ -8,6 +8,7 @@ impl Parse for File {
     fn initial_stack(_: FileId, first_token: &Token) -> Vec<UnfinishedStackItem> {
         vec![UnfinishedStackItem::File(Box::new(UnfinishedFile {
             first_token: first_token.clone(),
+            pending_visibility: None,
             items: vec![],
         }))]
     }

@@ -5,6 +5,8 @@ use crate::data::{
     FileId, TextSpan,
 };
 
+use std::num::NonZeroUsize;
+
 // TODO: Make errors more informative.
 // For example, if possible, it would be possible
 // to include "expected token <x>" information.
