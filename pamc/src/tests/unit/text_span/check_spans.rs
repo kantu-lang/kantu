@@ -95,6 +95,8 @@ impl ShallowCheckOwnSpan for PubClause {
     fn shallow_check_own_span(&self, _src: &str) {
         // Do nothing, since we haven't implemented `Parse` for `PubClause` yet.
         // TODO: Implement `Parse` for `PubClause` and use it here.
+        // NOTE: Since `PubClause` uses a lookahead token, it's `Accept` implementation will
+        // be different than the other `Accept` implementations.
     }
 }
 impl DeepCheckChildSpans for PubClause {
