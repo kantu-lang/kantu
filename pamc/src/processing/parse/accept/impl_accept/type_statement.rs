@@ -32,7 +32,7 @@ impl Accept for UnfinishedTypeStatement {
                     TokenKind::LParen => {
                         if let PendingPubClause::PubKw(_) = visibility {
                             AcceptResult::PushAndContinueReducingWithNewTop(
-                                UnfinishedStackItem::WeakAncestor(
+                                UnfinishedStackItem::ParenthesizedWeakAncestor(
                                     UnfinishedParenthesizedWeakAncestor::Empty,
                                 ),
                                 FinishedStackItem::Token(token),

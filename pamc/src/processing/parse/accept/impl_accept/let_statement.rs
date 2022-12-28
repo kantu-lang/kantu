@@ -32,7 +32,7 @@ impl Accept for UnfinishedLetStatement {
                     TokenKind::LParen => {
                         if let PendingPubClause::PubKw(_) = visibility {
                             AcceptResult::PushAndContinueReducingWithNewTop(
-                                UnfinishedStackItem::WeakAncestor(
+                                UnfinishedStackItem::ParenthesizedWeakAncestor(
                                     UnfinishedParenthesizedWeakAncestor::Empty,
                                 ),
                                 FinishedStackItem::Token(token),
@@ -78,7 +78,7 @@ impl Accept for UnfinishedLetStatement {
             } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::LParen => AcceptResult::PushAndContinueReducingWithNewTop(
-                        UnfinishedStackItem::WeakAncestor(
+                        UnfinishedStackItem::ParenthesizedWeakAncestor(
                             UnfinishedParenthesizedWeakAncestor::Empty,
                         ),
                         FinishedStackItem::Token(token),

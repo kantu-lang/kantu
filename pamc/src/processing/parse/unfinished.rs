@@ -3,7 +3,7 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
-    WeakAncestor(UnfinishedParenthesizedWeakAncestor),
+    ParenthesizedWeakAncestor(UnfinishedParenthesizedWeakAncestor),
     Type(UnfinishedTypeStatement),
     Let(UnfinishedLetStatement),
     Params(UnfinishedParams),

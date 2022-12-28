@@ -15,7 +15,7 @@ impl Accept for UnfinishedFile {
                 TokenKind::LParen => {
                     if let Some(PendingPubClause::PubKw(_)) = &self.pending_visibility {
                         AcceptResult::PushAndContinueReducingWithNewTop(
-                            UnfinishedStackItem::WeakAncestor(
+                            UnfinishedStackItem::ParenthesizedWeakAncestor(
                                 UnfinishedParenthesizedWeakAncestor::Empty,
                             ),
                             FinishedStackItem::Token(token),
