@@ -11,6 +11,7 @@ pub struct File {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
+    Mod(ModStatement),
     Type(TypeStatement),
     Let(LetStatement),
 }
@@ -18,10 +19,18 @@ pub enum FileItem {
 impl FileItem {
     pub fn span(&self) -> TextSpan {
         match self {
+            FileItem::Mod(mod_) => mod_.span,
             FileItem::Type(type_) => type_.span,
             FileItem::Let(let_) => let_.span,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ModStatement {
+    pub span: TextSpan,
+    pub visibility: Option<PubClause>,
+    pub name: Identifier,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

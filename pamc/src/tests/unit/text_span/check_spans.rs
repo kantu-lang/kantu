@@ -61,8 +61,77 @@ impl DeepCheckChildSpans for File {
 impl DeepCheckSpans for FileItem {
     fn deep_check_spans(&self, src: &str) {
         match self {
+            FileItem::Mod(x) => x.deep_check_spans(src),
             FileItem::Type(x) => x.deep_check_spans(src),
             FileItem::Let(x) => x.deep_check_spans(src),
+        }
+    }
+}
+
+impl ShallowCheckOwnSpan for ModStatement {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since we haven't implemented `Parse` for `ModStatement` yet.
+        // TODO: Implement `Parse` for `ModStatement` and use it here.
+    }
+}
+impl DeepCheckChildSpans for ModStatement {
+    fn deep_check_child_spans(&self, src: &str) {
+        self.visibility.deep_check_spans(src);
+        self.name.deep_check_spans(src);
+    }
+}
+
+impl ShallowCheckOwnSpan for PubClause {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since we haven't implemented `Parse` for `PubClause` yet.
+        // TODO: Implement `Parse` for `PubClause` and use it here.
+    }
+}
+impl DeepCheckChildSpans for PubClause {
+    fn deep_check_child_spans(&self, src: &str) {
+        self.ancestor.deep_check_spans(src);
+    }
+}
+
+impl ShallowCheckOwnSpan for WeakAncestor {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since we haven't implemented `Parse` for `WeakAncestor` yet.
+        // TODO: Implement `Parse` for `WeakAncestor` and use it here.
+    }
+}
+impl DeepCheckChildSpans for WeakAncestor {
+    fn deep_check_child_spans(&self, src: &str) {
+        self.kind.deep_check_spans(src);
+    }
+}
+
+impl ShallowCheckOwnSpan for WeakAncestorKind {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since `WeakAncestorKind` doesn't have its own span.
+    }
+}
+impl DeepCheckChildSpans for WeakAncestorKind {
+    fn deep_check_child_spans(&self, src: &str) {
+        match self {
+            WeakAncestorKind::Global => {}
+            WeakAncestorKind::Mod => {}
+            WeakAncestorKind::Super(_) => {}
+            WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
+                path_after_pack_kw.deep_check_spans(src);
+            }
+        }
+    }
+}
+
+impl ShallowCheckOwnSpan for Vec<Identifier> {
+    fn shallow_check_own_span(&self, _src: &str) {
+        // Do nothing, since `Vec<Identifier>` doesn't have its own span.
+    }
+}
+impl DeepCheckChildSpans for Vec<Identifier> {
+    fn deep_check_child_spans(&self, src: &str) {
+        for ident in self {
+            ident.deep_check_spans(src);
         }
     }
 }
@@ -80,6 +149,7 @@ impl ShallowCheckOwnSpan for TypeStatement {
 }
 impl DeepCheckChildSpans for TypeStatement {
     fn deep_check_child_spans(&self, src: &str) {
+        self.visibility.deep_check_spans(src);
         self.name.deep_check_spans(src);
         self.params.deep_check_spans(src);
         self.variants.deep_check_spans(src);
@@ -179,6 +249,8 @@ impl ShallowCheckOwnSpan for LetStatement {
 }
 impl DeepCheckChildSpans for LetStatement {
     fn deep_check_child_spans(&self, src: &str) {
+        self.visibility.deep_check_spans(src);
+        self.transparency.deep_check_spans(src);
         self.name.deep_check_spans(src);
         self.value.deep_check_spans(src);
     }

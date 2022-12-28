@@ -27,7 +27,10 @@ pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> 
     Ok(File {
         span: unsimplified.span,
         id: unsimplified.id,
-        items: vec_result_map(unsimplified.items, simplify_file_item)?,
+        items: vec_result_map(unsimplified.items, simplify_file_item)?
+            .into_iter()
+            .filter_map(std::convert::identity)
+            .collect(),
     })
 }
 
@@ -44,10 +47,17 @@ where
     Ok(result)
 }
 
-fn simplify_file_item(unsimplified: ust::FileItem) -> Result<FileItem, SimplifyAstError> {
+// TODO: Restore this to `... -> Result<FileItem, SimplifyAstError>`.
+fn simplify_file_item(unsimplified: ust::FileItem) -> Result<Option<FileItem>, SimplifyAstError> {
     Ok(match unsimplified {
-        ust::FileItem::Type(unsimplified) => FileItem::Type(simplify_type_statement(unsimplified)?),
-        ust::FileItem::Let(unsimplified) => FileItem::Let(simplify_let_statement(unsimplified)?),
+        // TODO: Properly simplify Mod statements.
+        ust::FileItem::Mod(_) => None,
+        ust::FileItem::Type(unsimplified) => {
+            Some(FileItem::Type(simplify_type_statement(unsimplified)?))
+        }
+        ust::FileItem::Let(unsimplified) => {
+            Some(FileItem::Let(simplify_let_statement(unsimplified)?))
+        }
     })
 }
 

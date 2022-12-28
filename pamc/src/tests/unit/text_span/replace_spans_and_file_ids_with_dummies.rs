@@ -39,8 +39,21 @@ impl ReplaceSpansAndFileIdsWithDummies for File {
 impl ReplaceSpansAndFileIdsWithDummies for FileItem {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         match self {
+            FileItem::Mod(item) => FileItem::Mod(item.replace_spans_and_file_ids_with_dummies()),
             FileItem::Type(item) => FileItem::Type(item.replace_spans_and_file_ids_with_dummies()),
             FileItem::Let(item) => FileItem::Let(item.replace_spans_and_file_ids_with_dummies()),
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for ModStatement {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let visibility = self.visibility.replace_spans_and_file_ids_with_dummies();
+        let name = self.name.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            visibility,
+            name,
         }
     }
 }
