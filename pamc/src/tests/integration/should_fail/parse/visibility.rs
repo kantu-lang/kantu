@@ -18,6 +18,12 @@ fn expect_unexpected_non_eoi_token_error(
 }
 
 #[test]
+fn empty_mod_vis() {
+    let src = include_str!("../../../sample_code/should_fail/parse/visibility/empty_mod_vis.ph");
+    expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
+}
+
+#[test]
 fn empty_type_vis() {
     let src = include_str!("../../../sample_code/should_fail/parse/visibility/empty_type_vis.ph");
     expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
