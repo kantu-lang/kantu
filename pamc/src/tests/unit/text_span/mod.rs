@@ -135,3 +135,12 @@ fn use_wildcard() {
     let src = include_str!("../../sample_code/should_succeed/should_parse/use/wildcard.ph");
     verify_that_spans_are_correct(src);
 }
+
+// TODO: Fix
+#[ignore]
+#[test]
+fn component_kw_in_dot_lhs() {
+    let src =
+        include_str!("../../sample_code/should_succeed/should_parse/component_kw_in_dot_lhs.ph");
+    verify_that_spans_are_correct(src);
+}
