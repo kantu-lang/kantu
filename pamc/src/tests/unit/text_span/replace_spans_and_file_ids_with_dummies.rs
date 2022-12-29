@@ -21,13 +21,20 @@ where
     }
 }
 
+impl<T> ReplaceSpansAndFileIdsWithDummies for Vec<T>
+where
+    T: ReplaceSpansAndFileIdsWithDummies,
+{
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        self.into_iter()
+            .map(T::replace_spans_and_file_ids_with_dummies)
+            .collect()
+    }
+}
+
 impl ReplaceSpansAndFileIdsWithDummies for File {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        let items = self
-            .items
-            .into_iter()
-            .map(FileItem::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        let items = self.items.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
             id: dummy_id(),
@@ -39,10 +46,69 @@ impl ReplaceSpansAndFileIdsWithDummies for File {
 impl ReplaceSpansAndFileIdsWithDummies for FileItem {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         match self {
+            FileItem::Use(item) => FileItem::Use(item.replace_spans_and_file_ids_with_dummies()),
             FileItem::Mod(item) => FileItem::Mod(item.replace_spans_and_file_ids_with_dummies()),
             FileItem::Type(item) => FileItem::Type(item.replace_spans_and_file_ids_with_dummies()),
             FileItem::Let(item) => FileItem::Let(item.replace_spans_and_file_ids_with_dummies()),
         }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for UseStatement {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let visibility = self.visibility.replace_spans_and_file_ids_with_dummies();
+        let first_component = self
+            .first_component
+            .replace_spans_and_file_ids_with_dummies();
+        let other_components = self
+            .other_components
+            .replace_spans_and_file_ids_with_dummies();
+        let import_modifier = self
+            .import_modifier
+            .replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            visibility,
+            first_component,
+            other_components,
+            import_modifier,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for UseStatementFirstComponent {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let kind = self.kind.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            kind,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for UseStatementFirstComponentKind {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        // UseStatementFirstComponentKind has no spans or file ids,
+        // nor do any of its children.
+        self
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for WildcardOrAlternateName {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        let kind = self.kind.replace_spans_and_file_ids_with_dummies();
+        Self {
+            span: dummy_span(),
+            kind,
+        }
+    }
+}
+
+impl ReplaceSpansAndFileIdsWithDummies for WildcardOrAlternateNameKind {
+    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
+        // UseStatementFirstComponentKind has no spans or file ids,
+        // nor do any of its children.
+        self
     }
 }
 
@@ -63,11 +129,7 @@ impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
         let visibility = self.visibility.replace_spans_and_file_ids_with_dummies();
         let name = self.name.replace_spans_and_file_ids_with_dummies();
         let params = self.params.replace_spans_and_file_ids_with_dummies();
-        let variants = self
-            .variants
-            .into_iter()
-            .map(Variant::replace_spans_and_file_ids_with_dummies)
-            .collect();
+        let variants = self.variants.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
             visibility,
@@ -105,10 +167,8 @@ impl ReplaceSpansAndFileIdsWithDummies for WeakAncestorKind {
             WeakAncestorKind::Mod => WeakAncestorKind::Mod,
             WeakAncestorKind::Super(n) => WeakAncestorKind::Super(n),
             WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
-                let path_after_pack_kw = path_after_pack_kw
-                    .into_iter()
-                    .map(Identifier::replace_spans_and_file_ids_with_dummies)
-                    .collect();
+                let path_after_pack_kw =
+                    path_after_pack_kw.replace_spans_and_file_ids_with_dummies();
                 WeakAncestorKind::PackageRelative { path_after_pack_kw }
             }
         }
@@ -282,14 +342,6 @@ impl ReplaceSpansAndFileIdsWithDummies for Match {
             matchee,
             cases,
         }
-    }
-}
-
-impl ReplaceSpansAndFileIdsWithDummies for Vec<MatchCase> {
-    fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        self.into_iter()
-            .map(MatchCase::replace_spans_and_file_ids_with_dummies)
-            .collect()
     }
 }
 

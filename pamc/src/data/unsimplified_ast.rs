@@ -11,6 +11,7 @@ pub struct File {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
+    Use(UseStatement),
     Mod(ModStatement),
     Type(TypeStatement),
     Let(LetStatement),
@@ -19,11 +20,47 @@ pub enum FileItem {
 impl FileItem {
     pub fn span(&self) -> TextSpan {
         match self {
+            FileItem::Use(use_) => use_.span,
             FileItem::Mod(mod_) => mod_.span,
             FileItem::Type(type_) => type_.span,
             FileItem::Let(let_) => let_.span,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UseStatement {
+    pub span: TextSpan,
+    pub visibility: Option<PubClause>,
+    pub first_component: UseStatementFirstComponent,
+    pub other_components: Vec<Identifier>,
+    pub import_modifier: Option<WildcardOrAlternateName>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UseStatementFirstComponent {
+    pub span: TextSpan,
+    pub kind: UseStatementFirstComponentKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum UseStatementFirstComponentKind {
+    Mod,
+    Super(NonZeroUsize),
+    Pack,
+    Identifier(IdentifierName),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct WildcardOrAlternateName {
+    pub span: TextSpan,
+    pub kind: WildcardOrAlternateNameKind,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WildcardOrAlternateNameKind {
+    Wildcard,
+    AlternateName(IdentifierName),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

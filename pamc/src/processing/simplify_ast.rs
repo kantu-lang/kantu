@@ -50,6 +50,8 @@ where
 // TODO: Restore this to `... -> Result<FileItem, SimplifyAstError>`.
 fn simplify_file_item(unsimplified: ust::FileItem) -> Result<Option<FileItem>, SimplifyAstError> {
     Ok(match unsimplified {
+        // TODO: Properly simplify Use statements.
+        ust::FileItem::Use(_) => None,
         // TODO: Properly simplify Mod statements.
         ust::FileItem::Mod(_) => None,
         ust::FileItem::Type(unsimplified) => {

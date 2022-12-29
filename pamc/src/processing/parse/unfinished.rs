@@ -4,6 +4,7 @@ use super::*;
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
     ParenthesizedWeakAncestor(UnfinishedParenthesizedWeakAncestor),
+    Use(UnfinishedUseStatement),
     Mod(UnfinishedModStatement),
     Type(UnfinishedTypeStatement),
     Let(UnfinishedLetStatement),
@@ -64,6 +65,39 @@ pub enum UnfinishedParenthesizedWeakAncestor {
     PackageRelativeAwaitingIdentifier {
         l_paren_token: Token,
         path_after_pack_kw: Vec<Identifier>,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub enum UnfinishedUseStatement {
+    Empty,
+    ExplicitVisibility {
+        first_token: Token,
+        visibility: PendingPubClause,
+    },
+    Keyword {
+        first_token: Token,
+        visibility: Option<PubClause>,
+    },
+    AtLeastOneComponent {
+        first_token: Token,
+        visibility: Option<PubClause>,
+        first_component: UseStatementFirstComponent,
+        other_components: Vec<Identifier>,
+        has_trailing_dot: bool,
+    },
+    As {
+        first_token: Token,
+        visibility: Option<PubClause>,
+        first_component: UseStatementFirstComponent,
+        other_components: Vec<Identifier>,
+    },
+    FinishedImportModifier {
+        first_token: Token,
+        visibility: Option<PubClause>,
+        first_component: UseStatementFirstComponent,
+        other_components: Vec<Identifier>,
+        import_modifier: WildcardOrAlternateName,
     },
 }
 

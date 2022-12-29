@@ -23,4 +23,5 @@ mod params;
 mod parenthesized_weak_ancestor;
 mod triple_dot;
 mod type_statement;
+mod use_statement;
 mod variant;

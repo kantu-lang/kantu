@@ -13,6 +13,11 @@ pub enum FinishedStackItem {
         Token,
         ParenthesizedWeakAncestor,
     ),
+    Use(
+        /// First token
+        Token,
+        UseStatement,
+    ),
     Mod(
         /// First token
         Token,
@@ -153,6 +158,7 @@ impl FinishedStackItem {
             FinishedStackItem::Token(token) => &token,
             FinishedStackItem::File(token, _) => &token,
             FinishedStackItem::ParenthesizedWeakAncestor(token, _) => &token,
+            FinishedStackItem::Use(token, _) => &token,
             FinishedStackItem::Mod(token, _) => &token,
             FinishedStackItem::Type(token, _) => &token,
             FinishedStackItem::Let(token, _) => &token,

@@ -71,9 +71,66 @@ fn assert_reconstructed_equals_original_up_to_spans_and_file_ids<T>(
 impl DeepCheckSpans for FileItem {
     fn deep_check_spans(&self, src: &str) {
         match self {
+            FileItem::Use(x) => x.deep_check_spans(src),
             FileItem::Mod(x) => x.deep_check_spans(src),
             FileItem::Type(x) => x.deep_check_spans(src),
             FileItem::Let(x) => x.deep_check_spans(src),
+        }
+    }
+}
+
+impl ShallowCheckOwnSpan for UseStatement {
+    fn shallow_check_own_span(&self, src: &str) {
+        assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
+    }
+}
+impl DeepCheckChildSpans for UseStatement {
+    fn deep_check_child_spans(&self, src: &str) {
+        self.visibility.deep_check_spans(src);
+        self.first_component.deep_check_spans(src);
+        self.other_components.deep_check_spans(src);
+        self.import_modifier.deep_check_spans(src);
+    }
+}
+
+impl DeepCheckSpans for UseStatementFirstComponent {
+    fn deep_check_spans(&self, src: &str) {
+        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
+        let expected_src = match &self.kind {
+            UseStatementFirstComponentKind::Mod => format!("mod"),
+            UseStatementFirstComponentKind::Super(n) => {
+                if n.get() == 1 {
+                    format!("super")
+                } else {
+                    format!("super{}", n.get())
+                }
+            }
+            UseStatementFirstComponentKind::Pack => format!("pack"),
+            UseStatementFirstComponentKind::Identifier(name) => identifier_name_to_src(name),
+        };
+        assert_eq!(&expected_src, spanned_src);
+    }
+}
+
+impl DeepCheckSpans for WildcardOrAlternateName {
+    fn deep_check_spans(&self, src: &str) {
+        let spanned_src = get_spanned_slice(src, self.span).expect("Span should be valid");
+        let expected_src = match &self.kind {
+            WildcardOrAlternateNameKind::Wildcard => format!("*"),
+            WildcardOrAlternateNameKind::AlternateName(name) => identifier_name_to_src(&name),
+        };
+        assert_eq!(&expected_src, spanned_src);
+    }
+}
+
+fn identifier_name_to_src(name: &IdentifierName) -> String {
+    match name {
+        IdentifierName::Standard(name) => format!("{}", name),
+        IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => {
+            format!("Type")
+        }
+        IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
+            format!("_")
         }
     }
 }
