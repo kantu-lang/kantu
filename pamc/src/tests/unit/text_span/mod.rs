@@ -136,8 +136,6 @@ fn use_wildcard() {
     verify_that_spans_are_correct(src);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn component_kw_in_dot_lhs() {
     let src =

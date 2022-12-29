@@ -183,6 +183,16 @@ pub enum IdentifierName {
 pub enum ReservedIdentifierName {
     TypeTitleCase,
     Underscore,
+    Mod,
+    Super,
+    Super2,
+    Super3,
+    Super4,
+    Super5,
+    Super6,
+    Super7,
+    Super8,
+    Pack,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

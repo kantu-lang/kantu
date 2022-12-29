@@ -60,6 +60,16 @@ pub fn format_ident(ident: &Identifier) -> String {
         IdentifierName::Standard(s) => s.clone(),
         IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => "Type".to_string(),
         IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Mod) => "mod".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super) => "super".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super2) => "super2".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super3) => "super3".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super4) => "super4".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super5) => "super5".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super6) => "super6".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super7) => "super7".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Super8) => "super8".to_string(),
+        IdentifierName::Reserved(ReservedIdentifierName::Pack) => "pack".to_string(),
     }
 }
 
