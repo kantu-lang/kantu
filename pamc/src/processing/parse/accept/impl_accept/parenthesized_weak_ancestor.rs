@@ -115,7 +115,7 @@ impl Accept for UnfinishedParenthesizedWeakAncestor {
                             l_paren_token: l_paren_token.clone(),
                             ancestor: ParenthesizedWeakAncestor {
                                 span,
-                                kind: WeakAncestorKind::PackageRelative {
+                                kind: WeakAncestorKind::PackRelative {
                                     path_after_pack_kw: vec![],
                                 },
                             },
@@ -145,8 +145,8 @@ impl Accept for UnfinishedParenthesizedWeakAncestor {
                 }
                 FinishedStackItem::Token(token) if token.kind == TokenKind::Dot => {
                     match &mut ancestor.kind {
-                        WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
-                            *self = UnfinishedParenthesizedWeakAncestor::PackageRelativeAwaitingIdentifier {
+                        WeakAncestorKind::PackRelative { path_after_pack_kw } => {
+                            *self = UnfinishedParenthesizedWeakAncestor::PackRelativeAwaitingIdentifier {
                                 l_paren_token: l_paren_token.clone(),
                                 path_after_pack_kw: path_after_pack_kw.clone(),
                             };
@@ -158,7 +158,7 @@ impl Accept for UnfinishedParenthesizedWeakAncestor {
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedParenthesizedWeakAncestor::PackageRelativeAwaitingIdentifier {
+            UnfinishedParenthesizedWeakAncestor::PackRelativeAwaitingIdentifier {
                 l_paren_token,
                 path_after_pack_kw,
             } => match item {
@@ -174,7 +174,7 @@ impl Accept for UnfinishedParenthesizedWeakAncestor {
                         ancestor: ParenthesizedWeakAncestor {
                             span: span_single(file_id, &l_paren_token)
                                 .inclusive_merge(component_span),
-                            kind: WeakAncestorKind::PackageRelative {
+                            kind: WeakAncestorKind::PackRelative {
                                 path_after_pack_kw: path_after_pack_kw.clone(),
                             },
                         },

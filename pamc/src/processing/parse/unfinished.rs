@@ -62,7 +62,7 @@ pub enum UnfinishedParenthesizedWeakAncestor {
         l_paren_token: Token,
         ancestor: ParenthesizedWeakAncestor,
     },
-    PackageRelativeAwaitingIdentifier {
+    PackRelativeAwaitingIdentifier {
         l_paren_token: Token,
         path_after_pack_kw: Vec<Identifier>,
     },

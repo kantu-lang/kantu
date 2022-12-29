@@ -166,10 +166,10 @@ impl ReplaceSpansAndFileIdsWithDummies for WeakAncestorKind {
             WeakAncestorKind::Global => WeakAncestorKind::Global,
             WeakAncestorKind::Mod => WeakAncestorKind::Mod,
             WeakAncestorKind::Super(n) => WeakAncestorKind::Super(n),
-            WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
+            WeakAncestorKind::PackRelative { path_after_pack_kw } => {
                 let path_after_pack_kw =
                     path_after_pack_kw.replace_spans_and_file_ids_with_dummies();
-                WeakAncestorKind::PackageRelative { path_after_pack_kw }
+                WeakAncestorKind::PackRelative { path_after_pack_kw }
             }
         }
     }
