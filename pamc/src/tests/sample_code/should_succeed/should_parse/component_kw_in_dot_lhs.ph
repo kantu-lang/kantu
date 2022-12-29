@@ -14,3 +14,5 @@ let list_to_nat_list = fun list_to_nat_list(
         ),
     }
 };
+
+let Nat = super4.Nat;
