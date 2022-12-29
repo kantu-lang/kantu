@@ -96,7 +96,7 @@ pub enum WeakAncestorKind {
     Global,
     Mod,
     Super(NonZeroUsize),
-    PackageRelative { path_after_pack_kw: Vec<Identifier> },
+    PackRelative { path_after_pack_kw: Vec<Identifier> },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

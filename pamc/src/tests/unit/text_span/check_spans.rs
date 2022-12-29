@@ -183,7 +183,7 @@ impl DeepCheckChildSpans for WeakAncestorKind {
             WeakAncestorKind::Global => {}
             WeakAncestorKind::Mod => {}
             WeakAncestorKind::Super(_) => {}
-            WeakAncestorKind::PackageRelative { path_after_pack_kw } => {
+            WeakAncestorKind::PackRelative { path_after_pack_kw } => {
                 path_after_pack_kw.deep_check_spans(src);
             }
         }
