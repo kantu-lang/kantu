@@ -129,3 +129,9 @@ fn use_alternate_name() {
     let src = include_str!("../../sample_code/should_succeed/should_parse/use/alternate_name.ph");
     verify_that_spans_are_correct(src);
 }
+
+#[test]
+fn use_wildcard() {
+    let src = include_str!("../../sample_code/should_succeed/should_parse/use/wildcard.ph");
+    verify_that_spans_are_correct(src);
+}
