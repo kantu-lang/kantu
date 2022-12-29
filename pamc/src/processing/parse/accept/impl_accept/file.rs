@@ -24,6 +24,17 @@ impl Accept for UnfinishedFile {
                         AcceptResult::Error(ParseError::unexpected_token(token))
                     }
                 }
+                TokenKind::Use => {
+                    let visibility = self
+                        .pending_visibility
+                        .take()
+                        .map(|visibility| visibility.finalize(file_id));
+                    let first_token = visibility.as_ref().map(get_pub_kw_token).unwrap_or(token);
+                    AcceptResult::Push(UnfinishedStackItem::Use(UnfinishedUseStatement::Keyword {
+                        first_token,
+                        visibility,
+                    }))
+                }
                 TokenKind::Mod => {
                     let visibility = self
                         .pending_visibility
@@ -102,6 +113,10 @@ impl Accept for UnfinishedFile {
                         ),
                     )
                 }
+            }
+            FinishedStackItem::Use(_, use_) => {
+                self.items.push(FileItem::Use(use_));
+                AcceptResult::ContinueToNextToken
             }
             FinishedStackItem::Mod(_, mod_) => {
                 self.items.push(FileItem::Mod(mod_));

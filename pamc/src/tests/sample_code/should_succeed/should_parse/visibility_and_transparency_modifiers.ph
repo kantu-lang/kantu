@@ -1,3 +1,14 @@
+use mod_a;
+pub use mod_b;
+pub(*) use mod_c;
+pub(mod) use mod_d;
+pub(super) use mod_e;
+pub(super2) use mod_f;
+pub(super8) use mod_g;
+pub(pack) use mod_h;
+pub(pack.some) use mod_i;
+pub(pack.some.module) use mod_j;
+
 mod mod_a;
 pub mod mod_b;
 pub(*) mod mod_c;
