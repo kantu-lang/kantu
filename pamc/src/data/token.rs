@@ -74,6 +74,7 @@ pub enum TokenKind {
     Super8,
     Pack,
     Use,
+    As,
     Namespace,
 
     Extern,

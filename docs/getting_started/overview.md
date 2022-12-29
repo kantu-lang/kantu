@@ -59,6 +59,7 @@ super7
 super8
 pack
 use
+as
 namespace
 
 extern

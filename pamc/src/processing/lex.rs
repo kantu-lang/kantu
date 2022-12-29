@@ -438,6 +438,7 @@ fn get_token_kind_of_non_underscore_keyword(s: &str) -> Option<TokenKind> {
         "super8" => Some(TokenKind::Super8),
         "pack" => Some(TokenKind::Pack),
         "use" => Some(TokenKind::Use),
+        "as" => Some(TokenKind::As),
         "namespace" => Some(TokenKind::Namespace),
 
         "extern" => Some(TokenKind::Extern),
