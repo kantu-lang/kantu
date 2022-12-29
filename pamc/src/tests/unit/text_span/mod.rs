@@ -117,3 +117,9 @@ fn visibility_and_transparency_modifiers() {
     );
     verify_that_spans_are_correct(src);
 }
+
+#[test]
+fn use_as_is() {
+    let src = include_str!("../../sample_code/should_succeed/should_parse/use/as_is.ph");
+    verify_that_spans_are_correct(src);
+}
