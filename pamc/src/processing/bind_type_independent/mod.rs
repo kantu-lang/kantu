@@ -13,6 +13,9 @@ pub use crate::data::bind_error::*;
 use context::*;
 mod context;
 
+use dot_graph::*;
+mod dot_graph;
+
 #[derive(Debug)]
 struct State<'a> {
     out: Vec<FileItem>,
@@ -117,20 +120,14 @@ fn bind_type_statement_dirty(
         out
     };
 
-    let type_name = create_name_and_add_to_scope(context, type_statement.name)?;
+    let type_name =
+        create_name_and_add_to_mod(context, type_statement.span.file_id, type_statement.name)?;
 
     let variants = type_statement
         .variants
         .into_iter()
-        .map(|unbound| {
-            bind_variant_and_add_restricted_dot_target(context, unbound, &type_name.name)
-        })
+        .map(|unbound| bind_variant_and_add_dot_target(context, unbound, &type_name.name))
         .collect::<Result<Vec<_>, BindError>>()?;
-
-    for variant in &variants {
-        let variant_name_components = [&type_name.name, &variant.name.name];
-        context.lift_dot_target_restriction(&variant_name_components);
-    }
 
     Ok(TypeStatement {
         span: Some(type_statement.span),
@@ -175,7 +172,7 @@ fn bind_unlabeled_param_dirty(
     param: ub::UnlabeledParam,
 ) -> Result<UnlabeledParam, BindError> {
     let type_ = bind_expression(context, param.type_)?;
-    let name = create_name_and_add_to_scope(context, param.name)?;
+    let name = create_local_name_and_add_to_scope(context, param.name)?;
     Ok(UnlabeledParam {
         span: Some(param.span),
         is_dashed: param.is_dashed,
@@ -196,7 +193,7 @@ fn bind_labeled_param_dirty(
     param: ub::LabeledParam,
 ) -> Result<LabeledParam, BindError> {
     let type_ = bind_expression(context, param.type_)?;
-    let name = create_name_and_add_to_scope(context, param.name)?;
+    let name = create_local_name_and_add_to_scope(context, param.name)?;
     Ok(LabeledParam {
         span: Some(param.span),
         label: param.label.into(),
@@ -206,7 +203,7 @@ fn bind_labeled_param_dirty(
     })
 }
 
-fn bind_variant_and_add_restricted_dot_target(
+fn bind_variant_and_add_dot_target(
     context: &mut Context,
     variant: ub::Variant,
     type_name: &IdentifierName,
@@ -227,12 +224,21 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
     let return_type = bind_expression(context, variant.return_type)?;
     context.pop_n(arity);
 
-    let unbound_name = variant.name;
-    let name = unbound_name.clone().into();
+    let unbound_variant_name = variant.name;
+    let name = unbound_variant_name.clone().into();
 
-    context.add_temporarily_restricted_name_to_scope_unless_singleton_underscore(
-        [type_name, &unbound_name.name].iter().copied(),
-        &unbound_name,
+    let type_db_index = context
+        .get_db_index(variant.span.file_id, std::iter::once(type_name))
+        .expect("type_name should already be in the context.");
+    let type_db_level = context.index_to_level(type_db_index);
+    let variant_db_level = context.push_placeholder();
+
+    add_dot_edge(
+        context,
+        DotGraphNode::LeafItem(type_db_level),
+        &unbound_variant_name.name,
+        DotGraphNode::LeafItem(variant_db_level),
+        &unbound_variant_name,
     )?;
 
     Ok(Variant {
@@ -255,7 +261,7 @@ fn bind_let_statement_dirty(
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
-    let name = create_name_and_add_to_scope(context, let_statement.name)?;
+    let name = create_name_and_add_to_mod(context, let_statement.span.file_id, let_statement.name)?;
     Ok(LetStatement {
         span: Some(let_statement.span),
         name,
@@ -289,7 +295,7 @@ fn bind_name_expression_dirty(
     context: &mut Context,
     name: ub::NameExpression,
 ) -> Result<Expression, BindError> {
-    let db_index = context.get_db_index(&name.components)?;
+    let db_index = get_db_index(context, name.span.file_id, name.components.as_ref().iter())?;
     Ok(Expression::Name(NameExpression {
         span: Some(name.span),
         components: name.components.into_mapped(Into::into),
@@ -330,7 +336,7 @@ fn bind_labeled_call_arg_dirty(
 ) -> Result<LabeledCallArg, BindError> {
     match arg {
         ub::LabeledCallArg::Implicit(value) => Ok(LabeledCallArg::Implicit {
-            db_index: context.get_db_index(&[value.clone()])?,
+            db_index: get_db_index(context, value.span.file_id, std::iter::once(&value))?,
             label: value.into(),
         }),
         ub::LabeledCallArg::Explicit(label, value) => Ok(LabeledCallArg::Explicit {
@@ -345,7 +351,7 @@ fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, Bin
     let params = bind_params(context, fun.params)?;
     let return_type = bind_expression_dirty(context, fun.return_type)?;
 
-    let name = create_name_and_add_to_scope(context, fun.name)?;
+    let name = create_local_name_and_add_to_scope(context, fun.name)?;
 
     let body = bind_expression_dirty(context, fun.body)?;
     let fun = Expression::Fun(Box::new(Fun {
@@ -406,7 +412,7 @@ fn bind_match_case_params(
     Ok(match params {
         ub::NonEmptyMatchCaseParamVec::Unlabeled(params) => NonEmptyMatchCaseParamVec::Unlabeled(
             params.try_into_mapped(|param| -> Result<_, BindError> {
-                Ok(create_name_and_add_to_scope(context, param)?)
+                Ok(create_local_name_and_add_to_scope(context, param)?)
             })?,
         ),
 
@@ -416,7 +422,7 @@ fn bind_match_case_params(
                     .map(|params| {
                         params.try_into_mapped(
                             |param| -> Result<LabeledMatchCaseParam, BindError> {
-                                let name = create_name_and_add_to_scope(context, param.name)?;
+                                let name = create_local_name_and_add_to_scope(context, param.name)?;
                                 Ok(LabeledMatchCaseParam {
                                     span: Some(param.span),
                                     label: param.label.into(),
@@ -539,11 +545,85 @@ fn bind_possibly_invalid_expression(
     }
 }
 
-fn create_name_and_add_to_scope(
+fn get_db_index<'a, N>(
+    context: &Context,
+    current_file_id: FileId,
+    name_components: N,
+) -> Result<DbIndex, BindError>
+where
+    N: Clone + Iterator<Item = &'a ub::Identifier>,
+{
+    let lookup_result =
+        context.get_db_index(current_file_id, name_components.clone().map(|c| &c.name));
+
+    match lookup_result {
+        Ok(db_index) => Ok(db_index),
+        Err(Some(_)) => Err(ExpectedTermButNameRefersToModError {
+            name_components: name_components.cloned().collect(),
+        }
+        .into()),
+        Err(None) => Err(NameNotFoundError {
+            name_components: name_components.cloned().collect(),
+        }
+        .into()),
+    }
+}
+
+fn add_dot_edge(
+    context: &mut Context,
+    start: DotGraphNode,
+    label: &IdentifierName,
+    end: DotGraphNode,
+    source: &ub::Identifier,
+) -> Result<(), NameClashError> {
+    let result = context.add_dot_edge(
+        start,
+        label,
+        end,
+        OwnedSymbolSource::Identifier(source.clone()),
+    );
+    if let Err(old_source) = result {
+        return Err(NameClashError {
+            old: old_source,
+            new: OwnedSymbolSource::Identifier(source.clone()),
+        });
+    }
+    Ok(())
+}
+
+fn create_name_and_add_to_mod(
+    context: &mut Context,
+    current_file_id: FileId,
+    identifier: ub::Identifier,
+) -> Result<Identifier, NameClashError> {
+    let db_level = context.push_placeholder();
+    add_dot_edge(
+        context,
+        DotGraphNode::Mod(current_file_id),
+        &identifier.name,
+        DotGraphNode::LeafItem(db_level),
+        &identifier,
+    )?;
+    Ok(identifier.into())
+}
+
+fn create_local_name_and_add_to_scope(
     context: &mut Context,
     identifier: ub::Identifier,
 ) -> Result<Identifier, NameClashError> {
-    context.add_unrestricted_unqualified_name_to_scope_unless_underscore(&identifier)?;
+    if let IdentifierName::Reserved(ReservedIdentifierName::Underscore) = &identifier.name {
+        context.push_placeholder();
+        return Ok(identifier.into());
+    }
+
+    let result = context.push_local(identifier.span.file_id, &identifier);
+    if let Err(old_source) = result {
+        return Err(NameClashError {
+            old: old_source,
+            new: OwnedSymbolSource::Identifier(identifier),
+        });
+    }
+
     Ok(identifier.into())
 }
 

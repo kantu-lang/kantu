@@ -253,6 +253,20 @@ impl From<UnreservedIdentifierName> for String {
     }
 }
 
+impl PartialEq<IdentifierName> for UnreservedIdentifierName {
+    fn eq(&self, other: &IdentifierName) -> bool {
+        match other {
+            IdentifierName::Standard(s) => self == s,
+            IdentifierName::Reserved(_) => false,
+        }
+    }
+}
+impl PartialEq<UnreservedIdentifierName> for IdentifierName {
+    fn eq(&self, other: &UnreservedIdentifierName) -> bool {
+        other == self
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReservedIdentifierName {
     TypeTitleCase,
@@ -269,6 +283,20 @@ pub enum ReservedIdentifierName {
     Super7,
     Super8,
     Pack,
+}
+
+impl PartialEq<IdentifierName> for ReservedIdentifierName {
+    fn eq(&self, other: &IdentifierName) -> bool {
+        match other {
+            IdentifierName::Standard(_) => false,
+            IdentifierName::Reserved(r) => self == r,
+        }
+    }
+}
+impl PartialEq<ReservedIdentifierName> for IdentifierName {
+    fn eq(&self, other: &ReservedIdentifierName) -> bool {
+        other == self
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
