@@ -68,6 +68,7 @@ fn simplify_type_statement(
 ) -> Result<TypeStatement, SimplifyAstError> {
     Ok(TypeStatement {
         span: unsimplified.span,
+        visibility: unsimplified.visibility,
         name: unsimplified.name,
         params: simplify_optional_params(unsimplified.params)?,
         variants: vec_result_map(unsimplified.variants, simplify_variant)?,
@@ -219,6 +220,8 @@ fn simplify_let_statement(
 ) -> Result<LetStatement, SimplifyAstError> {
     Ok(LetStatement {
         span: unsimplified.span,
+        visibility: unsimplified.visibility,
+        transparency: unsimplified.transparency,
         name: unsimplified.name,
         value: simplify_expression(unsimplified.value)?,
     })

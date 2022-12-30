@@ -28,10 +28,13 @@ impl FileItem {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
     pub span: TextSpan,
+    pub visibility: Option<PubClause>,
     pub name: Identifier,
     pub params: Option<NonEmptyParamVec>,
     pub variants: Vec<Variant>,
 }
+
+use crate::data::unsimplified_ast::PubClause;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamVec {
@@ -84,9 +87,13 @@ pub struct Variant {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
     pub span: TextSpan,
+    pub visibility: Option<PubClause>,
+    pub transparency: Option<ParenthesizedWeakAncestor>,
     pub name: Identifier,
     pub value: Expression,
 }
+
+use crate::data::unsimplified_ast::ParenthesizedWeakAncestor;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
