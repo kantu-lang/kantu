@@ -33,6 +33,7 @@ impl From<NameClashError> for BindError {
 pub enum OwnedSymbolSource {
     Identifier(unbound::Identifier),
     Builtin,
+    Mod(FileId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
