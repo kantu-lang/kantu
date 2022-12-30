@@ -1,5 +1,7 @@
 use super::*;
 
+use Identifier;
+
 mod dot_graph;
 use dot_graph::*;
 
@@ -27,14 +29,14 @@ pub enum AccessibleEntry {
 #[derive(Clone, Debug)]
 pub struct GlobalNameEntry {
     file_id: FileId,
-    name_components: Vec<UnreservedIdentifierName>,
-    source: ub::Identifier,
+    remaining_name_components: Vec<UnreservedIdentifierName>,
+    source: Identifier,
 }
 
 #[derive(Clone, Debug)]
 pub struct LocalNameEntry {
-    name_components: Vec<IdentifierName>,
-    source: ub::Identifier,
+    name_components: Vec<UnreservedIdentifierName>,
+    source: Identifier,
 }
 
 impl Context {
@@ -88,15 +90,13 @@ impl Context {
 }
 
 impl Context {
-    pub fn get_db_index(&self, name_components: &[ub::Identifier]) -> Option<DbIndex> {
+    pub fn get_db_index(&self, name_components: &[Identifier]) -> Option<DbIndex> {
         self.lookup_name(name_components)
             .map(|(db_index, _)| db_index)
     }
 
-    fn lookup_name(
-        &self,
-        name_components: &[ub::Identifier],
-    ) -> Option<(DbIndex, &AccessibleEntry)> {
+    fn lookup_name(&self, name_components: &[Identifier]) -> Option<(DbIndex, &AccessibleEntry)> {
+        let name = normalize_name(name_components);
         self.stack.iter().enumerate().rev().find_map(
             |(raw_index, entry)| -> Option<(DbIndex, &AccessibleEntry)> {
                 let ContextEntry::Accessible(entry) = entry else {
@@ -116,7 +116,7 @@ impl Context {
 }
 
 impl AccessibleEntry {
-    fn matches_name(&self, name_components: &[ub::Identifier]) -> bool {
+    fn matches_name(&self, name_components: &[Identifier]) -> bool {
         match self {
             AccessibleEntry::Builtin(self_components) => self_components
                 .iter()
@@ -128,15 +128,15 @@ impl AccessibleEntry {
 }
 
 impl GlobalNameEntry {
-    fn matches_name(&self, name_components: &[ub::Identifier]) -> bool {
-        self.name_components
+    fn matches_name(&self, name_components: &[Identifier]) -> bool {
+        self.remaining_name_components
             .iter()
             .eq(name_components.iter().map(|c| &c.name))
     }
 }
 
 impl LocalNameEntry {
-    fn matches_name(&self, name_components: &[ub::Identifier]) -> bool {
+    fn matches_name(&self, name_components: &[Identifier]) -> bool {
         self.name_components
             .iter()
             .eq(name_components.iter().map(|c| &c.name))
@@ -147,7 +147,7 @@ impl Context {
     pub fn add_local_name_to_scope_unless_underscore(
         &mut self,
         current_file_id: FileId,
-        identifier: &ub::Identifier,
+        identifier: &Identifier,
     ) -> Result<(), NameClashError> {
         if let IdentifierName::Reserved(ReservedIdentifierName::Underscore) = &identifier.name {
             self.stack.push(ContextEntry::Placeholder);
@@ -167,7 +167,7 @@ impl Context {
     fn check_for_name_clash<'a, N>(
         &self,
         name_components: N,
-        source: &ub::Identifier,
+        source: &Identifier,
     ) -> Result<(), NameClashError>
     where
         N: Clone + IntoIterator<Item = &'a IdentifierName>,
@@ -191,7 +191,7 @@ impl Context {
     pub fn add_temporarily_restricted_name_to_scope_unless_singleton_underscore<'a, N>(
         &mut self,
         name_components: N,
-        source: &ub::Identifier,
+        source: &Identifier,
     ) -> Result<(), NameClashError>
     where
         N: Clone + IntoIterator<Item = &'a IdentifierName>,
