@@ -29,7 +29,6 @@ pub fn simplify_file(unsimplified: ust::File) -> Result<File, SimplifyAstError> 
         id: unsimplified.id,
         items: vec_result_map(unsimplified.items, simplify_file_item)?
             .into_iter()
-            .filter_map(std::convert::identity)
             .collect(),
     })
 }
@@ -47,20 +46,83 @@ where
     Ok(result)
 }
 
-// TODO: Restore this to `... -> Result<FileItem, SimplifyAstError>`.
-fn simplify_file_item(unsimplified: ust::FileItem) -> Result<Option<FileItem>, SimplifyAstError> {
+fn simplify_file_item(unsimplified: ust::FileItem) -> Result<FileItem, SimplifyAstError> {
     Ok(match unsimplified {
-        // TODO: Properly simplify Use statements.
-        ust::FileItem::Use(_) => None,
-        // TODO: Properly simplify Mod statements.
-        ust::FileItem::Mod(_) => None,
-        ust::FileItem::Type(unsimplified) => {
-            Some(FileItem::Type(simplify_type_statement(unsimplified)?))
-        }
-        ust::FileItem::Let(unsimplified) => {
-            Some(FileItem::Let(simplify_let_statement(unsimplified)?))
+        ust::FileItem::Use(unsimplified) => simplify_use_statement(unsimplified)?,
+        ust::FileItem::Mod(unsimplified) => FileItem::Mod(simplify_mod_statement(unsimplified)?),
+        ust::FileItem::Type(unsimplified) => FileItem::Type(simplify_type_statement(unsimplified)?),
+        ust::FileItem::Let(unsimplified) => FileItem::Let(simplify_let_statement(unsimplified)?),
+    })
+}
+
+fn simplify_use_statement(
+    mut unsimplified: ust::UseStatement,
+) -> Result<FileItem, SimplifyAstError> {
+    let Some(import_modifier) = unsimplified.import_modifier.take() else {
+        return Ok(FileItem::UseSingle(simplify_use_statement_with_no_import_modifier(unsimplified)?));
+    };
+
+    Ok(match import_modifier.kind {
+        ust::WildcardOrAlternateNameKind::Wildcard => FileItem::UseWildcard(
+            simplify_use_statement_with_wildcard(unsimplified, import_modifier.span)?,
+        ),
+        ust::WildcardOrAlternateNameKind::AlternateName(alternate_name) => {
+            FileItem::UseSingle(simplify_use_statement_with_alternate_name(
+                unsimplified,
+                import_modifier.span,
+                alternate_name,
+            )?)
         }
     })
+}
+
+fn simplify_use_statement_with_no_import_modifier(
+    unsimplified: ust::UseStatement,
+) -> Result<UseSingleStatement, SimplifyAstError> {
+    Ok(UseSingleStatement {
+        span: unsimplified.span,
+        visibility: unsimplified.visibility,
+        first_component: unsimplified.first_component,
+        other_components: unsimplified.other_components,
+        alternate_name: None,
+    })
+}
+
+fn simplify_use_statement_with_wildcard(
+    unsimplified: ust::UseStatement,
+    star_span: TextSpan,
+) -> Result<UseWildcardStatement, SimplifyAstError> {
+    Ok(UseWildcardStatement {
+        span: unsimplified.span,
+        visibility: unsimplified.visibility,
+        first_component: unsimplified.first_component,
+        other_components: unsimplified.other_components,
+        star_span,
+    })
+}
+
+fn simplify_use_statement_with_alternate_name(
+    unsimplified: ust::UseStatement,
+    alternate_name_span: TextSpan,
+    alternate_name: IdentifierName,
+) -> Result<UseSingleStatement, SimplifyAstError> {
+    let alternate_name = Some(Identifier {
+        span: alternate_name_span,
+        name: alternate_name,
+    });
+    Ok(UseSingleStatement {
+        span: unsimplified.span,
+        visibility: unsimplified.visibility,
+        first_component: unsimplified.first_component,
+        other_components: unsimplified.other_components,
+        alternate_name,
+    })
+}
+
+fn simplify_mod_statement(
+    unsimplified: ust::ModStatement,
+) -> Result<ModStatement, SimplifyAstError> {
+    Ok(unsimplified)
 }
 
 fn simplify_type_statement(

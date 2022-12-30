@@ -12,6 +12,9 @@ pub struct File {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
+    UseSingle(UseSingleStatement),
+    UseWildcard(UseWildcardStatement),
+    Mod(ModStatement),
     Type(TypeStatement),
     Let(LetStatement),
 }
@@ -19,11 +22,38 @@ pub enum FileItem {
 impl FileItem {
     pub fn span(&self) -> TextSpan {
         match self {
-            FileItem::Type(type_) => type_.span,
-            FileItem::Let(let_) => let_.span,
+            FileItem::UseSingle(item) => item.span,
+            FileItem::UseWildcard(item) => item.span,
+            FileItem::Mod(item) => item.span,
+            FileItem::Type(item) => item.span,
+            FileItem::Let(item) => item.span,
         }
     }
 }
+
+pub use crate::data::unsimplified_ast::PubClause;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UseSingleStatement {
+    pub span: TextSpan,
+    pub visibility: Option<PubClause>,
+    pub first_component: UseStatementFirstComponent,
+    pub other_components: Vec<Identifier>,
+    pub alternate_name: Option<Identifier>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UseWildcardStatement {
+    pub span: TextSpan,
+    pub visibility: Option<PubClause>,
+    pub first_component: UseStatementFirstComponent,
+    pub other_components: Vec<Identifier>,
+    pub star_span: TextSpan,
+}
+
+pub use crate::data::unsimplified_ast::UseStatementFirstComponent;
+
+pub use crate::data::unsimplified_ast::ModStatement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
@@ -33,8 +63,6 @@ pub struct TypeStatement {
     pub params: Option<NonEmptyParamVec>,
     pub variants: Vec<Variant>,
 }
-
-use crate::data::unsimplified_ast::PubClause;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamVec {
@@ -93,7 +121,7 @@ pub struct LetStatement {
     pub value: Expression,
 }
 
-use crate::data::unsimplified_ast::ParenthesizedWeakAncestor;
+pub use crate::data::unsimplified_ast::ParenthesizedWeakAncestor;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
