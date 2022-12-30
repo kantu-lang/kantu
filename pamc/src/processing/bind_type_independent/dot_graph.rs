@@ -7,7 +7,7 @@ pub struct DotGraph {
     edges: FxHashMap<DotGraphNode, FxHashMap<IdentifierName, (DotGraphNode, OwnedSymbolSource)>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DotGraphNode {
     LeafItem(DbLevel),
     Mod(FileId),
@@ -45,5 +45,16 @@ impl DotGraph {
         }
 
         Ok(())
+    }
+
+    pub fn get_edge_target(
+        &self,
+        start: DotGraphNode,
+        label: &IdentifierName,
+    ) -> Option<(DotGraphNode, &OwnedSymbolSource)> {
+        self.edges
+            .get(&start)
+            .and_then(|map| map.get(label))
+            .map(|(node, source)| (*node, source))
     }
 }

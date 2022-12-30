@@ -105,8 +105,79 @@ impl Context {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
-        unimplemented!()
+        let mut remaining = name_components;
+        let first = remaining
+            .next()
+            .expect("name_components must not be empty.");
+
+        let mut current = self
+            .lookup_builtin(first)
+            .or_else(|| self.lookup_local_name_component(first))
+            .or_else(|| self.lookup_mod_item(current_file_id, first))?;
+
+        for component in remaining {
+            current = clone_tuple_1(self.graph.get_edge_target(current.0, component)?);
+        }
+
+        Some(current)
     }
+
+    fn lookup_builtin(
+        &self,
+        component: &IdentifierName,
+    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+        self.stack
+            .iter()
+            .enumerate()
+            .find_map(|(raw_index, entry)| match entry {
+                ContextEntry::Accessible(AccessibleEntry::Builtin(builtin)) => {
+                    if builtin == component {
+                        let level = DbLevel(raw_index);
+                        let source = OwnedSymbolSource::Builtin;
+                        return Some((DotGraphNode::LeafItem(level), source));
+                    }
+                    None
+                }
+                _ => None,
+            })
+    }
+
+    fn lookup_local_name_component(
+        &self,
+        component: &IdentifierName,
+    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+        self.stack
+            .iter()
+            .enumerate()
+            .find_map(|(raw_index, entry)| {
+                if let ContextEntry::Accessible(AccessibleEntry::Local(local)) = entry {
+                    if &local.name == component {
+                        let level = DbLevel(raw_index);
+                        let source = OwnedSymbolSource::Identifier(local.clone());
+                        return Some((DotGraphNode::LeafItem(level), source));
+                    }
+                }
+                None
+            })
+    }
+
+    fn lookup_mod_item(
+        &self,
+        current_file_id: FileId,
+        component: &IdentifierName,
+    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+        Some(clone_tuple_1(self.graph.get_edge_target(
+            DotGraphNode::Mod(current_file_id),
+            component,
+        )?))
+    }
+}
+
+fn clone_tuple_1<A, B>((a, b): (A, &B)) -> (A, B)
+where
+    B: Clone,
+{
+    (a, b.clone())
 }
 
 impl Context {
