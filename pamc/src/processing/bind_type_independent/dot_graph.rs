@@ -47,7 +47,7 @@ impl DotGraph {
         Ok(())
     }
 
-    pub fn get_edge_target(
+    pub fn get_edge_dest(
         &self,
         start: DotGraphNode,
         label: &IdentifierName,

@@ -19,7 +19,7 @@ mod dot_graph;
 #[derive(Debug)]
 struct State<'a> {
     out: Vec<FileItem>,
-    context: Context,
+    context: Context<'a>,
     unchecked_files: Vec<ub::File>,
     file_tree: &'a FileTree,
 }
@@ -32,7 +32,7 @@ pub fn bind_files(
     let root_file = remove_file_with_id_or_panic(&mut files, root_id);
     let mut state = State {
         out: vec![],
-        context: Context::with_builtins(),
+        context: Context::with_builtins(file_tree),
         unchecked_files: files,
         file_tree,
     };
