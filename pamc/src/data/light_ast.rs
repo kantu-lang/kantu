@@ -87,6 +87,8 @@ pub struct Identifier {
 
 pub use crate::data::simplified_ast::IdentifierName;
 
+pub use crate::data::simplified_ast::UnreservedIdentifierName;
+
 pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -158,6 +158,8 @@ pub use crate::data::unsimplified_ast::Identifier;
 
 pub use crate::data::unsimplified_ast::IdentifierName;
 
+pub use crate::data::unsimplified_ast::UnreservedIdentifierName;
+
 pub use crate::data::unsimplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
