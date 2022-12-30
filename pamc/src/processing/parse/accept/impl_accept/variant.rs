@@ -18,7 +18,7 @@ impl Accept for UnfinishedVariant {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedVariant::Name(dot.clone(), name);
                         AcceptResult::ContinueToNextToken

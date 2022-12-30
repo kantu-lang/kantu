@@ -127,10 +127,11 @@ impl Accept for UnfinishedDelimitedExpression {
                         );
                         AcceptResult::ContinueToNextToken
                     }
+                    // TODO: Merge cases
                     TokenKind::StandardIdentifier => {
                         let expression = Expression::Identifier(Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         });
                         *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
                             token, expression,

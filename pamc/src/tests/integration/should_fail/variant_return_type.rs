@@ -25,7 +25,7 @@ fn param() {
         ExpressionRef::Name(name) => {
             assert_eq!(
                 component_identifier_names(registry, name.id),
-                vec![standard_ident_name("a")],
+                vec![IdentifierName::new("a".to_string())],
                 "Unexpected variant return type: {:#?}",
                 return_type
             );
@@ -55,7 +55,7 @@ fn foreign_nullary_type() {
         ExpressionRef::Name(name) => {
             assert_eq!(
                 component_identifier_names(registry, name.id),
-                vec![standard_ident_name("U")],
+                vec![IdentifierName::new("U".to_string())],
                 "Unexpected variant return type: {:#?}",
                 return_type
             );
@@ -79,7 +79,7 @@ fn foreign_non_nullary_type() {
                     ExpressionRef::Name(name) => {
                         assert_eq!(
                             component_identifier_names(registry, name.id),
-                            vec![standard_ident_name("T")],
+                            vec![IdentifierName::new("T".to_string())],
                             "Unexpected variant return type: {:#?}",
                             return_type
                         );

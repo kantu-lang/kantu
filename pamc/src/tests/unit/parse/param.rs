@@ -14,7 +14,7 @@ fn expect_param(src: &str, panicker: impl Fn(Param)) {
 fn undashed() {
     let src = include_str!("../../sample_code/should_succeed/subterms/params/undashed.p.pht");
     expect_param(src, |param| {
-        let expected_name = IdentifierName::Standard("a".to_string());
+        let expected_name = IdentifierName::new("a".to_string());
         assert_eq!(&expected_name, &param.name.name);
         assert!(!param.is_dashed);
     });
@@ -24,7 +24,7 @@ fn undashed() {
 fn dashed() {
     let src = include_str!("../../sample_code/should_succeed/subterms/params/dashed.p.pht");
     expect_param(src, |param| {
-        let expected_name = IdentifierName::Standard("b".to_string());
+        let expected_name = IdentifierName::new("b".to_string());
         assert_eq!(&expected_name, &param.name.name);
         assert!(param.is_dashed);
     });

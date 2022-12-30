@@ -86,7 +86,7 @@ impl Accept for UnfinishedLetStatement {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedLetStatement::Name {
                             first_token: first_token.clone(),
@@ -118,7 +118,7 @@ impl Accept for UnfinishedLetStatement {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedLetStatement::Name {
                             first_token: first_token.clone(),

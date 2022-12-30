@@ -12,7 +12,7 @@ impl Accept for UnfinishedDelimitedCallArg {
                     TokenKind::StandardIdentifier => {
                         let identifier = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedDelimitedCallArg::Identifier {
                             first_token: token,
@@ -38,7 +38,7 @@ impl Accept for UnfinishedDelimitedCallArg {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::StandardIdentifier => {
                     let label = Identifier {
                         span: span_single(file_id, &token),
-                        name: IdentifierName::Standard(token.content),
+                        name: IdentifierName::new(token.content),
                     };
                     *self = UnfinishedDelimitedCallArg::ColonIdentifier(colon.clone(), label);
                     AcceptResult::ContinueToNextToken

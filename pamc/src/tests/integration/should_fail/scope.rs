@@ -13,7 +13,7 @@ where
                     .collect::<Vec<_>>(),
                 name_components
                     .into_iter()
-                    .map(standard_ident_name)
+                    .map(|component| IdentifierName::new(component.to_string()))
                     .collect::<Vec<_>>(),
                 "Unexpected param name"
             );
@@ -96,11 +96,11 @@ fn expect_name_clash_error(src: &str, expected_source_name: &str) {
     expect_bind_error(src, |err| match err {
         BindError::NameClash(err) => {
             assert!(
-                matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_source_name)),
+                matches!(err.old, OwnedSymbolSource::Identifier(identifier) if identifier.name == IdentifierName::new(expected_source_name.to_string())),
                 "Unexpected old name"
             );
             assert!(
-                matches!(err.new, OwnedSymbolSource::Identifier(identifier) if identifier.name == standard_ident_name(expected_source_name)),
+                matches!(err.new, OwnedSymbolSource::Identifier(identifier) if identifier.name == IdentifierName::new(expected_source_name.to_string())),
                 "Unexpected new name"
             );
         }

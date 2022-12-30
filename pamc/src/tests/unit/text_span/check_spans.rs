@@ -124,25 +124,7 @@ impl DeepCheckSpans for WildcardOrAlternateName {
 }
 
 fn identifier_name_to_src(name: &IdentifierName) -> String {
-    match name {
-        IdentifierName::Standard(name) => format!("{}", name),
-        IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => {
-            format!("Type")
-        }
-        IdentifierName::Reserved(ReservedIdentifierName::Underscore) => {
-            format!("_")
-        }
-        IdentifierName::Reserved(ReservedIdentifierName::Mod) => format!("mod"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super) => format!("super"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super2) => format!("super2"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super3) => format!("super3"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super4) => format!("super4"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super5) => format!("super5"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super6) => format!("super6"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super7) => format!("super7"),
-        IdentifierName::Reserved(ReservedIdentifierName::Super8) => format!("super8"),
-        IdentifierName::Reserved(ReservedIdentifierName::Pack) => format!("pack"),
-    }
+    name.src_str().to_string()
 }
 
 impl ShallowCheckOwnSpan for ModStatement {

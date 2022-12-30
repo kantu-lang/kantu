@@ -166,7 +166,7 @@ impl Accept for UnfinishedParenthesizedWeakAncestor {
                     let component_span = span_single(file_id, &token);
                     let component = Identifier {
                         span: component_span,
-                        name: IdentifierName::Standard(token.content),
+                        name: IdentifierName::new(token.content),
                     };
                     path_after_pack_kw.push(component);
                     *self = UnfinishedParenthesizedWeakAncestor::ReadyForRParen {

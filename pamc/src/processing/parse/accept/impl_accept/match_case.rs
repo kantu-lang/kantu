@@ -8,7 +8,7 @@ impl Accept for UnfinishedMatchCase {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedMatchCase::VariantName(dot_token.clone(), name);
                         AcceptResult::ContinueToNextToken

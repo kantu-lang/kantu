@@ -14,7 +14,7 @@ fn expect_variant(src: &str, panicker: impl Fn(Variant)) {
 fn nullary() {
     let src = include_str!("../../sample_code/should_succeed/subterms/variants/nullary.tv.pht");
     expect_variant(src, |variant| {
-        let expected_name = IdentifierName::Standard("O".to_string());
+        let expected_name = IdentifierName::new("O".to_string());
         assert_eq!(&expected_name, &variant.name.name);
         assert_eq!(0, variant.params.len());
     });
@@ -24,7 +24,7 @@ fn nullary() {
 fn unary() {
     let src = include_str!("../../sample_code/should_succeed/subterms/variants/unary.tv.pht");
     expect_variant(src, |variant| {
-        let expected_name = IdentifierName::Standard("S".to_string());
+        let expected_name = IdentifierName::new("S".to_string());
         assert_eq!(&expected_name, &variant.name.name);
         assert_eq!(1, variant.params.len());
     });
@@ -34,7 +34,7 @@ fn unary() {
 fn binary() {
     let src = include_str!("../../sample_code/should_succeed/subterms/variants/binary.tv.pht");
     expect_variant(src, |variant| {
-        let expected_name = IdentifierName::Standard("Some".to_string());
+        let expected_name = IdentifierName::new("Some".to_string());
         assert_eq!(&expected_name, &variant.name.name);
         assert_eq!(2, variant.params.len());
     });

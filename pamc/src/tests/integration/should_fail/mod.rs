@@ -34,9 +34,9 @@ use crate::{
     },
 };
 
-fn standard_ident_name(name: &str) -> IdentifierName {
-    IdentifierName::Standard(name.into())
-}
+// fn standard_ident_name(name: &str) -> IdentifierName {
+//     IdentifierName::new(name.into())
+// }
 
 fn component_identifier_names(
     registry: &NodeRegistry,

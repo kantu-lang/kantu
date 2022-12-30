@@ -37,7 +37,7 @@ fn expect_illegal_variable_appearance_error(
             assert_eq!(1, component_list_id.len.get());
             let component_ids = registry.get_list(*component_list_id);
             assert_eq!(
-                IdentifierName::Standard(expected_name.to_string()),
+                IdentifierName::new(expected_name.to_string()),
                 registry.get(component_ids[0]).name
             );
         }
@@ -95,7 +95,7 @@ fn expect_non_name_variant_return_type_error(
             let variant_name_id = registry.get(variant_id).name_id;
             let actual_variant_name = &registry.get(variant_name_id).name;
             assert_eq!(
-                IdentifierName::Standard(expected_variant_name.to_string()),
+                IdentifierName::new(expected_variant_name.to_string()),
                 *actual_variant_name,
             );
 
@@ -155,7 +155,7 @@ fn expect_expected_type_got_fun_error(src: &str, expected_fun_name: &IdentifierN
 #[test]
 fn expected_type_got_fun() {
     let src = include_str!("../../sample_code/should_fail/positivity/expected_type_got_fun.ph");
-    let expected_fun_name = IdentifierName::Standard("this_should_not_be_here".to_string());
+    let expected_fun_name = IdentifierName::new("this_should_not_be_here".to_string());
     expect_expected_type_got_fun_error(src, &expected_fun_name);
 }
 
