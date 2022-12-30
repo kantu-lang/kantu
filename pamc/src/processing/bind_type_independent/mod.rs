@@ -68,10 +68,88 @@ fn add_items_from_file_item(state: &mut State, item: ub::FileItem) -> Result<(),
 }
 
 fn add_single_import_to_context(
-    _context: &mut Context,
-    _item: ub::UseSingleStatement,
+    context: &mut Context,
+    item: ub::UseSingleStatement,
 ) -> Result<(), BindError> {
-    unimplemented!()
+    let current_file_id = item.span.file_id;
+    let start = DotGraphNode::Mod(current_file_id);
+    let import_name = match &item.alternate_name {
+        Some(name) => name,
+        None => {
+            let Some(last_component) = item
+                .other_components
+                .last()
+            else {
+                return Err(BindError::CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError {
+                    use_statement: item
+                }));
+            };
+            last_component
+        }
+    };
+    let end = {
+        let first_component_name =
+            use_statement_first_component_into_identifier_name(item.first_component);
+        let name_components =
+            std::iter::once(&first_component_name).chain(item.other_components.iter());
+        lookup_name(context, current_file_id, name_components)?.0
+    };
+    add_dot_edge(context, start, &import_name.name, end, import_name)?;
+    Ok(())
+}
+
+fn use_statement_first_component_into_identifier_name(
+    first_component: ub::UseStatementFirstComponent,
+) -> ub::Identifier {
+    match first_component.kind {
+        ub::UseStatementFirstComponentKind::Mod => ub::Identifier {
+            span: first_component.span,
+            name: IdentifierName::Reserved(ReservedIdentifierName::Mod),
+        },
+        ub::UseStatementFirstComponentKind::Super(n) => match n.get() {
+            1 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super),
+            },
+            2 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super2),
+            },
+            3 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super3),
+            },
+            4 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super4),
+            },
+            5 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super5),
+            },
+            6 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super6),
+            },
+            7 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super7),
+            },
+            8 => ub::Identifier {
+                span: first_component.span,
+                name: IdentifierName::Reserved(ReservedIdentifierName::Super8),
+            },
+            _ => panic!("n must be in the range [1, 8]"),
+        },
+        ub::UseStatementFirstComponentKind::Pack => ub::Identifier {
+            span: first_component.span,
+            name: IdentifierName::Reserved(ReservedIdentifierName::Pack),
+        },
+        ub::UseStatementFirstComponentKind::Identifier(name) => ub::Identifier {
+            span: first_component.span,
+            name,
+        },
+    }
 }
 
 fn add_wildcard_import_to_context(
@@ -566,6 +644,26 @@ where
             name_components: name_components.cloned().collect(),
         }
         .into()),
+    }
+}
+
+fn lookup_name<'a, N>(
+    context: &Context,
+    current_file_id: FileId,
+    name_components: N,
+) -> Result<(DotGraphNode, OwnedSymbolSource), NameNotFoundError>
+where
+    N: Clone + Iterator<Item = &'a ub::Identifier>,
+{
+    let lookup_result =
+        context.lookup_name(current_file_id, name_components.clone().map(|c| &c.name));
+
+    if let Some(entry) = lookup_result {
+        Ok(entry)
+    } else {
+        Err(NameNotFoundError {
+            name_components: name_components.cloned().collect(),
+        })
     }
 }
 

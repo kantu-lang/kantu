@@ -53,6 +53,8 @@ pub struct UseWildcardStatement {
 
 pub use crate::data::unsimplified_ast::UseStatementFirstComponent;
 
+pub use crate::data::unsimplified_ast::UseStatementFirstComponentKind;
+
 pub use crate::data::unsimplified_ast::ModStatement;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
