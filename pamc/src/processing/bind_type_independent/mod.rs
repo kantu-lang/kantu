@@ -97,57 +97,6 @@ fn add_item_from_let_statement(state: &mut State, item: ub::LetStatement) -> Res
     Ok(())
 }
 
-// TODO: Delete
-// fn bind_file(context: &mut Context, file: ub::File) -> Result<File, BindError> {
-//     untaint_err(context, file, bind_file_dirty)
-// }
-
-// fn bind_file_dirty(context: &mut Context, file: ub::File) -> Result<File, BindError> {
-//     let number_of_file_items = file.items.len();
-//     let items = file
-//         .items
-//         .into_iter()
-//         .map(|item| bind_file_item(context, item))
-//         .filter_map(Result::transpose)
-//         .collect::<Result<Vec<_>, BindError>>()?;
-//     context.pop_n(number_of_file_items);
-//     Ok(File {
-//         span: Some(file.span),
-//         id: file.id,
-//         items,
-//     })
-// }
-
-// // TODO: Restore this to `... -> Result<FileItem, BindError>`.
-// fn bind_file_item(
-//     context: &mut Context,
-//     item: ub::FileItem,
-// ) -> Result<Option<FileItem>, BindError> {
-//     untaint_err(context, item, bind_file_item_dirty)
-// }
-
-// // TODO: Restore this to `... -> Result<FileItem, BindError>`.
-// fn bind_file_item_dirty(
-//     context: &mut Context,
-//     item: ub::FileItem,
-// ) -> Result<Option<FileItem>, BindError> {
-//     match item {
-//         // TODO: Properly bind `use` statements.
-//         ub::FileItem::UseSingle(_) => Ok(None),
-//         ub::FileItem::UseWildcard(_) => Ok(None),
-//         // TODO: Properly bind `mod` statements.
-//         ub::FileItem::Mod(_) => Ok(None),
-//         ub::FileItem::Type(type_statement) => Ok(Some(FileItem::Type(bind_type_statement(
-//             context,
-//             type_statement,
-//         )?))),
-//         ub::FileItem::Let(let_statement) => Ok(Some(FileItem::Let(bind_let_statement(
-//             context,
-//             let_statement,
-//         )?))),
-//     }
-// }
-
 fn bind_type_statement(
     context: &mut Context,
     type_statement: ub::TypeStatement,
