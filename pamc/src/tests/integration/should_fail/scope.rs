@@ -67,7 +67,8 @@ fn expect_bind_error(src: &str, panicker: impl Fn(BindError)) {
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let file = simplify_file(file).expect("AST Simplification failed");
-    let err = bind_files(vec![file]).expect_err("Binding unexpectedly succeeded");
+    let err = bind_files(file_id, vec![file], &FileGraph::from_root(file_id))
+        .expect_err("Binding unexpectedly succeeded");
     panicker(err);
 }
 

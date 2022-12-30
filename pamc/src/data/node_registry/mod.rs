@@ -26,7 +26,6 @@ mod tagged_union_ids;
 /// `x.remove_id() == y.remove_id()` implies `x_id == y_id`.
 #[derive(Clone, Debug)]
 pub struct NodeRegistry {
-    files: Subregistry<File>,
     type_statements: Subregistry<TypeStatement>,
     unlabeled_params: Subregistry<UnlabeledParam>,
     labeled_params: Subregistry<LabeledParam>,
@@ -61,7 +60,6 @@ pub struct NodeRegistry {
 impl NodeRegistry {
     pub fn empty() -> Self {
         Self {
-            files: Subregistry::new(),
             type_statements: Subregistry::new(),
             unlabeled_params: Subregistry::new(),
             labeled_params: Subregistry::new(),
@@ -300,16 +298,6 @@ mod registerable_node {
     {
         fn subregistry(registry: &NodeRegistry) -> &Subregistry<Self>;
         fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self>;
-    }
-
-    impl RegisterableNode for File {
-        fn subregistry(registry: &NodeRegistry) -> &Subregistry<Self> {
-            &registry.files
-        }
-
-        fn subregistry_mut(registry: &mut NodeRegistry) -> &mut Subregistry<Self> {
-            &mut registry.files
-        }
     }
 
     impl RegisterableNode for TypeStatement {
@@ -609,12 +597,6 @@ mod set_id {
 
     pub trait SetId: Sized {
         fn set_id(&mut self, id: NodeId<Self>);
-    }
-
-    impl SetId for File {
-        fn set_id(&mut self, id: NodeId<Self>) {
-            self.id = id;
-        }
     }
 
     impl SetId for TypeStatement {

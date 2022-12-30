@@ -1,11 +1,11 @@
 use crate::data::{
     light_ast as light,
     node_registry::{
-        ExpressionRef, LabeledCallArgId, MatchCaseOutputId, NodeId, NodeRegistry,
-        NonEmptyCallArgListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId,
+        ExpressionRef, FileItemNodeId, LabeledCallArgId, MatchCaseOutputId, NodeId, NodeRegistry,
+        NonEmptyCallArgListId, NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId,
     },
     non_empty_vec::OptionalNonEmptyVecLen,
-    FileId, TextSpan,
+    TextSpan,
 };
 use crate::processing::generate_code::CompileTarget;
 
@@ -24,14 +24,16 @@ pub enum CompileToJavaScriptError {}
 
 impl CompileTarget for JavaScript {
     type Options = ();
-    type Ok = Vec<js_ast::File>;
+    // TODO: Make this return a tree of files, instead of
+    // just a single file.
+    type Ok = js_ast::File;
     type Error = CompileToJavaScriptError;
 
     fn generate_code_with_options(
         registry: &NodeRegistry,
-        file_ids: &[NodeId<light::File>],
+        file_item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
         _options: Self::Options,
     ) -> Result<Self::Ok, Self::Error> {
-        code_gen_impl::generate_code_with_options(registry, file_ids)
+        code_gen_impl::generate_code_with_options(registry, file_item_list_id)
     }
 }

@@ -1,8 +1,5 @@
-use super::*;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
-    pub id: FileId,
     pub items: Vec<FileItem>,
 }
 

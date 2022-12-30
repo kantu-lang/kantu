@@ -7,7 +7,7 @@ use crate::data::{
         NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId, ParamLabelId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
-    simplified_ast as unbound, FileId, TextSpan,
+    simplified_ast as unbound, TextSpan,
 };
 
 // TODO: We could probably greatly simplify this by just making a
@@ -28,34 +28,6 @@ pub trait RemoveId {
 pub trait AddId {
     type Output;
     fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output;
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct File {
-    pub span: Option<TextSpan>,
-    pub file_id: FileId,
-    pub item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
-}
-impl RemoveId for with_id::File {
-    type Output = File;
-    fn remove_id(&self) -> Self::Output {
-        File {
-            span: self.span,
-            file_id: self.file_id,
-            item_list_id: self.item_list_id,
-        }
-    }
-}
-impl AddId for File {
-    type Output = with_id::File;
-    fn add_id(&self, id: NodeId<Self::Output>) -> Self::Output {
-        with_id::File {
-            span: self.span,
-            file_id: self.file_id,
-            id,
-            item_list_id: self.item_list_id,
-        }
-    }
 }
 
 pub use crate::data::node_registry::FileItemNodeId;

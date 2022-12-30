@@ -13,24 +13,24 @@ pub fn expect_success_with_warnings(
     let tokens = lex(src).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let file = simplify_file(file).expect("AST Simplification failed");
-    let file = bind_files(vec![file])
-        .expect("Binding failed")
-        .into_iter()
-        .next()
-        .unwrap();
+    let file_items =
+        bind_files(file_id, vec![file], &FileGraph::from_root(file_id)).expect("Binding failed");
     let mut registry = NodeRegistry::empty();
-    let file_id = lighten_file(&mut registry, file);
-    let file = registry.get(file_id);
-    let file_id = validate_variant_return_types_in_file(&registry, file)
-        .expect("Variant return type validation failed");
-    let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
+    let file_item_list_id = register_file_items(&mut registry, file_items);
+
+    let file_item_list_id =
+        validate_variant_return_types_in_file_items(&registry, file_item_list_id)
+            .expect("Variant return type validation failed");
+    let file_item_list_id = validate_fun_recursion_in_file_items(&mut registry, file_item_list_id)
         .expect("Fun recursion validation failed");
-    let file_id = validate_type_positivity_in_file(&mut registry, file_id)
-        .expect("Type positivity validation failed");
-    let warnings = type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
+    let file_item_list_id =
+        validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
+            .expect("Type positivity validation failed");
+    let warnings =
+        type_check_file_items(&mut registry, file_item_list_id).expect("Type checking failed");
     assert_expectations_match_actual_warnings(&registry, expected_warnings, &warnings);
-    let _js_ast =
-        JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
+    let _js_ast = JavaScript::generate_code(&registry, file_item_list_id.raw())
+        .expect("Code generation failed");
     warnings
 }
 

@@ -1,8 +1,8 @@
 use super::*;
 
-pub fn type_check_files(
+pub fn type_check_file_items(
     registry: &mut NodeRegistry,
-    file_ids: &[TypePositivityValidated<NodeId<File>>],
+    file_item_list_id: TypePositivityValidated<Option<NonEmptyListId<FileItemNodeId>>>,
 ) -> Result<Vec<TypeCheckWarning>, TypeCheckError> {
     let mut context = Context::with_builtins(registry);
     let mut substitution_context = SubstitutionContext::empty();
@@ -15,27 +15,19 @@ pub fn type_check_files(
         equality_checker: &mut equality_checker,
         warnings: &mut warnings,
     };
-    for &id in file_ids {
-        type_check_file(&mut state, id.raw())?;
-    }
+
+    untaint_err(&mut state, file_item_list_id, type_check_file_items_dirty)?;
     Ok(warnings)
 }
 
-pub(super) fn type_check_file(
+pub(super) fn type_check_file_items_dirty(
     state: &mut State,
-    file_id: NodeId<File>,
-) -> Result<(), TypeCheckError> {
-    untaint_err(state, file_id, type_check_file_dirty)
-}
-
-pub(super) fn type_check_file_dirty(
-    state: &mut State,
-    file_id: NodeId<File>,
+    file_item_list_id: TypePositivityValidated<Option<NonEmptyListId<FileItemNodeId>>>,
 ) -> Result<(), Tainted<TypeCheckError>> {
-    let file = state.registry.get(file_id);
+    let file_item_list_id = file_item_list_id.raw();
     let items = state
         .registry
-        .get_possibly_empty_list(file.item_list_id)
+        .get_possibly_empty_list(file_item_list_id)
         .to_vec();
     for &item_id in &items {
         type_check_file_item_dirty(state, item_id)??;

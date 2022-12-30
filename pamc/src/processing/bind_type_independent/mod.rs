@@ -1,9 +1,11 @@
 use crate::data::{
     bind_error::*,
     bound_ast::*,
+    file_graph::FileGraph,
     non_empty_vec::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
+    FileId,
 };
 
 pub use crate::data::bind_error::*;
@@ -11,74 +13,88 @@ pub use crate::data::bind_error::*;
 use context::*;
 mod context;
 
-/// The returned `Vec<File>` is not guaranteed to be in any particular order.
-pub fn bind_files(files: Vec<ub::File>) -> Result<Vec<File>, BindError> {
-    let files = sort_by_dependencies(files)?;
-    let mut context = Context::with_builtins();
-
-    let files = files
-        .into_iter()
-        .map(|file| bind_file(&mut context, file))
-        .collect::<Result<Vec<_>, BindError>>()?;
-
-    Ok(files)
+#[derive(Debug)]
+struct State<'a> {
+    out: Vec<FileItem>,
+    context: Context,
+    unchecked_files: Vec<ub::File>,
+    graph: &'a FileGraph,
 }
 
-fn sort_by_dependencies(
-    files: Vec<ub::File>,
-) -> Result<Vec<ub::File>, CircularFileDependencyError> {
-    // TODO (distant): Actually sort, once we support `use` statements.
-    Ok(files)
+pub fn bind_files(
+    root_id: FileId,
+    mut files: Vec<ub::File>,
+    graph: &FileGraph,
+) -> Result<Vec<FileItem>, BindError> {
+    let root_file = remove_file_with_id_or_panic(&mut files, root_id);
+    let mut state = State {
+        out: vec![],
+        context: Context::with_builtins(),
+        unchecked_files: files,
+        graph,
+    };
+
+    add_items_from_file(&mut state, root_file)?;
+
+    Ok(state.out)
 }
 
-fn bind_file(context: &mut Context, file: ub::File) -> Result<File, BindError> {
-    untaint_err(context, file, bind_file_dirty)
+fn remove_file_with_id_or_panic(files: &mut Vec<ub::File>, id: FileId) -> ub::File {
+    let index = files
+        .iter()
+        .position(|file| file.id == id)
+        .expect("File ID not found.");
+    files.remove(index)
 }
 
-fn bind_file_dirty(context: &mut Context, file: ub::File) -> Result<File, BindError> {
-    let number_of_file_items = file.items.len();
-    let items = file
-        .items
-        .into_iter()
-        .map(|item| bind_file_item(context, item))
-        .filter_map(Result::transpose)
-        .collect::<Result<Vec<_>, BindError>>()?;
-    context.pop_n(number_of_file_items);
-    Ok(File {
-        span: Some(file.span),
-        id: file.id,
-        items,
-    })
-}
-
-// TODO: Restore this to `... -> Result<FileItem, BindError>`.
-fn bind_file_item(
-    context: &mut Context,
-    item: ub::FileItem,
-) -> Result<Option<FileItem>, BindError> {
-    untaint_err(context, item, bind_file_item_dirty)
-}
-
-// TODO: Restore this to `... -> Result<FileItem, BindError>`.
-fn bind_file_item_dirty(
-    context: &mut Context,
-    item: ub::FileItem,
-) -> Result<Option<FileItem>, BindError> {
-    match item {
-        // TODO: Properly bind `use` statements.
-        ub::FileItem::UseSingle(_) => Ok(None),
-        ub::FileItem::UseWildcard(_) => Ok(None),
-        // TODO: Properly bind `mod` statements.
-        ub::FileItem::Mod(_) => Ok(None),
-        ub::FileItem::Type(type_statement) => Ok(Some(FileItem::Type(bind_type_statement(
-            context,
-            type_statement,
-        )?))),
-        ub::FileItem::Let(let_statement) => Ok(Some(FileItem::Let(bind_let_statement(
-            context,
-            let_statement,
-        )?))),
+fn add_items_from_file(state: &mut State, file: ub::File) -> Result<(), BindError> {
+    for item in file.items {
+        add_items_from_file_item(state, item)?;
     }
+    Ok(())
+}
+
+fn add_items_from_file_item(state: &mut State, item: ub::FileItem) -> Result<(), BindError> {
+    match item {
+        ub::FileItem::UseSingle(item) => add_single_import_to_context(&mut state.context, item),
+        ub::FileItem::UseWildcard(item) => add_wildcard_import_to_context(&mut state.context, item),
+        ub::FileItem::Mod(item) => add_mod_to_context(&mut state.context, item),
+        ub::FileItem::Type(item) => add_item_from_type_statement(state, item),
+        ub::FileItem::Let(item) => add_item_from_let_statement(state, item),
+    }
+}
+
+fn add_single_import_to_context(
+    _context: &mut Context,
+    _item: ub::UseSingleStatement,
+) -> Result<(), BindError> {
+    unimplemented!()
+}
+
+fn add_wildcard_import_to_context(
+    _context: &mut Context,
+    _item: ub::UseWildcardStatement,
+) -> Result<(), BindError> {
+    unimplemented!()
+}
+
+fn add_mod_to_context(_context: &mut Context, _item: ub::ModStatement) -> Result<(), BindError> {
+    unimplemented!()
+}
+
+fn add_item_from_type_statement(
+    state: &mut State,
+    item: ub::TypeStatement,
+) -> Result<(), BindError> {
+    let bound = bind_type_statement(&mut state.context, item)?;
+    state.out.push(FileItem::Type(bound));
+    Ok(())
+}
+
+fn add_item_from_let_statement(state: &mut State, item: ub::LetStatement) -> Result<(), BindError> {
+    let bound = bind_let_statement(&mut state.context, item)?;
+    state.out.push(FileItem::Let(bound));
+    Ok(())
 }
 
 fn bind_type_statement(
