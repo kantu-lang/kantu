@@ -280,3 +280,12 @@ impl Context<'_> {
         Ok(())
     }
 }
+
+impl Context<'_> {
+    pub fn get_edges(
+        &self,
+        node: DotGraphNode,
+    ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
+        self.graph.get_edges(node)
+    }
+}

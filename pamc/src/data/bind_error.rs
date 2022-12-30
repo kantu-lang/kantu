@@ -36,6 +36,7 @@ pub enum OwnedSymbolSource {
     Identifier(unbound::Identifier),
     Builtin,
     Mod(FileId),
+    WildcardImport(unbound::UseWildcardStatement),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

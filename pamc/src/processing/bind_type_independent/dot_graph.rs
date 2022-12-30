@@ -4,7 +4,8 @@ use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
 pub struct DotGraph {
-    edges: FxHashMap<DotGraphNode, FxHashMap<IdentifierName, (DotGraphNode, OwnedSymbolSource)>>,
+    edge_maps:
+        FxHashMap<DotGraphNode, FxHashMap<IdentifierName, (DotGraphNode, OwnedSymbolSource)>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -16,7 +17,7 @@ pub enum DotGraphNode {
 impl DotGraph {
     pub fn empty() -> Self {
         Self {
-            edges: FxHashMap::default(),
+            edge_maps: FxHashMap::default(),
         }
     }
 }
@@ -30,14 +31,14 @@ impl DotGraph {
         source: OwnedSymbolSource,
     ) -> Result<(), OwnedSymbolSource> {
         let old_entry = self
-            .edges
+            .edge_maps
             .entry(start.clone())
             .or_default()
             .insert(label.clone(), (end, source));
 
         if let Some(old_entry) = old_entry {
             let old_source = old_entry.1.clone();
-            self.edges
+            self.edge_maps
                 .entry(start)
                 .or_default()
                 .insert(label.clone(), old_entry);
@@ -52,9 +53,23 @@ impl DotGraph {
         start: DotGraphNode,
         label: &IdentifierName,
     ) -> Option<(DotGraphNode, &OwnedSymbolSource)> {
-        self.edges
+        self.edge_maps
             .get(&start)
             .and_then(|map| map.get(label))
             .map(|(node, source)| (*node, source))
+    }
+
+    pub fn get_edges(
+        &self,
+        node: DotGraphNode,
+    ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
+        let Some(edges) = self.edge_maps.get(&node) else {
+            return vec![];
+        };
+        let mut out = Vec::with_capacity(edges.len());
+        for (label, (end, source)) in edges {
+            out.push((label, *end, source));
+        }
+        out
     }
 }
