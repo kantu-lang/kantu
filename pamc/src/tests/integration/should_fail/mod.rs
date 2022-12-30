@@ -9,7 +9,7 @@ mod variant_return_type;
 
 use crate::{
     data::{
-        file_graph::FileGraph,
+        file_tree::FileTree,
         fun_recursion_validation_result::IllegalFunRecursionError,
         light_ast::*,
         node_registry::{ExpressionRef, NodeId, NodeRegistry},

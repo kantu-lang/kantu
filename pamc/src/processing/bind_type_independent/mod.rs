@@ -1,7 +1,7 @@
 use crate::data::{
     bind_error::*,
     bound_ast::*,
-    file_graph::FileGraph,
+    file_tree::FileTree,
     non_empty_vec::*,
     // `ub` stands for "unbound".
     simplified_ast as ub,
@@ -18,20 +18,20 @@ struct State<'a> {
     out: Vec<FileItem>,
     context: Context,
     unchecked_files: Vec<ub::File>,
-    graph: &'a FileGraph,
+    file_tree: &'a FileTree,
 }
 
 pub fn bind_files(
     root_id: FileId,
     mut files: Vec<ub::File>,
-    graph: &FileGraph,
+    file_tree: &FileTree,
 ) -> Result<Vec<FileItem>, BindError> {
     let root_file = remove_file_with_id_or_panic(&mut files, root_id);
     let mut state = State {
         out: vec![],
         context: Context::with_builtins(),
         unchecked_files: files,
-        graph,
+        file_tree,
     };
 
     add_items_from_file(&mut state, root_file)?;

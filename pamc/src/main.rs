@@ -1,5 +1,5 @@
 use pamc::{
-    data::{file_graph::FileGraph, node_registry::NodeRegistry, FileId},
+    data::{file_tree::FileTree, node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
         generate_code::{
@@ -44,7 +44,7 @@ fn main() {
     let tokens = lex(&file_content).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let file = simplify_file(file).expect("AST Simplification failed");
-    let file = bind_files(file_id, vec![file], &FileGraph::from_root(file_id))
+    let file = bind_files(file_id, vec![file], &FileTree::from_root(file_id))
         .expect("Binding failed")
         .into_iter()
         .next()
