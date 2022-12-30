@@ -6,6 +6,7 @@ pub enum BindError {
     NameNotFound(NameNotFoundError),
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
+    CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -53,5 +54,15 @@ pub struct ExpectedTermButNameRefersToModError {
 impl From<ExpectedTermButNameRefersToModError> for BindError {
     fn from(error: ExpectedTermButNameRefersToModError) -> Self {
         Self::ExpectedTermButNameRefersToMod(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CannotUselesslyImportItemAsItselfError {
+    pub use_statement: unbound::UseSingleStatement,
+}
+impl From<CannotUselesslyImportItemAsItselfError> for BindError {
+    fn from(error: CannotUselesslyImportItemAsItselfError) -> Self {
+        Self::CannotUselesslyImportItemAsItself(error)
     }
 }
