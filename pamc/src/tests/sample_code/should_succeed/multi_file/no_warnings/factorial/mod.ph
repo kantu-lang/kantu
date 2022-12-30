@@ -1,14 +1,17 @@
 mod nat;
 pub use nat.Nat;
 
-mod ops;
-use ops.*;
-
 use Nat.*;
 
-pub let(*) factorial = fun factorial(-n: Nat): Nat {
+mod ops;
+
+// TODO: Use more wildcards once we implement visibility
+// (it currently causes a name clash, since even private items
+// are imported.)
+
+pub let(*) factorial = fun factorial(-n: Nat): nat.Nat {
     match n {
-        .O => S(O),
-        .S(n') => mult(n, factorial(n')),
+        .O => pack.nat.Nat.S(O),
+        .S(n') => mod.ops.mult(n, factorial(n')),
     }
 };
