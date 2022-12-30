@@ -87,12 +87,14 @@ fn add_item_from_type_statement(
     item: ub::TypeStatement,
 ) -> Result<(), BindError> {
     let bound = bind_type_statement(&mut state.context, item)?;
+    // TODO: Add module namespace
     state.out.push(FileItem::Type(bound));
     Ok(())
 }
 
 fn add_item_from_let_statement(state: &mut State, item: ub::LetStatement) -> Result<(), BindError> {
     let bound = bind_let_statement(&mut state.context, item)?;
+    // TODO: Add module namespace
     state.out.push(FileItem::Let(bound));
     Ok(())
 }
