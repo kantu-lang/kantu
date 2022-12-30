@@ -74,23 +74,34 @@ impl Context {
 }
 
 impl Context {
+    /// If the DB index lookup fails, then there are 2 possibilities:
+    /// 1. The name is not in scope, in which case the `Err` variant is `None`.
+    /// 2. The name is in scope, but it refers to a mod rather than a leaf item.
+    ///    In this case, the `Err` variant is `Some(file_id)` where `file_id` is
+    ///    the id of the mod's file.
     pub fn get_db_index<'a, N>(
         &self,
         current_file_id: FileId,
         name_components: N,
-    ) -> Option<DbIndex>
+    ) -> Result<DbIndex, Option<FileId>>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
-        self.lookup_name(current_file_id, name_components)
-            .map(|(index, _)| index)
+        let lookup_result = self
+            .lookup_name(current_file_id, name_components)
+            .map(|(index, _)| index);
+        match lookup_result {
+            Some(DotGraphNode::LeafItem(level)) => Ok(self.level_to_index(level)),
+            Some(DotGraphNode::Mod(file_id)) => Err(Some(file_id)),
+            None => Err(None),
+        }
     }
 
     fn lookup_name<'a, N>(
         &self,
         current_file_id: FileId,
         name_components: N,
-    ) -> Option<(DbIndex, &AccessibleEntry)>
+    ) -> Option<(DotGraphNode, OwnedSymbolSource)>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -123,10 +134,10 @@ impl Context {
         current_file_id: FileId,
         identifier: &Identifier,
     ) -> Result<(), OwnedSymbolSource> {
-        if let Some((_, entry)) =
+        if let Some((_, existing_source)) =
             self.lookup_name(current_file_id, std::iter::once(&identifier.name))
         {
-            return Err(entry.source().clone());
+            return Err(existing_source.clone());
         }
 
         self.stack
@@ -138,14 +149,15 @@ impl Context {
     }
 }
 
-impl AccessibleEntry {
-    fn source(&self) -> OwnedSymbolSource {
-        match self {
-            AccessibleEntry::Builtin(_) => OwnedSymbolSource::Builtin,
-            AccessibleEntry::Local(identifier) => OwnedSymbolSource::Identifier(identifier.clone()),
-        }
-    }
-}
+// TODO: Delete
+// impl AccessibleEntry {
+//     fn source(&self) -> OwnedSymbolSource {
+//         match self {
+//             AccessibleEntry::Builtin(_) => OwnedSymbolSource::Builtin,
+//             AccessibleEntry::Local(identifier) => OwnedSymbolSource::Identifier(identifier.clone()),
+//         }
+//     }
+// }
 
 // impl AccessibleEntry {
 //     fn matches_name(&self, name_components: &[Identifier]) -> bool {

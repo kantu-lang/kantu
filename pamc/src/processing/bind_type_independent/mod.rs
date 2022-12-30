@@ -549,16 +549,24 @@ fn get_db_index<'a, N>(
     context: &Context,
     current_file_id: FileId,
     name_components: N,
-) -> Result<DbIndex, NameNotFoundError>
+) -> Result<DbIndex, BindError>
 where
     N: Clone + Iterator<Item = &'a ub::Identifier>,
 {
-    let Some(db_index) = context.get_db_index(current_file_id, name_components.clone().map(|c| &c.name)) else {
-        return Err(NameNotFoundError {
+    let lookup_result =
+        context.get_db_index(current_file_id, name_components.clone().map(|c| &c.name));
+
+    match lookup_result {
+        Ok(db_index) => Ok(db_index),
+        Err(Some(_)) => Err(ExpectedTermButNameRefersToModError {
             name_components: name_components.cloned().collect(),
-        });
-    };
-    Ok(db_index)
+        }
+        .into()),
+        Err(None) => Err(NameNotFoundError {
+            name_components: name_components.cloned().collect(),
+        }
+        .into()),
+    }
 }
 
 fn add_dot_edge(

@@ -5,6 +5,7 @@ pub enum BindError {
     CircularFileDependency(CircularFileDependencyError),
     NameNotFound(NameNotFoundError),
     NameClash(NameClashError),
+    ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -41,5 +42,15 @@ pub struct NameNotFoundError {
 impl From<NameNotFoundError> for BindError {
     fn from(error: NameNotFoundError) -> Self {
         Self::NameNotFound(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ExpectedTermButNameRefersToModError {
+    pub name_components: Vec<unbound::Identifier>,
+}
+impl From<ExpectedTermButNameRefersToModError> for BindError {
+    fn from(error: ExpectedTermButNameRefersToModError) -> Self {
+        Self::ExpectedTermButNameRefersToMod(error)
     }
 }
