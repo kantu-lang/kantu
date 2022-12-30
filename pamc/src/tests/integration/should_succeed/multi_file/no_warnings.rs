@@ -15,8 +15,7 @@ impl FileTreeBuilder<'_> {
     fn build(self) -> FileTree {
         let mut file_tree = FileTree::from_root(self.root);
         for (parent, name, child) in self.edges_to_children {
-            let name = UnreservedIdentifierName::new(name.to_string())
-                .expect("Edge name should be a non-reserved identifier name.");
+            let name = IdentifierName::new(name.to_string());
             file_tree
                 .add_child(parent, &name, child)
                 .expect("Failed to add child");

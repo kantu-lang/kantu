@@ -1,11 +1,11 @@
-use crate::data::{unsimplified_ast::UnreservedIdentifierName, FileId};
+use crate::data::{unsimplified_ast::IdentifierName, FileId};
 
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
 pub struct FileTree {
     root: FileId,
-    children: FxHashMap<FileId, FxHashMap<UnreservedIdentifierName, FileId>>,
+    children: FxHashMap<FileId, FxHashMap<IdentifierName, FileId>>,
     parents: FxHashMap<FileId, FileId>,
 }
 
@@ -36,7 +36,7 @@ impl FileTree {
     pub fn child(
         &self,
         file_id: FileId,
-        name: &UnreservedIdentifierName,
+        name: &IdentifierName,
     ) -> Result<FileId, CannotFindChildError> {
         let Some(child_map) = self.children.get(&file_id) else {
             return Err(CannotFindChildError::CannotFindParent);
@@ -54,7 +54,7 @@ impl FileTree {
     pub fn add_child(
         &mut self,
         parent: FileId,
-        name: &UnreservedIdentifierName,
+        name: &IdentifierName,
         child: FileId,
     ) -> Result<(), ChildAlreadyExistsError> {
         let old_child = self

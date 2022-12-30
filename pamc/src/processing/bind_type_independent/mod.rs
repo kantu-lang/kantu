@@ -61,7 +61,7 @@ fn add_items_from_file_item(state: &mut State, item: ub::FileItem) -> Result<(),
     match item {
         ub::FileItem::UseSingle(item) => add_single_import_to_context(&mut state.context, item),
         ub::FileItem::UseWildcard(item) => add_wildcard_import_to_context(&mut state.context, item),
-        ub::FileItem::Mod(item) => add_mod_to_context(&mut state.context, item),
+        ub::FileItem::Mod(item) => add_mod_to_context(state, item),
         ub::FileItem::Type(item) => add_item_from_type_statement(state, item),
         ub::FileItem::Let(item) => add_item_from_let_statement(state, item),
     }
@@ -159,8 +159,25 @@ fn add_wildcard_import_to_context(
     unimplemented!()
 }
 
-fn add_mod_to_context(_context: &mut Context, _item: ub::ModStatement) -> Result<(), BindError> {
-    unimplemented!()
+fn add_mod_to_context(state: &mut State, item: ub::ModStatement) -> Result<(), BindError> {
+    let current_file_id = item.span.file_id;
+    let Ok(mod_file_id) = state.file_tree.child(current_file_id, &item.name.name) else {
+        return Err(BindError::ModFileNotFound(ModFileNotFoundError {
+            mod_name: item.name,
+        }));
+    };
+    add_dot_edge(
+        &mut state.context,
+        DotGraphNode::Mod(current_file_id),
+        &item.name.name,
+        DotGraphNode::Mod(mod_file_id),
+        &item.name,
+    )?;
+
+    let mod_file = remove_file_with_id_or_panic(&mut state.unchecked_files, mod_file_id);
+    add_items_from_file(state, mod_file)?;
+
+    Ok(())
 }
 
 fn add_item_from_type_statement(

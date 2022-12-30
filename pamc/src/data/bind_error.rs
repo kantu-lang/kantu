@@ -7,6 +7,7 @@ pub enum BindError {
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
     CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError),
+    ModFileNotFound(ModFileNotFoundError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -64,5 +65,15 @@ pub struct CannotUselesslyImportItemAsItselfError {
 impl From<CannotUselesslyImportItemAsItselfError> for BindError {
     fn from(error: CannotUselesslyImportItemAsItselfError) -> Self {
         Self::CannotUselesslyImportItemAsItself(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ModFileNotFoundError {
+    pub mod_name: unbound::Identifier,
+}
+impl From<ModFileNotFoundError> for BindError {
+    fn from(error: ModFileNotFoundError) -> Self {
+        Self::ModFileNotFound(error)
     }
 }
