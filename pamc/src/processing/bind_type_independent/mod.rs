@@ -13,6 +13,9 @@ pub use crate::data::bind_error::*;
 use context::*;
 mod context;
 
+use dot_graph::*;
+mod dot_graph;
+
 #[derive(Debug)]
 struct State<'a> {
     out: Vec<FileItem>,
@@ -230,11 +233,11 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
     let type_db_level = context.index_to_level(type_db_index);
     let variant_db_level = context.push_placeholder();
 
-    add_db_level_dot_edge(
+    add_dot_edge(
         context,
-        type_db_level,
+        DotGraphNode::LeafItem(type_db_level),
         &unbound_variant_name.name,
-        variant_db_level,
+        DotGraphNode::LeafItem(variant_db_level),
         &unbound_variant_name,
     )?;
 
@@ -558,14 +561,14 @@ where
     Ok(db_index)
 }
 
-fn add_db_level_dot_edge(
+fn add_dot_edge(
     context: &mut Context,
-    start: DbLevel,
+    start: DotGraphNode,
     label: &IdentifierName,
-    end: DbLevel,
+    end: DotGraphNode,
     source: &ub::Identifier,
 ) -> Result<(), NameClashError> {
-    let result = context.add_db_level_dot_edge(
+    let result = context.add_dot_edge(
         start,
         label,
         end,

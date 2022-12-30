@@ -2,11 +2,6 @@ use super::*;
 
 use ub::Identifier;
 
-mod dot_graph;
-use dot_graph::*;
-
-use rustc_hash::FxHashMap;
-
 #[derive(Clone, Debug)]
 pub struct Context {
     stack: Vec<ContextEntry>,
@@ -123,19 +118,14 @@ impl Context {
 }
 
 impl Context {
-    pub fn add_db_level_dot_edge(
+    pub fn add_dot_edge(
         &mut self,
-        start: DbLevel,
+        start: DotGraphNode,
         label: &IdentifierName,
-        end: DbLevel,
+        end: DotGraphNode,
         source: OwnedSymbolSource,
     ) -> Result<(), OwnedSymbolSource> {
-        self.graph.add_edge(
-            DotGraphNode::LeafItem(start),
-            label,
-            DotGraphNode::LeafItem(end),
-            source,
-        )
+        self.graph.add_edge(start, label, end, source)
     }
 }
 

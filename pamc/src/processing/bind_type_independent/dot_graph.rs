@@ -1,5 +1,7 @@
 use super::*;
 
+use rustc_hash::FxHashMap;
+
 #[derive(Clone, Debug)]
 pub struct DotGraph {
     edges: FxHashMap<DotGraphNode, FxHashMap<IdentifierName, (DotGraphNode, OwnedSymbolSource)>>,
