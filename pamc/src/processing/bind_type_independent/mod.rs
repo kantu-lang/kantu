@@ -228,7 +228,7 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
     context.pop_n(arity);
 
     let unbound_name = variant.name;
-    let name = create_name_without_adding_to_scope(context, unbound_name.clone());
+    let name = unbound_name.clone().into();
 
     context.add_temporarily_restricted_name_to_scope_unless_singleton_underscore(
         [type_name, &unbound_name.name].iter().copied(),
@@ -537,13 +537,6 @@ fn bind_possibly_invalid_expression(
             },
         )),
     }
-}
-
-fn create_name_without_adding_to_scope(
-    _context: &mut Context,
-    identifier: ub::Identifier,
-) -> Identifier {
-    identifier.into()
 }
 
 fn create_name_and_add_to_scope(
