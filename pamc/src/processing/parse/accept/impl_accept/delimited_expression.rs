@@ -5,130 +5,19 @@ impl Accept for UnfinishedDelimitedExpression {
         match self {
             UnfinishedDelimitedExpression::Empty => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::TypeTitleCase => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Underscore => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Mod => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Mod),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-
-                    TokenKind::Super => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super2 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super2),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super3 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super3),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super4 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super4),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super5 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super5),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super6 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super6),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super7 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super7),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super8 => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Super8),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-
-                    TokenKind::Pack => {
-                        let expression = Expression::Identifier(Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Pack),
-                        });
-                        *self = UnfinishedDelimitedExpression::WaitingForEndDelimiter(
-                            token, expression,
-                        );
-                        AcceptResult::ContinueToNextToken
-                    }
-                    // TODO: Merge cases
-                    TokenKind::StandardIdentifier => {
+                    TokenKind::TypeTitleCase
+                    | TokenKind::Underscore
+                    | TokenKind::Mod
+                    | TokenKind::Super
+                    | TokenKind::Super2
+                    | TokenKind::Super3
+                    | TokenKind::Super4
+                    | TokenKind::Super5
+                    | TokenKind::Super6
+                    | TokenKind::Super7
+                    | TokenKind::Super8
+                    | TokenKind::Pack
+                    | TokenKind::StandardIdentifier => {
                         let expression = Expression::Identifier(Identifier {
                             span: span_single(file_id, &token),
                             name: IdentifierName::new(token.content.clone()),

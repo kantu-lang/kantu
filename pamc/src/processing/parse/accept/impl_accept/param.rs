@@ -30,31 +30,10 @@ impl Accept for UnfinishedParam {
                                 AcceptResult::Error(ParseError::unexpected_token(token))
                             }
                         }
-                        TokenKind::StandardIdentifier => {
+                        TokenKind::StandardIdentifier | TokenKind::Underscore => {
                             let name_or_label = Identifier {
                                 span: span_single(file_id, &token),
                                 name: IdentifierName::new(token.content.clone()),
-                            };
-
-                            let pending_tilde = pending_tilde.take();
-                            let pending_dash = pending_dash.take();
-                            let is_tilded = pending_tilde.is_some();
-                            let is_dashed = pending_dash.is_some();
-                            *self = UnfinishedParam::FirstIdentifier {
-                                first_token: pending_tilde
-                                    .unwrap_or_else(|| pending_dash.unwrap_or_else(|| token)),
-                                is_tilded,
-                                is_dashed,
-                                is_dash_allowed: *is_dash_allowed,
-                                name_or_label,
-                            };
-                            AcceptResult::ContinueToNextToken
-                        }
-                        // TODO: Merge cases
-                        TokenKind::Underscore => {
-                            let name_or_label = Identifier {
-                                span: span_single(file_id, &token),
-                                name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                             };
 
                             let pending_tilde = pending_tilde.take();
@@ -145,24 +124,10 @@ impl Accept for UnfinishedParam {
                             AcceptResult::ContinueToNextToken
                         }
                     }
-                    TokenKind::StandardIdentifier => {
+                    TokenKind::StandardIdentifier | TokenKind::Underscore => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
                             name: IdentifierName::new(token.content.clone()),
-                        };
-                        *self = UnfinishedParam::ExplicitLabelAndName {
-                            first_token: first_token.clone(),
-                            is_dashed: *is_dashed,
-                            label: label.clone(),
-                            name,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    // TODO: Merge cases
-                    TokenKind::Underscore => {
-                        let name = Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         };
                         *self = UnfinishedParam::ExplicitLabelAndName {
                             first_token: first_token.clone(),
