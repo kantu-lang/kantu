@@ -1,11 +1,11 @@
-use crate::data::FileId;
+use crate::data::{unsimplified_ast::UnreservedIdentifierName, FileId};
 
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
 pub struct FileGraph {
     root: FileId,
-    children: FxHashMap<FileId, FxHashMap<String, FileId>>,
+    children: FxHashMap<FileId, FxHashMap<UnreservedIdentifierName, FileId>>,
     parents: FxHashMap<FileId, FileId>,
 }
 
@@ -33,7 +33,11 @@ impl FileGraph {
         self.root
     }
 
-    pub fn child(&self, file_id: FileId, name: &str) -> Result<FileId, CannotFindChildError> {
+    pub fn child(
+        &self,
+        file_id: FileId,
+        name: &UnreservedIdentifierName,
+    ) -> Result<FileId, CannotFindChildError> {
         let Some(child_map) = self.children.get(&file_id) else {
             return Err(CannotFindChildError::CannotFindParent);
         };
@@ -50,21 +54,21 @@ impl FileGraph {
     pub fn add_child(
         &mut self,
         parent: FileId,
-        name: &str,
+        name: &UnreservedIdentifierName,
         child: FileId,
     ) -> Result<(), ChildAlreadyExistsError> {
         let old_child = self
             .children
             .entry(parent)
             .or_default()
-            .insert(name.to_string(), child);
+            .insert(name.clone(), child);
 
         if let Some(old_entry) = old_child {
             // Undo the insertion, since it is illegal.
             self.children
                 .entry(parent)
                 .or_default()
-                .insert(name.to_string(), old_entry);
+                .insert(name.clone(), old_entry);
             return Err(ChildAlreadyExistsError);
         }
 

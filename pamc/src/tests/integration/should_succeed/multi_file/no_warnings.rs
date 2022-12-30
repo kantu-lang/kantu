@@ -15,8 +15,10 @@ impl FileTreeBuilder<'_> {
     fn build(self) -> FileGraph {
         let mut graph = FileGraph::from_root(self.root);
         for (parent, name, child) in self.edges_to_children {
+            let name = UnreservedIdentifierName::new(name.to_string())
+                .expect("Edge name should be a non-reserved identifier name.");
             graph
-                .add_child(parent, name, child)
+                .add_child(parent, &name, child)
                 .expect("Failed to add child");
         }
         graph

@@ -232,6 +232,13 @@ impl UnreservedIdentifierName {
     pub fn unchecked_new(raw: String) -> Self {
         Self { raw }
     }
+
+    pub fn new(raw: String) -> Result<Self, ReservedIdentifierName> {
+        match IdentifierName::new(raw) {
+            IdentifierName::Standard(s) => Ok(s),
+            IdentifierName::Reserved(r) => Err(r),
+        }
+    }
 }
 
 impl UnreservedIdentifierName {
