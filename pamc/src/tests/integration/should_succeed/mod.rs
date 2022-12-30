@@ -17,6 +17,7 @@ use crate::{
     },
 };
 
+mod multi_file;
 mod single_file;
 
 use warning_comparison::*;
