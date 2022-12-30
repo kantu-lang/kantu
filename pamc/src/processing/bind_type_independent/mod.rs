@@ -608,10 +608,7 @@ fn create_local_name_and_add_to_scope(
         return Ok(identifier.into());
     }
 
-    let result = context.push_local(
-        &identifier.name,
-        OwnedSymbolSource::Identifier(identifier.clone()),
-    );
+    let result = context.push_local(identifier.span.file_id, &identifier);
     if let Err(old_source) = result {
         return Err(NameClashError {
             old: old_source,

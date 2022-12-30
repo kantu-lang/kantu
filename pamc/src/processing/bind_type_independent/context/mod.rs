@@ -17,19 +17,7 @@ pub enum ContextEntry {
 #[derive(Clone, Debug)]
 pub enum AccessibleEntry {
     Builtin(IdentifierName),
-    GlobalName(GlobalNameEntry),
-    LocalName(LocalNameEntry),
-}
-
-#[derive(Clone, Debug)]
-pub struct GlobalNameEntry {
-    file_id: FileId,
-    source: Identifier,
-}
-
-#[derive(Clone, Debug)]
-pub struct LocalNameEntry {
-    source: Identifier,
+    Local(Identifier),
 }
 
 impl Context {
@@ -132,10 +120,30 @@ impl Context {
 impl Context {
     pub fn push_local(
         &mut self,
-        name: &IdentifierName,
-        source: OwnedSymbolSource,
+        current_file_id: FileId,
+        identifier: &Identifier,
     ) -> Result<(), OwnedSymbolSource> {
-        unimplemented!()
+        if let Some((_, entry)) =
+            self.lookup_name(current_file_id, std::iter::once(&identifier.name))
+        {
+            return Err(entry.source().clone());
+        }
+
+        self.stack
+            .push(ContextEntry::Accessible(AccessibleEntry::Local(
+                identifier.clone(),
+            )));
+
+        Ok(())
+    }
+}
+
+impl AccessibleEntry {
+    fn source(&self) -> OwnedSymbolSource {
+        match self {
+            AccessibleEntry::Builtin(_) => OwnedSymbolSource::Builtin,
+            AccessibleEntry::Local(identifier) => OwnedSymbolSource::Identifier(identifier.clone()),
+        }
     }
 }
 
