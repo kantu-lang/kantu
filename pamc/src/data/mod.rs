@@ -1,5 +1,6 @@
 pub mod bind_error;
 pub mod bound_ast;
+pub mod file_graph;
 pub mod fun_recursion_validation_result;
 pub mod light_ast;
 pub mod node_equality_checker;
