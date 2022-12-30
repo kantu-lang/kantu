@@ -4,7 +4,7 @@ use super::*;
 fn type_assertion_goal_lhs() {
     use TypeCheckWarningSummary::*;
     let src =
-        include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check/type_assertion_goal_lhs.ph");
+        include_str!("../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/type_assertion_goal_lhs.ph");
     let expected_warnings = vec![
         TypeAssertionGoalLhs {
             assertion_src: "goal: Nat".to_string(),
@@ -20,7 +20,7 @@ fn type_assertion_goal_lhs() {
 fn type_of_type0() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/type_of_type0.ph"
+        "../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/type_of_type0.ph"
     );
     let expected_warnings = vec![TypeAssertionLhsTypeIsType1 {
         assertion_src: "Type: ?".to_string(),
@@ -32,7 +32,7 @@ fn type_of_type0() {
 fn type_assertion_type_check_failure() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/type_assertion_type_check_failure.ph"
+        "../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/type_assertion_type_check_failure.ph"
     );
     let expected_warnings = vec![
         TypeAssertionCompareeTypeCheckFailure {
@@ -53,7 +53,7 @@ fn type_assertion_type_check_failure() {
 fn mismatched_types() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/mismatched_types.ph"
+        "../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/mismatched_types.ph"
     );
     let expected_warnings = vec![
         TypeAssertionTypeMismatch {
@@ -74,7 +74,7 @@ fn mismatched_types() {
 fn nf_no_goal_exists() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_no_goal_exists.ph"
+        "../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/nf_no_goal_exists.ph"
     );
     let expected_warnings = vec![
         NormalFormAssertionNoGoalExists {
@@ -91,7 +91,7 @@ fn nf_no_goal_exists() {
 fn nf_non_goal_assertion_type_check_failure() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_non_goal_assertion_type_check_failure.ph"
+        "../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/nf_non_goal_assertion_type_check_failure.ph"
     );
     let expected_warnings = vec![
         NormalFormAssertionCompareeTypeCheckFailure {
@@ -112,7 +112,7 @@ fn nf_non_goal_assertion_type_check_failure() {
 fn nf_goal_assertion_type_check_failure() {
     use TypeCheckWarningSummary::*;
     let src = include_str!(
-        "../../sample_code/should_succeed/should_succeed_with_warnings/check/nf_goal_assertion_type_check_failure.ph"
+        "../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/nf_goal_assertion_type_check_failure.ph"
     );
     let expected_warnings = vec![
         NormalFormAssertionCompareeTypeCheckFailure {
@@ -133,7 +133,7 @@ fn nf_goal_assertion_type_check_failure() {
 fn mismatched_nf_comparees() {
     use TypeCheckWarningSummary::*;
     let src =
-        include_str!("../../sample_code/should_succeed/should_succeed_with_warnings/check/mismatched_nf_comparees.ph");
+        include_str!("../../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/mismatched_nf_comparees.ph");
     let expected_warnings = vec![
         NormalFormAssertionCompareeMismatch {
             original_left_src: "goal".to_string(),
