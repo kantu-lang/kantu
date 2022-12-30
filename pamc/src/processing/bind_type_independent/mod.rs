@@ -588,16 +588,38 @@ fn create_name_and_add_to_mod(
     current_file_id: FileId,
     identifier: ub::Identifier,
 ) -> Result<Identifier, NameClashError> {
-    unimplemented!()
+    let db_level = context.push_placeholder();
+    add_dot_edge(
+        context,
+        DotGraphNode::Mod(current_file_id),
+        &identifier.name,
+        DotGraphNode::LeafItem(db_level),
+        &identifier,
+    )?;
+    Ok(identifier.into())
 }
 
 fn create_local_name_and_add_to_scope(
     context: &mut Context,
     identifier: ub::Identifier,
 ) -> Result<Identifier, NameClashError> {
-    // context.add_name_to_scope_unless_singleton_underscore(std::iter::once(&identifier))?;
-    // Ok(identifier.into())
-    unimplemented!()
+    if let IdentifierName::Reserved(ReservedIdentifierName::Underscore) = &identifier.name {
+        context.push_placeholder();
+        return Ok(identifier.into());
+    }
+
+    let result = context.push_local(
+        &identifier.name,
+        OwnedSymbolSource::Identifier(identifier.clone()),
+    );
+    if let Err(old_source) = result {
+        return Err(NameClashError {
+            old: old_source,
+            new: OwnedSymbolSource::Identifier(identifier),
+        });
+    }
+
+    Ok(identifier.into())
 }
 
 fn untaint_err<In, Out, Err, F>(context: &mut Context, input: In, f: F) -> Result<Out, Err>

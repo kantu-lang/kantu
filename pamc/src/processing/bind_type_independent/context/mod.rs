@@ -129,6 +129,16 @@ impl Context {
     }
 }
 
+impl Context {
+    pub fn push_local(
+        &mut self,
+        name: &IdentifierName,
+        source: OwnedSymbolSource,
+    ) -> Result<(), OwnedSymbolSource> {
+        unimplemented!()
+    }
+}
+
 // impl AccessibleEntry {
 //     fn matches_name(&self, name_components: &[Identifier]) -> bool {
 //         match self {
