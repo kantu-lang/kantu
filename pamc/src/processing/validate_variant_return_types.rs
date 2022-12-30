@@ -1,6 +1,6 @@
 use crate::data::{
     light_ast::*,
-    node_registry::{NodeId, NodeRegistry},
+    node_registry::{FileItemNodeId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::OptionalNonEmptyVecLen,
     variant_return_type_validation_result::*,
 };
@@ -35,18 +35,23 @@ use crate::data::{
 /// ```
 /// This is valid because since `Bool.True` and `Bool.False` both
 /// return a `Bool`, which is the type they are variants of.
-pub fn validate_variant_return_types_in_file(
+pub fn validate_variant_return_types_in_file_items(
     registry: &NodeRegistry,
-    file: &File,
-) -> Result<VariantReturnTypesValidated<NodeId<File>>, IllegalVariantReturnTypeError> {
-    let item_ids = registry.get_possibly_empty_list(file.item_list_id);
+    file_item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
+) -> Result<
+    VariantReturnTypesValidated<Option<NonEmptyListId<FileItemNodeId>>>,
+    IllegalVariantReturnTypeError,
+> {
+    let item_ids = registry.get_possibly_empty_list(file_item_list_id);
     for item_id in item_ids {
         if let FileItemNodeId::Type(type_id) = item_id {
             let type_statement = registry.get(*type_id);
             validate_variant_return_types_in_type_statement(registry, type_statement)?;
         }
     }
-    Ok(VariantReturnTypesValidated::unchecked_new(file.id))
+    Ok(VariantReturnTypesValidated::unchecked_new(
+        file_item_list_id,
+    ))
 }
 
 fn validate_variant_return_types_in_type_statement(

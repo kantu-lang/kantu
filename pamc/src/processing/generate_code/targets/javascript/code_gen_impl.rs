@@ -2,29 +2,12 @@ use light::{DbIndex, DbLevel};
 
 use super::*;
 
-// TODO: Handle bug where different label names
-// with the same JS name cause a collision.
-// For example, `a'` and `a_` both have the JS name `a_`.
-// If these were two separate labels in the same set of
-// params/args, this would likely cause a bug.
-
 pub fn generate_code_with_options(
     registry: &NodeRegistry,
-    file_ids: &[NodeId<light::File>],
-) -> Result<Vec<File>, CompileToJavaScriptError> {
-    file_ids
-        .iter()
-        .map(|file_id| generate_code_for_file(registry, *file_id))
-        .collect()
-}
-
-fn generate_code_for_file(
-    registry: &NodeRegistry,
-    file_id: NodeId<light::File>,
+    file_item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
 ) -> Result<File, CompileToJavaScriptError> {
     let mut context = Context::new();
-    let file = registry.get(file_id);
-    let item_ids = registry.get_possibly_empty_list(file.item_list_id);
+    let item_ids = registry.get_possibly_empty_list(file_item_list_id);
     let items = {
         let mut out = vec![];
         out.extend(generate_code_for_type1_and_type0_without_adding_to_context());
@@ -50,10 +33,7 @@ fn generate_code_for_file(
         }
         out
     };
-    Ok(File {
-        id: file.file_id,
-        items,
-    })
+    Ok(File { items })
 }
 
 fn generate_code_for_type1_and_type0_without_adding_to_context() -> Vec<FileItem> {

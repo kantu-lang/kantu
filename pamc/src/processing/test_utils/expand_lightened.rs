@@ -10,16 +10,6 @@ use crate::data::{
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
 
-pub fn expand_file(registry: &NodeRegistry, id: NodeId<light::File>) -> File {
-    let light = registry.get(id);
-    let items = expand_file_item_list(registry, light.item_list_id);
-    File {
-        id: light.file_id,
-        span: light.span,
-        items,
-    }
-}
-
 pub fn expand_file_item_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyListId<FileItemNodeId>>,

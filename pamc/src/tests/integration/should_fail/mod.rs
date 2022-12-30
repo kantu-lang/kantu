@@ -9,6 +9,7 @@ mod variant_return_type;
 
 use crate::{
     data::{
+        file_graph::FileGraph,
         fun_recursion_validation_result::IllegalFunRecursionError,
         light_ast::*,
         node_registry::{ExpressionRef, NodeId, NodeRegistry},
@@ -19,17 +20,17 @@ use crate::{
     processing::{
         bind_type_independent::{bind_files, BindError, OwnedSymbolSource},
         lex::{lex, LexError},
-        lighten_ast::lighten_file,
+        lighten_ast::register_file_items,
         parse::{parse_file, ParseError},
         simplify_ast::{simplify_file, SimplifyAstError},
         test_utils::{
             expand_lightened::{expand_expression, expand_match, expand_match_case},
             format::{format_expression, format_match, format_match_case, FormatOptions},
         },
-        type_check::{type_check_files, TypeCheckError},
-        validate_fun_recursion::validate_fun_recursion_in_file,
-        validate_type_positivity::validate_type_positivity_in_file,
-        validate_variant_return_types::validate_variant_return_types_in_file,
+        type_check::{type_check_file_items, TypeCheckError},
+        validate_fun_recursion::validate_fun_recursion_in_file_items,
+        validate_type_positivity::validate_type_positivity_in_file_items,
+        validate_variant_return_types::validate_variant_return_types_in_file_items,
     },
 };
 

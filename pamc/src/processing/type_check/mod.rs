@@ -25,7 +25,7 @@ mod substitute;
 use substitution_context::*;
 mod substitution_context;
 
-pub use type_check_node::type_check_files;
+pub use type_check_node::type_check_file_items;
 use type_check_node::*;
 mod type_check_node;
 

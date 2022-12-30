@@ -20,29 +20,46 @@ impl From<Tainted<Infallible>> for TaintedIllegalFunRecursionError {
     }
 }
 
-pub fn validate_fun_recursion_in_file(
+pub fn validate_fun_recursion_in_file_items(
     registry: &mut NodeRegistry,
-    file_id: VariantReturnTypesValidated<NodeId<File>>,
-) -> Result<FunRecursionValidated<NodeId<File>>, IllegalFunRecursionError> {
-    let file_id = file_id.raw();
-    let file = registry.get(file_id).clone();
+    file_item_list_id: VariantReturnTypesValidated<Option<NonEmptyListId<FileItemNodeId>>>,
+) -> Result<FunRecursionValidated<Option<NonEmptyListId<FileItemNodeId>>>, IllegalFunRecursionError>
+{
+    let file_item_list_id = file_item_list_id.raw();
     let mut context = Context::new();
     let item_ids = registry
-        .get_possibly_empty_list(file.item_list_id)
+        .get_possibly_empty_list(file_item_list_id)
         .to_vec()
         .into_iter()
         .map(|item_id| validate_fun_recursion_in_file_item(&mut context, registry, item_id))
         .collect::<Result<Vec<_>, _>>()?;
     let item_list_id = registry.add_possibly_empty_list(item_ids);
-    Ok(FunRecursionValidated::unchecked_new(
-        registry.add_and_overwrite_id(File {
-            id: dummy_id(),
-            span: file.span,
-            file_id: file.file_id,
-            item_list_id,
-        }),
-    ))
+    Ok(FunRecursionValidated::unchecked_new(item_list_id))
 }
+
+// pub fn validate_fun_recursion_in_file(
+//     registry: &mut NodeRegistry,
+//     file_id: VariantReturnTypesValidated<NodeId<File>>,
+// ) -> Result<FunRecursionValidated<NodeId<File>>, IllegalFunRecursionError> {
+//     let file_id = file_id.raw();
+//     let file = registry.get(file_id).clone();
+//     let mut context = Context::new();
+//     let item_ids = registry
+//         .get_possibly_empty_list(file.item_list_id)
+//         .to_vec()
+//         .into_iter()
+//         .map(|item_id| validate_fun_recursion_in_file_item(&mut context, registry, item_id))
+//         .collect::<Result<Vec<_>, _>>()?;
+//     let item_list_id = registry.add_possibly_empty_list(item_ids);
+//     Ok(FunRecursionValidated::unchecked_new(
+//         registry.add_and_overwrite_id(File {
+//             id: dummy_id(),
+//             span: file.span,
+//             file_id: file.file_id,
+//             item_list_id,
+//         }),
+//     ))
+// }
 
 fn validate_fun_recursion_in_file_item(
     context: &mut Context,

@@ -19,7 +19,7 @@ pub enum CannotFindChildError {
 pub struct ChildAlreadyExistsError;
 
 impl FileGraph {
-    pub fn new(root: FileId) -> Self {
+    pub fn from_root(root: FileId) -> Self {
         Self {
             root,
             children: FxHashMap::default(),

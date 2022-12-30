@@ -2,16 +2,8 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     node_registry::{NodeId, NonEmptyListId},
-    simplified_ast as unbound, FileId, TextSpan,
+    simplified_ast as unbound, TextSpan,
 };
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct File {
-    pub span: Option<TextSpan>,
-    pub file_id: FileId,
-    pub id: NodeId<Self>,
-    pub item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
-}
 
 pub use crate::data::node_registry::FileItemNodeId;
 

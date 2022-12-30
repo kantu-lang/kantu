@@ -10,19 +10,15 @@ fn dummy_id<T>() -> NodeId<T> {
     NodeId::new(0)
 }
 
-pub fn lighten_file(registry: &mut NodeRegistry, unregistered: heavy::File) -> NodeId<File> {
+pub fn register_file_items(
+    registry: &mut NodeRegistry,
+    unregistered: Vec<heavy::FileItem>,
+) -> Option<NonEmptyListId<FileItemNodeId>> {
     let item_ids: Vec<_> = unregistered
-        .items
         .into_iter()
         .map(|unregistered| register_file_item(registry, unregistered))
         .collect();
-    let item_list_id = registry.add_possibly_empty_list(item_ids);
-    registry.add_and_overwrite_id(File {
-        id: dummy_id(),
-        span: unregistered.span,
-        file_id: unregistered.id,
-        item_list_id,
-    })
+    registry.add_possibly_empty_list(item_ids)
 }
 
 pub fn register_file_item(

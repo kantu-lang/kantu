@@ -1,5 +1,5 @@
 use pamc::{
-    data::{node_registry::NodeRegistry, FileId},
+    data::{file_graph::FileGraph, node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
         generate_code::{
@@ -10,13 +10,13 @@ use pamc::{
             CompileTarget,
         },
         lex::lex,
-        lighten_ast::lighten_file,
+        lighten_ast::register_file_items,
         parse::parse_file,
         simplify_ast::simplify_file,
-        type_check::type_check_files,
-        validate_fun_recursion::validate_fun_recursion_in_file,
-        validate_type_positivity::validate_type_positivity_in_file,
-        validate_variant_return_types::validate_variant_return_types_in_file,
+        type_check::type_check_file_items,
+        validate_fun_recursion::validate_fun_recursion_in_file_items,
+        validate_type_positivity::validate_type_positivity_in_file_items,
+        validate_variant_return_types::validate_variant_return_types_in_file_items,
     },
 };
 
@@ -44,25 +44,26 @@ fn main() {
     let tokens = lex(&file_content).expect("Lexing failed");
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let file = simplify_file(file).expect("AST Simplification failed");
-    let file = bind_files(vec![file])
+    let file = bind_files(file_id, vec![file], &FileGraph::from_root(file_id))
         .expect("Binding failed")
         .into_iter()
         .next()
         .unwrap();
     let mut registry = NodeRegistry::empty();
-    let file_id = lighten_file(&mut registry, file);
-    let file = registry.get(file_id);
-    let file_id = validate_variant_return_types_in_file(&registry, file)
-        .expect("Variant return type validation failed");
-    let file_id = validate_fun_recursion_in_file(&mut registry, file_id)
+    let file_item_list_id = register_file_items(&mut registry, vec![file]);
+    let file_item_list_id =
+        validate_variant_return_types_in_file_items(&registry, file_item_list_id)
+            .expect("Variant return type validation failed");
+    let file_item_list_id = validate_fun_recursion_in_file_items(&mut registry, file_item_list_id)
         .expect("Fun recursion validation failed");
-    let file_id = validate_type_positivity_in_file(&mut registry, file_id)
-        .expect("Type positivity validation failed");
-    type_check_files(&mut registry, &[file_id]).expect("Type checking failed");
-    let js_ast =
-        JavaScript::generate_code(&registry, &[file_id.raw()]).expect("Code generation failed");
+    let file_item_list_id =
+        validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
+            .expect("Type positivity validation failed");
+    type_check_file_items(&mut registry, file_item_list_id).expect("Type checking failed");
+    let js_ast = JavaScript::generate_code(&registry, file_item_list_id.raw())
+        .expect("Code generation failed");
     println!(
         "Compilation pipeline completed successfully!\n\n{}",
-        format_file(&js_ast[0], &FormatOptions { indentation: 4 })
+        format_file(&js_ast, &FormatOptions { indentation: 4 })
     );
 }

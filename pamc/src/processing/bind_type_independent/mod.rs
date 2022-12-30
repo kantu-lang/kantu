@@ -65,20 +65,20 @@ fn add_items_from_file_item(state: &mut State, item: ub::FileItem) -> Result<(),
 }
 
 fn add_single_import_to_context(
-    context: &mut Context,
-    item: ub::UseSingleStatement,
+    _context: &mut Context,
+    _item: ub::UseSingleStatement,
 ) -> Result<(), BindError> {
     unimplemented!()
 }
 
 fn add_wildcard_import_to_context(
-    context: &mut Context,
-    item: ub::UseWildcardStatement,
+    _context: &mut Context,
+    _item: ub::UseWildcardStatement,
 ) -> Result<(), BindError> {
     unimplemented!()
 }
 
-fn add_mod_to_context(context: &mut Context, item: ub::ModStatement) -> Result<(), BindError> {
+fn add_mod_to_context(_context: &mut Context, _item: ub::ModStatement) -> Result<(), BindError> {
     unimplemented!()
 }
 

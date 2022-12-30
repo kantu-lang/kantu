@@ -25,18 +25,33 @@ mod misc;
 // and returns an error, that mutable state is left in a "tainted"
 // state, meaning most of the normal invariants may no longer hold.
 
-pub fn validate_type_positivity_in_file(
+// TODO: Delete
+// pub fn validate_type_positivity_in_file(
+//     registry: &mut NodeRegistry,
+//     file_id: FunRecursionValidated<NodeId<File>>,
+// ) -> Result<TypePositivityValidated<NodeId<File>>, TypePositivityError> {
+//     let mut context = Context::with_builtins();
+//     let mut cache = TrustCache::empty();
+//     let file = registry.get(file_id.raw()).clone();
+//     let item_ids = registry.get_possibly_empty_list(file.item_list_id).to_vec();
+//     for &item_id in &item_ids {
+//         validate_type_positivity_in_file_item(&mut context, &mut cache, registry, item_id)?;
+//     }
+//     Ok(TypePositivityValidated::unchecked_new(file.id))
+// }
+
+pub fn validate_type_positivity_in_file_items(
     registry: &mut NodeRegistry,
-    file_id: FunRecursionValidated<NodeId<File>>,
-) -> Result<TypePositivityValidated<NodeId<File>>, TypePositivityError> {
+    file_item_list_id: FunRecursionValidated<Option<NonEmptyListId<FileItemNodeId>>>,
+) -> Result<TypePositivityValidated<Option<NonEmptyListId<FileItemNodeId>>>, TypePositivityError> {
+    let file_item_list_id = file_item_list_id.raw();
     let mut context = Context::with_builtins();
     let mut cache = TrustCache::empty();
-    let file = registry.get(file_id.raw()).clone();
-    let item_ids = registry.get_possibly_empty_list(file.item_list_id).to_vec();
+    let item_ids = registry.get_possibly_empty_list(file_item_list_id).to_vec();
     for &item_id in &item_ids {
         validate_type_positivity_in_file_item(&mut context, &mut cache, registry, item_id)?;
     }
-    Ok(TypePositivityValidated::unchecked_new(file.id))
+    Ok(TypePositivityValidated::unchecked_new(file_item_list_id))
 }
 
 fn validate_type_positivity_in_file_item(

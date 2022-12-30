@@ -2,15 +2,8 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
-    simplified_ast as unbound, FileId, TextSpan,
+    simplified_ast as unbound, TextSpan,
 };
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct File {
-    pub span: Option<TextSpan>,
-    pub id: FileId,
-    pub items: Vec<FileItem>,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
