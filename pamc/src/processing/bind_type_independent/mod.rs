@@ -153,10 +153,34 @@ fn use_statement_first_component_into_identifier_name(
 }
 
 fn add_wildcard_import_to_context(
-    _context: &mut Context,
-    _item: ub::UseWildcardStatement,
+    context: &mut Context,
+    item: ub::UseWildcardStatement,
 ) -> Result<(), BindError> {
-    unimplemented!()
+    let source = OwnedSymbolSource::WildcardImport(item.clone());
+    let current_file_id = item.span.file_id;
+    let start = {
+        let first_component_name =
+            use_statement_first_component_into_identifier_name(item.first_component);
+        let name_components =
+            std::iter::once(&first_component_name).chain(item.other_components.iter());
+        lookup_name(context, current_file_id, name_components)?.0
+    };
+
+    let edges: Vec<(IdentifierName, DotGraphNode)> = context
+        .get_edges(start)
+        .into_iter()
+        .map(|(label, end, _)| (label.clone(), end))
+        .collect();
+    for (label, end) in edges {
+        add_dot_edge_with_source(
+            context,
+            DotGraphNode::Mod(current_file_id),
+            &label,
+            end,
+            &source,
+        )?;
+    }
+    Ok(())
 }
 
 fn add_mod_to_context(state: &mut State, item: ub::ModStatement) -> Result<(), BindError> {
@@ -701,6 +725,23 @@ fn add_dot_edge(
         return Err(NameClashError {
             old: old_source,
             new: OwnedSymbolSource::Identifier(source.clone()),
+        });
+    }
+    Ok(())
+}
+
+fn add_dot_edge_with_source(
+    context: &mut Context,
+    start: DotGraphNode,
+    label: &IdentifierName,
+    end: DotGraphNode,
+    source: &OwnedSymbolSource,
+) -> Result<(), NameClashError> {
+    let result = context.add_dot_edge(start, label, end, source.clone());
+    if let Err(old_source) = result {
+        return Err(NameClashError {
+            old: old_source,
+            new: source.clone(),
         });
     }
     Ok(())
