@@ -3,7 +3,7 @@ use crate::data::{unsimplified_ast::UnreservedIdentifierName, FileId};
 use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
-pub struct FileGraph {
+pub struct FileTree {
     root: FileId,
     children: FxHashMap<FileId, FxHashMap<UnreservedIdentifierName, FileId>>,
     parents: FxHashMap<FileId, FileId>,
@@ -18,7 +18,7 @@ pub enum CannotFindChildError {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ChildAlreadyExistsError;
 
-impl FileGraph {
+impl FileTree {
     pub fn from_root(root: FileId) -> Self {
         Self {
             root,
@@ -28,7 +28,7 @@ impl FileGraph {
     }
 }
 
-impl FileGraph {
+impl FileTree {
     pub fn root(&self) -> FileId {
         self.root
     }

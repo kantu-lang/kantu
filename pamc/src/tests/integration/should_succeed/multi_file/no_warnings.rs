@@ -12,24 +12,24 @@ struct FileTreeBuilder<'a> {
 }
 
 impl FileTreeBuilder<'_> {
-    fn build(self) -> FileGraph {
-        let mut graph = FileGraph::from_root(self.root);
+    fn build(self) -> FileTree {
+        let mut file_tree = FileTree::from_root(self.root);
         for (parent, name, child) in self.edges_to_children {
             let name = UnreservedIdentifierName::new(name.to_string())
                 .expect("Edge name should be a non-reserved identifier name.");
-            graph
+            file_tree
                 .add_child(parent, &name, child)
                 .expect("Failed to add child");
         }
-        graph
+        file_tree
     }
 }
 
 fn expect_success_with_no_warnings(
-    graph_builder: FileTreeBuilder,
+    file_tree_builder: FileTreeBuilder,
     file_builders: Vec<FileBuilder>,
 ) {
-    let graph = graph_builder.build();
+    let file_tree = file_tree_builder.build();
     let files = file_builders
         .into_iter()
         .map(|builder| {
@@ -38,7 +38,7 @@ fn expect_success_with_no_warnings(
             simplify_file(file).expect("AST Simplification failed")
         })
         .collect();
-    let file_items = bind_files(graph.root(), files, &graph).expect("Binding failed");
+    let file_items = bind_files(file_tree.root(), files, &file_tree).expect("Binding failed");
     let mut registry = NodeRegistry::empty();
     let file_item_list_id = register_file_items(&mut registry, file_items);
 

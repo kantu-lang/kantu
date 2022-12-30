@@ -8,7 +8,7 @@ fn expect_type_arg_extraction_error(src: &str, panicker: impl Fn(ExpressionRef, 
     let file = parse_file(tokens, file_id).expect("Parsing failed");
     let file = simplify_file(file).expect("AST Simplification failed");
     let file_items =
-        bind_files(file_id, vec![file], &FileGraph::from_root(file_id)).expect("Binding failed");
+        bind_files(file_id, vec![file], &FileTree::from_root(file_id)).expect("Binding failed");
     let mut registry = NodeRegistry::empty();
     let file_item_list_id = register_file_items(&mut registry, file_items);
 

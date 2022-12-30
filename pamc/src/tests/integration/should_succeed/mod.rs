@@ -1,5 +1,5 @@
 use crate::{
-    data::{file_graph::FileGraph, light_ast::*, node_registry::NodeRegistry, FileId},
+    data::{file_tree::FileTree, light_ast::*, node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
         generate_code::{targets::javascript::JavaScript, CompileTarget},
