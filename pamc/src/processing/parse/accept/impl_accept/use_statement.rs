@@ -238,7 +238,6 @@ impl Accept for UnfinishedUseStatement {
                         AcceptResult::ContinueToNextToken
                     }
 
-                    // TODO: Merge cases
                     TokenKind::Pack => {
                         let first_component = UseStatementFirstComponent {
                             span: span_single(file_id, &token),

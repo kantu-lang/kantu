@@ -5,19 +5,10 @@ impl Accept for UnfinishedFun {
         match self {
             UnfinishedFun::Keyword(fun_kw) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::StandardIdentifier => {
+                    TokenKind::StandardIdentifier | TokenKind::Underscore => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
                             name: IdentifierName::new(token.content.clone()),
-                        };
-                        *self = UnfinishedFun::Name(fun_kw.clone(), name);
-                        AcceptResult::ContinueToNextToken
-                    }
-                    // TODO: Merge cases
-                    TokenKind::Underscore => {
-                        let name = Identifier {
-                            span: span_single(file_id, &token),
-                            name: IdentifierName::Reserved(ReservedIdentifierName::Underscore),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
                         AcceptResult::ContinueToNextToken
