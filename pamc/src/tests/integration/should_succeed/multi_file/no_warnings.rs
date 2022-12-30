@@ -56,8 +56,6 @@ fn expect_success_with_no_warnings(
         .expect("Code generation failed");
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn factorial() {
     // TODO: Automatically build from directory.
