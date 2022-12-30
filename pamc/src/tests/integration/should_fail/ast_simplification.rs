@@ -125,7 +125,7 @@ mod labeled_params {
         fn expect_duplicate_label_params_error(src: &str, label: &str) {
             expect_simplification_error(src, |err| {
                 if let SimplifyAstError::DuplicateParamLabel(param1, param2) = &err {
-                    let label = standard_ident_name(label);
+                    let label = IdentifierName::new(label.to_string());
                     let label = Some(&label);
                     assert_eq!(label, param1.label_name());
                     assert_eq!(label, param2.label_name());
@@ -206,7 +206,7 @@ mod labeled_call_args {
         fn expect_duplicate_label_params_error(src: &str, label: &str) {
             expect_simplification_error(src, |err| {
                 if let SimplifyAstError::DuplicateCallArgLabel(param1, param2) = &err {
-                    let label = standard_ident_name(label);
+                    let label = IdentifierName::new(label.to_string());
                     let label = Some(&label);
                     assert_eq!(label, param1.label_name());
                     assert_eq!(label, param2.label_name());
@@ -317,7 +317,7 @@ mod labeled_match_case_params {
         fn expect_duplicate_label_params_error(src: &str, label: &str) {
             expect_simplification_error(src, |err| {
                 if let SimplifyAstError::DuplicateMatchCaseParamLabel(param1, param2) = &err {
-                    let label = standard_ident_name(label);
+                    let label = IdentifierName::new(label.to_string());
                     let label = Some(&label);
                     assert_eq!(label, param1.label_name());
                     assert_eq!(label, param2.label_name());

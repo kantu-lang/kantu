@@ -7,7 +7,7 @@ impl Accept for UnfinishedDot {
                 TokenKind::StandardIdentifier => {
                     let right = Identifier {
                         span: span_single(file_id, &token),
-                        name: IdentifierName::Standard(token.content.clone()),
+                        name: IdentifierName::new(token.content.clone()),
                     };
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::UndelimitedExpression(
                         self.first_token.clone(),

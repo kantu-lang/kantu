@@ -80,7 +80,7 @@ impl Accept for UnfinishedModStatement {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedModStatement::Name {
                             first_token: first_token.clone(),

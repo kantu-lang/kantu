@@ -78,7 +78,7 @@ impl Context {
                     registry,
                     NonEmptyVec::singleton(Identifier {
                         id: dummy_id(),
-                        name: IdentifierName::Standard("Type2".to_owned()),
+                        name: IdentifierName::Reserved(ReservedIdentifierName::Type2),
                         span: None,
                     }),
                     DbIndex(0),
@@ -95,7 +95,7 @@ impl Context {
                     registry,
                     NonEmptyVec::singleton(Identifier {
                         id: dummy_id(),
-                        name: IdentifierName::Standard("Type1".to_owned()),
+                        name: IdentifierName::Reserved(ReservedIdentifierName::Type1),
                         span: None,
                     }),
                     DbIndex(0),

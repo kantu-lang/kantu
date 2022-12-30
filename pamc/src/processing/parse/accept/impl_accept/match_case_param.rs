@@ -12,7 +12,7 @@ impl Accept for UnfinishedMatchCaseParam {
                     TokenKind::StandardIdentifier => {
                         let identifier = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedMatchCaseParam::Identifier {
                             first_token: token,
@@ -20,6 +20,7 @@ impl Accept for UnfinishedMatchCaseParam {
                         };
                         AcceptResult::ContinueToNextToken
                     }
+                    // TODO: Merge cases
                     TokenKind::Underscore => {
                         let identifier = Identifier {
                             span: span_single(file_id, &token),
@@ -41,7 +42,7 @@ impl Accept for UnfinishedMatchCaseParam {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::StandardIdentifier => {
                     let label = Identifier {
                         span: span_single(file_id, &token),
-                        name: IdentifierName::Standard(token.content),
+                        name: IdentifierName::new(token.content),
                     };
                     *self = UnfinishedMatchCaseParam::ColonIdentifier(colon.clone(), label);
                     AcceptResult::ContinueToNextToken
@@ -128,7 +129,7 @@ impl Accept for UnfinishedMatchCaseParam {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content),
+                            name: IdentifierName::new(token.content),
                         };
                         *self = UnfinishedMatchCaseParam::IdentifierColonIdentifier {
                             first_token: first_token.clone(),
@@ -137,6 +138,7 @@ impl Accept for UnfinishedMatchCaseParam {
                         };
                         AcceptResult::ContinueToNextToken
                     }
+                    // TODO: Merge cases
                     TokenKind::Underscore => {
                         let name = Identifier {
                             span: span_single(file_id, &token),

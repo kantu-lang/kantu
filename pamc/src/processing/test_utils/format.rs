@@ -55,22 +55,8 @@ pub fn format_name(name: &NameExpression, _indent_level: usize, options: &Format
     }
 }
 
-pub fn format_ident(ident: &Identifier) -> String {
-    match &ident.name {
-        IdentifierName::Standard(s) => s.clone(),
-        IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => "Type".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Mod) => "mod".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super) => "super".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super2) => "super2".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super3) => "super3".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super4) => "super4".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super5) => "super5".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super6) => "super6".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super7) => "super7".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Super8) => "super8".to_string(),
-        IdentifierName::Reserved(ReservedIdentifierName::Pack) => "pack".to_string(),
-    }
+pub fn format_ident(ident: &Identifier) -> &str {
+    ident.name.src_str()
 }
 
 pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) -> String {
@@ -204,7 +190,7 @@ pub fn format_labeled_param(
 ) -> String {
     let explicit_label = match &param.label {
         ParamLabel::Explicit(ident) => format_ident(ident),
-        ParamLabel::Implicit => "".to_string(),
+        ParamLabel::Implicit => "",
     };
     let is_dashed = if param.is_dashed { "-" } else { "" };
     format!(

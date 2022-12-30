@@ -19,7 +19,7 @@ fn expect_undefined_match_case_params_type_error<const N: usize>(
                 let case_param_label_id = registry.get(case_param_id).label_identifier_id();
                 let case_param_label_name = &registry.get(case_param_label_id).name;
                 assert_eq!(
-                    IdentifierName::Standard(expected_name.to_string()),
+                    IdentifierName::new(expected_name.to_string()),
                     *case_param_label_name
                 );
             }
@@ -57,7 +57,7 @@ fn expect_missing_labeled_match_case_param_type_error<const N: usize>(
             {
                 let case_param_label_name = &registry.get(label_name_id).name;
                 assert_eq!(
-                    IdentifierName::Standard(expected_name.to_string()),
+                    IdentifierName::new(expected_name.to_string()),
                     *case_param_label_name
                 );
             }

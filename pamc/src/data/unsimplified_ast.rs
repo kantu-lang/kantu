@@ -175,13 +175,82 @@ pub struct Identifier {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IdentifierName {
-    Standard(String),
+    Standard(UnreservedIdentifierName),
     Reserved(ReservedIdentifierName),
+}
+
+impl IdentifierName {
+    pub fn new(s: String) -> Self {
+        match s.as_str() {
+            "Type" => IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
+            "Type1" => IdentifierName::Reserved(ReservedIdentifierName::Type1),
+            "Type2" => IdentifierName::Reserved(ReservedIdentifierName::Type2),
+            "_" => IdentifierName::Reserved(ReservedIdentifierName::Underscore),
+            "mod" => IdentifierName::Reserved(ReservedIdentifierName::Mod),
+            "super" => IdentifierName::Reserved(ReservedIdentifierName::Super),
+            "super2" => IdentifierName::Reserved(ReservedIdentifierName::Super2),
+            "super3" => IdentifierName::Reserved(ReservedIdentifierName::Super3),
+            "super4" => IdentifierName::Reserved(ReservedIdentifierName::Super4),
+            "super5" => IdentifierName::Reserved(ReservedIdentifierName::Super5),
+            "super6" => IdentifierName::Reserved(ReservedIdentifierName::Super6),
+            "super7" => IdentifierName::Reserved(ReservedIdentifierName::Super7),
+            "super8" => IdentifierName::Reserved(ReservedIdentifierName::Super8),
+            "pack" => IdentifierName::Reserved(ReservedIdentifierName::Pack),
+            _ => IdentifierName::Standard(UnreservedIdentifierName::unchecked_new(s)),
+        }
+    }
+}
+
+impl IdentifierName {
+    pub fn src_str(&self) -> &str {
+        match &self {
+            IdentifierName::Standard(s) => s.raw(),
+            IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase) => "Type",
+            IdentifierName::Reserved(ReservedIdentifierName::Type1) => "Type1",
+            IdentifierName::Reserved(ReservedIdentifierName::Type2) => "Type2",
+            IdentifierName::Reserved(ReservedIdentifierName::Underscore) => "_",
+            IdentifierName::Reserved(ReservedIdentifierName::Mod) => "mod",
+            IdentifierName::Reserved(ReservedIdentifierName::Super) => "super",
+            IdentifierName::Reserved(ReservedIdentifierName::Super2) => "super2",
+            IdentifierName::Reserved(ReservedIdentifierName::Super3) => "super3",
+            IdentifierName::Reserved(ReservedIdentifierName::Super4) => "super4",
+            IdentifierName::Reserved(ReservedIdentifierName::Super5) => "super5",
+            IdentifierName::Reserved(ReservedIdentifierName::Super6) => "super6",
+            IdentifierName::Reserved(ReservedIdentifierName::Super7) => "super7",
+            IdentifierName::Reserved(ReservedIdentifierName::Super8) => "super8",
+            IdentifierName::Reserved(ReservedIdentifierName::Pack) => "pack",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct UnreservedIdentifierName {
+    raw: String,
+}
+
+impl UnreservedIdentifierName {
+    pub fn unchecked_new(raw: String) -> Self {
+        Self { raw }
+    }
+}
+
+impl UnreservedIdentifierName {
+    pub fn raw(&self) -> &str {
+        &self.raw
+    }
+}
+
+impl From<UnreservedIdentifierName> for String {
+    fn from(name: UnreservedIdentifierName) -> Self {
+        name.raw
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReservedIdentifierName {
     TypeTitleCase,
+    Type1,
+    Type2,
     Underscore,
     Mod,
     Super,

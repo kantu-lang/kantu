@@ -676,45 +676,7 @@ impl Function {
 
 impl light::IdentifierName {
     fn preferred_js_name(&self) -> ValidJsIdentifierName {
-        match self {
-            light::IdentifierName::Standard(s) => bijectively_sanitize_js_identifier_name(s),
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Underscore) => {
-                ValidJsIdentifierName("_".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::TypeTitleCase) => {
-                ValidJsIdentifierName(TYPE_SPECIES_VALUE__TYPE0.to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Mod) => {
-                ValidJsIdentifierName("mod".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super) => {
-                ValidJsIdentifierName("super".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super2) => {
-                ValidJsIdentifierName("super2".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super3) => {
-                ValidJsIdentifierName("super3".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super4) => {
-                ValidJsIdentifierName("super4".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super5) => {
-                ValidJsIdentifierName("super5".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super6) => {
-                ValidJsIdentifierName("super6".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super7) => {
-                ValidJsIdentifierName("super7".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Super8) => {
-                ValidJsIdentifierName("super8".to_string())
-            }
-            light::IdentifierName::Reserved(light::ReservedIdentifierName::Pack) => {
-                ValidJsIdentifierName("pack".to_string())
-            }
-        }
+        bijectively_sanitize_js_identifier_name(self.src_str())
     }
 }
 

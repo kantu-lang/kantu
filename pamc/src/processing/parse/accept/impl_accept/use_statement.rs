@@ -224,9 +224,9 @@ impl Accept for UnfinishedUseStatement {
                     TokenKind::StandardIdentifier => {
                         let first_component = UseStatementFirstComponent {
                             span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Identifier(
-                                IdentifierName::Standard(token.content),
-                            ),
+                            kind: UseStatementFirstComponentKind::Identifier(IdentifierName::new(
+                                token.content,
+                            )),
                         };
                         *self = UnfinishedUseStatement::AtLeastOneComponent {
                             first_token: first_token.clone(),
@@ -238,6 +238,7 @@ impl Accept for UnfinishedUseStatement {
                         AcceptResult::ContinueToNextToken
                     }
 
+                    // TODO: Merge cases
                     TokenKind::Pack => {
                         let first_component = UseStatementFirstComponent {
                             span: span_single(file_id, &token),
@@ -296,7 +297,7 @@ impl Accept for UnfinishedUseStatement {
                         *has_trailing_dot = false;
                         let component = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content),
+                            name: IdentifierName::new(token.content),
                         };
                         other_components.push(component);
                         AcceptResult::ContinueToNextToken
@@ -334,9 +335,9 @@ impl Accept for UnfinishedUseStatement {
                         other_components: other_components.clone(),
                         import_modifier: WildcardOrAlternateName {
                             span: span_single(file_id, &token),
-                            kind: WildcardOrAlternateNameKind::AlternateName(
-                                IdentifierName::Standard(token.content),
-                            ),
+                            kind: WildcardOrAlternateNameKind::AlternateName(IdentifierName::new(
+                                token.content,
+                            )),
                         },
                     };
                     AcceptResult::ContinueToNextToken

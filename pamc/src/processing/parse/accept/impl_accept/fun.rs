@@ -8,11 +8,12 @@ impl Accept for UnfinishedFun {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedFun::Name(fun_kw.clone(), name);
                         AcceptResult::ContinueToNextToken
                     }
+                    // TODO: Merge cases
                     TokenKind::Underscore => {
                         let name = Identifier {
                             span: span_single(file_id, &token),

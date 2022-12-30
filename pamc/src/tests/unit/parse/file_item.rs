@@ -22,7 +22,7 @@ fn empty_type() {
     let src =
         include_str!("../../sample_code/should_succeed/subterms/file_items/empty_type.fi.pht");
     expect_type_statement(src, |item| {
-        let expected_name = IdentifierName::Standard("Empty".to_string());
+        let expected_name = IdentifierName::new("Empty".to_string());
         assert_eq!(&expected_name, &item.name.name);
         assert_eq!(0, item.variants.len());
     });
@@ -32,7 +32,7 @@ fn empty_type() {
 fn nat() {
     let src = include_str!("../../sample_code/should_succeed/subterms/file_items/nat.fi.pht");
     expect_type_statement(src, |item| {
-        let expected_name = IdentifierName::Standard("Nat".to_string());
+        let expected_name = IdentifierName::new("Nat".to_string());
         assert_eq!(&expected_name, &item.name.name);
         assert_eq!(2, item.variants.len());
     });
@@ -42,7 +42,7 @@ fn nat() {
 fn let_() {
     let src = include_str!("../../sample_code/should_succeed/subterms/file_items/let.fi.pht");
     expect_let_statement(src, |item| {
-        let expected_name = IdentifierName::Standard("x".to_string());
+        let expected_name = IdentifierName::new("x".to_string());
         assert_eq!(&expected_name, &item.name.name);
     });
 }

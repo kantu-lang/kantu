@@ -8,8 +8,7 @@ fn expect_extraneous_labeled_call_arg_type_error(
         TypeCheckError::ExtraneousLabeledCallArg { arg_id, .. } => {
             let arg_label_id = arg_id.label_id();
             let actual_name = &registry.get(arg_label_id).name;
-            let expected_name =
-                IdentifierName::Standard(expected_extraneous_label_name_src.to_string());
+            let expected_name = IdentifierName::new(expected_extraneous_label_name_src.to_string());
             let expected_name = &expected_name;
 
             assert_eq!(expected_name, actual_name);
@@ -44,7 +43,7 @@ fn expect_missing_labeled_call_arg_type_error<const N: usize>(
                 .zip(missing_label_ids.iter().copied())
             {
                 let actual_name = &registry.get(missing_label_id).name;
-                let expected_name = IdentifierName::Standard(expected_name_src.to_string());
+                let expected_name = IdentifierName::new(expected_name_src.to_string());
                 let expected_name = &expected_name;
 
                 assert_eq!(expected_name, actual_name);

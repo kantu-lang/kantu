@@ -21,7 +21,7 @@ fn dot1() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot1.x.pht");
     expect_expression(src, |expression| match &expression {
         Expression::Identifier(name) => {
-            assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
+            assert_eq!(&IdentifierName::new("a".to_string()), &name.name);
         }
         _ => panic!("Unexpected expression {:?}", expression),
     });
@@ -32,10 +32,10 @@ fn dot2() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot2.x.pht");
     expect_expression(src, |expression| match &expression {
         Expression::Dot(dot) => {
-            assert_eq!(&IdentifierName::Standard("b".to_string()), &dot.right.name);
+            assert_eq!(&IdentifierName::new("b".to_string()), &dot.right.name);
             match &dot.left {
                 Expression::Identifier(name) => {
-                    assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
+                    assert_eq!(&IdentifierName::new("a".to_string()), &name.name);
                 }
                 _ => panic!("Unexpected expression {:?}", expression),
             }
@@ -49,13 +49,13 @@ fn dot3() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot3.x.pht");
     expect_expression(src, |expression| match &expression {
         Expression::Dot(dot) => {
-            assert_eq!(&IdentifierName::Standard("c".to_string()), &dot.right.name);
+            assert_eq!(&IdentifierName::new("c".to_string()), &dot.right.name);
             match &dot.left {
                 Expression::Dot(left) => {
-                    assert_eq!(&IdentifierName::Standard("b".to_string()), &left.right.name);
+                    assert_eq!(&IdentifierName::new("b".to_string()), &left.right.name);
                     match &left.left {
                         Expression::Identifier(name) => {
-                            assert_eq!(&IdentifierName::Standard("a".to_string()), &name.name);
+                            assert_eq!(&IdentifierName::new("a".to_string()), &name.name);
                         }
                         _ => panic!("Unexpected expression {:?}", expression),
                     }
@@ -88,10 +88,10 @@ fn call() {
                         Expression::Dot(callee),
                         [Expression::Identifier(arg0), Expression::Dot(arg1), Expression::Identifier(arg2)],
                     ) => {
-                        assert_eq!(IdentifierName::Standard("b".to_string()), callee.right.name);
-                        assert_eq!(IdentifierName::Standard("c".to_string()), arg0.name);
-                        assert_eq!(IdentifierName::Standard("e".to_string()), arg1.right.name);
-                        assert_eq!(IdentifierName::Standard("f".to_string()), arg2.name);
+                        assert_eq!(IdentifierName::new("b".to_string()), callee.right.name);
+                        assert_eq!(IdentifierName::new("c".to_string()), arg0.name);
+                        assert_eq!(IdentifierName::new("e".to_string()), arg1.right.name);
+                        assert_eq!(IdentifierName::new("f".to_string()), arg2.name);
                         return;
                     }
                     _ => {}
@@ -120,29 +120,29 @@ fn labeled_call() {
 
                 match &call.callee {
                     Expression::Dot(callee) => {
-                        assert_eq!(IdentifierName::Standard("b".to_string()), callee.right.name);
+                        assert_eq!(IdentifierName::new("b".to_string()), callee.right.name);
 
                         assert_eq!(Some(ParamLabel::Implicit), arg0.label);
                         assert_eq!(
-                            Some(&IdentifierName::Standard("c".to_string())),
+                            Some(&IdentifierName::new("c".to_string())),
                             arg0.label_name()
                         );
 
                         assert!(matches!(arg1.label, Some(ParamLabel::Explicit(_))));
                         assert_eq!(
-                            Some(&IdentifierName::Standard("e".to_string())),
+                            Some(&IdentifierName::new("e".to_string())),
                             arg1.label_name()
                         );
 
                         assert_eq!(Some(ParamLabel::Implicit), arg0.label);
                         assert_eq!(
-                            Some(&IdentifierName::Standard("f".to_string())),
+                            Some(&IdentifierName::new("f".to_string())),
                             arg2.label_name()
                         );
 
                         assert!(matches!(arg3.label, Some(ParamLabel::Explicit(_))));
                         assert_eq!(
-                            Some(&IdentifierName::Standard("g".to_string())),
+                            Some(&IdentifierName::new("g".to_string())),
                             arg3.label_name()
                         );
 
@@ -163,19 +163,19 @@ fn fun() {
     let src = include_str!("../../sample_code/should_succeed/subterms/expressions/fun.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Fun(fun) => {
-            assert_eq!(IdentifierName::Standard("x".to_string()), fun.name.name);
+            assert_eq!(IdentifierName::new("x".to_string()), fun.name.name);
 
             assert_eq!(2, fun.params.len());
 
             assert_eq!(
-                IdentifierName::Standard("a".to_string()),
+                IdentifierName::new("a".to_string()),
                 fun.params[0].name.name
             );
             assert!(fun.params[0].is_dashed);
             assert_eq!(None, fun.params[0].label);
 
             assert_eq!(
-                IdentifierName::Standard("b".to_string()),
+                IdentifierName::new("b".to_string()),
                 fun.params[1].name.name
             );
             assert!(!fun.params[1].is_dashed);
@@ -191,24 +191,24 @@ fn labeled_fun() {
         include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_fun.x.pht");
     expect_expression(src, |expression| match expression {
         Expression::Fun(fun) => {
-            assert_eq!(IdentifierName::Standard("x".to_string()), fun.name.name);
+            assert_eq!(IdentifierName::new("x".to_string()), fun.name.name);
 
             assert_eq!(2, fun.params.len());
 
             assert_eq!(
-                IdentifierName::Standard("a".to_string()),
+                IdentifierName::new("a".to_string()),
                 fun.params[0].name.name
             );
             assert!(fun.params[0].is_dashed);
             assert_eq!(Some(ParamLabel::Implicit), fun.params[0].label);
 
             assert_eq!(
-                IdentifierName::Standard("b".to_string()),
+                IdentifierName::new("b".to_string()),
                 fun.params[1].name.name
             );
             assert!(!fun.params[1].is_dashed);
             assert_eq!(
-                Some(&IdentifierName::Standard("bar".to_string())),
+                Some(&IdentifierName::new("bar".to_string())),
                 fun.params[1].label.as_ref().and_then(|label| match label {
                     ParamLabel::Explicit(name) => Some(&name.name),
                     ParamLabel::Implicit => None,
@@ -255,11 +255,11 @@ fn labeled_match() {
                 Some(ParamLabel::Implicit)
             ));
             assert_eq!(
-                Some(&IdentifierName::Standard("x'".to_string())),
+                Some(&IdentifierName::new("x'".to_string())),
                 case_d.params.to_possibly_empty()[0].label_name()
             );
             assert_eq!(
-                IdentifierName::Standard("x'".to_string()),
+                IdentifierName::new("x'".to_string()),
                 case_d.params.to_possibly_empty()[0].name.name
             );
             assert!(matches!(
@@ -267,11 +267,11 @@ fn labeled_match() {
                 Some(ParamLabel::Implicit)
             ));
             assert_eq!(
-                Some(&IdentifierName::Standard("y'".to_string())),
+                Some(&IdentifierName::new("y'".to_string())),
                 case_d.params.to_possibly_empty()[1].label_name()
             );
             assert_eq!(
-                IdentifierName::Standard("y'".to_string()),
+                IdentifierName::new("y'".to_string()),
                 case_d.params.to_possibly_empty()[1].name.name
             );
             assert!(case_d.triple_dot.is_none());
@@ -287,11 +287,11 @@ fn labeled_match() {
                 Some(ParamLabel::Explicit(_))
             ));
             assert_eq!(
-                Some(&IdentifierName::Standard("foo".to_string())),
+                Some(&IdentifierName::new("foo".to_string())),
                 case_f.params.to_possibly_empty()[0].label_name()
             );
             assert_eq!(
-                IdentifierName::Standard("x'".to_string()),
+                IdentifierName::new("x'".to_string()),
                 case_f.params.to_possibly_empty()[0].name.name
             );
             assert!(matches!(
@@ -299,11 +299,11 @@ fn labeled_match() {
                 Some(ParamLabel::Explicit(_))
             ));
             assert_eq!(
-                Some(&IdentifierName::Standard("bar".to_string())),
+                Some(&IdentifierName::new("bar".to_string())),
                 case_f.params.to_possibly_empty()[1].label_name()
             );
             assert_eq!(
-                IdentifierName::Standard("y'".to_string()),
+                IdentifierName::new("y'".to_string()),
                 case_f.params.to_possibly_empty()[1].name.name
             );
             assert!(case_f.triple_dot.is_none());
@@ -335,7 +335,7 @@ fn labeled_match() {
                 Some(ParamLabel::Explicit(_))
             ));
             assert_eq!(
-                Some(&IdentifierName::Standard("foo".to_string())),
+                Some(&IdentifierName::new("foo".to_string())),
                 case_l.params.to_possibly_empty()[0].label_name()
             );
             assert_eq!(
@@ -347,11 +347,11 @@ fn labeled_match() {
                 Some(ParamLabel::Implicit)
             ));
             assert_eq!(
-                Some(&IdentifierName::Standard("z".to_string())),
+                Some(&IdentifierName::new("z".to_string())),
                 case_l.params.to_possibly_empty()[1].label_name()
             );
             assert_eq!(
-                IdentifierName::Standard("z".to_string()),
+                IdentifierName::new("z".to_string()),
                 case_l.params.to_possibly_empty()[1].name.name
             );
             assert!(case_l.triple_dot.is_none());

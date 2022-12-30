@@ -33,7 +33,7 @@ impl Accept for UnfinishedParam {
                         TokenKind::StandardIdentifier => {
                             let name_or_label = Identifier {
                                 span: span_single(file_id, &token),
-                                name: IdentifierName::Standard(token.content.clone()),
+                                name: IdentifierName::new(token.content.clone()),
                             };
 
                             let pending_tilde = pending_tilde.take();
@@ -50,6 +50,7 @@ impl Accept for UnfinishedParam {
                             };
                             AcceptResult::ContinueToNextToken
                         }
+                        // TODO: Merge cases
                         TokenKind::Underscore => {
                             let name_or_label = Identifier {
                                 span: span_single(file_id, &token),
@@ -147,7 +148,7 @@ impl Accept for UnfinishedParam {
                     TokenKind::StandardIdentifier => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
-                            name: IdentifierName::Standard(token.content.clone()),
+                            name: IdentifierName::new(token.content.clone()),
                         };
                         *self = UnfinishedParam::ExplicitLabelAndName {
                             first_token: first_token.clone(),
@@ -157,6 +158,7 @@ impl Accept for UnfinishedParam {
                         };
                         AcceptResult::ContinueToNextToken
                     }
+                    // TODO: Merge cases
                     TokenKind::Underscore => {
                         let name = Identifier {
                             span: span_single(file_id, &token),
