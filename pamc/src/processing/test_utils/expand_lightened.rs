@@ -39,6 +39,7 @@ pub fn expand_type_statement(
         expand_optional_variant_list(registry, light.variant_list_id).into_possibly_empty();
     TypeStatement {
         span: light.span,
+        visibility: light.visibility,
         name,
         params,
         variants,
@@ -166,6 +167,8 @@ pub fn expand_let_statement(
     let value = expand_expression(registry, light.value_id);
     LetStatement {
         span: light.span,
+        visibility: light.visibility,
+        transparency: light.transparency,
         name,
         value,
     }

@@ -11,12 +11,15 @@ pub use crate::data::node_registry::FileItemNodeId;
 pub struct TypeStatement {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
+    pub visibility: Visibility,
     pub name_id: NodeId<Identifier>,
     pub param_list_id: Option<NonEmptyParamListId>,
     pub variant_list_id: Option<NonEmptyListId<NodeId<Variant>>>,
 }
 
 pub use crate::data::node_registry::NonEmptyParamListId;
+
+pub use crate::data::bound_ast::Visibility;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnlabeledParam {
@@ -61,9 +64,13 @@ pub struct Variant {
 pub struct LetStatement {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
+    pub visibility: Visibility,
+    pub transparency: Transparency,
     pub name_id: NodeId<Identifier>,
     pub value_id: ExpressionId,
 }
+
+pub use crate::data::bound_ast::Transparency;
 
 pub use crate::data::node_registry::ExpressionId;
 

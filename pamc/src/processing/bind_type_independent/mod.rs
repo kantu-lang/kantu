@@ -4,7 +4,7 @@ use crate::data::{
     file_tree::FileTree,
     non_empty_vec::*,
     // `ub` stands for "unbound".
-    simplified_ast as ub,
+    simplified_ast::{self as ub, ParenthesizedWeakAncestor},
     FileId,
     TextSpan,
 };
@@ -129,6 +129,13 @@ fn get_visibility(
     let Some(ancestor) = &pub_clause.ancestor else {
         return Ok(Visibility::Global);
     };
+    get_visibility_from_weak_ancestor_node(context, ancestor)
+}
+
+fn get_visibility_from_weak_ancestor_node(
+    context: &Context,
+    ancestor: &ParenthesizedWeakAncestor,
+) -> Result<Visibility, BindError> {
     match &ancestor.kind {
         ub::WeakAncestorKind::Global => Ok(Visibility::Global),
         ub::WeakAncestorKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
@@ -348,6 +355,7 @@ fn bind_type_statement_dirty(
 
     Ok(TypeStatement {
         span: Some(type_statement.span),
+        visibility,
         name: type_name,
         params,
         variants,
@@ -481,12 +489,25 @@ fn bind_let_statement_dirty(
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
     let visibility = get_visibility(context, let_statement.visibility.as_ref())?;
+    let transparency = get_transparency(context, let_statement.transparency.as_ref())?;
     let name = create_name_and_add_to_mod(context, let_statement.name, visibility)?;
     Ok(LetStatement {
         span: Some(let_statement.span),
+        visibility,
+        transparency,
         name,
         value,
     })
+}
+
+fn get_transparency(
+    context: &Context,
+    transparency: Option<&ub::ParenthesizedWeakAncestor>,
+) -> Result<Transparency, BindError> {
+    let Some(ancestor) = transparency else {
+        return Ok(Transparency(Visibility::Mod(context.current_file_id())));
+    };
+    get_visibility_from_weak_ancestor_node(context, ancestor).map(Transparency)
 }
 
 fn bind_expression(

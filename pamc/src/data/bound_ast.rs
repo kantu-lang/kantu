@@ -2,7 +2,7 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
-    simplified_ast as unbound, TextSpan,
+    simplified_ast as unbound, FileId, TextSpan,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -23,9 +23,16 @@ impl FileItem {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
     pub span: Option<TextSpan>,
+    pub visibility: Visibility,
     pub name: Identifier,
     pub params: Option<NonEmptyParamVec>,
     pub variants: Vec<Variant>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Visibility {
+    Global,
+    Mod(FileId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -86,9 +93,14 @@ pub struct Variant {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
     pub span: Option<TextSpan>,
+    pub visibility: Visibility,
+    pub transparency: Transparency,
     pub name: Identifier,
     pub value: Expression,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Transparency(pub Visibility);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {

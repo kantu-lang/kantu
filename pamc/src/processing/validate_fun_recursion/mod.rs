@@ -115,6 +115,7 @@ fn validate_fun_recursion_in_type_statement_dirty(
     Ok(registry.add_and_overwrite_id(TypeStatement {
         id: dummy_id(),
         span: type_statement.span,
+        visibility: type_statement.visibility,
         name_id: type_statement.name_id,
         param_list_id,
         variant_list_id,
@@ -173,6 +174,8 @@ fn validate_fun_recursion_in_let_statement_dirty(
     Ok(registry.add_and_overwrite_id(LetStatement {
         id: dummy_id(),
         span: let_statement.span,
+        visibility: let_statement.visibility,
+        transparency: let_statement.transparency,
         name_id: let_statement.name_id,
         value_id,
     }))

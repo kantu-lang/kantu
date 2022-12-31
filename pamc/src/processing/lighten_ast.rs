@@ -50,6 +50,7 @@ pub fn register_type_statement(
     registry.add_and_overwrite_id(TypeStatement {
         id: dummy_id(),
         span: unregistered.span,
+        visibility: unregistered.visibility,
         name_id,
         param_list_id,
         variant_list_id,
@@ -163,6 +164,8 @@ pub fn register_let_statement(
     registry.add_and_overwrite_id(LetStatement {
         id: dummy_id(),
         span: unregistered.span,
+        visibility: unregistered.visibility,
+        transparency: unregistered.transparency,
         name_id,
         value_id,
     })

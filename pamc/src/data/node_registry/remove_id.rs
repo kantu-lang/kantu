@@ -2,6 +2,7 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast as with_id,
+    light_ast::{Transparency, Visibility},
     node_registry::{
         GoalKwOrPossiblyInvalidExpressionId, MatchCaseOutputId, NodeId, NonEmptyCallArgListId,
         NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId, ParamLabelId,
@@ -35,6 +36,7 @@ pub use crate::data::node_registry::FileItemNodeId;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TypeStatement {
     pub span: Option<TextSpan>,
+    pub visibility: Visibility,
     pub name_id: NodeId<with_id::Identifier>,
     pub param_list_id: Option<NonEmptyParamListId>,
     pub variant_list_id: Option<NonEmptyListId<NodeId<with_id::Variant>>>,
@@ -44,6 +46,7 @@ impl RemoveId for with_id::TypeStatement {
     fn remove_id(&self) -> Self::Output {
         TypeStatement {
             span: self.span,
+            visibility: self.visibility,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             variant_list_id: self.variant_list_id,
@@ -56,6 +59,7 @@ impl AddId for TypeStatement {
         with_id::TypeStatement {
             id,
             span: self.span,
+            visibility: self.visibility,
             name_id: self.name_id,
             param_list_id: self.param_list_id,
             variant_list_id: self.variant_list_id,
@@ -162,6 +166,8 @@ impl AddId for Variant {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetStatement {
     pub span: Option<TextSpan>,
+    pub visibility: Visibility,
+    pub transparency: Transparency,
     pub name_id: NodeId<with_id::Identifier>,
     pub value_id: ExpressionId,
 }
@@ -170,6 +176,8 @@ impl RemoveId for with_id::LetStatement {
     fn remove_id(&self) -> Self::Output {
         LetStatement {
             span: self.span,
+            visibility: self.visibility,
+            transparency: self.transparency,
             name_id: self.name_id,
             value_id: self.value_id,
         }
@@ -181,6 +189,8 @@ impl AddId for LetStatement {
         with_id::LetStatement {
             id,
             span: self.span,
+            visibility: self.visibility,
+            transparency: self.transparency,
             name_id: self.name_id,
             value_id: self.value_id,
         }

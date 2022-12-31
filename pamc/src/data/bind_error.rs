@@ -34,11 +34,7 @@ impl From<NameIsPrivateError> for BindError {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Visibility {
-    Global,
-    Mod(FileId),
-}
+pub use crate::data::bound_ast::Visibility;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameClashError {
