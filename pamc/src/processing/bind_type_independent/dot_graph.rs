@@ -12,6 +12,10 @@ pub struct DotGraphEntry {
     pub node: DotGraphNode,
     pub def: OwnedSymbolSource,
     pub visibility: Visibility,
+    /// If this entry is a non-alias, this is the same as `visibility`.
+    /// Otherwise, `original_visibility` is equal to the visibility of the
+    /// non-alias that this alias points to.
+    pub original_visibility: Visibility,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

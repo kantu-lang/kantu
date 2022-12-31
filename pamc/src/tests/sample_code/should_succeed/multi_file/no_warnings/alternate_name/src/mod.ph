@@ -1,7 +1,7 @@
 mod nat;
 use nat.Nat as Blat;
 
-mod ops;
+pub mod ops;
 pub use ops as blops;
 
 use Blat.*;

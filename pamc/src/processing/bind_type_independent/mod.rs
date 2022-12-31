@@ -101,22 +101,34 @@ fn add_single_import_to_context(
             last_component
         }
     };
-    let end = {
-        let first_component_name =
-            use_statement_first_component_into_identifier_name(item.first_component);
-        let name_components =
-            std::iter::once(&first_component_name).chain(item.other_components.iter());
-        lookup_name(context, name_components)?.node
+    let first_component_name =
+        use_statement_first_component_into_identifier_name(item.first_component);
+    let name_components =
+        std::iter::once(&first_component_name).chain(item.other_components.iter());
+
+    let (end_node, end_original_visibility) = {
+        let entry = lookup_name(context, name_components.clone())?;
+        (entry.node, entry.original_visibility)
     };
     let visibility = get_visibility(context, item.visibility.as_ref())?;
-    // TODO: Check that end.leaf_visibility is compatible with visibility.
+    if !context.is_left_at_least_as_permissive_as_right(end_original_visibility, visibility) {
+        return Err(BindError::NameIsPrivate(NameIsPrivateError {
+            name_component: name_components
+                .last()
+                .expect("Must be non-empty since we chained onto std::iter::once()")
+                .clone(),
+            required_visibility: visibility,
+            actual_visibility: end_original_visibility,
+        }));
+    }
     add_new_dot_edge_or_merge_with_duplicate(
         context,
         start,
         &import_name.name,
-        end,
+        end_node,
         import_name,
         visibility,
+        end_original_visibility,
     )?;
     Ok(())
 }
@@ -146,6 +158,7 @@ fn get_visibility_from_weak_ancestor_node(
                 node: DotGraphNode::Mod(ancestor_id),
                 def: _,
                 visibility: _,
+                original_visibility: _,
             }) = context.get_n_supers(n.get())
             {
                 Ok(Visibility::Mod(ancestor_id))
@@ -202,23 +215,36 @@ fn add_wildcard_import_to_context(
     };
     let visibility = get_visibility(context, item.visibility.as_ref())?;
 
-    let edges: Vec<(IdentifierName, DotGraphNode)> = context
+    let edges_visible_to_current_mod: Vec<(IdentifierName, DotGraphEntry)> = context
         .get_edges(start)
         .into_iter()
-        .map(|(label, entry)| (label.clone(), entry.node))
+        .filter_map(|(label, entry)| {
+            if context.is_left_at_least_as_permissive_as_right(
+                entry.visibility,
+                Visibility::Mod(item_file_id),
+            ) {
+                Some((label.clone(), entry.clone()))
+            } else {
+                None
+            }
+        })
         .collect();
-    for (label, end) in edges {
-        // TODO: Only add if end.leaf_visibility is compatible with visibility.
-        // TODO: Warn if nothing is added.
+    for (label, entry) in edges_visible_to_current_mod {
+        if !context.is_left_at_least_as_permissive_as_right(entry.original_visibility, visibility) {
+            continue;
+        }
+
         add_new_dot_edge_with_source_or_merge_with_duplicate(
             context,
             DotGraphNode::Mod(context.current_file_id()),
             &label,
-            end,
+            entry.node,
             &source,
             visibility,
+            entry.original_visibility,
         )?;
     }
+    // TODO: Warn if nothing is added.
     Ok(())
 }
 
@@ -296,6 +322,7 @@ fn add_mod_to_context(
         &item.name.name,
         DotGraphNode::Mod(mod_file_id),
         &item.name,
+        visibility,
         visibility,
     )?;
 
@@ -484,6 +511,7 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
         &unbound_variant_name.name,
         DotGraphNode::LeafItem(variant_db_level),
         &unbound_variant_name,
+        type_visibility,
         type_visibility,
     )?;
 

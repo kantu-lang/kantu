@@ -62,6 +62,7 @@ pub fn add_dot_edge(
     end_node: DotGraphNode,
     end_def: &ub::Identifier,
     end_visibility: Visibility,
+    end_original_visibility: Visibility,
 ) -> Result<(), NameClashError> {
     let result = context.add_dot_edge(
         start,
@@ -70,6 +71,7 @@ pub fn add_dot_edge(
             node: end_node,
             def: OwnedSymbolSource::Identifier(end_def.clone()),
             visibility: end_visibility,
+            original_visibility: end_original_visibility,
         },
     );
     if let Err(existing_entry) = result {
@@ -104,6 +106,7 @@ pub fn add_new_dot_edge_or_merge_with_duplicate(
     end_node: DotGraphNode,
     end_def: &ub::Identifier,
     end_visibility: Visibility,
+    end_original_visibility: Visibility,
 ) -> Result<(), NameClashError> {
     let existing_entry = context
         .add_dot_edge(
@@ -113,6 +116,7 @@ pub fn add_new_dot_edge_or_merge_with_duplicate(
                 node: end_node,
                 def: OwnedSymbolSource::Identifier(end_def.clone()),
                 visibility: end_visibility,
+                original_visibility: end_original_visibility,
             },
         )
         .err();
@@ -129,6 +133,7 @@ pub fn add_new_dot_edge_or_merge_with_duplicate(
                         node: end_node,
                         def: OwnedSymbolSource::Identifier(end_def.clone()),
                         visibility: end_visibility,
+                        original_visibility: end_original_visibility,
                     },
                 );
             }
@@ -167,6 +172,7 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
     end_node: DotGraphNode,
     end_def: &OwnedSymbolSource,
     end_visibility: Visibility,
+    end_original_visibility: Visibility,
 ) -> Result<(), NameClashError> {
     let existing_entry = context
         .add_dot_edge(
@@ -176,6 +182,7 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
                 node: end_node,
                 def: end_def.clone(),
                 visibility: end_visibility,
+                original_visibility: end_original_visibility,
             },
         )
         .err();
@@ -192,6 +199,7 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
                         node: end_node,
                         def: end_def.clone(),
                         visibility: end_visibility,
+                        original_visibility: end_original_visibility,
                     },
                 );
             }
@@ -212,6 +220,11 @@ pub fn create_name_and_add_to_mod(
     identifier: ub::Identifier,
     visibility: Visibility,
 ) -> Result<Identifier, NameClashError> {
+    // Since we're freshly creating this name,
+    // we know it must not be an alias.
+    // Thus, the original visibility is the same as the current visibility.
+    let original_visibility = visibility;
+
     let db_level = context.push_placeholder();
     add_dot_edge(
         context,
@@ -220,6 +233,7 @@ pub fn create_name_and_add_to_mod(
         DotGraphNode::LeafItem(db_level),
         &identifier,
         visibility,
+        original_visibility,
     )?;
     Ok(identifier.into())
 }
