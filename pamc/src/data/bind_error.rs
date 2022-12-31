@@ -3,10 +3,34 @@ use crate::data::{simplified_ast as unbound, simplified_ast::IdentifierName, Fil
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BindError {
     NameNotFound(NameNotFoundError),
+    NameIsPrivate(NameIsPrivateError),
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
+    // TODO: Test
     CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError),
     ModFileNotFound(ModFileNotFoundError),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct NameNotFoundError {
+    pub name_components: Vec<unbound::Identifier>,
+}
+impl From<NameNotFoundError> for BindError {
+    fn from(error: NameNotFoundError) -> Self {
+        Self::NameNotFound(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct NameIsPrivateError {
+    pub name_component: unbound::Identifier,
+    pub required_visibility: FileId,
+    pub actual_visibility: FileId,
+}
+impl From<NameIsPrivateError> for BindError {
+    fn from(error: NameIsPrivateError) -> Self {
+        Self::NameIsPrivate(error)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -27,16 +51,6 @@ pub enum OwnedSymbolSource {
     Builtin,
     Mod(FileId),
     WildcardImport(unbound::UseWildcardStatement),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NameNotFoundError {
-    pub name_components: Vec<unbound::Identifier>,
-}
-impl From<NameNotFoundError> for BindError {
-    fn from(error: NameNotFoundError) -> Self {
-        Self::NameNotFound(error)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
