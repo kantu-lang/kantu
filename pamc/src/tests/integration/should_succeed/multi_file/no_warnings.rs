@@ -51,3 +51,13 @@ fn import_merging() {
         ),
     );
 }
+
+#[test]
+fn alternate_name() {
+    expect_success_with_no_warnings(
+        file!(),
+        checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/alternate_name/pack.omlet"
+        ),
+    );
+}
