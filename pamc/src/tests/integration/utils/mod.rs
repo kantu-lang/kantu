@@ -1,4 +1,5 @@
 pub use crate::data::{
+    bind_error::*,
     file_tree::FileTree,
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast::*,
@@ -32,6 +33,9 @@ pub use crate::processing::{
     validate_type_positivity::validate_type_positivity_in_file_items,
     validate_variant_return_types::validate_variant_return_types_in_file_items,
 };
+
+#[macro_use]
+pub mod macros;
 
 mod multi_file;
 pub use multi_file::*;

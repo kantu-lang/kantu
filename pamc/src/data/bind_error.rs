@@ -1,4 +1,4 @@
-use crate::data::{simplified_ast as unbound, FileId};
+use crate::data::{simplified_ast as unbound, simplified_ast::IdentifierName, FileId};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BindError {
@@ -22,6 +22,7 @@ impl From<CircularFileDependencyError> for BindError {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameClashError {
+    pub name: IdentifierName,
     pub old: OwnedSymbolSource,
     pub new: OwnedSymbolSource,
 }

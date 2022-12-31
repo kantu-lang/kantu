@@ -52,6 +52,7 @@ pub fn add_dot_edge(
     );
     if let Err((_, old_source)) = result {
         return Err(NameClashError {
+            name: label.clone(),
             old: old_source,
             new: OwnedSymbolSource::Identifier(source.clone()),
         });
@@ -87,6 +88,7 @@ pub fn add_new_dot_edge_or_ignore_duplicate(
             return Ok(());
         }
         return Err(NameClashError {
+            name: label.clone(),
             old: old_source,
             new: OwnedSymbolSource::Identifier(source.clone()),
         });
@@ -117,6 +119,7 @@ pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
             return Ok(());
         }
         return Err(NameClashError {
+            name: label.clone(),
             old: old_source,
             new: source.clone(),
         });
@@ -151,6 +154,7 @@ pub fn create_local_name_and_add_to_scope(
     let result = context.push_local(&identifier);
     if let Err(old_source) = result {
         return Err(NameClashError {
+            name: identifier.name.clone(),
             old: old_source,
             new: OwnedSymbolSource::Identifier(identifier),
         });
