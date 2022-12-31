@@ -42,7 +42,7 @@ pub struct NameComponentNotFoundError {
 #[derive(Clone, Debug)]
 pub enum NameComponentNotFoundErrorKind {
     NotFound,
-    Private(DotGraphEntry),
+    Private(Visibility),
 }
 
 impl ContextData<'_> {
@@ -191,6 +191,24 @@ impl ContextData<'_> {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
+        self.lookup_name_with_customizable_visibility_enforcement::<N, true>(
+            current_file_id,
+            name_components,
+        )
+    }
+
+    fn lookup_name_with_customizable_visibility_enforcement<
+        'a,
+        N,
+        const SHOULD_ENFORCE_VISIBILITY: bool,
+    >(
+        &self,
+        current_file_id: FileId,
+        name_components: N,
+    ) -> Result<DotGraphEntry, NameComponentNotFoundError>
+    where
+        N: Clone + Iterator<Item = &'a IdentifierName>,
+    {
         let mut remaining = name_components;
         let first = remaining
             .next()
@@ -216,7 +234,9 @@ impl ContextData<'_> {
                     kind: NameComponentNotFoundErrorKind::NotFound,
                 });
             };
-            // TODO: Check visibility
+            if SHOULD_ENFORCE_VISIBILITY {
+                // TODO: return Err
+            }
             current = next;
         }
 
@@ -411,14 +431,11 @@ impl ContextData<'_> {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
-        let lookup_result = self.lookup_name(current_file_id, name_components);
-        match lookup_result {
-            Ok(entry) => Some(entry),
-            Err(err) => match err.kind {
-                NameComponentNotFoundErrorKind::NotFound => None,
-                NameComponentNotFoundErrorKind::Private(entry) => Some(entry),
-            },
-        }
+        self.lookup_name_with_customizable_visibility_enforcement::<N, false>(
+            current_file_id,
+            name_components,
+        )
+        .ok()
     }
 }
 

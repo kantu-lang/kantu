@@ -17,14 +17,14 @@ where
                 name_components: name_components.cloned().collect(),
             }
             .into()),
-            NameComponentNotFoundErrorKind::Private(entry) => Err(NameIsPrivateError {
+            NameComponentNotFoundErrorKind::Private(actual_visibility) => Err(NameIsPrivateError {
                 name_component: name_components
                     .clone()
                     .nth(err.index)
                     .expect("NameComponentNotFoundError index should be valid")
                     .clone(),
                 required_visibility: Visibility::Mod(context.current_file_id()),
-                actual_visibility: entry.visibility,
+                actual_visibility,
             }
             .into()),
         },
@@ -42,14 +42,14 @@ where
                 name_components: name_components.cloned().collect(),
             }
             .into(),
-            NameComponentNotFoundErrorKind::Private(entry) => NameIsPrivateError {
+            NameComponentNotFoundErrorKind::Private(actual_visibility) => NameIsPrivateError {
                 name_component: name_components
                     .clone()
                     .nth(err.index)
                     .expect("NameComponentNotFoundError index should be valid")
                     .clone(),
                 required_visibility: Visibility::Mod(context.current_file_id()),
-                actual_visibility: entry.visibility,
+                actual_visibility,
             }
             .into(),
         })
