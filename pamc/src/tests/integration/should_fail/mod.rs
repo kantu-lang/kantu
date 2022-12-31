@@ -1,11 +1,4 @@
-mod ast_simplification;
-mod fun_recursion;
-mod lex;
-mod parse;
-mod positivity;
-mod scope;
-mod type_check;
-mod variant_return_type;
+mod single_file;
 
 use crate::{
     data::{
@@ -33,10 +26,6 @@ use crate::{
         validate_variant_return_types::validate_variant_return_types_in_file_items,
     },
 };
-
-// fn standard_ident_name(name: &str) -> IdentifierName {
-//     IdentifierName::new(name.into())
-// }
 
 fn component_identifier_names(
     registry: &NodeRegistry,
