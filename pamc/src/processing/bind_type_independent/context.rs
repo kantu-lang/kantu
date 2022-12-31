@@ -6,11 +6,16 @@ use ub::Identifier;
 pub struct Context<'a, 'b> {
     data: &'a mut ContextData<'b>,
     current_file_id: FileId,
+    required_visibility: Visibility,
 }
 
 impl Context<'_, '_> {
     pub fn current_file_id(&self) -> FileId {
         self.current_file_id
+    }
+
+    pub fn required_visibility(&self) -> Visibility {
+        self.required_visibility
     }
 }
 
@@ -60,10 +65,15 @@ impl ContextData<'_> {
 }
 
 impl<'b> ContextData<'b> {
-    pub fn create_context_for_mod<'a>(&'a mut self, mod_id: FileId) -> Context<'a, 'b> {
+    pub fn create_context_for_mod<'a>(
+        &'a mut self,
+        mod_id: FileId,
+        required_visibility: Visibility,
+    ) -> Context<'a, 'b> {
         Context {
             data: self,
             current_file_id: mod_id,
+            required_visibility,
         }
     }
 }
@@ -143,8 +153,11 @@ impl Context<'_, '_> {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
-        self.data
-            .get_db_index(self.current_file_id, name_components)
+        self.data.get_db_index(
+            self.current_file_id,
+            self.required_visibility,
+            name_components,
+        )
     }
 
     pub fn lookup_name<'a, N>(
@@ -154,7 +167,11 @@ impl Context<'_, '_> {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
-        self.data.lookup_name(self.current_file_id, name_components)
+        self.data.lookup_name(
+            self.current_file_id,
+            self.required_visibility,
+            name_components,
+        )
     }
 }
 impl ContextData<'_> {
@@ -168,13 +185,14 @@ impl ContextData<'_> {
     fn get_db_index<'a, N>(
         &self,
         current_file_id: FileId,
+        required_visibility: Visibility,
         name_components: N,
     ) -> Result<DbIndex, Result<FileId, NameComponentNotFoundError>>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
         let lookup_result = self
-            .lookup_name(current_file_id, name_components)
+            .lookup_name(current_file_id, required_visibility, name_components)
             .map(|entry| entry.node);
         match lookup_result {
             Ok(DotGraphNode::LeafItem(level)) => Ok(self.level_to_index(level)),
@@ -186,6 +204,7 @@ impl ContextData<'_> {
     fn lookup_name<'a, N>(
         &self,
         current_file_id: FileId,
+        required_visibility: Visibility,
         name_components: N,
     ) -> Result<DotGraphEntry, NameComponentNotFoundError>
     where
@@ -193,6 +212,7 @@ impl ContextData<'_> {
     {
         self.lookup_name_with_customizable_visibility_enforcement::<N, true>(
             current_file_id,
+            required_visibility,
             name_components,
         )
     }
@@ -204,6 +224,7 @@ impl ContextData<'_> {
     >(
         &self,
         current_file_id: FileId,
+        required_visibility: Visibility,
         name_components: N,
     ) -> Result<DotGraphEntry, NameComponentNotFoundError>
     where
@@ -235,7 +256,8 @@ impl ContextData<'_> {
                 });
             };
             if SHOULD_ENFORCE_VISIBILITY
-                && !is_visible_to_mod(self.file_tree, next.visibility, current_file_id)
+                && !self
+                    .is_left_at_least_as_permissive_as_right(next.visibility, required_visibility)
             {
                 return Err(NameComponentNotFoundError {
                     index: index_in_remaining + 1,
@@ -349,15 +371,6 @@ impl ContextData<'_> {
     }
 }
 
-fn is_visible_to_mod(file_tree: &FileTree, visibility: Visibility, mod_id: FileId) -> bool {
-    match visibility {
-        Visibility::Global => true,
-        Visibility::Mod(visibility_mod_id) => {
-            file_tree.is_left_non_strict_descendant_of_right(mod_id, visibility_mod_id)
-        }
-    }
-}
-
 impl Context<'_, '_> {
     pub fn get_n_supers(&self, n: usize) -> Option<DotGraphEntry> {
         self.data.get_n_supers(self.current_file_id, n)
@@ -461,8 +474,11 @@ impl ContextData<'_> {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
+        let dummy_visibility = Visibility::Global;
         self.lookup_name_with_customizable_visibility_enforcement::<N, false>(
             current_file_id,
+            // We pass a dummy since visibility is not enforced anyway.
+            dummy_visibility,
             name_components,
         )
         .ok()
@@ -481,15 +497,39 @@ impl ContextData<'_> {
 }
 
 impl Context<'_, '_> {
-    pub fn is_left_more_permissive_than_right(&self, left: Visibility, right: Visibility) -> bool {
+    pub fn is_left_strictly_more_permissive_than_right(
+        &self,
+        left: Visibility,
+        right: Visibility,
+    ) -> bool {
+        self.data
+            .is_left_strictly_more_permissive_than_right(left, right)
+    }
+}
+impl ContextData<'_> {
+    fn is_left_strictly_more_permissive_than_right(
+        &self,
+        left: Visibility,
+        right: Visibility,
+    ) -> bool {
         match (left, right) {
             (Visibility::Global, Visibility::Global) => false,
             (Visibility::Global, Visibility::Mod(_)) => true,
             (Visibility::Mod(_), Visibility::Global) => false,
             (Visibility::Mod(left), Visibility::Mod(right)) => self
-                .data
                 .file_tree
                 .is_left_strict_descendant_of_right(right, left),
+        }
+    }
+
+    fn is_left_at_least_as_permissive_as_right(&self, left: Visibility, right: Visibility) -> bool {
+        match (left, right) {
+            (Visibility::Global, Visibility::Global) => true,
+            (Visibility::Global, Visibility::Mod(_)) => true,
+            (Visibility::Mod(_), Visibility::Global) => false,
+            (Visibility::Mod(left), Visibility::Mod(right)) => self
+                .file_tree
+                .is_left_non_strict_descendant_of_right(right, left),
         }
     }
 }

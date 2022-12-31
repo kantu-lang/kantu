@@ -23,7 +23,7 @@ where
                     .nth(err.index)
                     .expect("NameComponentNotFoundError index should be valid")
                     .clone(),
-                required_visibility: Visibility::Mod(context.current_file_id()),
+                required_visibility: context.required_visibility(),
                 actual_visibility,
             }
             .into()),
@@ -48,7 +48,7 @@ where
                     .nth(err.index)
                     .expect("NameComponentNotFoundError index should be valid")
                     .clone(),
-                required_visibility: Visibility::Mod(context.current_file_id()),
+                required_visibility: context.required_visibility(),
                 actual_visibility,
             }
             .into(),
@@ -118,8 +118,10 @@ pub fn add_new_dot_edge_or_merge_with_duplicate(
         .err();
     if let Some(existing_entry) = existing_entry {
         if end_node == existing_entry.node {
-            if context.is_left_more_permissive_than_right(end_visibility, existing_entry.visibility)
-            {
+            if context.is_left_strictly_more_permissive_than_right(
+                end_visibility,
+                existing_entry.visibility,
+            ) {
                 context.overwrite_dot_edge(
                     start,
                     label,
@@ -179,8 +181,10 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
         .err();
     if let Some(existing_entry) = existing_entry {
         if end_node == existing_entry.node {
-            if context.is_left_more_permissive_than_right(end_visibility, existing_entry.visibility)
-            {
+            if context.is_left_strictly_more_permissive_than_right(
+                end_visibility,
+                existing_entry.visibility,
+            ) {
                 context.overwrite_dot_edge(
                     start,
                     label,
