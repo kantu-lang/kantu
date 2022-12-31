@@ -85,14 +85,13 @@ pub fn add_dot_edge(
 /// There are 3 cases:
 /// 1. An edge with the given label is not present.
 ///    In this case, the edge is added and `Ok(())` is returned.
-/// 2. An edge with the given label is present, and it points to the same `end`
-///    AND that `end`'s definition is a wildcard.
+/// 2. An edge with the given label is present, and it points to the same `end`.
 ///    In this case, this end's def is set to the new end def, and the
 ///    visibility is set to the more permissive of the two.
 ///    `Ok(())` is returned.
 /// 3. An edge with the given label is present, and it points to a different `end`.
 ///    In this case, `Err(NameClashError)` is returned.
-pub fn add_new_dot_edge_with_source_or_merge_with_wildcard_duplicate(
+pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
@@ -112,9 +111,7 @@ pub fn add_new_dot_edge_with_source_or_merge_with_wildcard_duplicate(
         )
         .err();
     if let Some(existing_entry) = existing_entry {
-        if end_node == existing_entry.node
-            && matches!(&existing_entry.def, OwnedSymbolSource::WildcardImport(_))
-        {
+        if end_node == existing_entry.node {
             let max_visibility = if context
                 .is_left_more_permissive_than_right(end_visibility, existing_entry.visibility)
             {
