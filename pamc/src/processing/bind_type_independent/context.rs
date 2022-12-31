@@ -283,6 +283,7 @@ impl ContextData<'_> {
                             node: DotGraphNode::LeafItem(level),
                             def,
                             visibility: Visibility::Global,
+                            original_visibility: Visibility::Global,
                         });
                     }
                     None
@@ -307,6 +308,7 @@ impl ContextData<'_> {
                             // so we don't need to place any visibility restrictions on them.
                             // Thus, we give them global visibility.
                             visibility: Visibility::Global,
+                            original_visibility: Visibility::Global,
                         });
                     }
                 }
@@ -363,6 +365,7 @@ impl ContextData<'_> {
                     node: DotGraphNode::Mod(root_id),
                     def: OwnedSymbolSource::Mod(root_id),
                     visibility: Visibility::Global,
+                    original_visibility: Visibility::Global,
                 })
             }
 
@@ -388,6 +391,7 @@ impl ContextData<'_> {
             node: DotGraphNode::Mod(nth_super),
             def: OwnedSymbolSource::Mod(nth_super),
             visibility: Visibility::Global,
+            original_visibility: Visibility::Global,
         })
     }
 }
@@ -504,6 +508,15 @@ impl Context<'_, '_> {
     ) -> bool {
         self.data
             .is_left_strictly_more_permissive_than_right(left, right)
+    }
+
+    pub fn is_left_at_least_as_permissive_as_right(
+        &self,
+        left: Visibility,
+        right: Visibility,
+    ) -> bool {
+        self.data
+            .is_left_at_least_as_permissive_as_right(left, right)
     }
 }
 impl ContextData<'_> {
