@@ -6,9 +6,10 @@ use std::{
 };
 
 pub fn get_files_and_file_tree(
+    file_path: &str,
     checked_unadjusted_pack_omlet_path: &str,
 ) -> (Vec<simplified_ast::File>, FileTree) {
-    let adjusted_pack_omlet_path = Path::new(file!())
+    let adjusted_pack_omlet_path = Path::new(file_path)
         .parent()
         .unwrap()
         .join(checked_unadjusted_pack_omlet_path);
