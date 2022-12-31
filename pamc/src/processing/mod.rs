@@ -9,6 +9,4 @@ pub mod validate_fun_recursion;
 pub mod validate_type_positivity;
 pub mod validate_variant_return_types;
 
-// TODO: Add strict positivity checker
-
 pub mod test_utils;
