@@ -75,4 +75,19 @@ impl FileTree {
         self.parents.insert(child, parent);
         Ok(())
     }
+
+    pub fn is_left_non_strict_descendant_of_right(&self, left: FileId, right: FileId) -> bool {
+        let mut current_ancestor = left;
+        loop {
+            if current_ancestor == right {
+                return true;
+            }
+
+            if let Some(parent) = self.parents.get(&current_ancestor) {
+                current_ancestor = *parent;
+            } else {
+                return false;
+            }
+        }
+    }
 }

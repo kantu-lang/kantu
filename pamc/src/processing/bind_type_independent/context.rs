@@ -234,8 +234,13 @@ impl ContextData<'_> {
                     kind: NameComponentNotFoundErrorKind::NotFound,
                 });
             };
-            if SHOULD_ENFORCE_VISIBILITY {
-                // TODO: return Err
+            if SHOULD_ENFORCE_VISIBILITY
+                && !is_visible_to_mod(self.file_tree, next.visibility, current_file_id)
+            {
+                return Err(NameComponentNotFoundError {
+                    index: index_in_remaining + 1,
+                    kind: NameComponentNotFoundErrorKind::Private(next.visibility),
+                });
             }
             current = next;
         }
@@ -340,6 +345,15 @@ impl ContextData<'_> {
             }
 
             _ => None,
+        }
+    }
+}
+
+fn is_visible_to_mod(file_tree: &FileTree, visibility: Visibility, mod_id: FileId) -> bool {
+    match visibility {
+        Visibility::Global => true,
+        Visibility::Mod(visibility_mod_id) => {
+            file_tree.is_left_non_strict_descendant_of_right(mod_id, visibility_mod_id)
         }
     }
 }
