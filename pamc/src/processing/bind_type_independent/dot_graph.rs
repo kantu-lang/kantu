@@ -4,8 +4,13 @@ use rustc_hash::FxHashMap;
 
 #[derive(Clone, Debug)]
 pub struct DotGraph {
-    edge_maps:
-        FxHashMap<DotGraphNode, FxHashMap<IdentifierName, (DotGraphNode, OwnedSymbolSource)>>,
+    edge_maps: FxHashMap<DotGraphNode, FxHashMap<IdentifierName, DotGraphEntry>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct DotGraphEntry {
+    pub node: DotGraphNode,
+    pub def: OwnedSymbolSource,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -27,14 +32,13 @@ impl DotGraph {
         &mut self,
         start: DotGraphNode,
         label: &IdentifierName,
-        end: DotGraphNode,
-        source: OwnedSymbolSource,
-    ) -> Result<(), (DotGraphNode, OwnedSymbolSource)> {
+        end: DotGraphEntry,
+    ) -> Result<(), DotGraphEntry> {
         let old_entry = self
             .edge_maps
             .entry(start.clone())
             .or_default()
-            .insert(label.clone(), (end, source));
+            .insert(label.clone(), end);
 
         if let Some(old_entry) = old_entry {
             self.edge_maps
@@ -51,23 +55,17 @@ impl DotGraph {
         &self,
         start: DotGraphNode,
         label: &IdentifierName,
-    ) -> Option<(DotGraphNode, &OwnedSymbolSource)> {
-        self.edge_maps
-            .get(&start)
-            .and_then(|map| map.get(label))
-            .map(|(node, source)| (*node, source))
+    ) -> Option<&DotGraphEntry> {
+        self.edge_maps.get(&start).and_then(|map| map.get(label))
     }
 
-    pub fn get_edges(
-        &self,
-        node: DotGraphNode,
-    ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
+    pub fn get_edges(&self, node: DotGraphNode) -> Vec<(&IdentifierName, &DotGraphEntry)> {
         let Some(edges) = self.edge_maps.get(&node) else {
             return vec![];
         };
         let mut out = Vec::with_capacity(edges.len());
-        for (label, (end, source)) in edges {
-            out.push((label, *end, source));
+        for (label, end) in edges {
+            out.push((label, end));
         }
         out
     }

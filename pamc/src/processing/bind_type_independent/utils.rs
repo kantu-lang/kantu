@@ -22,7 +22,7 @@ where
 pub fn lookup_name<'a, N>(
     context: &Context,
     name_components: N,
-) -> Result<(DotGraphNode, OwnedSymbolSource), NameNotFoundError>
+) -> Result<DotGraphEntry, NameNotFoundError>
 where
     N: Clone + Iterator<Item = &'a ub::Identifier>,
 {
@@ -41,20 +41,22 @@ pub fn add_dot_edge(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
-    end: DotGraphNode,
-    source: &ub::Identifier,
+    end_node: DotGraphNode,
+    end_def: &ub::Identifier,
 ) -> Result<(), NameClashError> {
     let result = context.add_dot_edge(
         start,
         label,
-        end,
-        OwnedSymbolSource::Identifier(source.clone()),
+        DotGraphEntry {
+            node: end_node,
+            def: OwnedSymbolSource::Identifier(end_def.clone()),
+        },
     );
-    if let Err((_, old_source)) = result {
+    if let Err(existing_entry) = result {
         return Err(NameClashError {
             name: label.clone(),
-            old: old_source,
-            new: OwnedSymbolSource::Identifier(source.clone()),
+            old: existing_entry.def,
+            new: OwnedSymbolSource::Identifier(end_def.clone()),
         });
     }
     Ok(())
@@ -71,26 +73,28 @@ pub fn add_new_dot_edge_or_ignore_duplicate(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
-    end: DotGraphNode,
-    source: &ub::Identifier,
+    end_node: DotGraphNode,
+    end_def: &ub::Identifier,
 ) -> Result<(), NameClashError> {
     let existing_entry = context
         .add_dot_edge(
             start,
             label,
-            end,
-            OwnedSymbolSource::Identifier(source.clone()),
+            DotGraphEntry {
+                node: end_node,
+                def: OwnedSymbolSource::Identifier(end_def.clone()),
+            },
         )
         .err();
-    if let Some((old_end, old_source)) = existing_entry {
-        if end == old_end {
+    if let Some(existing_entry) = existing_entry {
+        if end_node == existing_entry.node {
             // Ignore duplicate
             return Ok(());
         }
         return Err(NameClashError {
             name: label.clone(),
-            old: old_source,
-            new: OwnedSymbolSource::Identifier(source.clone()),
+            old: existing_entry.def,
+            new: OwnedSymbolSource::Identifier(end_def.clone()),
         });
     }
     Ok(())
@@ -107,21 +111,28 @@ pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
-    end: DotGraphNode,
-    source: &OwnedSymbolSource,
+    end_node: DotGraphNode,
+    end_def: &OwnedSymbolSource,
 ) -> Result<(), NameClashError> {
     let existing_entry = context
-        .add_dot_edge(start, label, end, source.clone())
+        .add_dot_edge(
+            start,
+            label,
+            DotGraphEntry {
+                node: end_node,
+                def: end_def.clone(),
+            },
+        )
         .err();
-    if let Some((old_end, old_source)) = existing_entry {
-        if end == old_end {
+    if let Some(existing_entry) = existing_entry {
+        if end_node == existing_entry.node {
             // Ignore duplicate
             return Ok(());
         }
         return Err(NameClashError {
             name: label.clone(),
-            old: old_source,
-            new: source.clone(),
+            old: existing_entry.def,
+            new: end_def.clone(),
         });
     }
     Ok(())

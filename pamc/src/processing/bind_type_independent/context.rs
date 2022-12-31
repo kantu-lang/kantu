@@ -130,10 +130,7 @@ impl Context<'_, '_> {
             .get_db_index(self.current_file_id, name_components)
     }
 
-    pub fn lookup_name<'a, N>(
-        &self,
-        name_components: N,
-    ) -> Option<(DotGraphNode, OwnedSymbolSource)>
+    pub fn lookup_name<'a, N>(&self, name_components: N) -> Option<DotGraphEntry>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -156,7 +153,7 @@ impl ContextData<'_> {
     {
         let lookup_result = self
             .lookup_name(current_file_id, name_components)
-            .map(|(index, _)| index);
+            .map(|entry| entry.node);
         match lookup_result {
             Some(DotGraphNode::LeafItem(level)) => Ok(self.level_to_index(level)),
             Some(DotGraphNode::Mod(file_id)) => Err(Some(file_id)),
@@ -168,7 +165,7 @@ impl ContextData<'_> {
         &self,
         current_file_id: FileId,
         name_components: N,
-    ) -> Option<(DotGraphNode, OwnedSymbolSource)>
+    ) -> Option<DotGraphEntry>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -184,16 +181,13 @@ impl ContextData<'_> {
             .or_else(|| self.resolve_component_kw_if_applicable(current_file_id, first))?;
 
         for component in remaining {
-            current = clone_tuple_1(self.graph.get_edge_dest(current.0, component)?);
+            current = self.graph.get_edge_dest(current.node, component)?.clone();
         }
 
         Some(current)
     }
 
-    fn lookup_builtin(
-        &self,
-        component: &IdentifierName,
-    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+    fn lookup_builtin(&self, component: &IdentifierName) -> Option<DotGraphEntry> {
         self.stack
             .iter()
             .enumerate()
@@ -201,8 +195,11 @@ impl ContextData<'_> {
                 ContextEntry::Accessible(AccessibleEntry::Builtin(builtin)) => {
                     if builtin == component {
                         let level = DbLevel(raw_index);
-                        let source = OwnedSymbolSource::Builtin;
-                        return Some((DotGraphNode::LeafItem(level), source));
+                        let def = OwnedSymbolSource::Builtin;
+                        return Some(DotGraphEntry {
+                            node: DotGraphNode::LeafItem(level),
+                            def,
+                        });
                     }
                     None
                 }
@@ -210,10 +207,7 @@ impl ContextData<'_> {
             })
     }
 
-    fn lookup_local_name_component(
-        &self,
-        component: &IdentifierName,
-    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+    fn lookup_local_name_component(&self, component: &IdentifierName) -> Option<DotGraphEntry> {
         self.stack
             .iter()
             .enumerate()
@@ -221,8 +215,11 @@ impl ContextData<'_> {
                 if let ContextEntry::Accessible(AccessibleEntry::Local(local)) = entry {
                     if &local.name == component {
                         let level = DbLevel(raw_index);
-                        let source = OwnedSymbolSource::Identifier(local.clone());
-                        return Some((DotGraphNode::LeafItem(level), source));
+                        let def = OwnedSymbolSource::Identifier(local.clone());
+                        return Some(DotGraphEntry {
+                            node: DotGraphNode::LeafItem(level),
+                            def,
+                        });
                     }
                 }
                 None
@@ -233,18 +230,17 @@ impl ContextData<'_> {
         &self,
         current_file_id: FileId,
         component: &IdentifierName,
-    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
-        Some(clone_tuple_1(self.graph.get_edge_dest(
-            DotGraphNode::Mod(current_file_id),
-            component,
-        )?))
+    ) -> Option<DotGraphEntry> {
+        self.graph
+            .get_edge_dest(DotGraphNode::Mod(current_file_id), component)
+            .cloned()
     }
 
     fn resolve_component_kw_if_applicable(
         &self,
         current_file_id: FileId,
         component: &IdentifierName,
-    ) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+    ) -> Option<DotGraphEntry> {
         match component {
             IdentifierName::Reserved(ReservedIdentifierName::Mod) => {
                 get_n_supers(self.file_tree, current_file_id, 0)
@@ -275,7 +271,10 @@ impl ContextData<'_> {
             }
             IdentifierName::Reserved(ReservedIdentifierName::Pack) => {
                 let root_id = self.file_tree.root();
-                Some((DotGraphNode::Mod(root_id), OwnedSymbolSource::Mod(root_id)))
+                Some(DotGraphEntry {
+                    node: DotGraphNode::Mod(root_id),
+                    def: OwnedSymbolSource::Mod(root_id),
+                })
             }
 
             _ => None,
@@ -283,27 +282,16 @@ impl ContextData<'_> {
     }
 }
 
-fn clone_tuple_1<A, B>((a, b): (A, &B)) -> (A, B)
-where
-    B: Clone,
-{
-    (a, b.clone())
-}
-
-fn get_n_supers(
-    tree: &FileTree,
-    current_file_id: FileId,
-    n: usize,
-) -> Option<(DotGraphNode, OwnedSymbolSource)> {
+fn get_n_supers(tree: &FileTree, current_file_id: FileId, n: usize) -> Option<DotGraphEntry> {
     let mut current = current_file_id;
     for _ in 0..n {
         current = tree.parent(current)?;
     }
     let nth_super = current;
-    Some((
-        DotGraphNode::Mod(nth_super),
-        OwnedSymbolSource::Mod(nth_super),
-    ))
+    Some(DotGraphEntry {
+        node: DotGraphNode::Mod(nth_super),
+        def: OwnedSymbolSource::Mod(nth_super),
+    })
 }
 
 impl Context<'_, '_> {
@@ -323,10 +311,9 @@ impl Context<'_, '_> {
         &mut self,
         start: DotGraphNode,
         label: &IdentifierName,
-        end: DotGraphNode,
-        source: OwnedSymbolSource,
-    ) -> Result<(), (DotGraphNode, OwnedSymbolSource)> {
-        self.data.add_dot_edge(start, label, end, source)
+        end: DotGraphEntry,
+    ) -> Result<(), DotGraphEntry> {
+        self.data.add_dot_edge(start, label, end)
     }
 }
 impl ContextData<'_> {
@@ -334,10 +321,9 @@ impl ContextData<'_> {
         &mut self,
         start: DotGraphNode,
         label: &IdentifierName,
-        end: DotGraphNode,
-        source: OwnedSymbolSource,
-    ) -> Result<(), (DotGraphNode, OwnedSymbolSource)> {
-        self.graph.add_edge(start, label, end, source)
+        end: DotGraphEntry,
+    ) -> Result<(), DotGraphEntry> {
+        self.graph.add_edge(start, label, end)
     }
 }
 
@@ -352,10 +338,10 @@ impl ContextData<'_> {
         current_file_id: FileId,
         identifier: &Identifier,
     ) -> Result<(), OwnedSymbolSource> {
-        if let Some((_, existing_source)) =
+        if let Some(existing_entry) =
             self.lookup_name(current_file_id, std::iter::once(&identifier.name))
         {
-            return Err(existing_source.clone());
+            return Err(existing_entry.def.clone());
         }
 
         self.stack
@@ -368,18 +354,12 @@ impl ContextData<'_> {
 }
 
 impl Context<'_, '_> {
-    pub fn get_edges(
-        &self,
-        node: DotGraphNode,
-    ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
+    pub fn get_edges(&self, node: DotGraphNode) -> Vec<(&IdentifierName, &DotGraphEntry)> {
         self.data.get_edges(node)
     }
 }
 impl ContextData<'_> {
-    fn get_edges(
-        &self,
-        node: DotGraphNode,
-    ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
+    fn get_edges(&self, node: DotGraphNode) -> Vec<(&IdentifierName, &DotGraphEntry)> {
         self.graph.get_edges(node)
     }
 }

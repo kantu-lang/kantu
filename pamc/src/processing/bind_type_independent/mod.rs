@@ -104,7 +104,7 @@ fn add_single_import_to_context(
             use_statement_first_component_into_identifier_name(item.first_component);
         let name_components =
             std::iter::once(&first_component_name).chain(item.other_components.iter());
-        lookup_name(context, name_components)?.0
+        lookup_name(context, name_components)?.node
     };
     add_new_dot_edge_or_ignore_duplicate(context, start, &import_name.name, end, import_name)?;
     Ok(())
@@ -120,13 +120,13 @@ fn add_wildcard_import_to_context(
             use_statement_first_component_into_identifier_name(item.first_component);
         let name_components =
             std::iter::once(&first_component_name).chain(item.other_components.iter());
-        lookup_name(context, name_components)?.0
+        lookup_name(context, name_components)?.node
     };
 
     let edges: Vec<(IdentifierName, DotGraphNode)> = context
         .get_edges(start)
         .into_iter()
-        .map(|(label, end, _)| (label.clone(), end))
+        .map(|(label, entry)| (label.clone(), entry.node))
         .collect();
     for (label, end) in edges {
         add_new_dot_edge_with_source_or_ignore_duplicate(
