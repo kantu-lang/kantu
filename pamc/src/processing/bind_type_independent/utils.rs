@@ -85,10 +85,16 @@ pub fn add_dot_edge(
 /// There are 3 cases:
 /// 1. An edge with the given label is not present.
 ///    In this case, the edge is added and `Ok(())` is returned.
+///
 /// 2. An edge with the given label is present, and it points to the same `end`.
-///    In this case, this end's def is set to the new end def, and the
-///    visibility is set to the more permissive of the two.
-///    `Ok(())` is returned.
+///
+///    a. If the new visibility is more permissive than the old visibility,
+///       the old entry is overwritten with the new one.
+///
+///    b. Otherwise, this is a no-op.
+///
+///    In either case, `Ok(())` is returned.
+///
 /// 3. An edge with the given label is present, and it points to a different `end`.
 ///    In this case, `Err(NameClashError)` is returned.
 pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
@@ -112,24 +118,22 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
         .err();
     if let Some(existing_entry) = existing_entry {
         if end_node == existing_entry.node {
-            let max_visibility = if context
-                .is_left_more_permissive_than_right(end_visibility, existing_entry.visibility)
+            if context.is_left_more_permissive_than_right(end_visibility, existing_entry.visibility)
             {
-                end_visibility
-            } else {
-                existing_entry.visibility
-            };
-            context.overwrite_dot_edge(
-                start,
-                label,
-                DotGraphEntry {
-                    node: end_node,
-                    def: OwnedSymbolSource::Identifier(end_def.clone()),
-                    visibility: max_visibility,
-                },
-            );
+                context.overwrite_dot_edge(
+                    start,
+                    label,
+                    DotGraphEntry {
+                        node: end_node,
+                        def: OwnedSymbolSource::Identifier(end_def.clone()),
+                        visibility: end_visibility,
+                    },
+                );
+            }
+
             return Ok(());
         }
+
         return Err(NameClashError {
             name: label.clone(),
             old: existing_entry.def,
