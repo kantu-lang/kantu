@@ -29,7 +29,7 @@ impl DotGraph {
         label: &IdentifierName,
         end: DotGraphNode,
         source: OwnedSymbolSource,
-    ) -> Result<(), OwnedSymbolSource> {
+    ) -> Result<(), (DotGraphNode, OwnedSymbolSource)> {
         let old_entry = self
             .edge_maps
             .entry(start.clone())
@@ -37,12 +37,11 @@ impl DotGraph {
             .insert(label.clone(), (end, source));
 
         if let Some(old_entry) = old_entry {
-            let old_source = old_entry.1.clone();
             self.edge_maps
                 .entry(start)
                 .or_default()
-                .insert(label.clone(), old_entry);
-            return Err(old_source);
+                .insert(label.clone(), old_entry.clone());
+            return Err(old_entry);
         }
 
         Ok(())

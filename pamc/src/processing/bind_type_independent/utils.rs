@@ -50,7 +50,7 @@ pub fn add_dot_edge(
         end,
         OwnedSymbolSource::Identifier(source.clone()),
     );
-    if let Err(old_source) = result {
+    if let Err((_, old_source)) = result {
         return Err(NameClashError {
             old: old_source,
             new: OwnedSymbolSource::Identifier(source.clone()),
@@ -59,15 +59,63 @@ pub fn add_dot_edge(
     Ok(())
 }
 
-pub fn add_dot_edge_with_source(
+/// There are 3 cases:
+/// 1. An edge with the given label is not present.
+///    In this case, the edge is added and `Ok(())` is returned.
+/// 2. An edge with the given label is present, and it points to the same `end`.
+///    In this case, this is a no-op, and `Ok(())` is returned.
+/// 3. An edge with the given label is present, and it points to a different `end`.
+///    In this case, `Err(NameClashError)` is returned.
+pub fn add_new_dot_edge_or_ignore_duplicate(
+    context: &mut Context,
+    start: DotGraphNode,
+    label: &IdentifierName,
+    end: DotGraphNode,
+    source: &ub::Identifier,
+) -> Result<(), NameClashError> {
+    let existing_entry = context
+        .add_dot_edge(
+            start,
+            label,
+            end,
+            OwnedSymbolSource::Identifier(source.clone()),
+        )
+        .err();
+    if let Some((old_end, old_source)) = existing_entry {
+        if end == old_end {
+            // Ignore duplicate
+            return Ok(());
+        }
+        return Err(NameClashError {
+            old: old_source,
+            new: OwnedSymbolSource::Identifier(source.clone()),
+        });
+    }
+    Ok(())
+}
+
+/// There are 3 cases:
+/// 1. An edge with the given label is not present.
+///    In this case, the edge is added and `Ok(())` is returned.
+/// 2. An edge with the given label is present, and it points to the same `end`.
+///    In this case, this is a no-op, and `Ok(())` is returned.
+/// 3. An edge with the given label is present, and it points to a different `end`.
+///    In this case, `Err(NameClashError)` is returned.
+pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
     end: DotGraphNode,
     source: &OwnedSymbolSource,
 ) -> Result<(), NameClashError> {
-    let result = context.add_dot_edge(start, label, end, source.clone());
-    if let Err(old_source) = result {
+    let existing_entry = context
+        .add_dot_edge(start, label, end, source.clone())
+        .err();
+    if let Some((old_end, old_source)) = existing_entry {
+        if end == old_end {
+            // Ignore duplicate
+            return Ok(());
+        }
         return Err(NameClashError {
             old: old_source,
             new: source.clone(),
