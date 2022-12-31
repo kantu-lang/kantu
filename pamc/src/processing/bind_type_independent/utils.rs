@@ -97,7 +97,7 @@ pub fn add_dot_edge(
 ///
 /// 3. An edge with the given label is present, and it points to a different `end`.
 ///    In this case, `Err(NameClashError)` is returned.
-pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
+pub fn add_new_dot_edge_or_merge_with_duplicate(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
@@ -146,11 +146,19 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
 /// There are 3 cases:
 /// 1. An edge with the given label is not present.
 ///    In this case, the edge is added and `Ok(())` is returned.
+///
 /// 2. An edge with the given label is present, and it points to the same `end`.
-///    In this case, this is a no-op, and `Ok(())` is returned.
+///
+///    a. If the new visibility is more permissive than the old visibility,
+///       the old entry is overwritten with the new one.
+///
+///    b. Otherwise, this is a no-op.
+///
+///    In either case, `Ok(())` is returned.
+///
 /// 3. An edge with the given label is present, and it points to a different `end`.
 ///    In this case, `Err(NameClashError)` is returned.
-pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
+pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
     context: &mut Context,
     start: DotGraphNode,
     label: &IdentifierName,
@@ -171,7 +179,19 @@ pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
         .err();
     if let Some(existing_entry) = existing_entry {
         if end_node == existing_entry.node {
-            // Ignore duplicate
+            if context.is_left_more_permissive_than_right(end_visibility, existing_entry.visibility)
+            {
+                context.overwrite_dot_edge(
+                    start,
+                    label,
+                    DotGraphEntry {
+                        node: end_node,
+                        def: end_def.clone(),
+                        visibility: end_visibility,
+                    },
+                );
+            }
+
             return Ok(());
         }
         return Err(NameClashError {

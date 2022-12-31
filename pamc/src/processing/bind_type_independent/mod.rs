@@ -108,7 +108,7 @@ fn add_single_import_to_context(
         lookup_name(context, name_components)?.node
     };
     let visibility = get_visibility(context, item.visibility.as_ref())?;
-    add_new_dot_edge_with_source_or_merge_with_duplicate(
+    add_new_dot_edge_or_merge_with_duplicate(
         context,
         start,
         &import_name.name,
@@ -203,7 +203,7 @@ fn add_wildcard_import_to_context(
         .map(|(label, entry)| (label.clone(), entry.node))
         .collect();
     for (label, end) in edges {
-        add_new_dot_edge_with_source_or_ignore_duplicate(
+        add_new_dot_edge_with_source_or_merge_with_duplicate(
             context,
             DotGraphNode::Mod(context.current_file_id()),
             &label,
