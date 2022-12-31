@@ -199,6 +199,7 @@ impl ContextData<'_> {
                         return Some(DotGraphEntry {
                             node: DotGraphNode::LeafItem(level),
                             def,
+                            visibility: Visibility::Global,
                         });
                     }
                     None
@@ -219,6 +220,10 @@ impl ContextData<'_> {
                         return Some(DotGraphEntry {
                             node: DotGraphNode::LeafItem(level),
                             def,
+                            // Local names will never be accessed from outside the current file,
+                            // so we don't need to place any visibility restrictions on them.
+                            // Thus, we give them global visibility.
+                            visibility: Visibility::Global,
                         });
                     }
                 }
@@ -243,37 +248,38 @@ impl ContextData<'_> {
     ) -> Option<DotGraphEntry> {
         match component {
             IdentifierName::Reserved(ReservedIdentifierName::Mod) => {
-                get_n_supers(self.file_tree, current_file_id, 0)
+                self.get_n_supers(current_file_id, 0)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super) => {
-                get_n_supers(self.file_tree, current_file_id, 1)
+                self.get_n_supers(current_file_id, 1)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super2) => {
-                get_n_supers(self.file_tree, current_file_id, 2)
+                self.get_n_supers(current_file_id, 2)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super3) => {
-                get_n_supers(self.file_tree, current_file_id, 3)
+                self.get_n_supers(current_file_id, 3)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super4) => {
-                get_n_supers(self.file_tree, current_file_id, 4)
+                self.get_n_supers(current_file_id, 4)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super5) => {
-                get_n_supers(self.file_tree, current_file_id, 5)
+                self.get_n_supers(current_file_id, 5)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super6) => {
-                get_n_supers(self.file_tree, current_file_id, 6)
+                self.get_n_supers(current_file_id, 6)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super7) => {
-                get_n_supers(self.file_tree, current_file_id, 7)
+                self.get_n_supers(current_file_id, 7)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Super8) => {
-                get_n_supers(self.file_tree, current_file_id, 8)
+                self.get_n_supers(current_file_id, 8)
             }
             IdentifierName::Reserved(ReservedIdentifierName::Pack) => {
                 let root_id = self.file_tree.root();
                 Some(DotGraphEntry {
                     node: DotGraphNode::Mod(root_id),
                     def: OwnedSymbolSource::Mod(root_id),
+                    visibility: Visibility::Global,
                 })
             }
 
@@ -282,16 +288,25 @@ impl ContextData<'_> {
     }
 }
 
-fn get_n_supers(tree: &FileTree, current_file_id: FileId, n: usize) -> Option<DotGraphEntry> {
-    let mut current = current_file_id;
-    for _ in 0..n {
-        current = tree.parent(current)?;
+impl Context<'_, '_> {
+    pub fn get_n_supers(&self, n: usize) -> Option<DotGraphEntry> {
+        self.data.get_n_supers(self.current_file_id, n)
     }
-    let nth_super = current;
-    Some(DotGraphEntry {
-        node: DotGraphNode::Mod(nth_super),
-        def: OwnedSymbolSource::Mod(nth_super),
-    })
+}
+
+impl ContextData<'_> {
+    fn get_n_supers(&self, current_file_id: FileId, n: usize) -> Option<DotGraphEntry> {
+        let mut current = current_file_id;
+        for _ in 0..n {
+            current = self.file_tree.parent(current)?;
+        }
+        let nth_super = current;
+        Some(DotGraphEntry {
+            node: DotGraphNode::Mod(nth_super),
+            def: OwnedSymbolSource::Mod(nth_super),
+            visibility: Visibility::Global,
+        })
+    }
 }
 
 impl Context<'_, '_> {

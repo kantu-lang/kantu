@@ -43,6 +43,7 @@ pub fn add_dot_edge(
     label: &IdentifierName,
     end_node: DotGraphNode,
     end_def: &ub::Identifier,
+    end_visibility: Visibility,
 ) -> Result<(), NameClashError> {
     let result = context.add_dot_edge(
         start,
@@ -50,6 +51,7 @@ pub fn add_dot_edge(
         DotGraphEntry {
             node: end_node,
             def: OwnedSymbolSource::Identifier(end_def.clone()),
+            visibility: end_visibility,
         },
     );
     if let Err(existing_entry) = result {
@@ -75,6 +77,7 @@ pub fn add_new_dot_edge_or_ignore_duplicate(
     label: &IdentifierName,
     end_node: DotGraphNode,
     end_def: &ub::Identifier,
+    end_visibility: Visibility,
 ) -> Result<(), NameClashError> {
     let existing_entry = context
         .add_dot_edge(
@@ -83,6 +86,7 @@ pub fn add_new_dot_edge_or_ignore_duplicate(
             DotGraphEntry {
                 node: end_node,
                 def: OwnedSymbolSource::Identifier(end_def.clone()),
+                visibility: end_visibility,
             },
         )
         .err();
@@ -113,6 +117,7 @@ pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
     label: &IdentifierName,
     end_node: DotGraphNode,
     end_def: &OwnedSymbolSource,
+    end_visibility: Visibility,
 ) -> Result<(), NameClashError> {
     let existing_entry = context
         .add_dot_edge(
@@ -121,6 +126,7 @@ pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
             DotGraphEntry {
                 node: end_node,
                 def: end_def.clone(),
+                visibility: end_visibility,
             },
         )
         .err();
@@ -141,6 +147,7 @@ pub fn add_new_dot_edge_with_source_or_ignore_duplicate(
 pub fn create_name_and_add_to_mod(
     context: &mut Context,
     identifier: ub::Identifier,
+    visibility: Visibility,
 ) -> Result<Identifier, NameClashError> {
     let db_level = context.push_placeholder();
     add_dot_edge(
@@ -149,6 +156,7 @@ pub fn create_name_and_add_to_mod(
         &identifier.name,
         DotGraphNode::LeafItem(db_level),
         &identifier,
+        visibility,
     )?;
     Ok(identifier.into())
 }

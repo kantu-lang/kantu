@@ -11,6 +11,7 @@ pub struct DotGraph {
 pub struct DotGraphEntry {
     pub node: DotGraphNode,
     pub def: OwnedSymbolSource,
+    pub visibility: Visibility,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

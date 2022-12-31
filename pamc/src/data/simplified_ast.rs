@@ -125,6 +125,8 @@ pub struct LetStatement {
 
 pub use crate::data::unsimplified_ast::ParenthesizedWeakAncestor;
 
+pub use crate::data::unsimplified_ast::WeakAncestorKind;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
     Name(NameExpression),

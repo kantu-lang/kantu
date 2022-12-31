@@ -6,6 +6,7 @@ use crate::data::{
     // `ub` stands for "unbound".
     simplified_ast as ub,
     FileId,
+    TextSpan,
 };
 
 pub use crate::data::bind_error::*;
@@ -106,8 +107,73 @@ fn add_single_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.node
     };
-    add_new_dot_edge_or_ignore_duplicate(context, start, &import_name.name, end, import_name)?;
+    let visibility = get_visibility(context, item.visibility.as_ref())?;
+    add_new_dot_edge_or_ignore_duplicate(
+        context,
+        start,
+        &import_name.name,
+        end,
+        import_name,
+        visibility,
+    )?;
     Ok(())
+}
+
+fn get_visibility(
+    context: &Context,
+    pub_clause: Option<&ub::PubClause>,
+) -> Result<Visibility, BindError> {
+    let Some(pub_clause) = pub_clause else {
+        return Ok(Visibility::Mod(context.current_file_id()));
+    };
+    let Some(ancestor) = &pub_clause.ancestor else {
+        return Ok(Visibility::Global);
+    };
+    match &ancestor.kind {
+        ub::WeakAncestorKind::Global => Ok(Visibility::Global),
+        ub::WeakAncestorKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
+        ub::WeakAncestorKind::Super(n) => {
+            if let Some(DotGraphEntry {
+                node: DotGraphNode::Mod(ancestor_id),
+                def: _,
+                visibility: _,
+            }) = context.get_n_supers(n.get())
+            {
+                Ok(Visibility::Mod(ancestor_id))
+            } else {
+                Err(NameNotFoundError {
+                    name_components: vec![ub::Identifier {
+                        span: ancestor.span,
+                        name: IdentifierName::new("super".to_string()),
+                    }],
+                }
+                .into())
+            }
+        }
+        ub::WeakAncestorKind::PackRelative { path_after_pack_kw } => {
+            let name_components: Vec<ub::Identifier> = {
+                let pack_kw_name = IdentifierName::Reserved(ReservedIdentifierName::Pack);
+                let pack_kw = ub::Identifier {
+                    span: TextSpan {
+                        file_id: ancestor.span.file_id,
+                        start: ancestor.span.start,
+                        end: ancestor.span.start + pack_kw_name.src_str().len(),
+                    },
+                    name: pack_kw_name,
+                };
+                std::iter::once(pack_kw)
+                    .chain(path_after_pack_kw.iter().cloned())
+                    .collect()
+            };
+            let entry = lookup_name(context, name_components.iter())?;
+            match entry.node {
+                DotGraphNode::Mod(mod_id) => Ok(Visibility::Mod(mod_id)),
+                DotGraphNode::LeafItem(_) => Err(BindError::ExpectedModButNameRefersToTerm(
+                    ExpectedModButNameRefersToTermError { name_components },
+                )),
+            }
+        }
+    }
 }
 
 fn add_wildcard_import_to_context(
@@ -122,6 +188,7 @@ fn add_wildcard_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.node
     };
+    let visibility = get_visibility(context, item.visibility.as_ref())?;
 
     let edges: Vec<(IdentifierName, DotGraphNode)> = context
         .get_edges(start)
@@ -135,6 +202,7 @@ fn add_wildcard_import_to_context(
             &label,
             end,
             &source,
+            visibility,
         )?;
     }
     Ok(())
@@ -204,12 +272,17 @@ fn add_mod_to_context(
             mod_name: item.name,
         }));
     };
+    let visibility = get_visibility(
+        &state.context_data.create_context_for_mod(item_file_id),
+        item.visibility.as_ref(),
+    )?;
     add_dot_edge(
         &mut state.context_data.create_context_for_mod(item_file_id),
         DotGraphNode::Mod(item_file_id),
         &item.name.name,
         DotGraphNode::Mod(mod_file_id),
         &item.name,
+        visibility,
     )?;
 
     let mod_file = remove_file_with_id_or_panic(&mut state.unchecked_files, mod_file_id);
@@ -262,12 +335,15 @@ fn bind_type_statement_dirty(
         out
     };
 
-    let type_name = create_name_and_add_to_mod(context, type_statement.name)?;
+    let visibility = get_visibility(context, type_statement.visibility.as_ref())?;
+    let type_name = create_name_and_add_to_mod(context, type_statement.name, visibility)?;
 
     let variants = type_statement
         .variants
         .into_iter()
-        .map(|unbound| bind_variant_and_add_dot_target(context, unbound, &type_name.name))
+        .map(|unbound| {
+            bind_variant_and_add_dot_target(context, unbound, &type_name.name, visibility)
+        })
         .collect::<Result<Vec<_>, BindError>>()?;
 
     Ok(TypeStatement {
@@ -348,17 +424,18 @@ fn bind_variant_and_add_dot_target(
     context: &mut Context,
     variant: ub::Variant,
     type_name: &IdentifierName,
+    type_visibility: Visibility,
 ) -> Result<Variant, BindError> {
     untaint_err(
         context,
-        (variant, type_name),
+        (variant, type_name, type_visibility),
         bind_variant_and_add_restricted_dot_target_dirty,
     )
 }
 
 fn bind_variant_and_add_restricted_dot_target_dirty(
     context: &mut Context,
-    (variant, type_name): (ub::Variant, &IdentifierName),
+    (variant, type_name, type_visibility): (ub::Variant, &IdentifierName, Visibility),
 ) -> Result<Variant, BindError> {
     let arity = variant.params.len();
     let params = bind_optional_params(context, variant.params)?;
@@ -380,6 +457,7 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
         &unbound_variant_name.name,
         DotGraphNode::LeafItem(variant_db_level),
         &unbound_variant_name,
+        type_visibility,
     )?;
 
     Ok(Variant {
@@ -402,7 +480,8 @@ fn bind_let_statement_dirty(
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
-    let name = create_name_and_add_to_mod(context, let_statement.name)?;
+    let visibility = get_visibility(context, let_statement.visibility.as_ref())?;
+    let name = create_name_and_add_to_mod(context, let_statement.name, visibility)?;
     Ok(LetStatement {
         span: Some(let_statement.span),
         name,

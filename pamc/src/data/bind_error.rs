@@ -6,6 +6,7 @@ pub enum BindError {
     NameIsPrivate(NameIsPrivateError),
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
+    ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError),
     // TODO: Test
     CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError),
     ModFileNotFound(ModFileNotFoundError),
@@ -24,13 +25,19 @@ impl From<NameNotFoundError> for BindError {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameIsPrivateError {
     pub name_component: unbound::Identifier,
-    pub required_visibility: FileId,
-    pub actual_visibility: FileId,
+    pub required_visibility: Visibility,
+    pub actual_visibility: Visibility,
 }
 impl From<NameIsPrivateError> for BindError {
     fn from(error: NameIsPrivateError) -> Self {
         Self::NameIsPrivate(error)
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Visibility {
+    Global,
+    Mod(FileId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -60,6 +67,16 @@ pub struct ExpectedTermButNameRefersToModError {
 impl From<ExpectedTermButNameRefersToModError> for BindError {
     fn from(error: ExpectedTermButNameRefersToModError) -> Self {
         Self::ExpectedTermButNameRefersToMod(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ExpectedModButNameRefersToTermError {
+    pub name_components: Vec<unbound::Identifier>,
+}
+impl From<ExpectedModButNameRefersToTermError> for BindError {
+    fn from(error: ExpectedModButNameRefersToTermError) -> Self {
+        Self::ExpectedModButNameRefersToTerm(error)
     }
 }
 
