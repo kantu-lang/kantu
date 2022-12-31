@@ -56,3 +56,13 @@ fn factorial() {
         ),
     );
 }
+
+#[test]
+fn import_merging() {
+    expect_success_with_no_warnings(
+        file!(),
+        checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/import_merging/pack.omlet"
+        ),
+    );
+}
