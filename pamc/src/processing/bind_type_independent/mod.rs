@@ -67,14 +67,12 @@ fn add_items_from_file_item(
     item_file_id: FileId,
 ) -> Result<(), BindError> {
     match item {
-        ub::FileItem::UseSingle(item) => add_single_import_to_context(
-            &mut state.context_data.create_context_for_mod(item_file_id),
-            item,
-        ),
-        ub::FileItem::UseWildcard(item) => add_wildcard_import_to_context(
-            &mut state.context_data.create_context_for_mod(item_file_id),
-            item,
-        ),
+        ub::FileItem::UseSingle(item) => {
+            add_single_import_to_context(&mut state.context_data, item, item_file_id)
+        }
+        ub::FileItem::UseWildcard(item) => {
+            add_wildcard_import_to_context(&mut state.context_data, item, item_file_id)
+        }
         ub::FileItem::Mod(item) => add_mod_to_context(state, item, item_file_id),
         ub::FileItem::Type(item) => add_item_from_type_statement(state, item, item_file_id),
         ub::FileItem::Let(item) => add_item_from_let_statement(state, item, item_file_id),
@@ -82,9 +80,15 @@ fn add_items_from_file_item(
 }
 
 fn add_single_import_to_context(
-    context: &mut Context,
+    context_data: &mut ContextData,
     item: ub::UseSingleStatement,
+    item_file_id: FileId,
 ) -> Result<(), BindError> {
+    let visibility = get_visibility(
+        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
+        item.visibility.as_ref(),
+    )?;
+    let context = &mut context_data.create_context_for_mod(item_file_id, visibility);
     let start = DotGraphNode::Mod(context.current_file_id());
     let import_name = match &item.alternate_name {
         Some(name) => name,
@@ -107,7 +111,6 @@ fn add_single_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.node
     };
-    let visibility = get_visibility(context, item.visibility.as_ref())?;
     add_new_dot_edge_or_merge_with_duplicate(
         context,
         start,
@@ -184,9 +187,15 @@ fn get_visibility_from_weak_ancestor_node(
 }
 
 fn add_wildcard_import_to_context(
-    context: &mut Context,
+    context_data: &mut ContextData,
     item: ub::UseWildcardStatement,
+    item_file_id: FileId,
 ) -> Result<(), BindError> {
+    let visibility = get_visibility(
+        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
+        item.visibility.as_ref(),
+    )?;
+    let context = &mut context_data.create_context_for_mod(item_file_id, visibility);
     let source = OwnedSymbolSource::WildcardImport(item.clone());
     let start = {
         let first_component_name =
@@ -195,7 +204,6 @@ fn add_wildcard_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.node
     };
-    let visibility = get_visibility(context, item.visibility.as_ref())?;
 
     let edges: Vec<(IdentifierName, DotGraphNode)> = context
         .get_edges(start)
@@ -280,11 +288,15 @@ fn add_mod_to_context(
         }));
     };
     let visibility = get_visibility(
-        &state.context_data.create_context_for_mod(item_file_id),
+        &state
+            .context_data
+            .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
         item.visibility.as_ref(),
     )?;
     add_dot_edge(
-        &mut state.context_data.create_context_for_mod(item_file_id),
+        &mut state
+            .context_data
+            .create_context_for_mod(item_file_id, visibility),
         DotGraphNode::Mod(item_file_id),
         &item.name.name,
         DotGraphNode::Mod(mod_file_id),
@@ -303,10 +315,16 @@ fn add_item_from_type_statement(
     item: ub::TypeStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let bound = bind_type_statement(
-        &mut state.context_data.create_context_for_mod(item_file_id),
-        item,
+    let visibility = get_visibility(
+        &mut state
+            .context_data
+            .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
+        item.visibility.as_ref(),
     )?;
+    let context = &mut state
+        .context_data
+        .create_context_for_mod(item_file_id, visibility);
+    let bound = bind_type_statement(context, item)?;
     state.out.push(FileItem::Type(bound));
     Ok(())
 }
@@ -316,10 +334,16 @@ fn add_item_from_let_statement(
     item: ub::LetStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let bound = bind_let_statement(
-        &mut state.context_data.create_context_for_mod(item_file_id),
-        item,
+    let visibility = get_visibility(
+        &mut state
+            .context_data
+            .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
+        item.visibility.as_ref(),
     )?;
+    let context = &mut state
+        .context_data
+        .create_context_for_mod(item_file_id, visibility);
+    let bound = bind_let_statement(context, item)?;
     state.out.push(FileItem::Let(bound));
     Ok(())
 }
