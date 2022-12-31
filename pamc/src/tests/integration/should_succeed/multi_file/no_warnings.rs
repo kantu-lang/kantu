@@ -61,3 +61,13 @@ fn alternate_name() {
         ),
     );
 }
+
+#[test]
+fn plus_commutative() {
+    expect_success_with_no_warnings(
+        file!(),
+        checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/plus_commutative/pack.omlet"
+        ),
+    );
+}
