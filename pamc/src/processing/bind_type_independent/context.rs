@@ -33,6 +33,18 @@ pub enum AccessibleEntry {
     Local(Identifier),
 }
 
+#[derive(Clone, Debug)]
+pub struct NameComponentNotFoundError {
+    pub index: usize,
+    pub kind: NameComponentNotFoundErrorKind,
+}
+
+#[derive(Clone, Debug)]
+pub enum NameComponentNotFoundErrorKind {
+    NotFound,
+    Private(DotGraphEntry),
+}
+
 impl ContextData<'_> {
     pub fn with_builtins(file_tree: &FileTree) -> ContextData {
         let type1_entry = ContextEntry::Placeholder;
@@ -118,11 +130,16 @@ impl ContextData<'_> {
 
 impl Context<'_, '_> {
     /// If the DB index lookup fails, then there are 2 possibilities:
-    /// 1. The name is not in scope, in which case the `Err` variant is `None`.
-    /// 2. The name is in scope, but it refers to a mod rather than a leaf item.
-    ///    In this case, the `Err` variant is `Some(file_id)` where `file_id` is
+    /// 1. The name cannot be legally accessed (e.g., it cannot be found in scope, or it's private)
+    ///    in which case this returns `Err(Err(err))` where `err` is the reason
+    ///    why the name cannot be legally accessed.
+    /// 2. The name can be legally accessed, but it refers to a mod rather than a leaf item.
+    ///    In this case, this returns `Err(Ok(file_id))` where `file_id` is
     ///    the id of the mod's file.
-    pub fn get_db_index<'a, N>(&self, name_components: N) -> Result<DbIndex, Option<FileId>>
+    pub fn get_db_index<'a, N>(
+        &self,
+        name_components: N,
+    ) -> Result<DbIndex, Result<FileId, NameComponentNotFoundError>>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -130,7 +147,10 @@ impl Context<'_, '_> {
             .get_db_index(self.current_file_id, name_components)
     }
 
-    pub fn lookup_name<'a, N>(&self, name_components: N) -> Option<DotGraphEntry>
+    pub fn lookup_name<'a, N>(
+        &self,
+        name_components: N,
+    ) -> Result<DotGraphEntry, NameComponentNotFoundError>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -139,15 +159,17 @@ impl Context<'_, '_> {
 }
 impl ContextData<'_> {
     /// If the DB index lookup fails, then there are 2 possibilities:
-    /// 1. The name is not in scope, in which case the `Err` variant is `None`.
-    /// 2. The name is in scope, but it refers to a mod rather than a leaf item.
-    ///    In this case, the `Err` variant is `Some(file_id)` where `file_id` is
+    /// 1. The name cannot be legally accessed (e.g., it cannot be found in scope, or it's private)
+    ///    in which case this returns `Err(Err(err))` where `err` is the reason
+    ///    why the name cannot be legally accessed.
+    /// 2. The name can be legally accessed, but it refers to a mod rather than a leaf item.
+    ///    In this case, this returns `Err(Ok(file_id))` where `file_id` is
     ///    the id of the mod's file.
     fn get_db_index<'a, N>(
         &self,
         current_file_id: FileId,
         name_components: N,
-    ) -> Result<DbIndex, Option<FileId>>
+    ) -> Result<DbIndex, Result<FileId, NameComponentNotFoundError>>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -155,9 +177,9 @@ impl ContextData<'_> {
             .lookup_name(current_file_id, name_components)
             .map(|entry| entry.node);
         match lookup_result {
-            Some(DotGraphNode::LeafItem(level)) => Ok(self.level_to_index(level)),
-            Some(DotGraphNode::Mod(file_id)) => Err(Some(file_id)),
-            None => Err(None),
+            Ok(DotGraphNode::LeafItem(level)) => Ok(self.level_to_index(level)),
+            Ok(DotGraphNode::Mod(file_id)) => Err(Ok(file_id)),
+            Err(err) => Err(Err(err)),
         }
     }
 
@@ -165,7 +187,7 @@ impl ContextData<'_> {
         &self,
         current_file_id: FileId,
         name_components: N,
-    ) -> Option<DotGraphEntry>
+    ) -> Result<DotGraphEntry, NameComponentNotFoundError>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -174,17 +196,31 @@ impl ContextData<'_> {
             .next()
             .expect("name_components must not be empty.");
 
-        let mut current = self
+        let current = self
             .lookup_builtin(first)
             .or_else(|| self.lookup_local_name_component(first))
             .or_else(|| self.lookup_mod_item(current_file_id, first))
-            .or_else(|| self.resolve_component_kw_if_applicable(current_file_id, first))?;
+            .or_else(|| self.resolve_component_kw_if_applicable(current_file_id, first));
+        let Some(mut current) = current else {
+            return Err(NameComponentNotFoundError {
+                index: 0,
+                kind: NameComponentNotFoundErrorKind::NotFound,
+            });
+        };
 
-        for component in remaining {
-            current = self.graph.get_edge_dest(current.node, component)?.clone();
+        for (index_in_remaining, component) in remaining.enumerate() {
+            let next = self.graph.get_edge_dest(current.node, component).cloned();
+            let Some(next) = next else {
+                return Err(NameComponentNotFoundError {
+                    index: index_in_remaining + 1,
+                    kind: NameComponentNotFoundErrorKind::NotFound,
+                });
+            };
+            // TODO: Check visibility
+            current = next;
         }
 
-        Some(current)
+        Ok(current)
     }
 
     fn lookup_builtin(&self, component: &IdentifierName) -> Option<DotGraphEntry> {
@@ -354,7 +390,7 @@ impl ContextData<'_> {
         identifier: &Identifier,
     ) -> Result<(), OwnedSymbolSource> {
         if let Some(existing_entry) =
-            self.lookup_name(current_file_id, std::iter::once(&identifier.name))
+            self.lookup_name_ignoring_visibility(current_file_id, std::iter::once(&identifier.name))
         {
             return Err(existing_entry.def.clone());
         }
@@ -365,6 +401,24 @@ impl ContextData<'_> {
             )));
 
         Ok(())
+    }
+
+    fn lookup_name_ignoring_visibility<'a, N>(
+        &self,
+        current_file_id: FileId,
+        name_components: N,
+    ) -> Option<DotGraphEntry>
+    where
+        N: Clone + Iterator<Item = &'a IdentifierName>,
+    {
+        let lookup_result = self.lookup_name(current_file_id, name_components);
+        match lookup_result {
+            Ok(entry) => Some(entry),
+            Err(err) => match err.kind {
+                NameComponentNotFoundErrorKind::NotFound => None,
+                NameComponentNotFoundErrorKind::Private(entry) => Some(entry),
+            },
+        }
     }
 }
 

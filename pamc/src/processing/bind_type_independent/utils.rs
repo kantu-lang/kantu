@@ -8,33 +8,51 @@ where
 
     match lookup_result {
         Ok(db_index) => Ok(db_index),
-        Err(Some(_)) => Err(ExpectedTermButNameRefersToModError {
+        Err(Ok(_)) => Err(ExpectedTermButNameRefersToModError {
             name_components: name_components.cloned().collect(),
         }
         .into()),
-        Err(None) => Err(NameNotFoundError {
-            name_components: name_components.cloned().collect(),
-        }
-        .into()),
+        Err(Err(err)) => match err.kind {
+            NameComponentNotFoundErrorKind::NotFound => Err(NameNotFoundError {
+                name_components: name_components.cloned().collect(),
+            }
+            .into()),
+            NameComponentNotFoundErrorKind::Private(entry) => Err(NameIsPrivateError {
+                name_component: name_components
+                    .clone()
+                    .nth(err.index)
+                    .expect("NameComponentNotFoundError index should be valid")
+                    .clone(),
+                required_visibility: Visibility::Mod(context.current_file_id()),
+                actual_visibility: entry.visibility,
+            }
+            .into()),
+        },
     }
 }
 
-pub fn lookup_name<'a, N>(
-    context: &Context,
-    name_components: N,
-) -> Result<DotGraphEntry, NameNotFoundError>
+pub fn lookup_name<'a, N>(context: &Context, name_components: N) -> Result<DotGraphEntry, BindError>
 where
     N: Clone + Iterator<Item = &'a ub::Identifier>,
 {
-    let lookup_result = context.lookup_name(name_components.clone().map(|c| &c.name));
-
-    if let Some(entry) = lookup_result {
-        Ok(entry)
-    } else {
-        Err(NameNotFoundError {
-            name_components: name_components.cloned().collect(),
+    context
+        .lookup_name(name_components.clone().map(|c| &c.name))
+        .map_err(|err| match err.kind {
+            NameComponentNotFoundErrorKind::NotFound => NameNotFoundError {
+                name_components: name_components.cloned().collect(),
+            }
+            .into(),
+            NameComponentNotFoundErrorKind::Private(entry) => NameIsPrivateError {
+                name_component: name_components
+                    .clone()
+                    .nth(err.index)
+                    .expect("NameComponentNotFoundError index should be valid")
+                    .clone(),
+                required_visibility: Visibility::Mod(context.current_file_id()),
+                actual_visibility: entry.visibility,
+            }
+            .into(),
         })
-    }
 }
 
 pub fn add_dot_edge(
