@@ -84,11 +84,8 @@ fn add_single_import_to_context(
     item: ub::UseSingleStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let visibility = get_visibility(
-        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
-        item.visibility.as_ref(),
-    )?;
-    let context = &mut context_data.create_context_for_mod(item_file_id, visibility);
+    let context =
+        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id));
     let start = DotGraphNode::Mod(context.current_file_id());
     let import_name = match &item.alternate_name {
         Some(name) => name,
@@ -111,6 +108,8 @@ fn add_single_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.node
     };
+    let visibility = get_visibility(context, item.visibility.as_ref())?;
+    // TODO: Check that end.leaf_visibility is compatible with visibility.
     add_new_dot_edge_or_merge_with_duplicate(
         context,
         start,
@@ -191,11 +190,8 @@ fn add_wildcard_import_to_context(
     item: ub::UseWildcardStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let visibility = get_visibility(
-        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
-        item.visibility.as_ref(),
-    )?;
-    let context = &mut context_data.create_context_for_mod(item_file_id, visibility);
+    let context =
+        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id));
     let source = OwnedSymbolSource::WildcardImport(item.clone());
     let start = {
         let first_component_name =
@@ -204,6 +200,7 @@ fn add_wildcard_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.node
     };
+    let visibility = get_visibility(context, item.visibility.as_ref())?;
 
     let edges: Vec<(IdentifierName, DotGraphNode)> = context
         .get_edges(start)
@@ -211,6 +208,8 @@ fn add_wildcard_import_to_context(
         .map(|(label, entry)| (label.clone(), entry.node))
         .collect();
     for (label, end) in edges {
+        // TODO: Only add if end.leaf_visibility is compatible with visibility.
+        // TODO: Warn if nothing is added.
         add_new_dot_edge_with_source_or_merge_with_duplicate(
             context,
             DotGraphNode::Mod(context.current_file_id()),
@@ -287,16 +286,12 @@ fn add_mod_to_context(
             mod_name: item.name,
         }));
     };
-    let visibility = get_visibility(
-        &state
-            .context_data
-            .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
-        item.visibility.as_ref(),
-    )?;
+    let context = &mut state
+        .context_data
+        .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id));
+    let visibility = get_visibility(context, item.visibility.as_ref())?;
     add_dot_edge(
-        &mut state
-            .context_data
-            .create_context_for_mod(item_file_id, visibility),
+        context,
         DotGraphNode::Mod(item_file_id),
         &item.name.name,
         DotGraphNode::Mod(mod_file_id),
@@ -334,15 +329,15 @@ fn add_item_from_let_statement(
     item: ub::LetStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let visibility = get_visibility(
+    let transparency = get_transparency(
         &mut state
             .context_data
             .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
-        item.visibility.as_ref(),
+        item.transparency.as_ref(),
     )?;
     let context = &mut state
         .context_data
-        .create_context_for_mod(item_file_id, visibility);
+        .create_context_for_mod(item_file_id, transparency.0);
     let bound = bind_let_statement(context, item)?;
     state.out.push(FileItem::Let(bound));
     Ok(())
