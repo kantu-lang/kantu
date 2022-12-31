@@ -325,7 +325,7 @@ impl Context<'_, '_> {
         label: &IdentifierName,
         end: DotGraphNode,
         source: OwnedSymbolSource,
-    ) -> Result<(), OwnedSymbolSource> {
+    ) -> Result<(), (DotGraphNode, OwnedSymbolSource)> {
         self.data.add_dot_edge(start, label, end, source)
     }
 }
@@ -336,7 +336,7 @@ impl ContextData<'_> {
         label: &IdentifierName,
         end: DotGraphNode,
         source: OwnedSymbolSource,
-    ) -> Result<(), OwnedSymbolSource> {
+    ) -> Result<(), (DotGraphNode, OwnedSymbolSource)> {
         self.graph.add_edge(start, label, end, source)
     }
 }

@@ -106,7 +106,37 @@ fn add_single_import_to_context(
             std::iter::once(&first_component_name).chain(item.other_components.iter());
         lookup_name(context, name_components)?.0
     };
-    add_dot_edge(context, start, &import_name.name, end, import_name)?;
+    add_new_dot_edge_or_ignore_duplicate(context, start, &import_name.name, end, import_name)?;
+    Ok(())
+}
+
+fn add_wildcard_import_to_context(
+    context: &mut Context,
+    item: ub::UseWildcardStatement,
+) -> Result<(), BindError> {
+    let source = OwnedSymbolSource::WildcardImport(item.clone());
+    let start = {
+        let first_component_name =
+            use_statement_first_component_into_identifier_name(item.first_component);
+        let name_components =
+            std::iter::once(&first_component_name).chain(item.other_components.iter());
+        lookup_name(context, name_components)?.0
+    };
+
+    let edges: Vec<(IdentifierName, DotGraphNode)> = context
+        .get_edges(start)
+        .into_iter()
+        .map(|(label, end, _)| (label.clone(), end))
+        .collect();
+    for (label, end) in edges {
+        add_new_dot_edge_with_source_or_ignore_duplicate(
+            context,
+            DotGraphNode::Mod(context.current_file_id()),
+            &label,
+            end,
+            &source,
+        )?;
+    }
     Ok(())
 }
 
@@ -162,36 +192,6 @@ fn use_statement_first_component_into_identifier_name(
             name,
         },
     }
-}
-
-fn add_wildcard_import_to_context(
-    context: &mut Context,
-    item: ub::UseWildcardStatement,
-) -> Result<(), BindError> {
-    let source = OwnedSymbolSource::WildcardImport(item.clone());
-    let start = {
-        let first_component_name =
-            use_statement_first_component_into_identifier_name(item.first_component);
-        let name_components =
-            std::iter::once(&first_component_name).chain(item.other_components.iter());
-        lookup_name(context, name_components)?.0
-    };
-
-    let edges: Vec<(IdentifierName, DotGraphNode)> = context
-        .get_edges(start)
-        .into_iter()
-        .map(|(label, end, _)| (label.clone(), end))
-        .collect();
-    for (label, end) in edges {
-        add_dot_edge_with_source(
-            context,
-            DotGraphNode::Mod(context.current_file_id()),
-            &label,
-            end,
-            &source,
-        )?;
-    }
-    Ok(())
 }
 
 fn add_mod_to_context(
