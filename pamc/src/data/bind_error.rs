@@ -2,22 +2,11 @@ use crate::data::{simplified_ast as unbound, simplified_ast::IdentifierName, Fil
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BindError {
-    CircularFileDependency(CircularFileDependencyError),
     NameNotFound(NameNotFoundError),
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
     CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError),
     ModFileNotFound(ModFileNotFoundError),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CircularFileDependencyError {
-    pub ids: Vec<FileId>,
-}
-impl From<CircularFileDependencyError> for BindError {
-    fn from(error: CircularFileDependencyError) -> Self {
-        Self::CircularFileDependency(error)
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
