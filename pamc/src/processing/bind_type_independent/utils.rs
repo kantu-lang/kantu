@@ -1,15 +1,10 @@
 use super::*;
 
-pub fn get_db_index<'a, N>(
-    context: &Context,
-    current_file_id: FileId,
-    name_components: N,
-) -> Result<DbIndex, BindError>
+pub fn get_db_index<'a, N>(context: &Context, name_components: N) -> Result<DbIndex, BindError>
 where
     N: Clone + Iterator<Item = &'a ub::Identifier>,
 {
-    let lookup_result =
-        context.get_db_index(current_file_id, name_components.clone().map(|c| &c.name));
+    let lookup_result = context.get_db_index(name_components.clone().map(|c| &c.name));
 
     match lookup_result {
         Ok(db_index) => Ok(db_index),
@@ -26,14 +21,12 @@ where
 
 pub fn lookup_name<'a, N>(
     context: &Context,
-    current_file_id: FileId,
     name_components: N,
 ) -> Result<(DotGraphNode, OwnedSymbolSource), NameNotFoundError>
 where
     N: Clone + Iterator<Item = &'a ub::Identifier>,
 {
-    let lookup_result =
-        context.lookup_name(current_file_id, name_components.clone().map(|c| &c.name));
+    let lookup_result = context.lookup_name(name_components.clone().map(|c| &c.name));
 
     if let Some(entry) = lookup_result {
         Ok(entry)
@@ -85,13 +78,12 @@ pub fn add_dot_edge_with_source(
 
 pub fn create_name_and_add_to_mod(
     context: &mut Context,
-    current_file_id: FileId,
     identifier: ub::Identifier,
 ) -> Result<Identifier, NameClashError> {
     let db_level = context.push_placeholder();
     add_dot_edge(
         context,
-        DotGraphNode::Mod(current_file_id),
+        DotGraphNode::Mod(context.current_file_id()),
         &identifier.name,
         DotGraphNode::LeafItem(db_level),
         &identifier,
@@ -108,7 +100,7 @@ pub fn create_local_name_and_add_to_scope(
         return Ok(identifier.into());
     }
 
-    let result = context.push_local(identifier.span.file_id, &identifier);
+    let result = context.push_local(&identifier);
     if let Err(old_source) = result {
         return Err(NameClashError {
             old: old_source,

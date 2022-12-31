@@ -2,8 +2,20 @@ use super::*;
 
 use ub::Identifier;
 
+#[derive(Debug)]
+pub struct Context<'a, 'b> {
+    data: &'a mut ContextData<'b>,
+    current_file_id: FileId,
+}
+
+impl Context<'_, '_> {
+    pub fn current_file_id(&self) -> FileId {
+        self.current_file_id
+    }
+}
+
 #[derive(Clone, Debug)]
-pub struct Context<'a> {
+pub struct ContextData<'a> {
     stack: Vec<ContextEntry>,
     graph: DotGraph,
     file_tree: &'a FileTree,
@@ -21,13 +33,13 @@ pub enum AccessibleEntry {
     Local(Identifier),
 }
 
-impl Context<'_> {
-    pub fn with_builtins(file_tree: &FileTree) -> Context {
+impl ContextData<'_> {
+    pub fn with_builtins(file_tree: &FileTree) -> ContextData {
         let type1_entry = ContextEntry::Placeholder;
         let type0_entry = ContextEntry::Accessible(AccessibleEntry::Builtin(
             IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
         ));
-        Context {
+        ContextData {
             stack: vec![type1_entry, type0_entry],
             graph: DotGraph::empty(),
             file_tree,
@@ -35,9 +47,33 @@ impl Context<'_> {
     }
 }
 
-impl Context<'_> {
+impl<'b> ContextData<'b> {
+    pub fn create_context_for_mod<'a>(&'a mut self, mod_id: FileId) -> Context<'a, 'b> {
+        Context {
+            data: self,
+            current_file_id: mod_id,
+        }
+    }
+}
+
+impl Context<'_, '_> {
     /// Panics if `n > self.len()`.
     pub fn pop_n(&mut self, n: usize) {
+        self.data.pop_n(n)
+    }
+
+    /// Panics if `new_len > self.len()`.
+    pub fn truncate(&mut self, new_len: usize) {
+        self.data.truncate(new_len)
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+}
+impl ContextData<'_> {
+    /// Panics if `n > self.len()`.
+    fn pop_n(&mut self, n: usize) {
         if n > self.len() {
             panic!(
                 "Tried to pop {} elements from a context with only {} elements",
@@ -49,7 +85,7 @@ impl Context<'_> {
     }
 
     /// Panics if `new_len > self.len()`.
-    pub fn truncate(&mut self, new_len: usize) {
+    fn truncate(&mut self, new_len: usize) {
         if new_len > self.len() {
             panic!(
                 "Tried to truncate a context with only {} elements to {} elements",
@@ -60,28 +96,57 @@ impl Context<'_> {
         self.stack.truncate(new_len);
     }
 
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.stack.len()
     }
 }
 
-impl Context<'_> {
-    pub fn level_to_index(&self, level: DbLevel) -> DbIndex {
+impl Context<'_, '_> {
+    pub fn index_to_level(&self, level: DbIndex) -> DbLevel {
+        self.data.index_to_level(level)
+    }
+}
+impl ContextData<'_> {
+    fn level_to_index(&self, level: DbLevel) -> DbIndex {
         DbIndex(self.len() - level.0 - 1)
     }
 
-    pub fn index_to_level(&self, level: DbIndex) -> DbLevel {
+    fn index_to_level(&self, level: DbIndex) -> DbLevel {
         DbLevel(self.len() - level.0 - 1)
     }
 }
 
-impl Context<'_> {
+impl Context<'_, '_> {
     /// If the DB index lookup fails, then there are 2 possibilities:
     /// 1. The name is not in scope, in which case the `Err` variant is `None`.
     /// 2. The name is in scope, but it refers to a mod rather than a leaf item.
     ///    In this case, the `Err` variant is `Some(file_id)` where `file_id` is
     ///    the id of the mod's file.
-    pub fn get_db_index<'a, N>(
+    pub fn get_db_index<'a, N>(&self, name_components: N) -> Result<DbIndex, Option<FileId>>
+    where
+        N: Clone + Iterator<Item = &'a IdentifierName>,
+    {
+        self.data
+            .get_db_index(self.current_file_id, name_components)
+    }
+
+    pub fn lookup_name<'a, N>(
+        &self,
+        name_components: N,
+    ) -> Option<(DotGraphNode, OwnedSymbolSource)>
+    where
+        N: Clone + Iterator<Item = &'a IdentifierName>,
+    {
+        self.data.lookup_name(self.current_file_id, name_components)
+    }
+}
+impl ContextData<'_> {
+    /// If the DB index lookup fails, then there are 2 possibilities:
+    /// 1. The name is not in scope, in which case the `Err` variant is `None`.
+    /// 2. The name is in scope, but it refers to a mod rather than a leaf item.
+    ///    In this case, the `Err` variant is `Some(file_id)` where `file_id` is
+    ///    the id of the mod's file.
+    fn get_db_index<'a, N>(
         &self,
         current_file_id: FileId,
         name_components: N,
@@ -99,7 +164,7 @@ impl Context<'_> {
         }
     }
 
-    pub fn lookup_name<'a, N>(
+    fn lookup_name<'a, N>(
         &self,
         current_file_id: FileId,
         name_components: N,
@@ -241,15 +306,31 @@ fn get_n_supers(
     ))
 }
 
-impl Context<'_> {
+impl Context<'_, '_> {
     pub fn push_placeholder(&mut self) -> DbLevel {
+        self.data.push_placeholder()
+    }
+}
+impl ContextData<'_> {
+    fn push_placeholder(&mut self) -> DbLevel {
         self.stack.push(ContextEntry::Placeholder);
         DbLevel(self.len() - 1)
     }
 }
 
-impl Context<'_> {
+impl Context<'_, '_> {
     pub fn add_dot_edge(
+        &mut self,
+        start: DotGraphNode,
+        label: &IdentifierName,
+        end: DotGraphNode,
+        source: OwnedSymbolSource,
+    ) -> Result<(), OwnedSymbolSource> {
+        self.data.add_dot_edge(start, label, end, source)
+    }
+}
+impl ContextData<'_> {
+    fn add_dot_edge(
         &mut self,
         start: DotGraphNode,
         label: &IdentifierName,
@@ -260,8 +341,13 @@ impl Context<'_> {
     }
 }
 
-impl Context<'_> {
-    pub fn push_local(
+impl Context<'_, '_> {
+    pub fn push_local(&mut self, identifier: &Identifier) -> Result<(), OwnedSymbolSource> {
+        self.data.push_local(self.current_file_id, identifier)
+    }
+}
+impl ContextData<'_> {
+    fn push_local(
         &mut self,
         current_file_id: FileId,
         identifier: &Identifier,
@@ -281,8 +367,16 @@ impl Context<'_> {
     }
 }
 
-impl Context<'_> {
+impl Context<'_, '_> {
     pub fn get_edges(
+        &self,
+        node: DotGraphNode,
+    ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
+        self.data.get_edges(node)
+    }
+}
+impl ContextData<'_> {
+    fn get_edges(
         &self,
         node: DotGraphNode,
     ) -> Vec<(&IdentifierName, DotGraphNode, &OwnedSymbolSource)> {
