@@ -400,6 +400,14 @@ impl Context<'_, '_> {
     ) -> Result<(), DotGraphEntry> {
         self.data.add_dot_edge(start, label, end)
     }
+    pub fn overwrite_dot_edge(
+        &mut self,
+        start: DotGraphNode,
+        label: &IdentifierName,
+        end: DotGraphEntry,
+    ) {
+        self.data.overwrite_dot_edge(start, label, end)
+    }
 }
 impl ContextData<'_> {
     fn add_dot_edge(
@@ -409,6 +417,14 @@ impl ContextData<'_> {
         end: DotGraphEntry,
     ) -> Result<(), DotGraphEntry> {
         self.graph.add_edge(start, label, end)
+    }
+    fn overwrite_dot_edge(
+        &mut self,
+        start: DotGraphNode,
+        label: &IdentifierName,
+        end: DotGraphEntry,
+    ) {
+        self.graph.overwrite_edge(start, label, end)
     }
 }
 
@@ -461,5 +477,19 @@ impl Context<'_, '_> {
 impl ContextData<'_> {
     fn get_edges(&self, node: DotGraphNode) -> Vec<(&IdentifierName, &DotGraphEntry)> {
         self.graph.get_edges(node)
+    }
+}
+
+impl Context<'_, '_> {
+    pub fn is_left_more_permissive_than_right(&self, left: Visibility, right: Visibility) -> bool {
+        match (left, right) {
+            (Visibility::Global, Visibility::Global) => false,
+            (Visibility::Global, Visibility::Mod(_)) => true,
+            (Visibility::Mod(_), Visibility::Global) => false,
+            (Visibility::Mod(left), Visibility::Mod(right)) => self
+                .data
+                .file_tree
+                .is_left_strict_descendant_of_right(right, left),
+        }
     }
 }

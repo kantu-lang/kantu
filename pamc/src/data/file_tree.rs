@@ -76,6 +76,10 @@ impl FileTree {
         Ok(())
     }
 
+    pub fn is_left_strict_descendant_of_right(&self, left: FileId, right: FileId) -> bool {
+        self.is_left_non_strict_descendant_of_right(left, right) && left != right
+    }
+
     pub fn is_left_non_strict_descendant_of_right(&self, left: FileId, right: FileId) -> bool {
         let mut current_ancestor = left;
         loop {

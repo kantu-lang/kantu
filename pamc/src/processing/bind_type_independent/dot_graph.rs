@@ -52,6 +52,18 @@ impl DotGraph {
         Ok(())
     }
 
+    pub fn overwrite_edge(
+        &mut self,
+        start: DotGraphNode,
+        label: &IdentifierName,
+        end: DotGraphEntry,
+    ) {
+        self.edge_maps
+            .entry(start.clone())
+            .or_default()
+            .insert(label.clone(), end);
+    }
+
     pub fn get_edge_dest(
         &self,
         start: DotGraphNode,
