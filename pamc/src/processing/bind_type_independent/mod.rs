@@ -22,7 +22,7 @@ mod utils;
 #[derive(Debug)]
 struct State<'a> {
     out: Vec<FileItem>,
-    context: Context<'a>,
+    context_data: ContextData<'a>,
     unchecked_files: Vec<ub::File>,
     file_tree: &'a FileTree,
 }
@@ -35,7 +35,7 @@ pub fn bind_files(
     let root_file = remove_file_with_id_or_panic(&mut files, root_id);
     let mut state = State {
         out: vec![],
-        context: Context::with_builtins(file_tree),
+        context_data: ContextData::with_builtins(file_tree),
         unchecked_files: files,
         file_tree,
     };
@@ -55,18 +55,28 @@ fn remove_file_with_id_or_panic(files: &mut Vec<ub::File>, id: FileId) -> ub::Fi
 
 fn add_items_from_file(state: &mut State, file: ub::File) -> Result<(), BindError> {
     for item in file.items {
-        add_items_from_file_item(state, item)?;
+        add_items_from_file_item(state, item, file.id)?;
     }
     Ok(())
 }
 
-fn add_items_from_file_item(state: &mut State, item: ub::FileItem) -> Result<(), BindError> {
+fn add_items_from_file_item(
+    state: &mut State,
+    item: ub::FileItem,
+    item_file_id: FileId,
+) -> Result<(), BindError> {
     match item {
-        ub::FileItem::UseSingle(item) => add_single_import_to_context(&mut state.context, item),
-        ub::FileItem::UseWildcard(item) => add_wildcard_import_to_context(&mut state.context, item),
-        ub::FileItem::Mod(item) => add_mod_to_context(state, item),
-        ub::FileItem::Type(item) => add_item_from_type_statement(state, item),
-        ub::FileItem::Let(item) => add_item_from_let_statement(state, item),
+        ub::FileItem::UseSingle(item) => add_single_import_to_context(
+            &mut state.context_data.create_context_for_mod(item_file_id),
+            item,
+        ),
+        ub::FileItem::UseWildcard(item) => add_wildcard_import_to_context(
+            &mut state.context_data.create_context_for_mod(item_file_id),
+            item,
+        ),
+        ub::FileItem::Mod(item) => add_mod_to_context(state, item, item_file_id),
+        ub::FileItem::Type(item) => add_item_from_type_statement(state, item, item_file_id),
+        ub::FileItem::Let(item) => add_item_from_let_statement(state, item, item_file_id),
     }
 }
 
@@ -74,8 +84,7 @@ fn add_single_import_to_context(
     context: &mut Context,
     item: ub::UseSingleStatement,
 ) -> Result<(), BindError> {
-    let current_file_id = item.span.file_id;
-    let start = DotGraphNode::Mod(current_file_id);
+    let start = DotGraphNode::Mod(context.current_file_id());
     let import_name = match &item.alternate_name {
         Some(name) => name,
         None => {
@@ -95,7 +104,7 @@ fn add_single_import_to_context(
             use_statement_first_component_into_identifier_name(item.first_component);
         let name_components =
             std::iter::once(&first_component_name).chain(item.other_components.iter());
-        lookup_name(context, current_file_id, name_components)?.0
+        lookup_name(context, name_components)?.0
     };
     add_dot_edge(context, start, &import_name.name, end, import_name)?;
     Ok(())
@@ -160,13 +169,12 @@ fn add_wildcard_import_to_context(
     item: ub::UseWildcardStatement,
 ) -> Result<(), BindError> {
     let source = OwnedSymbolSource::WildcardImport(item.clone());
-    let current_file_id = item.span.file_id;
     let start = {
         let first_component_name =
             use_statement_first_component_into_identifier_name(item.first_component);
         let name_components =
             std::iter::once(&first_component_name).chain(item.other_components.iter());
-        lookup_name(context, current_file_id, name_components)?.0
+        lookup_name(context, name_components)?.0
     };
 
     let edges: Vec<(IdentifierName, DotGraphNode)> = context
@@ -177,7 +185,7 @@ fn add_wildcard_import_to_context(
     for (label, end) in edges {
         add_dot_edge_with_source(
             context,
-            DotGraphNode::Mod(current_file_id),
+            DotGraphNode::Mod(context.current_file_id()),
             &label,
             end,
             &source,
@@ -186,16 +194,19 @@ fn add_wildcard_import_to_context(
     Ok(())
 }
 
-fn add_mod_to_context(state: &mut State, item: ub::ModStatement) -> Result<(), BindError> {
-    let current_file_id = item.span.file_id;
-    let Ok(mod_file_id) = state.file_tree.child(current_file_id, &item.name.name) else {
+fn add_mod_to_context(
+    state: &mut State,
+    item: ub::ModStatement,
+    item_file_id: FileId,
+) -> Result<(), BindError> {
+    let Ok(mod_file_id) = state.file_tree.child(item_file_id, &item.name.name) else {
         return Err(BindError::ModFileNotFound(ModFileNotFoundError {
             mod_name: item.name,
         }));
     };
     add_dot_edge(
-        &mut state.context,
-        DotGraphNode::Mod(current_file_id),
+        &mut state.context_data.create_context_for_mod(item_file_id),
+        DotGraphNode::Mod(item_file_id),
         &item.name.name,
         DotGraphNode::Mod(mod_file_id),
         &item.name,
@@ -210,16 +221,25 @@ fn add_mod_to_context(state: &mut State, item: ub::ModStatement) -> Result<(), B
 fn add_item_from_type_statement(
     state: &mut State,
     item: ub::TypeStatement,
+    item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let bound = bind_type_statement(&mut state.context, item)?;
-    // TODO: Add module namespace
+    let bound = bind_type_statement(
+        &mut state.context_data.create_context_for_mod(item_file_id),
+        item,
+    )?;
     state.out.push(FileItem::Type(bound));
     Ok(())
 }
 
-fn add_item_from_let_statement(state: &mut State, item: ub::LetStatement) -> Result<(), BindError> {
-    let bound = bind_let_statement(&mut state.context, item)?;
-    // TODO: Add module namespace
+fn add_item_from_let_statement(
+    state: &mut State,
+    item: ub::LetStatement,
+    item_file_id: FileId,
+) -> Result<(), BindError> {
+    let bound = bind_let_statement(
+        &mut state.context_data.create_context_for_mod(item_file_id),
+        item,
+    )?;
     state.out.push(FileItem::Let(bound));
     Ok(())
 }
@@ -242,8 +262,7 @@ fn bind_type_statement_dirty(
         out
     };
 
-    let type_name =
-        create_name_and_add_to_mod(context, type_statement.span.file_id, type_statement.name)?;
+    let type_name = create_name_and_add_to_mod(context, type_statement.name)?;
 
     let variants = type_statement
         .variants
@@ -350,7 +369,7 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
     let name = unbound_variant_name.clone().into();
 
     let type_db_index = context
-        .get_db_index(variant.span.file_id, std::iter::once(type_name))
+        .get_db_index(std::iter::once(type_name))
         .expect("type_name should already be in the context.");
     let type_db_level = context.index_to_level(type_db_index);
     let variant_db_level = context.push_placeholder();
@@ -383,7 +402,7 @@ fn bind_let_statement_dirty(
     let_statement: ub::LetStatement,
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
-    let name = create_name_and_add_to_mod(context, let_statement.span.file_id, let_statement.name)?;
+    let name = create_name_and_add_to_mod(context, let_statement.name)?;
     Ok(LetStatement {
         span: Some(let_statement.span),
         name,
@@ -417,7 +436,7 @@ fn bind_name_expression_dirty(
     context: &mut Context,
     name: ub::NameExpression,
 ) -> Result<Expression, BindError> {
-    let db_index = get_db_index(context, name.span.file_id, name.components.as_ref().iter())?;
+    let db_index = get_db_index(context, name.components.as_ref().iter())?;
     Ok(Expression::Name(NameExpression {
         span: Some(name.span),
         components: name.components.into_mapped(Into::into),
@@ -458,7 +477,7 @@ fn bind_labeled_call_arg_dirty(
 ) -> Result<LabeledCallArg, BindError> {
     match arg {
         ub::LabeledCallArg::Implicit(value) => Ok(LabeledCallArg::Implicit {
-            db_index: get_db_index(context, value.span.file_id, std::iter::once(&value))?,
+            db_index: get_db_index(context, std::iter::once(&value))?,
             label: value.into(),
         }),
         ub::LabeledCallArg::Explicit(label, value) => Ok(LabeledCallArg::Explicit {
