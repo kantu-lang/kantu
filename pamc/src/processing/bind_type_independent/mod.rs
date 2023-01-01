@@ -84,8 +84,7 @@ fn add_single_import_to_context(
     item: ub::UseSingleStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let context =
-        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id));
+    let context = &mut context_data.create_context_for_mod(item_file_id, None);
     let start = DotGraphNode::Mod(context.current_file_id());
     let import_name = match &item.alternate_name {
         Some(name) => name,
@@ -112,14 +111,16 @@ fn add_single_import_to_context(
     };
     let visibility = get_visibility(context, item.visibility.as_ref())?;
     if !context.is_left_at_least_as_permissive_as_right(end_original_visibility, visibility) {
-        return Err(BindError::NameIsPrivate(NameIsPrivateError {
-            name_component: name_components
-                .last()
-                .expect("Must be non-empty since we chained onto std::iter::once()")
-                .clone(),
-            required_visibility: visibility,
-            actual_visibility: end_original_visibility,
-        }));
+        return Err(BindError::CannotLeakPrivateName(
+            CannotLeakPrivateNameError {
+                name_component: name_components
+                    .last()
+                    .expect("Must be non-empty since we chained onto std::iter::once()")
+                    .clone(),
+                required_visibility: visibility,
+                actual_visibility: end_original_visibility,
+            },
+        ));
     }
     add_new_dot_edge_or_merge_with_duplicate(
         context,
@@ -203,8 +204,7 @@ fn add_wildcard_import_to_context(
     item: ub::UseWildcardStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
-    let context =
-        &mut context_data.create_context_for_mod(item_file_id, Visibility::Mod(item_file_id));
+    let context = &mut context_data.create_context_for_mod(item_file_id, None);
     let source = OwnedSymbolSource::WildcardImport(item.clone());
     let start = {
         let first_component_name =
@@ -215,21 +215,26 @@ fn add_wildcard_import_to_context(
     };
     let visibility = get_visibility(context, item.visibility.as_ref())?;
 
-    let edges_visible_to_current_mod: Vec<(IdentifierName, DotGraphEntry)> = context
+    let edges_visible_to_current_mod_and_exportable_with_given_visibility: Vec<(
+        IdentifierName,
+        DotGraphEntry,
+    )> = context
         .get_edges(start)
         .into_iter()
         .filter_map(|(label, entry)| {
             if context.is_left_at_least_as_permissive_as_right(
                 entry.visibility,
                 Visibility::Mod(item_file_id),
-            ) {
+            ) && context
+                .is_left_at_least_as_permissive_as_right(entry.original_visibility, visibility)
+            {
                 Some((label.clone(), entry.clone()))
             } else {
                 None
             }
         })
         .collect();
-    for (label, entry) in edges_visible_to_current_mod {
+    for (label, entry) in edges_visible_to_current_mod_and_exportable_with_given_visibility {
         let effective_visibility =
             if context.is_left_at_least_as_permissive_as_right(entry.visibility, visibility) {
                 visibility
@@ -316,7 +321,7 @@ fn add_mod_to_context(
     };
     let context = &mut state
         .context_data
-        .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id));
+        .create_context_for_mod(item_file_id, None);
     let visibility = get_visibility(context, item.visibility.as_ref())?;
     add_dot_edge(
         context,
@@ -342,12 +347,12 @@ fn add_item_from_type_statement(
     let visibility = get_visibility(
         &mut state
             .context_data
-            .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
+            .create_context_for_mod(item_file_id, None),
         item.visibility.as_ref(),
     )?;
     let context = &mut state
         .context_data
-        .create_context_for_mod(item_file_id, visibility);
+        .create_context_for_mod(item_file_id, Some(visibility));
     let bound = bind_type_statement(context, item)?;
     state.out.push(FileItem::Type(bound));
     Ok(())
@@ -361,12 +366,12 @@ fn add_item_from_let_statement(
     let transparency = get_transparency(
         &mut state
             .context_data
-            .create_context_for_mod(item_file_id, Visibility::Mod(item_file_id)),
+            .create_context_for_mod(item_file_id, None),
         item.transparency.as_ref(),
     )?;
     let context = &mut state
         .context_data
-        .create_context_for_mod(item_file_id, transparency.0);
+        .create_context_for_mod(item_file_id, Some(transparency.0));
     let bound = bind_let_statement(context, item)?;
     state.out.push(FileItem::Let(bound));
     Ok(())
