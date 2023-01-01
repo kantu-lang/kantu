@@ -3,7 +3,7 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
-    ParenthesizedQuasiAncestor(UnfinishedParenthesizedQuasiAncestor),
+    ParenthesizedModScopeModifier(UnfinishedParenthesizedModScopeModifier),
     Use(UnfinishedUseStatement),
     Mod(UnfinishedModStatement),
     Type(UnfinishedTypeStatement),
@@ -47,7 +47,7 @@ impl PendingPubClause {
         match self {
             PendingPubClause::PubKw(pub_kw_token) => PubClause {
                 span: span_single(file_id, &pub_kw_token),
-                ancestor: None,
+                scope_modifier: None,
             },
             PendingPubClause::Finished(clause) => clause,
         }
@@ -55,12 +55,12 @@ impl PendingPubClause {
 }
 
 #[derive(Clone, Debug)]
-pub enum UnfinishedParenthesizedQuasiAncestor {
+pub enum UnfinishedParenthesizedModScopeModifier {
     Empty,
     LParen(Token),
     ReadyForRParen {
         l_paren_token: Token,
-        ancestor: ParenthesizedQuasiAncestor,
+        modifier: ParenthesizedModScopeModifier,
     },
     PackRelativeAwaitingIdentifier {
         l_paren_token: Token,
@@ -164,12 +164,12 @@ pub enum UnfinishedLetStatement {
     ExplicitTransparency {
         first_token: Token,
         visibility: Option<PubClause>,
-        transparency: ParenthesizedQuasiAncestor,
+        transparency: ParenthesizedModScopeModifier,
     },
     Name {
         first_token: Token,
         visibility: Option<PubClause>,
-        transparency: Option<ParenthesizedQuasiAncestor>,
+        transparency: Option<ParenthesizedModScopeModifier>,
         name: Identifier,
     },
 }

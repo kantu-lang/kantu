@@ -15,8 +15,8 @@ impl Accept for UnfinishedFile {
                 TokenKind::LParen => {
                     if let Some(PendingPubClause::PubKw(_)) = &self.pending_visibility {
                         AcceptResult::PushAndContinueReducingWithNewTop(
-                            UnfinishedStackItem::ParenthesizedQuasiAncestor(
-                                UnfinishedParenthesizedQuasiAncestor::Empty,
+                            UnfinishedStackItem::ParenthesizedModScopeModifier(
+                                UnfinishedParenthesizedModScopeModifier::Empty,
                             ),
                             FinishedStackItem::Token(token),
                         )
@@ -96,20 +96,23 @@ impl Accept for UnfinishedFile {
                 }
                 _ => AcceptResult::Error(ParseError::unexpected_token(token)),
             },
-            FinishedStackItem::ParenthesizedQuasiAncestor(ancestor_first_token, ancestor) => {
+            FinishedStackItem::ParenthesizedModScopeModifier(
+                parenthesized_mod_scope_modifier_first_token,
+                modifier,
+            ) => {
                 if let Some(PendingPubClause::PubKw(pub_kw_token)) = self.pending_visibility.take()
                 {
                     let visibility = PubClause {
-                        span: span_single(file_id, &pub_kw_token).inclusive_merge(ancestor.span),
-                        ancestor: Some(ancestor),
+                        span: span_single(file_id, &pub_kw_token).inclusive_merge(modifier.span),
+                        scope_modifier: Some(modifier),
                     };
                     self.pending_visibility = Some(PendingPubClause::Finished(visibility));
                     AcceptResult::ContinueToNextToken
                 } else {
                     wrapped_unexpected_finished_item_err(
-                        &FinishedStackItem::ParenthesizedQuasiAncestor(
-                            ancestor_first_token,
-                            ancestor,
+                        &FinishedStackItem::ParenthesizedModScopeModifier(
+                            parenthesized_mod_scope_modifier_first_token,
+                            modifier,
                         ),
                     )
                 }

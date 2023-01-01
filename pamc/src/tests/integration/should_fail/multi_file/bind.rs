@@ -184,24 +184,24 @@ fn type_priv() {
 }
 
 #[test]
-fn visibility_not_quasi_ancestor_of_current_mod() {
+fn visibility_not_at_least_as_permissive_as_current_mod() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
             checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/visibility_not_quasi_ancestor_of_current_mod/pack.omlet"
+                "../../../sample_code/should_fail/multi_file/bind/visibility_not_at_least_as_permissive_as_current_mod/pack.omlet"
             ),
         },
         |err| match err {
-            BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError {
-                quasi_ancestor,
+            BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
+                visibility_modifier,
             }) => {
-                match quasi_ancestor.kind {
-                    simplified_ast::QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+                match visibility_modifier.kind {
+                    simplified_ast::ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
                         assert_eq!(1, path_after_pack_kw.len());
                         assert_eq!("nat", path_after_pack_kw[0].name.src_str());
                     }
-                    _ => panic!("Unexpected quasi ancestor: {:?}", quasi_ancestor),
+                    _ => panic!("Unexpected visibility modifier: {:?}", visibility_modifier),
                 }
             }
             _ => panic!("Unexpected error: {:?}", err),
@@ -210,24 +210,24 @@ fn visibility_not_quasi_ancestor_of_current_mod() {
 }
 
 #[test]
-fn transparency_not_quasi_ancestor_of_current_mod() {
+fn transparency_not_at_least_as_permissive_as_current_mod() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
             checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/transparency_not_quasi_ancestor_of_current_mod/pack.omlet"
+                "../../../sample_code/should_fail/multi_file/bind/transparency_not_at_least_as_permissive_as_current_mod/pack.omlet"
             ),
         },
         |err| match err {
-            BindError::TransparencyWasNotQuasiAncestorOfCurrentMod(TransparencyWasNotQuasiAncestorOfCurrentModError {
-                quasi_ancestor,
+            BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
+                transparency_modifier,
             }) => {
-                match quasi_ancestor.kind {
-                    simplified_ast::QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+                match transparency_modifier.kind {
+                    simplified_ast::ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
                         assert_eq!(1, path_after_pack_kw.len());
                         assert_eq!("nat", path_after_pack_kw[0].name.src_str());
                     }
-                    _ => panic!("Unexpected quasi ancestor: {:?}", quasi_ancestor),
+                    _ => panic!("Unexpected transparency modifier: {:?}", transparency_modifier),
                 }
             }
             _ => panic!("Unexpected error: {:?}", err),
@@ -402,11 +402,11 @@ fn visibility_stricter_than_transparency() {
             ),
         },
         |err| match err {
-            BindError::TransparencyWasNotQuasiDescendantOfVisibility(TransparencyWasNotQuasiDescendantOfVisibilityError {
-                transparency,
+            BindError::TransparencyWasNotAtLeastAsPermissiveAsVisibility(TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {
+                transparency_modifier: transparency,
             }) => {
                 assert_eq!(
-                    simplified_ast::QuasiAncestorKind::Global,
+                    simplified_ast::ModScopeModifierKind::Global,
                     transparency.kind
                 );
             }

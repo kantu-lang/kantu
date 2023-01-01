@@ -8,10 +8,10 @@ pub enum FinishedStackItem {
         Token,
         File,
     ),
-    ParenthesizedQuasiAncestor(
+    ParenthesizedModScopeModifier(
         /// First token
         Token,
-        ParenthesizedQuasiAncestor,
+        ParenthesizedModScopeModifier,
     ),
     Use(
         /// First token
@@ -157,7 +157,7 @@ impl FinishedStackItem {
         match self {
             FinishedStackItem::Token(token) => &token,
             FinishedStackItem::File(token, _) => &token,
-            FinishedStackItem::ParenthesizedQuasiAncestor(token, _) => &token,
+            FinishedStackItem::ParenthesizedModScopeModifier(token, _) => &token,
             FinishedStackItem::Use(token, _) => &token,
             FinishedStackItem::Mod(token, _) => &token,
             FinishedStackItem::Type(token, _) => &token,

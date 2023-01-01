@@ -22,8 +22,8 @@ impl Accept for UnfinishedStackItem {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
             UnfinishedStackItem::File(file) => file.accept(item, file_id),
-            UnfinishedStackItem::ParenthesizedQuasiAncestor(ancestor) => {
-                ancestor.accept(item, file_id)
+            UnfinishedStackItem::ParenthesizedModScopeModifier(modifier) => {
+                modifier.accept(item, file_id)
             }
             UnfinishedStackItem::Use(use_) => use_.accept(item, file_id),
             UnfinishedStackItem::Mod(mod_) => mod_.accept(item, file_id),
