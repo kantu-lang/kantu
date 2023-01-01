@@ -279,3 +279,21 @@ fn use_pack_as_is() {
         },
     );
 }
+
+#[test]
+fn mod_file_not_found() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/mod_file_not_found/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::ModFileNotFound(ModFileNotFoundError { mod_name }) => {
+                assert_eq!("foo", mod_name.name.src_str());
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}

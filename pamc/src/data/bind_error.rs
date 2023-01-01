@@ -9,7 +9,6 @@ pub enum BindError {
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
     ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError),
     CannotUselesslyImportModSuperOrPackAsIs(CannotUselesslyImportModSuperOrPackAsIsError),
-    // TODO: Test?
     ModFileNotFound(ModFileNotFoundError),
     VisibilityWasNotAncestorlike(VisibilityWasNotAncestorlikeError),
 }
