@@ -90,3 +90,13 @@ fn let_not_leaky_because_its_opaque() {
         ),
     });
 }
+
+#[test]
+fn pack_relative_with_alias() {
+    expect_success_with_no_warnings(ProjectPath {
+        callee_file_path: file!(),
+        checked_unadjusted_pack_omlet_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/pack_relative_with_alias/pack.omlet"
+        ),
+    });
+}
