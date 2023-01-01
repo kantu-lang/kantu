@@ -52,3 +52,69 @@ fn leaky_let_type() {
         },
     );
 }
+
+fn expect_type_mismatch_error(
+    project_path: ProjectPath,
+    expected_expression_src: &str,
+    expected_expected_type_src: &str,
+    expected_actual_type_src: &str,
+) {
+    expect_type_check_error(project_path, |registry, err| match err {
+        TypeCheckError::TypeMismatch {
+            expression_id,
+            expected_type_id,
+            actual_type_id,
+        } => {
+            let actual_expression_src = format_expression(
+                &expand_expression(registry, expression_id),
+                0,
+                &FormatOptions {
+                    ident_size_in_spaces: 4,
+                    print_db_indices: false,
+                    print_fun_body_status: false,
+                },
+            );
+            assert_eq_up_to_white_space(&actual_expression_src, expected_expression_src);
+
+            let actual_expected_type_src = format_expression(
+                &expand_expression(registry, expected_type_id.raw()),
+                0,
+                &FormatOptions {
+                    ident_size_in_spaces: 4,
+                    print_db_indices: false,
+                    print_fun_body_status: false,
+                },
+            );
+            assert_eq_up_to_white_space(&actual_expected_type_src, expected_expected_type_src);
+
+            let actual_actual_type_src = format_expression(
+                &expand_expression(registry, actual_type_id.raw()),
+                0,
+                &FormatOptions {
+                    ident_size_in_spaces: 4,
+                    print_db_indices: false,
+                    print_fun_body_status: false,
+                },
+            );
+            assert_eq_up_to_white_space(&actual_actual_type_src, expected_actual_type_src);
+        }
+        _ => panic!("Unexpected error: {:#?}", err),
+    });
+}
+
+// TODO: Fix
+#[ignore]
+#[test]
+fn insufficient_transparency() {
+    expect_type_mismatch_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/type_check/insufficient_transparency/pack.omlet"
+            ),
+        },
+        "Eq.Refl(T, t,)",
+        "Eq(T, t, identity(T, t,),)",
+        "Eq(T, t, t,)",
+    );
+}
