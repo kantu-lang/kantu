@@ -116,3 +116,25 @@ fn wildcard_downgrades_visibility() {
         },
     );
 }
+
+#[test]
+fn leaky_let_value() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/leaky_let_value/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::CannotLeakPrivateName(CannotLeakPrivateNameError {
+                name_component,
+                required_visibility: _,
+                actual_visibility: _,
+            }) => {
+                assert_eq!("priv_S", name_component.name.src_str());
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
