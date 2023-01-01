@@ -102,6 +102,7 @@ pub enum TypeCheckError {
     },
     CannotInferTypeOfTodoExpression(NodeId<TodoExpression>),
     UnreachableExpression(ExpressionId),
+    LetStatementTypeContainsPrivateName(NodeId<LetStatement>, NodeId<NameExpression>),
 }
 
 #[derive(Clone, Debug)]

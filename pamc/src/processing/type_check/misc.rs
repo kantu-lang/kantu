@@ -367,6 +367,7 @@ pub(super) fn get_db_index_for_adt_variant_of_name(
     let variant_name_list_id = match state.context.get_definition(type_dbi, state.registry) {
         ContextEntryDefinition::Adt {
             variant_name_list_id,
+            ..
         } => variant_name_list_id,
         _ => panic!("An ADT's NameExpression should always point to an ADT definition"),
     };
@@ -611,6 +612,7 @@ pub(super) fn try_as_normal_form_adt_expression(
             match definition {
                 ContextEntryDefinition::Adt {
                     variant_name_list_id,
+                    ..
                 } => Some(NormalFormAdtExpression {
                     type_name_id: name_id,
                     variant_name_list_id,
@@ -628,6 +630,7 @@ pub(super) fn try_as_normal_form_adt_expression(
                     match definition {
                         ContextEntryDefinition::Adt {
                             variant_name_list_id,
+                            ..
                         } => Some(NormalFormAdtExpression {
                             type_name_id: name_id,
                             variant_name_list_id: variant_name_list_id,
@@ -656,7 +659,7 @@ pub(super) fn try_as_variant_expression(
             let db_index = state.registry.get(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
             match definition {
-                ContextEntryDefinition::Variant { name_id } => Some((name_id, None)),
+                ContextEntryDefinition::Variant { name_id, .. } => Some((name_id, None)),
                 _ => None,
             }
         }
@@ -667,7 +670,7 @@ pub(super) fn try_as_variant_expression(
                     let db_index = state.registry.get(name_id).db_index;
                     let definition = state.context.get_definition(db_index, state.registry);
                     match definition {
-                        ContextEntryDefinition::Variant { name_id } => {
+                        ContextEntryDefinition::Variant { name_id, .. } => {
                             Some((name_id, Some(call.arg_list_id)))
                         }
                         _ => None,
@@ -1711,4 +1714,19 @@ pub(super) fn get_arg_corresponding_to_label(
         let arg_label_name = &state.registry.get(arg_label_id).name;
         arg_label_name == target_label_name
     })
+}
+
+pub fn is_left_at_least_as_permissive_as_right(
+    file_tree: &FileTree,
+    left: ModScope,
+    right: ModScope,
+) -> bool {
+    match (left, right) {
+        (ModScope::Global, ModScope::Global) => true,
+        (ModScope::Global, ModScope::Mod(_)) => true,
+        (ModScope::Mod(_), ModScope::Global) => false,
+        (ModScope::Mod(left), ModScope::Mod(right)) => {
+            file_tree.is_left_non_strict_descendant_of_right(right, left)
+        }
+    }
 }

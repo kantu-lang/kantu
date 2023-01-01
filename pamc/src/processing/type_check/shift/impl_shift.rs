@@ -43,14 +43,24 @@ impl ShiftDbIndices for ContextEntryDefinition {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            ContextEntryDefinition::Alias { value_id } => ContextEntryDefinition::Alias {
+            ContextEntryDefinition::Alias {
+                value_id,
+                visibility,
+                transparency,
+            } => ContextEntryDefinition::Alias {
                 value_id: value_id.try_shift_with_cutoff(f, cutoff, registry)?,
+                visibility,
+                transparency,
             },
 
             ContextEntryDefinition::Adt {
                 variant_name_list_id: _,
+                visibility: _,
             }
-            | ContextEntryDefinition::Variant { name_id: _ }
+            | ContextEntryDefinition::Variant {
+                name_id: _,
+                visibility: _,
+            }
             | ContextEntryDefinition::Uninterpreted => self,
         })
     }

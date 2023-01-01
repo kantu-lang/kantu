@@ -19,12 +19,13 @@ pub(super) fn type_check_type_statement_dirty(
     type_check_type_constructor_dirty(state, type_statement_id)??;
 
     let type_statement = state.registry.get(type_statement_id);
+    let type_statement_visibility = type_statement.visibility;
     let variant_ids = state
         .registry
         .get_possibly_empty_list(type_statement.variant_list_id)
         .to_vec();
     for variant_id in variant_ids {
-        type_check_type_variant_dirty(state, variant_id)??;
+        type_check_type_variant_dirty(state, variant_id, type_statement_visibility)??;
     }
 
     Ok(with_push_warning(()))
@@ -66,6 +67,7 @@ pub(super) fn type_check_type_constructor_dirty(
         type_id: type_constructor_type_id,
         definition: ContextEntryDefinition::Adt {
             variant_name_list_id,
+            visibility: type_statement.visibility,
         },
     }))
 }
@@ -107,6 +109,7 @@ pub(in crate::processing::type_check) fn type_check_labeled_param_dirty(
 pub(super) fn type_check_type_variant_dirty(
     state: &mut State,
     variant_id: NodeId<Variant>,
+    type_statement_visibility: Visibility,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let variant = state.registry.get(variant_id).clone();
     let arity = variant.param_list_id.len();
@@ -129,6 +132,7 @@ pub(super) fn type_check_type_variant_dirty(
         type_id,
         definition: ContextEntryDefinition::Variant {
             name_id: variant.name_id,
+            visibility: type_statement_visibility,
         },
     }))
 }
@@ -139,13 +143,23 @@ pub(super) fn type_check_let_statement_dirty(
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let let_statement = state.registry.get(let_statement_id).clone();
     let type_id = get_type_of_expression_dirty(state, None, let_statement.value_id)?;
-    verify_expression_is_visible_from(state, type_id.raw(), let_statement.visibility)
-        .map_err(Tainted::new)?;
+
+    let visibility_status =
+        verify_expression_is_visible_from(state, type_id.raw(), let_statement.visibility);
+    if let Err(private_name_id) = visibility_status {
+        return tainted_err(TypeCheckError::LetStatementTypeContainsPrivateName(
+            let_statement_id,
+            private_name_id,
+        ));
+    }
+
     let normalized_value_id = evaluate_well_typed_expression(state, let_statement.value_id);
     Ok(state.context.push(ContextEntry {
         type_id,
         definition: ContextEntryDefinition::Alias {
             value_id: normalized_value_id,
+            visibility: let_statement.visibility,
+            transparency: let_statement.transparency,
         },
     }))
 }
