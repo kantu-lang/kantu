@@ -8,7 +8,7 @@ pub enum BindError {
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
     ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError),
-    CannotUselesslyImportModSuperOrPackAsIs(CannotUselesslyImportModSuperOrPackAsIsError),
+    CannotUselesslyImportItemAsSelf(CannotUselesslyImportItemAsSelfError),
     ModFileNotFound(ModFileNotFoundError),
     VisibilityWasNotAncestorlike(VisibilityWasNotAncestorlikeError),
 }
@@ -90,12 +90,12 @@ impl From<ExpectedModButNameRefersToTermError> for BindError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CannotUselesslyImportModSuperOrPackAsIsError {
+pub struct CannotUselesslyImportItemAsSelfError {
     pub use_statement: unbound::UseSingleStatement,
 }
-impl From<CannotUselesslyImportModSuperOrPackAsIsError> for BindError {
-    fn from(error: CannotUselesslyImportModSuperOrPackAsIsError) -> Self {
-        Self::CannotUselesslyImportModSuperOrPackAsIs(error)
+impl From<CannotUselesslyImportItemAsSelfError> for BindError {
+    fn from(error: CannotUselesslyImportItemAsSelfError) -> Self {
+        Self::CannotUselesslyImportItemAsSelf(error)
     }
 }
 
