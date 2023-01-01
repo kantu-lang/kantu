@@ -71,3 +71,13 @@ fn plus_commutative() {
         ),
     );
 }
+
+#[test]
+fn no_clash_because_priv() {
+    expect_success_with_no_warnings(
+        file!(),
+        checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/no_clash_because_priv/pack.omlet"
+        ),
+    );
+}

@@ -230,17 +230,19 @@ fn add_wildcard_import_to_context(
         })
         .collect();
     for (label, entry) in edges_visible_to_current_mod {
-        if !context.is_left_at_least_as_permissive_as_right(entry.original_visibility, visibility) {
-            continue;
-        }
-
+        let effective_visibility =
+            if context.is_left_at_least_as_permissive_as_right(entry.visibility, visibility) {
+                visibility
+            } else {
+                entry.visibility
+            };
         add_new_dot_edge_with_source_or_merge_with_duplicate(
             context,
             DotGraphNode::Mod(context.current_file_id()),
             &label,
             entry.node,
             &source,
-            visibility,
+            effective_visibility,
             entry.original_visibility,
         )?;
     }
