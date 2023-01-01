@@ -11,6 +11,7 @@ pub enum BindError {
     CannotUselesslyImportItemAsSelf(CannotUselesslyImportItemAsSelfError),
     ModFileNotFound(ModFileNotFoundError),
     VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError),
+    TransparencyWasNotQuasiAncestorOfCurrentMod(TransparencyWasNotQuasiAncestorOfCurrentModError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -116,5 +117,15 @@ pub struct VisibilityWasNotQuasiAncestorOfCurrentModError {
 impl From<VisibilityWasNotQuasiAncestorOfCurrentModError> for BindError {
     fn from(error: VisibilityWasNotQuasiAncestorOfCurrentModError) -> Self {
         Self::VisibilityWasNotQuasiAncestorOfCurrentMod(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TransparencyWasNotQuasiAncestorOfCurrentModError {
+    pub quasi_ancestor: unbound::ParenthesizedQuasiAncestor,
+}
+impl From<TransparencyWasNotQuasiAncestorOfCurrentModError> for BindError {
+    fn from(error: TransparencyWasNotQuasiAncestorOfCurrentModError) -> Self {
+        Self::TransparencyWasNotQuasiAncestorOfCurrentMod(error)
     }
 }
