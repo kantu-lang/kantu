@@ -84,16 +84,16 @@ impl Parse for Variant {
     }
 }
 
-impl Parse for ParenthesizedWeakAncestor {
+impl Parse for ParenthesizedAncestorlike {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::ParenthesizedWeakAncestor(
-            UnfinishedParenthesizedWeakAncestor::Empty,
+        vec![UnfinishedStackItem::ParenthesizedAncestorlike(
+            UnfinishedParenthesizedAncestorlike::Empty,
         )]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
-            FinishedStackItem::ParenthesizedWeakAncestor(_, ancestor) => Ok(ancestor),
+            FinishedStackItem::ParenthesizedAncestorlike(_, ancestor) => Ok(ancestor),
             other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }

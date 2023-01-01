@@ -12,7 +12,7 @@ pub enum BindError {
     CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError),
     // TODO: Test?
     ModFileNotFound(ModFileNotFoundError),
-    VisibilityMustBeGlobalOrNonStrictAncestor(VisibilityMustBeGlobalOrNonStrictAncestorError),
+    VisibilityWasNotAncestorlike(VisibilityWasNotAncestorlikeError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -112,11 +112,11 @@ impl From<ModFileNotFoundError> for BindError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VisibilityMustBeGlobalOrNonStrictAncestorError {
-    pub weak_ancestor: unbound::ParenthesizedWeakAncestor,
+pub struct VisibilityWasNotAncestorlikeError {
+    pub ancestorlike: unbound::ParenthesizedAncestorlike,
 }
-impl From<VisibilityMustBeGlobalOrNonStrictAncestorError> for BindError {
-    fn from(error: VisibilityMustBeGlobalOrNonStrictAncestorError) -> Self {
-        Self::VisibilityMustBeGlobalOrNonStrictAncestor(error)
+impl From<VisibilityWasNotAncestorlikeError> for BindError {
+    fn from(error: VisibilityWasNotAncestorlikeError) -> Self {
+        Self::VisibilityWasNotAncestorlike(error)
     }
 }

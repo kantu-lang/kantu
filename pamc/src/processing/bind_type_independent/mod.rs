@@ -4,7 +4,7 @@ use crate::data::{
     file_tree::FileTree,
     non_empty_vec::*,
     // `ub` stands for "unbound".
-    simplified_ast::{self as ub, ParenthesizedWeakAncestor},
+    simplified_ast::{self as ub, ParenthesizedAncestorlike},
     FileId,
     TextSpan,
 };
@@ -251,17 +251,17 @@ fn get_visibility(
     let Some(ancestor) = &pub_clause.ancestor else {
         return Ok(Visibility::Global);
     };
-    get_visibility_from_weak_ancestor_node(context, ancestor)
+    get_visibility_from_ancestorlike_node(context, ancestor)
 }
 
-fn get_visibility_from_weak_ancestor_node(
+fn get_visibility_from_ancestorlike_node(
     context: &Context,
-    ancestor: &ParenthesizedWeakAncestor,
+    ancestor: &ParenthesizedAncestorlike,
 ) -> Result<Visibility, BindError> {
     match &ancestor.kind {
-        ub::WeakAncestorKind::Global => Ok(Visibility::Global),
-        ub::WeakAncestorKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
-        ub::WeakAncestorKind::Super(n) => {
+        ub::AncestorlikeKind::Global => Ok(Visibility::Global),
+        ub::AncestorlikeKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
+        ub::AncestorlikeKind::Super(n) => {
             if let Some(DotGraphEntry {
                 node: DotGraphNode::Mod(ancestor_id),
                 def: _,
@@ -280,7 +280,7 @@ fn get_visibility_from_weak_ancestor_node(
                 .into())
             }
         }
-        ub::WeakAncestorKind::PackRelative { path_after_pack_kw } => {
+        ub::AncestorlikeKind::PackRelative { path_after_pack_kw } => {
             let name_components: Vec<ub::Identifier> = {
                 let pack_kw_name = IdentifierName::Reserved(ReservedIdentifierName::Pack);
                 let pack_kw = ub::Identifier {
@@ -305,9 +305,9 @@ fn get_visibility_from_weak_ancestor_node(
                     ) {
                         Ok(visibility)
                     } else {
-                        Err(BindError::VisibilityMustBeGlobalOrNonStrictAncestor(
-                            VisibilityMustBeGlobalOrNonStrictAncestorError {
-                                weak_ancestor: ancestor.clone(),
+                        Err(BindError::VisibilityWasNotAncestorlike(
+                            VisibilityWasNotAncestorlikeError {
+                                ancestorlike: ancestor.clone(),
                             },
                         ))
                     }
@@ -567,12 +567,12 @@ fn bind_let_statement_dirty(
 
 fn get_transparency(
     context: &Context,
-    transparency: Option<&ub::ParenthesizedWeakAncestor>,
+    transparency: Option<&ub::ParenthesizedAncestorlike>,
 ) -> Result<Transparency, BindError> {
     let Some(ancestor) = transparency else {
         return Ok(Transparency(Visibility::Mod(context.current_file_id())));
     };
-    get_visibility_from_weak_ancestor_node(context, ancestor).map(Transparency)
+    get_visibility_from_ancestorlike_node(context, ancestor).map(Transparency)
 }
 
 fn bind_expression(

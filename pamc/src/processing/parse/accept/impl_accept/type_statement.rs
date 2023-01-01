@@ -32,8 +32,8 @@ impl Accept for UnfinishedTypeStatement {
                     TokenKind::LParen => {
                         if let PendingPubClause::PubKw(_) = visibility {
                             AcceptResult::PushAndContinueReducingWithNewTop(
-                                UnfinishedStackItem::ParenthesizedWeakAncestor(
-                                    UnfinishedParenthesizedWeakAncestor::Empty,
+                                UnfinishedStackItem::ParenthesizedAncestorlike(
+                                    UnfinishedParenthesizedAncestorlike::Empty,
                                 ),
                                 FinishedStackItem::Token(token),
                             )
@@ -50,8 +50,8 @@ impl Accept for UnfinishedTypeStatement {
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                FinishedStackItem::ParenthesizedWeakAncestor(
-                    weak_ancestor_first_token,
+                FinishedStackItem::ParenthesizedAncestorlike(
+                    ancestorlike_first_token,
                     ancestor,
                 ) => {
                     if let PendingPubClause::PubKw(pub_kw_token) = visibility {
@@ -62,8 +62,8 @@ impl Accept for UnfinishedTypeStatement {
                         AcceptResult::ContinueToNextToken
                     } else {
                         wrapped_unexpected_finished_item_err(
-                            &FinishedStackItem::ParenthesizedWeakAncestor(
-                                weak_ancestor_first_token,
+                            &FinishedStackItem::ParenthesizedAncestorlike(
+                                ancestorlike_first_token,
                                 ancestor,
                             ),
                         )
