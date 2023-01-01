@@ -208,3 +208,74 @@ fn visibility_not_global_or_non_strict_ancestor() {
         },
     );
 }
+
+#[test]
+fn use_mod_as_is() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_mod_as_is/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::CannotUselesslyImportModSuperOrPackAsIs(
+                CannotUselesslyImportModSuperOrPackAsIsError { use_statement },
+            ) => {
+                assert_eq!(
+                    simplified_ast::UseStatementFirstComponentKind::Mod,
+                    use_statement.first_component.kind
+                );
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
+
+#[test]
+fn use_super_as_is() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_super_as_is/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::CannotUselesslyImportModSuperOrPackAsIs(
+                CannotUselesslyImportModSuperOrPackAsIsError { use_statement },
+            ) => {
+                assert_eq!(
+                    simplified_ast::UseStatementFirstComponentKind::Super(
+                        NonZeroUsize::new(1).unwrap()
+                    ),
+                    use_statement.first_component.kind
+                );
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
+
+#[test]
+fn use_pack_as_is() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_pack_as_is/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::CannotUselesslyImportModSuperOrPackAsIs(
+                CannotUselesslyImportModSuperOrPackAsIsError { use_statement },
+            ) => {
+                assert_eq!(
+                    simplified_ast::UseStatementFirstComponentKind::Pack,
+                    use_statement.first_component.kind
+                );
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}

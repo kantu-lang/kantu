@@ -34,6 +34,8 @@ pub use crate::processing::{
     validate_variant_return_types::validate_variant_return_types_in_file_items,
 };
 
+pub use std::num::NonZeroUsize;
+
 #[macro_use]
 pub mod macros;
 
