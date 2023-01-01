@@ -100,3 +100,13 @@ fn pack_relative_with_alias() {
         ),
     });
 }
+
+#[test]
+fn identity_eq_transparent() {
+    expect_success_with_no_warnings(ProjectPath {
+        callee_file_path: file!(),
+        checked_unadjusted_pack_omlet_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/identity_eq_transparent/pack.omlet"
+        ),
+    });
+}
