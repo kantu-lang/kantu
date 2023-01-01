@@ -15,6 +15,7 @@ pub fn type_check_file_items(
         registry,
         equality_checker: &mut equality_checker,
         warnings: &mut warnings,
+        required_transparency_for_substitution: None,
         context: &mut context,
     };
 

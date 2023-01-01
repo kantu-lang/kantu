@@ -188,6 +188,32 @@ pub enum ExpressionRef<'a> {
     Check(&'a Check),
 }
 
+impl ExpressionRef<'_> {
+    pub fn id(self) -> ExpressionId {
+        match self {
+            ExpressionRef::Name(expr) => ExpressionId::Name(expr.id),
+            ExpressionRef::Todo(expr) => ExpressionId::Todo(expr.id),
+            ExpressionRef::Call(expr) => ExpressionId::Call(expr.id),
+            ExpressionRef::Fun(expr) => ExpressionId::Fun(expr.id),
+            ExpressionRef::Match(expr) => ExpressionId::Match(expr.id),
+            ExpressionRef::Forall(expr) => ExpressionId::Forall(expr.id),
+            ExpressionRef::Check(expr) => ExpressionId::Check(expr.id),
+        }
+    }
+
+    pub fn span(self) -> Option<TextSpan> {
+        match self {
+            ExpressionRef::Name(expr) => expr.span,
+            ExpressionRef::Todo(expr) => expr.span,
+            ExpressionRef::Call(expr) => expr.span,
+            ExpressionRef::Fun(expr) => expr.span,
+            ExpressionRef::Match(expr) => expr.span,
+            ExpressionRef::Forall(expr) => expr.span,
+            ExpressionRef::Check(expr) => expr.span,
+        }
+    }
+}
+
 use subregistry::*;
 mod subregistry {
     use super::*;

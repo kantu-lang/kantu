@@ -21,8 +21,27 @@ fn evaluate_well_typed_name_expression(
     let name = state.registry.get(name_id);
     let definition = state.context.get_definition(name.db_index, state.registry);
     match definition {
-        // TODO: Checkk `transparency`
-        ContextEntryDefinition::Alias { value_id, .. } => value_id,
+        ContextEntryDefinition::Alias {
+            value_id: alias_value_id,
+            transparency,
+            ..
+        } => {
+            let can_substitute =
+                if let Some(required_transparency) = state.required_transparency_for_substitution {
+                    is_left_at_least_as_permissive_as_right(
+                        state.file_tree,
+                        transparency.0,
+                        required_transparency.0,
+                    )
+                } else {
+                    true
+                };
+            if can_substitute {
+                alias_value_id
+            } else {
+                NormalFormId::unchecked_new(ExpressionId::Name(name_id))
+            }
+        }
 
         ContextEntryDefinition::Adt {
             variant_name_list_id: _,
@@ -338,18 +357,34 @@ fn evaluate_well_typed_labeled_call_arg(
             value_id,
         } => {
             let definition = state.context.get_definition(db_index, state.registry);
-            // TODO: Check `transparency`.
-            if let ContextEntryDefinition::Alias { value_id, .. } = definition {
-                LabeledCallArgId::Explicit {
-                    label_id,
-                    value_id: value_id.raw(),
+            if let ContextEntryDefinition::Alias {
+                value_id: alias_value_id,
+                transparency,
+                ..
+            } = definition
+            {
+                let can_substitute = if let Some(required_transparency) =
+                    state.required_transparency_for_substitution
+                {
+                    is_left_at_least_as_permissive_as_right(
+                        state.file_tree,
+                        transparency.0,
+                        required_transparency.0,
+                    )
+                } else {
+                    true
+                };
+                if can_substitute {
+                    return LabeledCallArgId::Explicit {
+                        label_id,
+                        value_id: alias_value_id.raw(),
+                    };
                 }
-            } else {
-                LabeledCallArgId::Implicit {
-                    label_id,
-                    db_index,
-                    value_id,
-                }
+            }
+            LabeledCallArgId::Implicit {
+                label_id,
+                db_index,
+                value_id,
             }
         }
         LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
