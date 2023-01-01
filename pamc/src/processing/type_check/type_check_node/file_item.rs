@@ -143,7 +143,7 @@ pub(super) fn type_check_let_statement_dirty(
     let_statement_id: NodeId<LetStatement>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let let_statement = state.registry.get(let_statement_id).clone();
-    state.required_transparency_for_substitution = Some(Transparency(let_statement.visibility.0));
+    state.required_transparency_for_substitution = Some(let_statement.transparency);
 
     let type_id = get_type_of_expression_dirty(state, None, let_statement.value_id)?;
 
