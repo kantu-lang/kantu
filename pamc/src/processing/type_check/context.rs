@@ -53,13 +53,17 @@ pub struct ContextEntry {
 pub enum ContextEntryDefinition {
     Alias {
         value_id: NormalFormId,
+        visibility: Visibility,
+        transparency: Transparency,
     },
     /// Algebraic data type
     Adt {
         variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+        visibility: Visibility,
     },
     Variant {
         name_id: NodeId<Identifier>,
+        visibility: Visibility,
     },
     Uninterpreted,
 }
@@ -254,6 +258,17 @@ impl Context {
             .definition
             .upshift(index.0 + 1, registry)
     }
+
+    pub fn get_visibility(&self, index: DbIndex) -> Visibility {
+        let level = self.index_to_level(index);
+        let definition = self.local_type_stack[level.0].definition;
+        match definition {
+            ContextEntryDefinition::Uninterpreted => Visibility(ModScope::Global),
+            ContextEntryDefinition::Alias { visibility, .. } => visibility,
+            ContextEntryDefinition::Adt { visibility, .. } => visibility,
+            ContextEntryDefinition::Variant { visibility, .. } => visibility,
+        }
+    }
 }
 
 impl SubstituteInPlaceAndGetNoOpStatus for Context {
@@ -303,11 +318,12 @@ impl Context {
             let mut context = self.clone_slice(level);
             evaluate_well_typed_expression(
                 &mut State {
-                    context: &mut context,
+                    file_tree: state.file_tree,
                     substitution_context: state.substitution_context,
                     registry: state.registry,
                     equality_checker: state.equality_checker,
                     warnings: state.warnings,
+                    context: &mut context,
                 },
                 substituted_type_id,
             )
@@ -326,7 +342,11 @@ impl Context {
 
         let original_definition = self.local_type_stack[level.0].definition;
         let (new_definition, was_no_op) = match original_definition {
-            ContextEntryDefinition::Alias { value_id } => {
+            ContextEntryDefinition::Alias {
+                value_id,
+                visibility,
+                transparency,
+            } => {
                 let substituted = value_id
                     .raw()
                     .upshift(shift_amount, state.registry)
@@ -338,14 +358,17 @@ impl Context {
                     ContextEntryDefinition::Alias {
                         value_id: evaluate_well_typed_expression(
                             &mut State {
-                                context: &mut context,
+                                file_tree: state.file_tree,
                                 substitution_context: state.substitution_context,
                                 registry: state.registry,
                                 equality_checker: state.equality_checker,
                                 warnings: state.warnings,
+                                context: &mut context,
                             },
                             substituted,
                         ),
+                        visibility,
+                        transparency,
                     }
                 };
                 (new_definition, was_no_op)

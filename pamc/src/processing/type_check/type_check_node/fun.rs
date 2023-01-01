@@ -50,6 +50,8 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
             type_id: shifted_fun_type_id,
             definition: ContextEntryDefinition::Alias {
                 value_id: normalized_fun_id,
+                visibility: Visibility(ModScope::Global),
+                transparency: Transparency(ModScope::Global),
             },
         })?;
     }

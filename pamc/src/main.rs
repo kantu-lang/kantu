@@ -59,7 +59,12 @@ fn main() {
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
             .expect("Type positivity validation failed");
-    type_check_file_items(&mut registry, file_item_list_id).expect("Type checking failed");
+    type_check_file_items(
+        &FileTree::from_root(file_id),
+        &mut registry,
+        file_item_list_id,
+    )
+    .expect("Type checking failed");
     let js_ast = JavaScript::generate_code(&registry, file_item_list_id.raw())
         .expect("Code generation failed");
     println!(

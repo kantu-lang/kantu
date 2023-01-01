@@ -17,7 +17,7 @@ fn expect_type_check_error(
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
             .expect("Type positivity validation failed");
-    let err = type_check_file_items(&mut registry, file_item_list_id)
+    let err = type_check_file_items(&file_tree, &mut registry, file_item_list_id)
         .expect_err("Type checking unexpected succeeded");
     panicker(&registry, err);
 }

@@ -36,7 +36,11 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
             .expect("Type positivity validation failed");
-    let err = type_check_file_items(&mut registry, file_item_list_id)
-        .expect_err("Type checking unexpected succeeded");
+    let err = type_check_file_items(
+        &FileTree::from_root(file_id),
+        &mut registry,
+        file_item_list_id,
+    )
+    .expect_err("Type checking unexpected succeeded");
     panicker(&registry, err);
 }

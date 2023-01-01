@@ -21,12 +21,17 @@ fn evaluate_well_typed_name_expression(
     let name = state.registry.get(name_id);
     let definition = state.context.get_definition(name.db_index, state.registry);
     match definition {
-        ContextEntryDefinition::Alias { value_id } => value_id,
+        // TODO: Checkk `transparency`
+        ContextEntryDefinition::Alias { value_id, .. } => value_id,
 
         ContextEntryDefinition::Adt {
             variant_name_list_id: _,
+            visibility: _,
         }
-        | ContextEntryDefinition::Variant { name_id: _ }
+        | ContextEntryDefinition::Variant {
+            name_id: _,
+            visibility: _,
+        }
         | ContextEntryDefinition::Uninterpreted => {
             NormalFormId::unchecked_new(ExpressionId::Name(name_id))
         }
@@ -333,7 +338,8 @@ fn evaluate_well_typed_labeled_call_arg(
             value_id,
         } => {
             let definition = state.context.get_definition(db_index, state.registry);
-            if let ContextEntryDefinition::Alias { value_id } = definition {
+            // TODO: Check `transparency`.
+            if let ContextEntryDefinition::Alias { value_id, .. } = definition {
                 LabeledCallArgId::Explicit {
                     label_id,
                     value_id: value_id.raw(),
