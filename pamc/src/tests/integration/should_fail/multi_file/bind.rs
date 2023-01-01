@@ -297,3 +297,21 @@ fn mod_file_not_found() {
         },
     );
 }
+
+#[test]
+fn term_in_visibility_modifier() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/term_in_visibility_modifier/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError { name_components }) => {
+                assert_eq!("pack.foo.Foo", name_components.iter().map(|c| c.name.src_str()).collect::<Vec<_>>().join("."));
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
