@@ -138,3 +138,25 @@ fn leaky_let_value() {
         },
     );
 }
+
+#[test]
+fn let_value_priv() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/let_value_priv/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::NameIsPrivate(NameIsPrivateError {
+                name_component,
+                required_visibility: _,
+                actual_visibility: _,
+            }) => {
+                assert_eq!("Nat", name_component.name.src_str());
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
