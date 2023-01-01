@@ -80,3 +80,13 @@ fn opaque_nat() {
         ),
     });
 }
+
+#[test]
+fn let_not_leaky_because_its_opaque() {
+    expect_success_with_no_warnings(ProjectPath {
+        callee_file_path: file!(),
+        checked_unadjusted_pack_omlet_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/let_not_leaky_because_its_opaque/pack.omlet"
+        ),
+    });
+}
