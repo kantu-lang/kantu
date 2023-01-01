@@ -4,7 +4,7 @@ use crate::data::{
     file_tree::FileTree,
     non_empty_vec::*,
     // `ub` stands for "unbound".
-    simplified_ast::{self as ub, ParenthesizedQuasiAncestor},
+    simplified_ast::{self as ub, ParenthesizedModScopeModifier},
     FileId,
     TextSpan,
 };
@@ -247,20 +247,20 @@ fn get_visibility(
     let Some(pub_clause) = pub_clause else {
         return Ok(Visibility::Mod(context.current_file_id()));
     };
-    let Some(ancestor) = &pub_clause.ancestor else {
+    let Some(scope_modifier) = &pub_clause.scope_modifier else {
         return Ok(Visibility::Global);
     };
-    get_visibility_from_quasi_ancestor_node(context, ancestor)
+    get_visibility_from_mod_scope_modifier(context, scope_modifier)
 }
 
-fn get_visibility_from_quasi_ancestor_node(
+fn get_visibility_from_mod_scope_modifier(
     context: &Context,
-    ancestor: &ParenthesizedQuasiAncestor,
+    scope_modifier: &ParenthesizedModScopeModifier,
 ) -> Result<Visibility, BindError> {
-    match &ancestor.kind {
-        ub::QuasiAncestorKind::Global => Ok(Visibility::Global),
-        ub::QuasiAncestorKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
-        ub::QuasiAncestorKind::Super(n) => {
+    match &scope_modifier.kind {
+        ub::ModScopeModifierKind::Global => Ok(Visibility::Global),
+        ub::ModScopeModifierKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
+        ub::ModScopeModifierKind::Super(n) => {
             if let Some(DotGraphEntry {
                 node: DotGraphNode::Mod(ancestor_id),
                 def: _,
@@ -272,21 +272,21 @@ fn get_visibility_from_quasi_ancestor_node(
             } else {
                 Err(NameNotFoundError {
                     name_components: vec![ub::Identifier {
-                        span: ancestor.span,
+                        span: scope_modifier.span,
                         name: IdentifierName::new("super".to_string()),
                     }],
                 }
                 .into())
             }
         }
-        ub::QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+        ub::ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
             let name_components: Vec<ub::Identifier> = {
                 let pack_kw_name = IdentifierName::Reserved(ReservedIdentifierName::Pack);
                 let pack_kw = ub::Identifier {
                     span: TextSpan {
-                        file_id: ancestor.span.file_id,
-                        start: ancestor.span.start,
-                        end: ancestor.span.start + pack_kw_name.src_str().len(),
+                        file_id: scope_modifier.span.file_id,
+                        start: scope_modifier.span.start,
+                        end: scope_modifier.span.start + pack_kw_name.src_str().len(),
                     },
                     name: pack_kw_name,
                 };
@@ -304,9 +304,9 @@ fn get_visibility_from_quasi_ancestor_node(
                     ) {
                         Ok(visibility)
                     } else {
-                        Err(BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(
-                            VisibilityWasNotQuasiAncestorOfCurrentModError {
-                                quasi_ancestor: ancestor.clone(),
+                        Err(BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(
+                            VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
+                                visibility_modifier: scope_modifier.clone(),
                             },
                         ))
                     }
@@ -577,20 +577,20 @@ fn bind_let_statement_dirty(
 
 fn get_transparency(
     context: &Context,
-    transparency: Option<&ub::ParenthesizedQuasiAncestor>,
+    transparency_modifier: Option<&ub::ParenthesizedModScopeModifier>,
     visibility: Visibility,
 ) -> Result<Transparency, BindError> {
-    let Some(ancestor) = transparency else {
+    let Some(scope_modifier) = transparency_modifier else {
         return Ok(Transparency(Visibility::Mod(context.current_file_id())));
     };
 
-    let transparency = get_visibility_from_quasi_ancestor_node(context, ancestor)
+    let transparency = get_visibility_from_mod_scope_modifier(context, scope_modifier)
         .map(Transparency)
         .map_err(|err| match err {
-            BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(err) => {
-                BindError::TransparencyWasNotQuasiAncestorOfCurrentMod(
-                    TransparencyWasNotQuasiAncestorOfCurrentModError {
-                        quasi_ancestor: err.quasi_ancestor,
+            BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(err) => {
+                BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
+                    TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
+                        transparency_modifier: err.visibility_modifier,
                     },
                 )
             }
@@ -601,7 +601,7 @@ fn get_transparency(
         context,
         visibility,
         transparency,
-        ancestor,
+        scope_modifier,
     )?;
 
     Ok(transparency)
@@ -611,14 +611,16 @@ fn verify_visibility_is_at_least_as_permissive_as_transparency(
     context: &Context,
     visibility: Visibility,
     transparency: Transparency,
-    ancestor: &ub::ParenthesizedQuasiAncestor,
+    scope_modifier: &ub::ParenthesizedModScopeModifier,
 ) -> Result<(), BindError> {
     if !context.is_left_at_least_as_permissive_as_right(visibility, transparency.0) {
-        return Err(BindError::TransparencyWasNotQuasiDescendantOfVisibility(
-            TransparencyWasNotQuasiDescendantOfVisibilityError {
-                transparency: ancestor.clone(),
-            },
-        ));
+        return Err(
+            BindError::TransparencyWasNotAtLeastAsPermissiveAsVisibility(
+                TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {
+                    transparency_modifier: scope_modifier.clone(),
+                },
+            ),
+        );
     }
     Ok(())
 }

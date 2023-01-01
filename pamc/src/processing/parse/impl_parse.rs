@@ -84,16 +84,16 @@ impl Parse for Variant {
     }
 }
 
-impl Parse for ParenthesizedQuasiAncestor {
+impl Parse for ParenthesizedModScopeModifier {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::ParenthesizedQuasiAncestor(
-            UnfinishedParenthesizedQuasiAncestor::Empty,
+        vec![UnfinishedStackItem::ParenthesizedModScopeModifier(
+            UnfinishedParenthesizedModScopeModifier::Empty,
         )]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
-            FinishedStackItem::ParenthesizedQuasiAncestor(_, ancestor) => Ok(ancestor),
+            FinishedStackItem::ParenthesizedModScopeModifier(_, modifier) => Ok(modifier),
             other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }

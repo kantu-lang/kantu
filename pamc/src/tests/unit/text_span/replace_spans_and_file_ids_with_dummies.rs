@@ -142,15 +142,17 @@ impl ReplaceSpansAndFileIdsWithDummies for TypeStatement {
 
 impl ReplaceSpansAndFileIdsWithDummies for PubClause {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        let ancestor = self.ancestor.replace_spans_and_file_ids_with_dummies();
+        let scope_modifier = self
+            .scope_modifier
+            .replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
-            ancestor,
+            scope_modifier,
         }
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedQuasiAncestor {
+impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedModScopeModifier {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let kind = self.kind.replace_spans_and_file_ids_with_dummies();
         Self {
@@ -160,16 +162,16 @@ impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedQuasiAncestor {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for QuasiAncestorKind {
+impl ReplaceSpansAndFileIdsWithDummies for ModScopeModifierKind {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         match self {
-            QuasiAncestorKind::Global => QuasiAncestorKind::Global,
-            QuasiAncestorKind::Mod => QuasiAncestorKind::Mod,
-            QuasiAncestorKind::Super(n) => QuasiAncestorKind::Super(n),
-            QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+            ModScopeModifierKind::Global => ModScopeModifierKind::Global,
+            ModScopeModifierKind::Mod => ModScopeModifierKind::Mod,
+            ModScopeModifierKind::Super(n) => ModScopeModifierKind::Super(n),
+            ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
                 let path_after_pack_kw =
                     path_after_pack_kw.replace_spans_and_file_ids_with_dummies();
-                QuasiAncestorKind::PackRelative { path_after_pack_kw }
+                ModScopeModifierKind::PackRelative { path_after_pack_kw }
             }
         }
     }

@@ -149,33 +149,33 @@ impl ShallowCheckOwnSpan for PubClause {
 }
 impl DeepCheckChildSpans for PubClause {
     fn deep_check_child_spans(&self, src: &str) {
-        self.ancestor.deep_check_spans(src);
+        self.scope_modifier.deep_check_spans(src);
     }
 }
 
-impl ShallowCheckOwnSpan for ParenthesizedQuasiAncestor {
+impl ShallowCheckOwnSpan for ParenthesizedModScopeModifier {
     fn shallow_check_own_span(&self, src: &str) {
         assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
-impl DeepCheckChildSpans for ParenthesizedQuasiAncestor {
+impl DeepCheckChildSpans for ParenthesizedModScopeModifier {
     fn deep_check_child_spans(&self, src: &str) {
         self.kind.deep_check_spans(src);
     }
 }
 
-impl ShallowCheckOwnSpan for QuasiAncestorKind {
+impl ShallowCheckOwnSpan for ModScopeModifierKind {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `QuasiAncestorKind` doesn't have its own span.
+        // Do nothing, since `ModScopeModifierKind` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for QuasiAncestorKind {
+impl DeepCheckChildSpans for ModScopeModifierKind {
     fn deep_check_child_spans(&self, src: &str) {
         match self {
-            QuasiAncestorKind::Global => {}
-            QuasiAncestorKind::Mod => {}
-            QuasiAncestorKind::Super(_) => {}
-            QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+            ModScopeModifierKind::Global => {}
+            ModScopeModifierKind::Mod => {}
+            ModScopeModifierKind::Super(_) => {}
+            ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
                 path_after_pack_kw.deep_check_spans(src);
             }
         }

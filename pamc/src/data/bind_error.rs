@@ -10,10 +10,14 @@ pub enum BindError {
     ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError),
     CannotUselesslyImportItemAsSelf(CannotUselesslyImportItemAsSelfError),
     ModFileNotFound(ModFileNotFoundError),
-    VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError),
-    TransparencyWasNotQuasiAncestorOfCurrentMod(TransparencyWasNotQuasiAncestorOfCurrentModError),
-    TransparencyWasNotQuasiDescendantOfVisibility(
-        TransparencyWasNotQuasiDescendantOfVisibilityError,
+    VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(
+        VisibilityWasNotAtLeastAsPermissiveAsCurrentModError,
+    ),
+    TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
+        TransparencyWasNotAtLeastAsPermissiveAsCurrentModError,
+    ),
+    TransparencyWasNotAtLeastAsPermissiveAsVisibility(
+        TransparencyWasNotAtLeastAsPermissiveAsVisibilityError,
     ),
 }
 
@@ -114,31 +118,31 @@ impl From<ModFileNotFoundError> for BindError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VisibilityWasNotQuasiAncestorOfCurrentModError {
-    pub quasi_ancestor: unbound::ParenthesizedQuasiAncestor,
+pub struct VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
+    pub visibility_modifier: unbound::ParenthesizedModScopeModifier,
 }
-impl From<VisibilityWasNotQuasiAncestorOfCurrentModError> for BindError {
-    fn from(error: VisibilityWasNotQuasiAncestorOfCurrentModError) -> Self {
-        Self::VisibilityWasNotQuasiAncestorOfCurrentMod(error)
+impl From<VisibilityWasNotAtLeastAsPermissiveAsCurrentModError> for BindError {
+    fn from(error: VisibilityWasNotAtLeastAsPermissiveAsCurrentModError) -> Self {
+        Self::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(error)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TransparencyWasNotQuasiAncestorOfCurrentModError {
-    pub quasi_ancestor: unbound::ParenthesizedQuasiAncestor,
+pub struct TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
+    pub transparency_modifier: unbound::ParenthesizedModScopeModifier,
 }
-impl From<TransparencyWasNotQuasiAncestorOfCurrentModError> for BindError {
-    fn from(error: TransparencyWasNotQuasiAncestorOfCurrentModError) -> Self {
-        Self::TransparencyWasNotQuasiAncestorOfCurrentMod(error)
+impl From<TransparencyWasNotAtLeastAsPermissiveAsCurrentModError> for BindError {
+    fn from(error: TransparencyWasNotAtLeastAsPermissiveAsCurrentModError) -> Self {
+        Self::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(error)
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TransparencyWasNotQuasiDescendantOfVisibilityError {
-    pub transparency: unbound::ParenthesizedQuasiAncestor,
+pub struct TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {
+    pub transparency_modifier: unbound::ParenthesizedModScopeModifier,
 }
-impl From<TransparencyWasNotQuasiDescendantOfVisibilityError> for BindError {
-    fn from(error: TransparencyWasNotQuasiDescendantOfVisibilityError) -> Self {
-        Self::TransparencyWasNotQuasiDescendantOfVisibility(error)
+impl From<TransparencyWasNotAtLeastAsPermissiveAsVisibilityError> for BindError {
+    fn from(error: TransparencyWasNotAtLeastAsPermissiveAsVisibilityError) -> Self {
+        Self::TransparencyWasNotAtLeastAsPermissiveAsVisibility(error)
     }
 }

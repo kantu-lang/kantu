@@ -82,17 +82,17 @@ pub struct TypeStatement {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PubClause {
     pub span: TextSpan,
-    pub ancestor: Option<ParenthesizedQuasiAncestor>,
+    pub scope_modifier: Option<ParenthesizedModScopeModifier>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ParenthesizedQuasiAncestor {
+pub struct ParenthesizedModScopeModifier {
     pub span: TextSpan,
-    pub kind: QuasiAncestorKind,
+    pub kind: ModScopeModifierKind,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum QuasiAncestorKind {
+pub enum ModScopeModifierKind {
     Global,
     Mod,
     Super(NonZeroUsize),
@@ -135,7 +135,7 @@ pub struct Variant {
 pub struct LetStatement {
     pub span: TextSpan,
     pub visibility: Option<PubClause>,
-    pub transparency: Option<ParenthesizedQuasiAncestor>,
+    pub transparency: Option<ParenthesizedModScopeModifier>,
     pub name: Identifier,
     pub value: Expression,
 }
