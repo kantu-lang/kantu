@@ -571,7 +571,18 @@ fn get_transparency(
     let Some(ancestor) = transparency else {
         return Ok(Transparency(Visibility::Mod(context.current_file_id())));
     };
-    get_visibility_from_quasi_ancestor_node(context, ancestor).map(Transparency)
+    get_visibility_from_quasi_ancestor_node(context, ancestor)
+        .map(Transparency)
+        .map_err(|err| match err {
+            BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(err) => {
+                BindError::TransparencyWasNotQuasiAncestorOfCurrentMod(
+                    TransparencyWasNotQuasiAncestorOfCurrentModError {
+                        quasi_ancestor: err.quasi_ancestor,
+                    },
+                )
+            }
+            other_err => other_err,
+        })
 }
 
 fn bind_expression(

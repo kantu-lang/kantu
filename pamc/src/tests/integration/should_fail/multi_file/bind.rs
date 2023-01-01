@@ -184,16 +184,42 @@ fn type_priv() {
 }
 
 #[test]
-fn visibility_not_global_or_non_strict_ancestor() {
+fn visibility_not_quasi_ancestor_of_current_mod() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
             checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/visibility_not_global_or_non_strict_ancestor/pack.omlet"
+                "../../../sample_code/should_fail/multi_file/bind/visibility_not_quasi_ancestor_of_current_mod/pack.omlet"
             ),
         },
         |err| match err {
             BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError {
+                quasi_ancestor,
+            }) => {
+                match quasi_ancestor.kind {
+                    simplified_ast::QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+                        assert_eq!(1, path_after_pack_kw.len());
+                        assert_eq!("nat", path_after_pack_kw[0].name.src_str());
+                    }
+                    _ => panic!("Unexpected quasi ancestor: {:?}", quasi_ancestor),
+                }
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
+
+#[test]
+fn transparency_not_quasi_ancestor_of_current_mod() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/transparency_not_quasi_ancestor_of_current_mod/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::TransparencyWasNotQuasiAncestorOfCurrentMod(TransparencyWasNotQuasiAncestorOfCurrentModError {
                 quasi_ancestor,
             }) => {
                 match quasi_ancestor.kind {
