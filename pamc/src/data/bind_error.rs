@@ -12,6 +12,9 @@ pub enum BindError {
     ModFileNotFound(ModFileNotFoundError),
     VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError),
     TransparencyWasNotQuasiAncestorOfCurrentMod(TransparencyWasNotQuasiAncestorOfCurrentModError),
+    TransparencyWasNotQuasiDescendantOfVisibility(
+        TransparencyWasNotQuasiDescendantOfVisibilityError,
+    ),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -127,5 +130,15 @@ pub struct TransparencyWasNotQuasiAncestorOfCurrentModError {
 impl From<TransparencyWasNotQuasiAncestorOfCurrentModError> for BindError {
     fn from(error: TransparencyWasNotQuasiAncestorOfCurrentModError) -> Self {
         Self::TransparencyWasNotQuasiAncestorOfCurrentMod(error)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TransparencyWasNotQuasiDescendantOfVisibilityError {
+    pub transparency: unbound::ParenthesizedQuasiAncestor,
+}
+impl From<TransparencyWasNotQuasiDescendantOfVisibilityError> for BindError {
+    fn from(error: TransparencyWasNotQuasiDescendantOfVisibilityError) -> Self {
+        Self::TransparencyWasNotQuasiDescendantOfVisibility(error)
     }
 }
