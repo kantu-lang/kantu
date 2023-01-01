@@ -39,3 +39,23 @@ fn name_clash() {
         },
     );
 }
+
+#[test]
+fn leaky_use_single() {
+    expect_bind_error(
+        file!(),
+        checked_path!(
+            "../../../sample_code/should_fail/multi_file/bind/leaky_use_single/pack.omlet"
+        ),
+        |err| match err {
+            BindError::NameIsPrivate(NameIsPrivateError {
+                name_component,
+                required_visibility: _,
+                actual_visibility: _,
+            }) => {
+                assert_eq!("Foo", name_component.name.src_str());
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
