@@ -32,8 +32,6 @@ fn expect_success_with_no_warnings(file_path: &str, checked_unadjusted_pack_omle
         .expect("Code generation failed");
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn factorial() {
     expect_success_with_no_warnings(

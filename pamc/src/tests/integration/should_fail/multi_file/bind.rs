@@ -64,31 +64,9 @@ fn leaky_use_single() {
 fn leaky_use_single_nested() {
     expect_bind_error(
         file!(),
-        checked_path!(
-            "../../../sample_code/should_fail/multi_file/bind/leaky_use_single_nested/pack.omlet"
-        ),
+        checked_path!("../../../sample_code/should_fail/multi_file/bind/use_priv/pack.omlet"),
         |err| match err {
-            BindError::CannotLeakPrivateName(CannotLeakPrivateNameError {
-                name_component,
-                required_visibility: _,
-                actual_visibility: _,
-            }) => {
-                assert_eq!("Foo", name_component.name.src_str());
-            }
-            _ => panic!("Unexpected error: {:?}", err),
-        },
-    );
-}
-
-#[test]
-fn locally_leaky_use_single_nested() {
-    expect_bind_error(
-        file!(),
-        checked_path!(
-            "../../../sample_code/should_fail/multi_file/bind/locally_leaky_use_single_nested/pack.omlet"
-        ),
-        |err| match err {
-            BindError::CannotLeakPrivateName(CannotLeakPrivateNameError {
+            BindError::NameIsPrivate(NameIsPrivateError {
                 name_component,
                 required_visibility: _,
                 actual_visibility: _,
