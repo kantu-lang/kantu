@@ -391,3 +391,26 @@ fn expected_term_got_mod() {
         },
     );
 }
+
+#[test]
+fn visibility_stricter_than_transparency() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/visibility_stricter_than_transparency/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::TransparencyWasNotQuasiDescendantOfVisibility(TransparencyWasNotQuasiDescendantOfVisibilityError {
+                transparency,
+            }) => {
+                assert_eq!(
+                    simplified_ast::QuasiAncestorKind::Global,
+                    transparency.kind
+                );
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}

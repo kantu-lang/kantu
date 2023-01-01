@@ -373,16 +373,23 @@ fn add_item_from_let_statement(
     item: ub::LetStatement,
     item_file_id: FileId,
 ) -> Result<(), BindError> {
+    let visibility = get_visibility(
+        &mut state
+            .context_data
+            .create_context_for_mod(item_file_id, None),
+        item.visibility.as_ref(),
+    )?;
     let transparency = get_transparency(
         &mut state
             .context_data
             .create_context_for_mod(item_file_id, None),
         item.transparency.as_ref(),
+        visibility,
     )?;
     let context = &mut state
         .context_data
         .create_context_for_mod(item_file_id, Some(transparency.0));
-    let bound = bind_let_statement(context, item)?;
+    let bound = bind_let_statement(context, item, visibility, transparency)?;
     state.out.push(FileItem::Let(bound));
     Ok(())
 }
@@ -543,17 +550,21 @@ fn bind_variant_and_add_restricted_dot_target_dirty(
 fn bind_let_statement(
     context: &mut Context,
     let_statement: ub::LetStatement,
+    visibility: Visibility,
+    transparency: Transparency,
 ) -> Result<LetStatement, BindError> {
-    untaint_err(context, let_statement, bind_let_statement_dirty)
+    untaint_err(
+        context,
+        (let_statement, visibility, transparency),
+        bind_let_statement_dirty,
+    )
 }
 
 fn bind_let_statement_dirty(
     context: &mut Context,
-    let_statement: ub::LetStatement,
+    (let_statement, visibility, transparency): (ub::LetStatement, Visibility, Transparency),
 ) -> Result<LetStatement, BindError> {
     let value = bind_expression(context, let_statement.value)?;
-    let visibility = get_visibility(context, let_statement.visibility.as_ref())?;
-    let transparency = get_transparency(context, let_statement.transparency.as_ref())?;
     let name = create_name_and_add_to_mod(context, let_statement.name, visibility)?;
     Ok(LetStatement {
         span: Some(let_statement.span),
@@ -567,11 +578,13 @@ fn bind_let_statement_dirty(
 fn get_transparency(
     context: &Context,
     transparency: Option<&ub::ParenthesizedQuasiAncestor>,
+    visibility: Visibility,
 ) -> Result<Transparency, BindError> {
     let Some(ancestor) = transparency else {
         return Ok(Transparency(Visibility::Mod(context.current_file_id())));
     };
-    get_visibility_from_quasi_ancestor_node(context, ancestor)
+
+    let transparency = get_visibility_from_quasi_ancestor_node(context, ancestor)
         .map(Transparency)
         .map_err(|err| match err {
             BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(err) => {
@@ -582,7 +595,32 @@ fn get_transparency(
                 )
             }
             other_err => other_err,
-        })
+        })?;
+
+    verify_visibility_is_at_least_as_permissive_as_transparency(
+        context,
+        visibility,
+        transparency,
+        ancestor,
+    )?;
+
+    Ok(transparency)
+}
+
+fn verify_visibility_is_at_least_as_permissive_as_transparency(
+    context: &Context,
+    visibility: Visibility,
+    transparency: Transparency,
+    ancestor: &ub::ParenthesizedQuasiAncestor,
+) -> Result<(), BindError> {
+    if !context.is_left_at_least_as_permissive_as_right(visibility, transparency.0) {
+        return Err(BindError::TransparencyWasNotQuasiDescendantOfVisibility(
+            TransparencyWasNotQuasiDescendantOfVisibilityError {
+                transparency: ancestor.clone(),
+            },
+        ));
+    }
+    Ok(())
 }
 
 fn bind_expression(
