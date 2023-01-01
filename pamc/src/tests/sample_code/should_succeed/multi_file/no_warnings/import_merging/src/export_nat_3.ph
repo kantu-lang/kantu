@@ -1,1 +1,1 @@
-pub use super.Nat as NicknamedNat;
+pub(pack) use super.Nat as NicknamedNat;
