@@ -30,10 +30,16 @@ pub struct TypeStatement {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Visibility {
+pub enum ModScope {
     Global,
     Mod(FileId),
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Visibility(pub ModScope);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Transparency(pub ModScope);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamVec {
@@ -98,9 +104,6 @@ pub struct LetStatement {
     pub name: Identifier,
     pub value: Expression,
 }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Transparency(pub Visibility);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
