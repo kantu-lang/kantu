@@ -338,3 +338,30 @@ fn term_in_visibility_modifier() {
         },
     );
 }
+
+#[test]
+fn expected_term_got_mod() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/expected_term_got_mod/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError {
+                name_components,
+            }) => {
+                assert_eq!(
+                    "foo",
+                    name_components
+                        .iter()
+                        .map(|c| c.name.src_str())
+                        .collect::<Vec<_>>()
+                        .join(".")
+                );
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
