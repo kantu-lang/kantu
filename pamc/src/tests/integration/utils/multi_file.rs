@@ -5,11 +5,32 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub fn get_files_and_file_tree(
-    file_path: &str,
-    checked_unadjusted_pack_omlet_path: &str,
-) -> (Vec<simplified_ast::File>, FileTree) {
-    let adjusted_pack_omlet_path = Path::new(file_path)
+#[derive(Clone, Copy, Debug)]
+pub struct ProjectPath<'a> {
+    /// `checked_unadjusted_pack_omlet_path` should **always** be created using the
+    /// `checked_path!` macro.
+    pub checked_unadjusted_pack_omlet_path: &'a str,
+
+    /// `callee_file_path` should **always** be `file!()`.
+    ///
+    /// This is so it will be consistent with `checked_unadjusted_pack_omlet_path`.
+    ///
+    /// The reason we make `callee_file_path` a parameter rather than simply
+    /// hardcoding `file!()` in the function is because the value
+    /// of `file!()` will change depending on where it is written.
+    /// The value of `checked_unadjusted_pack_omlet_path` is relative to the
+    /// calling file, so the value of `callee_file_path` must also be relative to the calling file.
+    /// Thus, we cannot hardcode `file!()` in the function definition,
+    /// and must instead require the caller to pass it in as an argument.
+    pub callee_file_path: &'a str,
+}
+
+pub fn get_files_and_file_tree(project_path: ProjectPath) -> (Vec<simplified_ast::File>, FileTree) {
+    let ProjectPath {
+        callee_file_path,
+        checked_unadjusted_pack_omlet_path,
+    } = project_path;
+    let adjusted_pack_omlet_path = Path::new(callee_file_path)
         .parent()
         .unwrap()
         .join(checked_unadjusted_pack_omlet_path);
