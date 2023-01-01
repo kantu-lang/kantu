@@ -6,16 +6,12 @@ use ub::Identifier;
 pub struct Context<'a, 'b> {
     data: &'a mut ContextData<'b>,
     current_file_id: FileId,
-    required_visibility: Visibility,
+    required_original_visibility: Option<Visibility>,
 }
 
 impl Context<'_, '_> {
     pub fn current_file_id(&self) -> FileId {
         self.current_file_id
-    }
-
-    pub fn required_visibility(&self) -> Visibility {
-        self.required_visibility
     }
 }
 
@@ -39,15 +35,22 @@ pub enum AccessibleEntry {
 }
 
 #[derive(Clone, Debug)]
-pub struct NameComponentNotFoundError {
+pub struct NameComponentNotAccessibleError {
     pub index: usize,
-    pub kind: NameComponentNotFoundErrorKind,
+    pub kind: NameComponentNotAccessibleErrorKind,
 }
 
 #[derive(Clone, Debug)]
-pub enum NameComponentNotFoundErrorKind {
+pub enum NameComponentNotAccessibleErrorKind {
     NotFound,
-    Private(Visibility),
+    InsufficientVisibility {
+        actual_visibility: Visibility,
+        required_visibility: Visibility,
+    },
+    InsufficientOriginalVisibility {
+        actual_visibility: Visibility,
+        required_visibility: Visibility,
+    },
 }
 
 impl ContextData<'_> {
@@ -68,12 +71,12 @@ impl<'b> ContextData<'b> {
     pub fn create_context_for_mod<'a>(
         &'a mut self,
         mod_id: FileId,
-        required_visibility: Visibility,
+        required_original_visibility: Option<Visibility>,
     ) -> Context<'a, 'b> {
         Context {
             data: self,
             current_file_id: mod_id,
-            required_visibility,
+            required_original_visibility,
         }
     }
 }
@@ -149,13 +152,13 @@ impl Context<'_, '_> {
     pub fn get_db_index<'a, N>(
         &self,
         name_components: N,
-    ) -> Result<DbIndex, Result<FileId, NameComponentNotFoundError>>
+    ) -> Result<DbIndex, Result<FileId, NameComponentNotAccessibleError>>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
         self.data.get_db_index(
             self.current_file_id,
-            self.required_visibility,
+            self.required_original_visibility,
             name_components,
         )
     }
@@ -163,13 +166,13 @@ impl Context<'_, '_> {
     pub fn lookup_name<'a, N>(
         &self,
         name_components: N,
-    ) -> Result<DotGraphEntry, NameComponentNotFoundError>
+    ) -> Result<DotGraphEntry, NameComponentNotAccessibleError>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
         self.data.lookup_name(
             self.current_file_id,
-            self.required_visibility,
+            self.required_original_visibility,
             name_components,
         )
     }
@@ -185,14 +188,18 @@ impl ContextData<'_> {
     fn get_db_index<'a, N>(
         &self,
         current_file_id: FileId,
-        required_visibility: Visibility,
+        required_original_visibility: Option<Visibility>,
         name_components: N,
-    ) -> Result<DbIndex, Result<FileId, NameComponentNotFoundError>>
+    ) -> Result<DbIndex, Result<FileId, NameComponentNotAccessibleError>>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
         let lookup_result = self
-            .lookup_name(current_file_id, required_visibility, name_components)
+            .lookup_name(
+                current_file_id,
+                required_original_visibility,
+                name_components,
+            )
             .map(|entry| entry.node);
         match lookup_result {
             Ok(DotGraphNode::LeafItem(level)) => Ok(self.level_to_index(level)),
@@ -204,15 +211,15 @@ impl ContextData<'_> {
     fn lookup_name<'a, N>(
         &self,
         current_file_id: FileId,
-        required_visibility: Visibility,
+        required_original_visibility: Option<Visibility>,
         name_components: N,
-    ) -> Result<DotGraphEntry, NameComponentNotFoundError>
+    ) -> Result<DotGraphEntry, NameComponentNotAccessibleError>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
         self.lookup_name_with_customizable_visibility_enforcement::<N, true>(
             current_file_id,
-            required_visibility,
+            required_original_visibility,
             name_components,
         )
     }
@@ -224,9 +231,9 @@ impl ContextData<'_> {
     >(
         &self,
         current_file_id: FileId,
-        required_visibility: Visibility,
+        required_original_visibility: Option<Visibility>,
         name_components: N,
-    ) -> Result<DotGraphEntry, NameComponentNotFoundError>
+    ) -> Result<DotGraphEntry, NameComponentNotAccessibleError>
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
@@ -242,14 +249,15 @@ impl ContextData<'_> {
             .map(Ok)
             .or_else(|| {
                 self.lookup_unqualified_mod_item_with_customizable_visibility_enforcement::<SHOULD_ENFORCE_VISIBILITY>(
-                    current_file_id,required_visibility,
+                    current_file_id,
+                    required_original_visibility,
                     first,
                 )
             });
         let Some(first_component_lookup_result) = first_component_lookup_result else {
-            return Err(NameComponentNotFoundError {
+            return Err(NameComponentNotAccessibleError {
                 index: 0,
-                kind: NameComponentNotFoundErrorKind::NotFound,
+                kind: NameComponentNotAccessibleErrorKind::NotFound,
             });
         };
         let mut current = first_component_lookup_result?;
@@ -257,19 +265,38 @@ impl ContextData<'_> {
         for (index_in_remaining, component) in remaining.enumerate() {
             let next = self.graph.get_edge_dest(current.node, component).cloned();
             let Some(next) = next else {
-                return Err(NameComponentNotFoundError {
+                return Err(NameComponentNotAccessibleError {
                     index: index_in_remaining + 1,
-                    kind: NameComponentNotFoundErrorKind::NotFound,
+                    kind: NameComponentNotAccessibleErrorKind::NotFound,
                 });
             };
-            if SHOULD_ENFORCE_VISIBILITY
-                && !self
-                    .is_left_at_least_as_permissive_as_right(next.visibility, required_visibility)
-            {
-                return Err(NameComponentNotFoundError {
-                    index: index_in_remaining + 1,
-                    kind: NameComponentNotFoundErrorKind::Private(next.visibility),
-                });
+            if SHOULD_ENFORCE_VISIBILITY {
+                if !self.is_left_at_least_as_permissive_as_right(
+                    next.visibility,
+                    Visibility::Mod(current_file_id),
+                ) {
+                    return Err(NameComponentNotAccessibleError {
+                        index: index_in_remaining + 1,
+                        kind: NameComponentNotAccessibleErrorKind::InsufficientVisibility {
+                            actual_visibility: next.visibility,
+                            required_visibility: Visibility::Mod(current_file_id),
+                        },
+                    });
+                }
+                if let Some(required_original_visibility) = required_original_visibility {
+                    if !self.is_left_at_least_as_permissive_as_right(
+                        next.original_visibility,
+                        required_original_visibility,
+                    ) {
+                        return Err(NameComponentNotAccessibleError {
+                            index: index_in_remaining + 1,
+                            kind: NameComponentNotAccessibleErrorKind::InsufficientOriginalVisibility {
+                                actual_visibility: next.original_visibility,
+                                required_visibility: required_original_visibility,
+                            },
+                        });
+                    }
+                }
             }
             current = next;
         }
@@ -328,23 +355,42 @@ impl ContextData<'_> {
     >(
         &self,
         current_file_id: FileId,
-        required_visibility: Visibility,
+        required_original_visibility: Option<Visibility>,
         component: &IdentifierName,
-    ) -> Option<Result<DotGraphEntry, NameComponentNotFoundError>> {
+    ) -> Option<Result<DotGraphEntry, NameComponentNotAccessibleError>> {
         self.graph
             .get_edge_dest(DotGraphNode::Mod(current_file_id), component)
             .map(|entry| {
-                if self
-                    .is_left_at_least_as_permissive_as_right(entry.visibility, required_visibility)
-                {
-                    Ok(entry.clone())
-                } else {
-                    Err(NameComponentNotFoundError {
-                        // The mod item is unqualified, so it must be the first component.
-                        index: 0,
-                        kind: NameComponentNotFoundErrorKind::Private(entry.visibility),
-                    })
+                if SHOULD_ENFORCE_VISIBILITY {
+                    if !self.is_left_at_least_as_permissive_as_right(
+                        entry.visibility,
+                        Visibility::Mod(current_file_id),
+                    ) {
+                        return Err(NameComponentNotAccessibleError {
+                            index: 0,
+                            kind: NameComponentNotAccessibleErrorKind::InsufficientVisibility {
+                                actual_visibility: entry.visibility,
+                                required_visibility: Visibility::Mod(current_file_id),
+                            },
+                        });
+                    }
+                    if let Some(required_original_visibility) = required_original_visibility {
+                        if !self.is_left_at_least_as_permissive_as_right(
+                            entry.original_visibility,
+                            required_original_visibility,
+                        ) {
+                            return Err(NameComponentNotAccessibleError {
+                                index: 0,
+                                kind: NameComponentNotAccessibleErrorKind::InsufficientOriginalVisibility {
+                                    actual_visibility: entry.original_visibility,
+                                    required_visibility: required_original_visibility,
+                                },
+                            });
+                        }
+                    }
                 }
+
+                Ok(entry.clone())
             })
     }
 
@@ -500,11 +546,9 @@ impl ContextData<'_> {
     where
         N: Clone + Iterator<Item = &'a IdentifierName>,
     {
-        let dummy_visibility = Visibility::Global;
         self.lookup_name_with_customizable_visibility_enforcement::<N, false>(
             current_file_id,
-            // We pass a dummy since visibility is not enforced anyway.
-            dummy_visibility,
+            None,
             name_components,
         )
         .ok()

@@ -13,17 +13,33 @@ where
         }
         .into()),
         Err(Err(err)) => match err.kind {
-            NameComponentNotFoundErrorKind::NotFound => Err(NameNotFoundError {
+            NameComponentNotAccessibleErrorKind::NotFound => Err(NameNotFoundError {
                 name_components: name_components.cloned().collect(),
             }
             .into()),
-            NameComponentNotFoundErrorKind::Private(actual_visibility) => Err(NameIsPrivateError {
+            NameComponentNotAccessibleErrorKind::InsufficientVisibility {
+                actual_visibility,
+                required_visibility,
+            } => Err(NameIsPrivateError {
                 name_component: name_components
                     .clone()
                     .nth(err.index)
                     .expect("NameComponentNotFoundError index should be valid")
                     .clone(),
-                required_visibility: context.required_visibility(),
+                required_visibility,
+                actual_visibility,
+            }
+            .into()),
+            NameComponentNotAccessibleErrorKind::InsufficientOriginalVisibility {
+                actual_visibility,
+                required_visibility,
+            } => Err(CannotLeakPrivateNameError {
+                name_component: name_components
+                    .clone()
+                    .nth(err.index)
+                    .expect("NameComponentNotFoundError index should be valid")
+                    .clone(),
+                required_visibility,
                 actual_visibility,
             }
             .into()),
@@ -38,17 +54,33 @@ where
     context
         .lookup_name(name_components.clone().map(|c| &c.name))
         .map_err(|err| match err.kind {
-            NameComponentNotFoundErrorKind::NotFound => NameNotFoundError {
+            NameComponentNotAccessibleErrorKind::NotFound => NameNotFoundError {
                 name_components: name_components.cloned().collect(),
             }
             .into(),
-            NameComponentNotFoundErrorKind::Private(actual_visibility) => NameIsPrivateError {
+            NameComponentNotAccessibleErrorKind::InsufficientVisibility {
+                actual_visibility,
+                required_visibility,
+            } => NameIsPrivateError {
                 name_component: name_components
                     .clone()
                     .nth(err.index)
                     .expect("NameComponentNotFoundError index should be valid")
                     .clone(),
-                required_visibility: context.required_visibility(),
+                required_visibility,
+                actual_visibility,
+            }
+            .into(),
+            NameComponentNotAccessibleErrorKind::InsufficientOriginalVisibility {
+                actual_visibility,
+                required_visibility,
+            } => CannotLeakPrivateNameError {
+                name_component: name_components
+                    .clone()
+                    .nth(err.index)
+                    .expect("NameComponentNotFoundError index should be valid")
+                    .clone(),
+                required_visibility,
                 actual_visibility,
             }
             .into(),

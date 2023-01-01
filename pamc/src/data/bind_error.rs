@@ -4,6 +4,7 @@ use crate::data::{simplified_ast as unbound, simplified_ast::IdentifierName, Fil
 pub enum BindError {
     NameNotFound(NameNotFoundError),
     NameIsPrivate(NameIsPrivateError),
+    CannotLeakPrivateName(CannotLeakPrivateNameError),
     NameClash(NameClashError),
     ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError),
     ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError),
@@ -22,6 +23,8 @@ impl From<NameNotFoundError> for BindError {
     }
 }
 
+pub use crate::data::bound_ast::Visibility;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameIsPrivateError {
     pub name_component: unbound::Identifier,
@@ -34,7 +37,17 @@ impl From<NameIsPrivateError> for BindError {
     }
 }
 
-pub use crate::data::bound_ast::Visibility;
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CannotLeakPrivateNameError {
+    pub name_component: unbound::Identifier,
+    pub required_visibility: Visibility,
+    pub actual_visibility: Visibility,
+}
+impl From<CannotLeakPrivateNameError> for BindError {
+    fn from(error: CannotLeakPrivateNameError) -> Self {
+        Self::CannotLeakPrivateName(error)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameClashError {
