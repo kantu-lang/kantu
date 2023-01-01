@@ -86,20 +86,41 @@ fn add_single_import_to_context(
 ) -> Result<(), BindError> {
     let context = &mut context_data.create_context_for_mod(item_file_id, None);
     let start = DotGraphNode::Mod(context.current_file_id());
+
+    // Below, we create a variable `import_name` is a reference to an `Identifier`.
+    // In most cases, this is just a reference to  an existing identifier.
+    // However, it is possible that we will need to _create_ an identifier to reference.
+    // In that case, we will create a new identifier and store it in `import_name_owner`,
+    // in order to prevent it from getting dropped too early.
+    #[allow(unused_assignments)]
+    let mut import_name_owner = None;
+
     let import_name = match &item.alternate_name {
         Some(name) => name,
-        None => {
-            let Some(last_component) = item
-                .other_components
-                .last()
-            else {
-                return Err(BindError::CannotUselesslyImportItemAsItself(CannotUselesslyImportItemAsItselfError {
-                    use_statement: item
-                }));
-            };
-            last_component
-        }
+        None => match item.other_components.last() {
+            Some(last_component) => last_component,
+            None => match &item.first_component.kind {
+                ub::UseStatementFirstComponentKind::Identifier(name) => {
+                    let name = ub::Identifier {
+                        span: item.first_component.span,
+                        name: name.clone(),
+                    };
+                    import_name_owner = Some(name);
+                    import_name_owner.as_ref().unwrap()
+                }
+                ub::UseStatementFirstComponentKind::Mod
+                | ub::UseStatementFirstComponentKind::Super(_)
+                | ub::UseStatementFirstComponentKind::Pack => {
+                    return Err(BindError::CannotUselesslyImportModSuperOrPackAsIs(
+                        CannotUselesslyImportModSuperOrPackAsIsError {
+                            use_statement: item,
+                        },
+                    ));
+                }
+            },
+        },
     };
+
     let first_component_name =
         use_statement_first_component_into_identifier_name(item.first_component);
     let name_components =
