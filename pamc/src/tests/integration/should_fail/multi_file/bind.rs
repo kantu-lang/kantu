@@ -99,3 +99,21 @@ fn locally_leaky_use_single_nested() {
         },
     );
 }
+
+#[test]
+fn leaky_type() {
+    expect_bind_error(
+        file!(),
+        checked_path!("../../../sample_code/should_fail/multi_file/bind/leaky_type/pack.omlet"),
+        |err| match err {
+            BindError::NameIsPrivate(NameIsPrivateError {
+                name_component,
+                required_visibility: _,
+                actual_visibility: _,
+            }) => {
+                assert_eq!("Private", name_component.name.src_str());
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
