@@ -20,7 +20,7 @@ mod match_case_param;
 mod mod_statement;
 mod param;
 mod params;
-mod parenthesized_ancestorlike;
+mod parenthesized_quasi_ancestor;
 mod triple_dot;
 mod type_statement;
 mod use_statement;
