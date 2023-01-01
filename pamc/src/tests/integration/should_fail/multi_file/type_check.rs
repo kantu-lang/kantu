@@ -102,8 +102,6 @@ fn expect_type_mismatch_error(
     });
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn insufficient_transparency() {
     expect_type_mismatch_error(
