@@ -22,7 +22,7 @@ impl Accept for UnfinishedStackItem {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
             UnfinishedStackItem::File(file) => file.accept(item, file_id),
-            UnfinishedStackItem::ParenthesizedWeakAncestor(ancestor) => {
+            UnfinishedStackItem::ParenthesizedAncestorlike(ancestor) => {
                 ancestor.accept(item, file_id)
             }
             UnfinishedStackItem::Use(use_) => use_.accept(item, file_id),

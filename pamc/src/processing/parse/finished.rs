@@ -8,10 +8,10 @@ pub enum FinishedStackItem {
         Token,
         File,
     ),
-    ParenthesizedWeakAncestor(
+    ParenthesizedAncestorlike(
         /// First token
         Token,
-        ParenthesizedWeakAncestor,
+        ParenthesizedAncestorlike,
     ),
     Use(
         /// First token
@@ -157,7 +157,7 @@ impl FinishedStackItem {
         match self {
             FinishedStackItem::Token(token) => &token,
             FinishedStackItem::File(token, _) => &token,
-            FinishedStackItem::ParenthesizedWeakAncestor(token, _) => &token,
+            FinishedStackItem::ParenthesizedAncestorlike(token, _) => &token,
             FinishedStackItem::Use(token, _) => &token,
             FinishedStackItem::Mod(token, _) => &token,
             FinishedStackItem::Type(token, _) => &token,

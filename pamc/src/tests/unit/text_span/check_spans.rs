@@ -153,29 +153,29 @@ impl DeepCheckChildSpans for PubClause {
     }
 }
 
-impl ShallowCheckOwnSpan for ParenthesizedWeakAncestor {
+impl ShallowCheckOwnSpan for ParenthesizedAncestorlike {
     fn shallow_check_own_span(&self, src: &str) {
         assert_reconstructed_equals_original_up_to_spans_and_file_ids(self, self.span, src);
     }
 }
-impl DeepCheckChildSpans for ParenthesizedWeakAncestor {
+impl DeepCheckChildSpans for ParenthesizedAncestorlike {
     fn deep_check_child_spans(&self, src: &str) {
         self.kind.deep_check_spans(src);
     }
 }
 
-impl ShallowCheckOwnSpan for WeakAncestorKind {
+impl ShallowCheckOwnSpan for AncestorlikeKind {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `WeakAncestorKind` doesn't have its own span.
+        // Do nothing, since `AncestorlikeKind` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for WeakAncestorKind {
+impl DeepCheckChildSpans for AncestorlikeKind {
     fn deep_check_child_spans(&self, src: &str) {
         match self {
-            WeakAncestorKind::Global => {}
-            WeakAncestorKind::Mod => {}
-            WeakAncestorKind::Super(_) => {}
-            WeakAncestorKind::PackRelative { path_after_pack_kw } => {
+            AncestorlikeKind::Global => {}
+            AncestorlikeKind::Mod => {}
+            AncestorlikeKind::Super(_) => {}
+            AncestorlikeKind::PackRelative { path_after_pack_kw } => {
                 path_after_pack_kw.deep_check_spans(src);
             }
         }

@@ -32,8 +32,8 @@ impl Accept for UnfinishedLetStatement {
                     TokenKind::LParen => {
                         if let PendingPubClause::PubKw(_) = visibility {
                             AcceptResult::PushAndContinueReducingWithNewTop(
-                                UnfinishedStackItem::ParenthesizedWeakAncestor(
-                                    UnfinishedParenthesizedWeakAncestor::Empty,
+                                UnfinishedStackItem::ParenthesizedAncestorlike(
+                                    UnfinishedParenthesizedAncestorlike::Empty,
                                 ),
                                 FinishedStackItem::Token(token),
                             )
@@ -50,8 +50,8 @@ impl Accept for UnfinishedLetStatement {
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                FinishedStackItem::ParenthesizedWeakAncestor(
-                    weak_ancestor_first_token,
+                FinishedStackItem::ParenthesizedAncestorlike(
+                    ancestorlike_first_token,
                     ancestor,
                 ) => {
                     if let PendingPubClause::PubKw(pub_kw_token) = visibility {
@@ -62,8 +62,8 @@ impl Accept for UnfinishedLetStatement {
                         AcceptResult::ContinueToNextToken
                     } else {
                         wrapped_unexpected_finished_item_err(
-                            &FinishedStackItem::ParenthesizedWeakAncestor(
-                                weak_ancestor_first_token,
+                            &FinishedStackItem::ParenthesizedAncestorlike(
+                                ancestorlike_first_token,
                                 ancestor,
                             ),
                         )
@@ -78,8 +78,8 @@ impl Accept for UnfinishedLetStatement {
             } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::LParen => AcceptResult::PushAndContinueReducingWithNewTop(
-                        UnfinishedStackItem::ParenthesizedWeakAncestor(
-                            UnfinishedParenthesizedWeakAncestor::Empty,
+                        UnfinishedStackItem::ParenthesizedAncestorlike(
+                            UnfinishedParenthesizedAncestorlike::Empty,
                         ),
                         FinishedStackItem::Token(token),
                     ),
@@ -98,7 +98,7 @@ impl Accept for UnfinishedLetStatement {
                     }
                     _other_token_kind => AcceptResult::Error(ParseError::unexpected_token(token)),
                 },
-                FinishedStackItem::ParenthesizedWeakAncestor(_, transparency) => {
+                FinishedStackItem::ParenthesizedAncestorlike(_, transparency) => {
                     *self = UnfinishedLetStatement::ExplicitTransparency {
                         first_token: first_token.clone(),
                         visibility: visibility.clone(),
