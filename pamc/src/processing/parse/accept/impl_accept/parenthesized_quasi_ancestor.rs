@@ -1,36 +1,36 @@
 use super::*;
 
-impl Accept for UnfinishedParenthesizedAncestorlike {
+impl Accept for UnfinishedParenthesizedQuasiAncestor {
     fn accept(&mut self, item: FinishedStackItem, file_id: FileId) -> AcceptResult {
         match self {
-            UnfinishedParenthesizedAncestorlike::Empty => match item {
+            UnfinishedParenthesizedQuasiAncestor::Empty => match item {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::LParen => {
-                    *self = UnfinishedParenthesizedAncestorlike::LParen(token);
+                    *self = UnfinishedParenthesizedQuasiAncestor::LParen(token);
                     AcceptResult::ContinueToNextToken
                 }
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedParenthesizedAncestorlike::LParen(l_paren_token) => match item {
+            UnfinishedParenthesizedQuasiAncestor::LParen(l_paren_token) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
                     TokenKind::Star => {
                         let span = span_range_including_end(file_id, l_paren_token, &token);
-                        *self = UnfinishedParenthesizedAncestorlike::ReadyForRParen {
+                        *self = UnfinishedParenthesizedQuasiAncestor::ReadyForRParen {
                             l_paren_token: l_paren_token.clone(),
-                            ancestor: ParenthesizedAncestorlike {
+                            ancestor: ParenthesizedQuasiAncestor {
                                 span,
-                                kind: AncestorlikeKind::Global,
+                                kind: QuasiAncestorKind::Global,
                             },
                         };
                         AcceptResult::ContinueToNextToken
                     }
                     TokenKind::Mod => {
                         let span = span_range_including_end(file_id, l_paren_token, &token);
-                        *self = UnfinishedParenthesizedAncestorlike::ReadyForRParen {
+                        *self = UnfinishedParenthesizedQuasiAncestor::ReadyForRParen {
                             l_paren_token: l_paren_token.clone(),
-                            ancestor: ParenthesizedAncestorlike {
+                            ancestor: ParenthesizedQuasiAncestor {
                                 span,
-                                kind: AncestorlikeKind::Mod,
+                                kind: QuasiAncestorKind::Mod,
                             },
                         };
                         AcceptResult::ContinueToNextToken
@@ -111,11 +111,11 @@ impl Accept for UnfinishedParenthesizedAncestorlike {
 
                     TokenKind::Pack => {
                         let span = span_range_including_end(file_id, l_paren_token, &token);
-                        *self = UnfinishedParenthesizedAncestorlike::ReadyForRParen {
+                        *self = UnfinishedParenthesizedQuasiAncestor::ReadyForRParen {
                             l_paren_token: l_paren_token.clone(),
-                            ancestor: ParenthesizedAncestorlike {
+                            ancestor: ParenthesizedQuasiAncestor {
                                 span,
-                                kind: AncestorlikeKind::PackRelative {
+                                kind: QuasiAncestorKind::PackRelative {
                                     path_after_pack_kw: vec![],
                                 },
                             },
@@ -128,15 +128,15 @@ impl Accept for UnfinishedParenthesizedAncestorlike {
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedParenthesizedAncestorlike::ReadyForRParen {
+            UnfinishedParenthesizedQuasiAncestor::ReadyForRParen {
                 l_paren_token,
                 ancestor,
             } => match item {
                 FinishedStackItem::Token(token) if token.kind == TokenKind::RParen => {
                     AcceptResult::PopAndContinueReducing(
-                        FinishedStackItem::ParenthesizedAncestorlike(
+                        FinishedStackItem::ParenthesizedQuasiAncestor(
                             l_paren_token.clone(),
-                            ParenthesizedAncestorlike {
+                            ParenthesizedQuasiAncestor {
                                 span: ancestor.span.inclusive_merge(span_single(file_id, &token)),
                                 kind: ancestor.kind.clone(),
                             },
@@ -145,8 +145,8 @@ impl Accept for UnfinishedParenthesizedAncestorlike {
                 }
                 FinishedStackItem::Token(token) if token.kind == TokenKind::Dot => {
                     match &mut ancestor.kind {
-                        AncestorlikeKind::PackRelative { path_after_pack_kw } => {
-                            *self = UnfinishedParenthesizedAncestorlike::PackRelativeAwaitingIdentifier {
+                        QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
+                            *self = UnfinishedParenthesizedQuasiAncestor::PackRelativeAwaitingIdentifier {
                                 l_paren_token: l_paren_token.clone(),
                                 path_after_pack_kw: path_after_pack_kw.clone(),
                             };
@@ -158,7 +158,7 @@ impl Accept for UnfinishedParenthesizedAncestorlike {
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
 
-            UnfinishedParenthesizedAncestorlike::PackRelativeAwaitingIdentifier {
+            UnfinishedParenthesizedQuasiAncestor::PackRelativeAwaitingIdentifier {
                 l_paren_token,
                 path_after_pack_kw,
             } => match item {
@@ -169,12 +169,12 @@ impl Accept for UnfinishedParenthesizedAncestorlike {
                         name: IdentifierName::new(token.content),
                     };
                     path_after_pack_kw.push(component);
-                    *self = UnfinishedParenthesizedAncestorlike::ReadyForRParen {
+                    *self = UnfinishedParenthesizedQuasiAncestor::ReadyForRParen {
                         l_paren_token: l_paren_token.clone(),
-                        ancestor: ParenthesizedAncestorlike {
+                        ancestor: ParenthesizedQuasiAncestor {
                             span: span_single(file_id, &l_paren_token)
                                 .inclusive_merge(component_span),
-                            kind: AncestorlikeKind::PackRelative {
+                            kind: QuasiAncestorKind::PackRelative {
                                 path_after_pack_kw: path_after_pack_kw.clone(),
                             },
                         },
@@ -187,7 +187,7 @@ impl Accept for UnfinishedParenthesizedAncestorlike {
     }
 }
 
-impl UnfinishedParenthesizedAncestorlike {
+impl UnfinishedParenthesizedQuasiAncestor {
     fn set_to_super_n(
         &mut self,
         file_id: FileId,
@@ -196,11 +196,11 @@ impl UnfinishedParenthesizedAncestorlike {
         n: NonZeroUsize,
     ) -> AcceptResult {
         let span = span_range_including_end(file_id, &l_paren_token, super_n_token);
-        *self = UnfinishedParenthesizedAncestorlike::ReadyForRParen {
+        *self = UnfinishedParenthesizedQuasiAncestor::ReadyForRParen {
             l_paren_token: l_paren_token,
-            ancestor: ParenthesizedAncestorlike {
+            ancestor: ParenthesizedQuasiAncestor {
                 span,
-                kind: AncestorlikeKind::Super(n),
+                kind: QuasiAncestorKind::Super(n),
             },
         };
         AcceptResult::ContinueToNextToken

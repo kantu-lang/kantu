@@ -193,15 +193,15 @@ fn visibility_not_global_or_non_strict_ancestor() {
             ),
         },
         |err| match err {
-            BindError::VisibilityWasNotAncestorlike(VisibilityWasNotAncestorlikeError {
-                ancestorlike,
+            BindError::VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError {
+                quasi_ancestor,
             }) => {
-                match ancestorlike.kind {
-                    simplified_ast::AncestorlikeKind::PackRelative { path_after_pack_kw } => {
+                match quasi_ancestor.kind {
+                    simplified_ast::QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
                         assert_eq!(1, path_after_pack_kw.len());
                         assert_eq!("nat", path_after_pack_kw[0].name.src_str());
                     }
-                    _ => panic!("Unexpected ancestorlike: {:?}", ancestorlike),
+                    _ => panic!("Unexpected quasi ancestor: {:?}", quasi_ancestor),
                 }
             }
             _ => panic!("Unexpected error: {:?}", err),

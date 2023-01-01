@@ -10,7 +10,7 @@ pub enum BindError {
     ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError),
     CannotUselesslyImportItemAsSelf(CannotUselesslyImportItemAsSelfError),
     ModFileNotFound(ModFileNotFoundError),
-    VisibilityWasNotAncestorlike(VisibilityWasNotAncestorlikeError),
+    VisibilityWasNotQuasiAncestorOfCurrentMod(VisibilityWasNotQuasiAncestorOfCurrentModError),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -110,11 +110,11 @@ impl From<ModFileNotFoundError> for BindError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VisibilityWasNotAncestorlikeError {
-    pub ancestorlike: unbound::ParenthesizedAncestorlike,
+pub struct VisibilityWasNotQuasiAncestorOfCurrentModError {
+    pub quasi_ancestor: unbound::ParenthesizedQuasiAncestor,
 }
-impl From<VisibilityWasNotAncestorlikeError> for BindError {
-    fn from(error: VisibilityWasNotAncestorlikeError) -> Self {
-        Self::VisibilityWasNotAncestorlike(error)
+impl From<VisibilityWasNotQuasiAncestorOfCurrentModError> for BindError {
+    fn from(error: VisibilityWasNotQuasiAncestorOfCurrentModError) -> Self {
+        Self::VisibilityWasNotQuasiAncestorOfCurrentMod(error)
     }
 }

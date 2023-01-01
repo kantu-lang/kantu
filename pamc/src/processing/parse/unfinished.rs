@@ -3,7 +3,7 @@ use super::*;
 #[derive(Clone, Debug)]
 pub enum UnfinishedStackItem {
     File(Box<UnfinishedFile>),
-    ParenthesizedAncestorlike(UnfinishedParenthesizedAncestorlike),
+    ParenthesizedQuasiAncestor(UnfinishedParenthesizedQuasiAncestor),
     Use(UnfinishedUseStatement),
     Mod(UnfinishedModStatement),
     Type(UnfinishedTypeStatement),
@@ -55,12 +55,12 @@ impl PendingPubClause {
 }
 
 #[derive(Clone, Debug)]
-pub enum UnfinishedParenthesizedAncestorlike {
+pub enum UnfinishedParenthesizedQuasiAncestor {
     Empty,
     LParen(Token),
     ReadyForRParen {
         l_paren_token: Token,
-        ancestor: ParenthesizedAncestorlike,
+        ancestor: ParenthesizedQuasiAncestor,
     },
     PackRelativeAwaitingIdentifier {
         l_paren_token: Token,
@@ -164,12 +164,12 @@ pub enum UnfinishedLetStatement {
     ExplicitTransparency {
         first_token: Token,
         visibility: Option<PubClause>,
-        transparency: ParenthesizedAncestorlike,
+        transparency: ParenthesizedQuasiAncestor,
     },
     Name {
         first_token: Token,
         visibility: Option<PubClause>,
-        transparency: Option<ParenthesizedAncestorlike>,
+        transparency: Option<ParenthesizedQuasiAncestor>,
         name: Identifier,
     },
 }

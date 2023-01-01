@@ -150,7 +150,7 @@ impl ReplaceSpansAndFileIdsWithDummies for PubClause {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedAncestorlike {
+impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedQuasiAncestor {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let kind = self.kind.replace_spans_and_file_ids_with_dummies();
         Self {
@@ -160,16 +160,16 @@ impl ReplaceSpansAndFileIdsWithDummies for ParenthesizedAncestorlike {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for AncestorlikeKind {
+impl ReplaceSpansAndFileIdsWithDummies for QuasiAncestorKind {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         match self {
-            AncestorlikeKind::Global => AncestorlikeKind::Global,
-            AncestorlikeKind::Mod => AncestorlikeKind::Mod,
-            AncestorlikeKind::Super(n) => AncestorlikeKind::Super(n),
-            AncestorlikeKind::PackRelative { path_after_pack_kw } => {
+            QuasiAncestorKind::Global => QuasiAncestorKind::Global,
+            QuasiAncestorKind::Mod => QuasiAncestorKind::Mod,
+            QuasiAncestorKind::Super(n) => QuasiAncestorKind::Super(n),
+            QuasiAncestorKind::PackRelative { path_after_pack_kw } => {
                 let path_after_pack_kw =
                     path_after_pack_kw.replace_spans_and_file_ids_with_dummies();
-                AncestorlikeKind::PackRelative { path_after_pack_kw }
+                QuasiAncestorKind::PackRelative { path_after_pack_kw }
             }
         }
     }

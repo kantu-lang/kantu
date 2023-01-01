@@ -84,16 +84,16 @@ impl Parse for Variant {
     }
 }
 
-impl Parse for ParenthesizedAncestorlike {
+impl Parse for ParenthesizedQuasiAncestor {
     fn initial_stack(_: FileId, _: &Token) -> Vec<UnfinishedStackItem> {
-        vec![UnfinishedStackItem::ParenthesizedAncestorlike(
-            UnfinishedParenthesizedAncestorlike::Empty,
+        vec![UnfinishedStackItem::ParenthesizedQuasiAncestor(
+            UnfinishedParenthesizedQuasiAncestor::Empty,
         )]
     }
 
     fn finish(bottom_item: FinishedStackItem) -> Result<Self, ParseError> {
         match bottom_item {
-            FinishedStackItem::ParenthesizedAncestorlike(_, ancestor) => Ok(ancestor),
+            FinishedStackItem::ParenthesizedQuasiAncestor(_, ancestor) => Ok(ancestor),
             other_item => Err(unexpected_finished_item_err(&other_item)),
         }
     }

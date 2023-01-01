@@ -118,14 +118,14 @@ pub struct Variant {
 pub struct LetStatement {
     pub span: TextSpan,
     pub visibility: Option<PubClause>,
-    pub transparency: Option<ParenthesizedAncestorlike>,
+    pub transparency: Option<ParenthesizedQuasiAncestor>,
     pub name: Identifier,
     pub value: Expression,
 }
 
-pub use crate::data::unsimplified_ast::ParenthesizedAncestorlike;
+pub use crate::data::unsimplified_ast::ParenthesizedQuasiAncestor;
 
-pub use crate::data::unsimplified_ast::AncestorlikeKind;
+pub use crate::data::unsimplified_ast::QuasiAncestorKind;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Expression {
