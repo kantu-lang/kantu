@@ -22,8 +22,6 @@ fn expect_type_check_error(
     panicker(&registry, err);
 }
 
-// TODO: Fix
-#[ignore]
 #[test]
 fn leaky_let_type() {
     expect_type_check_error(
@@ -33,7 +31,23 @@ fn leaky_let_type() {
                 "../../../sample_code/should_fail/multi_file/type_check/leaky_let_type/pack.omlet"
             ),
         },
-        |_, err| match err {
+        |registry, err| match err {
+            TypeCheckError::LetStatementTypeContainsPrivateName(let_id, private_name_id) => {
+                let let_statement = registry.get(let_id);
+                let let_name = registry.get(let_statement.name_id);
+                assert_eq!("_2", let_name.name.src_str());
+
+                let private_name = registry.get(private_name_id);
+                let private_name_components = registry.get_list(private_name.component_list_id);
+                assert_eq!(
+                    "Nat",
+                    private_name_components
+                        .iter()
+                        .map(|&component_id| registry.get(component_id).name.src_str())
+                        .collect::<Vec<_>>()
+                        .join(".")
+                );
+            }
             _ => panic!("Unexpected error: {:?}", err),
         },
     );
