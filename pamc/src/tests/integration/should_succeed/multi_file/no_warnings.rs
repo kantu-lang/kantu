@@ -14,8 +14,8 @@ fn expect_success_with_no_warnings(project_path: ProjectPath) {
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
             .expect("Type positivity validation failed");
-    let warnings =
-        type_check_file_items(&mut registry, file_item_list_id).expect("Type checking failed");
+    let warnings = type_check_file_items(&file_tree, &mut registry, file_item_list_id)
+        .expect("Type checking failed");
     assert_eq!(0, warnings.len(), "One or more warnings were emitted");
     let _js_ast = JavaScript::generate_code(&registry, file_item_list_id.raw())
         .expect("Code generation failed");

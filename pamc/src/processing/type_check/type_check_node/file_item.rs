@@ -139,6 +139,8 @@ pub(super) fn type_check_let_statement_dirty(
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let let_statement = state.registry.get(let_statement_id).clone();
     let type_id = get_type_of_expression_dirty(state, None, let_statement.value_id)?;
+    verify_expression_is_visible_from(state, type_id.raw(), let_statement.visibility)
+        .map_err(Tainted::new)?;
     let normalized_value_id = evaluate_well_typed_expression(state, let_statement.value_id);
     Ok(state.context.push(ContextEntry {
         type_id,

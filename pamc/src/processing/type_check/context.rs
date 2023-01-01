@@ -303,11 +303,12 @@ impl Context {
             let mut context = self.clone_slice(level);
             evaluate_well_typed_expression(
                 &mut State {
-                    context: &mut context,
+                    file_tree: state.file_tree,
                     substitution_context: state.substitution_context,
                     registry: state.registry,
                     equality_checker: state.equality_checker,
                     warnings: state.warnings,
+                    context: &mut context,
                 },
                 substituted_type_id,
             )
@@ -338,11 +339,12 @@ impl Context {
                     ContextEntryDefinition::Alias {
                         value_id: evaluate_well_typed_expression(
                             &mut State {
-                                context: &mut context,
+                                file_tree: state.file_tree,
                                 substitution_context: state.substitution_context,
                                 registry: state.registry,
                                 equality_checker: state.equality_checker,
                                 warnings: state.warnings,
+                                context: &mut context,
                             },
                             substituted,
                         ),

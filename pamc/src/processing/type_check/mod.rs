@@ -1,4 +1,5 @@
 use crate::data::{
+    file_tree::FileTree,
     light_ast::*,
     node_equality_checker::NodeEqualityChecker,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
@@ -28,6 +29,9 @@ mod substitution_context;
 pub use type_check_node::type_check_file_items;
 use type_check_node::*;
 mod type_check_node;
+
+mod verify_expression_is_visibility;
+use verify_expression_is_visibility::*;
 
 mod without_spans;
 use without_spans::*;
@@ -144,16 +148,19 @@ pub enum TypeCheckFailureReason {
 
 #[derive(Debug)]
 struct State<'a> {
-    context: &'a mut Context,
+    file_tree: &'a FileTree,
     substitution_context: &'a mut SubstitutionContext,
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
     warnings: &'a mut Vec<TypeCheckWarning>,
+
+    context: &'a mut Context,
 }
 
 impl<'a> State<'_> {
     fn without_context(&'a mut self) -> ContextlessState<'a> {
         ContextlessState {
+            file_tree: self.file_tree,
             substitution_context: self.substitution_context,
             registry: self.registry,
             equality_checker: self.equality_checker,
@@ -164,6 +171,7 @@ impl<'a> State<'_> {
 
 #[derive(Debug)]
 struct ContextlessState<'a> {
+    file_tree: &'a FileTree,
     substitution_context: &'a mut SubstitutionContext,
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
