@@ -75,8 +75,6 @@ fn parse_children_then_add(
 
     for mod_name in &mod_names {
         let child_file_id = get_unused_file_id(files);
-        tree.add_child(file_id, mod_name, child_file_id)
-            .expect("Multiple modules with same name.");
 
         let (child_src, child_path) = {
             if !file_path.ends_with("mod.ph") {
@@ -93,14 +91,20 @@ fn parse_children_then_add(
                 .join(mod_name.src_str())
                 .join("mod.ph");
 
-            fs::read_to_string(&child_leaf_file_path)
+            let file_res = fs::read_to_string(&child_leaf_file_path)
                 .map(|src| (src, child_leaf_file_path))
                 .or_else(|_| {
                     fs::read_to_string(&child_nonleaf_file_path)
                         .map(|src| (src, child_nonleaf_file_path))
-                })
-                .expect("Failed to open file")
+                });
+            match file_res {
+                Ok(file_res) => file_res,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => continue,
+                Err(err) => panic!("Could not read file: {:?}", err),
+            }
         };
+        tree.add_child(file_id, mod_name, child_file_id)
+            .expect("Multiple modules with same name.");
         let child_file = lex_and_parse_file(&child_src, child_file_id);
         files.push((child_file, child_path));
 
