@@ -19,7 +19,11 @@ pub struct TypeStatement {
 
 pub use crate::data::node_registry::NonEmptyParamListId;
 
+pub use crate::data::bound_ast::ModScope;
+
 pub use crate::data::bound_ast::Visibility;
+
+pub use crate::data::bound_ast::Transparency;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UnlabeledParam {
@@ -69,8 +73,6 @@ pub struct LetStatement {
     pub name_id: NodeId<Identifier>,
     pub value_id: ExpressionId,
 }
-
-pub use crate::data::bound_ast::Transparency;
 
 pub use crate::data::node_registry::ExpressionId;
 

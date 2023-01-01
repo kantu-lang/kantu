@@ -106,7 +106,7 @@ fn add_single_import_to_context(
 
     let end_entry = lookup_name(context, name_components.clone())?;
     let visibility = get_visibility(context, item.visibility.as_ref())?;
-    if !context.is_left_at_least_as_permissive_as_right(end_entry.visibility, visibility) {
+    if !context.is_left_at_least_as_permissive_as_right(end_entry.visibility.0, visibility.0) {
         return Err(BindError::CannotLeakPrivateName(
             CannotLeakPrivateNameError {
                 name_component: name_components
@@ -154,10 +154,10 @@ fn add_wildcard_import_to_context(
         .into_iter()
         .filter_map(|(label, entry)| {
             if context.is_left_at_least_as_permissive_as_right(
-                entry.visibility,
-                Visibility::Mod(item_file_id),
+                entry.visibility.0,
+                ModScope::Mod(item_file_id),
             ) && context
-                .is_left_at_least_as_permissive_as_right(entry.original_visibility, visibility)
+                .is_left_at_least_as_permissive_as_right(entry.original_visibility.0, visibility.0)
             {
                 Some((label.clone(), entry.clone()))
             } else {
@@ -167,7 +167,7 @@ fn add_wildcard_import_to_context(
         .collect();
     for (label, entry) in edges_visible_to_current_mod_and_exportable_with_given_visibility {
         let effective_visibility =
-            if context.is_left_at_least_as_permissive_as_right(entry.visibility, visibility) {
+            if context.is_left_at_least_as_permissive_as_right(entry.visibility.0, visibility.0) {
                 visibility
             } else {
                 entry.visibility
@@ -245,21 +245,33 @@ fn get_visibility(
     pub_clause: Option<&ub::PubClause>,
 ) -> Result<Visibility, BindError> {
     let Some(pub_clause) = pub_clause else {
-        return Ok(Visibility::Mod(context.current_file_id()));
+        return Ok(Visibility(ModScope::Mod(context.current_file_id())));
     };
     let Some(scope_modifier) = &pub_clause.scope_modifier else {
-        return Ok(Visibility::Global);
+        return Ok(Visibility(ModScope::Global));
     };
-    get_visibility_from_mod_scope_modifier(context, scope_modifier)
+    let scope = get_mod_scope(context, scope_modifier)?;
+
+    if context
+        .is_left_at_least_as_permissive_as_right(scope, ModScope::Mod(context.current_file_id()))
+    {
+        Ok(Visibility(scope))
+    } else {
+        Err(BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(
+            VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
+                visibility_modifier: scope_modifier.clone(),
+            },
+        ))
+    }
 }
 
-fn get_visibility_from_mod_scope_modifier(
+fn get_mod_scope(
     context: &Context,
     scope_modifier: &ParenthesizedModScopeModifier,
-) -> Result<Visibility, BindError> {
+) -> Result<ModScope, BindError> {
     match &scope_modifier.kind {
-        ub::ModScopeModifierKind::Global => Ok(Visibility::Global),
-        ub::ModScopeModifierKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
+        ub::ModScopeModifierKind::Global => Ok(ModScope::Global),
+        ub::ModScopeModifierKind::Mod => Ok(ModScope::Mod(context.current_file_id())),
         ub::ModScopeModifierKind::Super(n) => {
             if let Some(DotGraphEntry {
                 node: DotGraphNode::Mod(ancestor_id),
@@ -268,7 +280,7 @@ fn get_visibility_from_mod_scope_modifier(
                 original_visibility: _,
             }) = context.get_n_supers(n.get())
             {
-                Ok(Visibility::Mod(ancestor_id))
+                Ok(ModScope::Mod(ancestor_id))
             } else {
                 Err(NameNotFoundError {
                     name_components: vec![ub::Identifier {
@@ -296,21 +308,7 @@ fn get_visibility_from_mod_scope_modifier(
             };
             let entry = lookup_name(context, name_components.iter())?;
             match entry.node {
-                DotGraphNode::Mod(mod_id) => {
-                    let visibility = Visibility::Mod(mod_id);
-                    if context.is_left_at_least_as_permissive_as_right(
-                        visibility,
-                        Visibility::Mod(context.current_file_id()),
-                    ) {
-                        Ok(visibility)
-                    } else {
-                        Err(BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(
-                            VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
-                                visibility_modifier: scope_modifier.clone(),
-                            },
-                        ))
-                    }
-                }
+                DotGraphNode::Mod(mod_id) => Ok(ModScope::Mod(mod_id)),
                 DotGraphNode::LeafItem(_) => Err(BindError::ExpectedModButNameRefersToTerm(
                     ExpectedModButNameRefersToTermError { name_components },
                 )),
@@ -388,7 +386,7 @@ fn add_item_from_let_statement(
     )?;
     let context = &mut state
         .context_data
-        .create_context_for_mod(item_file_id, Some(transparency.0));
+        .create_context_for_mod(item_file_id, Some(Visibility(transparency.0)));
     let bound = bind_let_statement(context, item, visibility, transparency)?;
     state.out.push(FileItem::Let(bound));
     Ok(())
@@ -580,28 +578,30 @@ fn get_transparency(
     transparency_modifier: Option<&ub::ParenthesizedModScopeModifier>,
     visibility: Visibility,
 ) -> Result<Transparency, BindError> {
-    let Some(scope_modifier) = transparency_modifier else {
-        return Ok(Transparency(Visibility::Mod(context.current_file_id())));
+    let Some(transparency_modifier) = transparency_modifier else {
+        return Ok(Transparency(ModScope::Mod(context.current_file_id())));
     };
+    let scope = get_mod_scope(context, transparency_modifier)?;
 
-    let transparency = get_visibility_from_mod_scope_modifier(context, scope_modifier)
-        .map(Transparency)
-        .map_err(|err| match err {
-            BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(err) => {
-                BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
-                    TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
-                        transparency_modifier: err.visibility_modifier,
-                    },
-                )
-            }
-            other_err => other_err,
-        })?;
+    if !context
+        .is_left_at_least_as_permissive_as_right(scope, ModScope::Mod(context.current_file_id()))
+    {
+        return Err(
+            BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
+                TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
+                    transparency_modifier: transparency_modifier.clone(),
+                },
+            ),
+        );
+    }
+
+    let transparency = Transparency(scope);
 
     verify_visibility_is_at_least_as_permissive_as_transparency(
         context,
         visibility,
         transparency,
-        scope_modifier,
+        transparency_modifier,
     )?;
 
     Ok(transparency)
@@ -613,7 +613,7 @@ fn verify_visibility_is_at_least_as_permissive_as_transparency(
     transparency: Transparency,
     scope_modifier: &ub::ParenthesizedModScopeModifier,
 ) -> Result<(), BindError> {
-    if !context.is_left_at_least_as_permissive_as_right(visibility, transparency.0) {
+    if !context.is_left_at_least_as_permissive_as_right(visibility.0, transparency.0) {
         return Err(
             BindError::TransparencyWasNotAtLeastAsPermissiveAsVisibility(
                 TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {

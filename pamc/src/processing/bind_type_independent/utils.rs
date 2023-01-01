@@ -155,8 +155,8 @@ pub fn add_new_dot_edge_or_merge_with_duplicate(
     if let Some(existing_entry) = existing_entry {
         if end_node == existing_entry.node {
             if context.is_left_strictly_more_permissive_than_right(
-                end_visibility,
-                existing_entry.visibility,
+                end_visibility.0,
+                existing_entry.visibility.0,
             ) {
                 context.overwrite_dot_edge(
                     start,
@@ -221,8 +221,8 @@ pub fn add_new_dot_edge_with_source_or_merge_with_duplicate(
     if let Some(existing_entry) = existing_entry {
         if end_node == existing_entry.node {
             if context.is_left_strictly_more_permissive_than_right(
-                end_visibility,
-                existing_entry.visibility,
+                end_visibility.0,
+                existing_entry.visibility.0,
             ) {
                 context.overwrite_dot_edge(
                     start,

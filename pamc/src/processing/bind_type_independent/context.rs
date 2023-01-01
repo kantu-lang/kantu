@@ -272,21 +272,21 @@ impl ContextData<'_> {
             };
             if SHOULD_ENFORCE_VISIBILITY {
                 if !self.is_left_at_least_as_permissive_as_right(
-                    next.visibility,
-                    Visibility::Mod(current_file_id),
+                    next.visibility.0,
+                    ModScope::Mod(current_file_id),
                 ) {
                     return Err(NameComponentNotAccessibleError {
                         index: index_in_remaining + 1,
                         kind: NameComponentNotAccessibleErrorKind::InsufficientVisibility {
                             actual_visibility: next.visibility,
-                            required_visibility: Visibility::Mod(current_file_id),
+                            required_visibility: Visibility(ModScope::Mod(current_file_id)),
                         },
                     });
                 }
                 if let Some(required_original_visibility) = required_original_visibility {
                     if !self.is_left_at_least_as_permissive_as_right(
-                        next.original_visibility,
-                        required_original_visibility,
+                        next.original_visibility.0,
+                        required_original_visibility.0,
                     ) {
                         return Err(NameComponentNotAccessibleError {
                             index: index_in_remaining + 1,
@@ -316,8 +316,8 @@ impl ContextData<'_> {
                         return Some(DotGraphEntry {
                             node: DotGraphNode::LeafItem(level),
                             def,
-                            visibility: Visibility::Global,
-                            original_visibility: Visibility::Global,
+                            visibility: Visibility(ModScope::Global),
+                            original_visibility: Visibility(ModScope::Global),
                         });
                     }
                     None
@@ -341,8 +341,8 @@ impl ContextData<'_> {
                             // Local names will never be accessed from outside the current file,
                             // so we don't need to place any visibility restrictions on them.
                             // Thus, we give them global visibility.
-                            visibility: Visibility::Global,
-                            original_visibility: Visibility::Global,
+                            visibility: Visibility(ModScope::Global),
+                            original_visibility: Visibility(ModScope::Global),
                         });
                     }
                 }
@@ -363,21 +363,21 @@ impl ContextData<'_> {
             .map(|entry| {
                 if SHOULD_ENFORCE_VISIBILITY {
                     if !self.is_left_at_least_as_permissive_as_right(
-                        entry.visibility,
-                        Visibility::Mod(current_file_id),
+                        entry.visibility.0,
+                        ModScope::Mod(current_file_id),
                     ) {
                         return Err(NameComponentNotAccessibleError {
                             index: 0,
                             kind: NameComponentNotAccessibleErrorKind::InsufficientVisibility {
                                 actual_visibility: entry.visibility,
-                                required_visibility: Visibility::Mod(current_file_id),
+                                required_visibility: Visibility(ModScope::Mod(current_file_id)),
                             },
                         });
                     }
                     if let Some(required_original_visibility) = required_original_visibility {
                         if !self.is_left_at_least_as_permissive_as_right(
-                            entry.original_visibility,
-                            required_original_visibility,
+                            entry.original_visibility.0,
+                            required_original_visibility.0,
                         ) {
                             return Err(NameComponentNotAccessibleError {
                                 index: 0,
@@ -432,8 +432,8 @@ impl ContextData<'_> {
                 Some(DotGraphEntry {
                     node: DotGraphNode::Mod(root_id),
                     def: OwnedSymbolSource::Mod(root_id),
-                    visibility: Visibility::Global,
-                    original_visibility: Visibility::Global,
+                    visibility: Visibility(ModScope::Global),
+                    original_visibility: Visibility(ModScope::Global),
                 })
             }
 
@@ -458,8 +458,8 @@ impl ContextData<'_> {
         Some(DotGraphEntry {
             node: DotGraphNode::Mod(nth_super),
             def: OwnedSymbolSource::Mod(nth_super),
-            visibility: Visibility::Global,
-            original_visibility: Visibility::Global,
+            visibility: Visibility(ModScope::Global),
+            original_visibility: Visibility(ModScope::Global),
         })
     }
 }
@@ -569,44 +569,36 @@ impl ContextData<'_> {
 impl Context<'_, '_> {
     pub fn is_left_strictly_more_permissive_than_right(
         &self,
-        left: Visibility,
-        right: Visibility,
+        left: ModScope,
+        right: ModScope,
     ) -> bool {
         self.data
             .is_left_strictly_more_permissive_than_right(left, right)
     }
 
-    pub fn is_left_at_least_as_permissive_as_right(
-        &self,
-        left: Visibility,
-        right: Visibility,
-    ) -> bool {
+    pub fn is_left_at_least_as_permissive_as_right(&self, left: ModScope, right: ModScope) -> bool {
         self.data
             .is_left_at_least_as_permissive_as_right(left, right)
     }
 }
 impl ContextData<'_> {
-    fn is_left_strictly_more_permissive_than_right(
-        &self,
-        left: Visibility,
-        right: Visibility,
-    ) -> bool {
+    fn is_left_strictly_more_permissive_than_right(&self, left: ModScope, right: ModScope) -> bool {
         match (left, right) {
-            (Visibility::Global, Visibility::Global) => false,
-            (Visibility::Global, Visibility::Mod(_)) => true,
-            (Visibility::Mod(_), Visibility::Global) => false,
-            (Visibility::Mod(left), Visibility::Mod(right)) => self
+            (ModScope::Global, ModScope::Global) => false,
+            (ModScope::Global, ModScope::Mod(_)) => true,
+            (ModScope::Mod(_), ModScope::Global) => false,
+            (ModScope::Mod(left), ModScope::Mod(right)) => self
                 .file_tree
                 .is_left_strict_descendant_of_right(right, left),
         }
     }
 
-    fn is_left_at_least_as_permissive_as_right(&self, left: Visibility, right: Visibility) -> bool {
+    fn is_left_at_least_as_permissive_as_right(&self, left: ModScope, right: ModScope) -> bool {
         match (left, right) {
-            (Visibility::Global, Visibility::Global) => true,
-            (Visibility::Global, Visibility::Mod(_)) => true,
-            (Visibility::Mod(_), Visibility::Global) => false,
-            (Visibility::Mod(left), Visibility::Mod(right)) => self
+            (ModScope::Global, ModScope::Global) => true,
+            (ModScope::Global, ModScope::Mod(_)) => true,
+            (ModScope::Mod(_), ModScope::Global) => false,
+            (ModScope::Mod(left), ModScope::Mod(right)) => self
                 .file_tree
                 .is_left_non_strict_descendant_of_right(right, left),
         }
