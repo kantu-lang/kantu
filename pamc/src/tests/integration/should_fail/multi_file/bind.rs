@@ -182,3 +182,29 @@ fn type_priv() {
         },
     );
 }
+
+#[test]
+fn visibility_not_global_or_non_strict_ancestor() {
+    expect_bind_error(
+        ProjectPath {
+            callee_file_path: file!(),
+            checked_unadjusted_pack_omlet_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/visibility_not_global_or_non_strict_ancestor/pack.omlet"
+            ),
+        },
+        |err| match err {
+            BindError::VisibilityMustBeGlobalOrNonStrictAncestor(VisibilityMustBeGlobalOrNonStrictAncestorError {
+                weak_ancestor,
+            }) => {
+                match weak_ancestor.kind {
+                    simplified_ast::WeakAncestorKind::PackRelative { path_after_pack_kw } => {
+                        assert_eq!(1, path_after_pack_kw.len());
+                        assert_eq!("nat", path_after_pack_kw[0].name.src_str());
+                    }
+                    _ => panic!("Unexpected weak ancestor: {:?}", weak_ancestor),
+                }
+            }
+            _ => panic!("Unexpected error: {:?}", err),
+        },
+    );
+}
