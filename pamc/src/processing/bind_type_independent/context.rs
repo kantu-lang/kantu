@@ -235,17 +235,24 @@ impl ContextData<'_> {
             .next()
             .expect("name_components must not be empty.");
 
-        let current = self
+        let first_component_lookup_result = self
             .lookup_builtin(first)
             .or_else(|| self.lookup_local_name_component(first))
-            .or_else(|| self.lookup_mod_item(current_file_id, first))
-            .or_else(|| self.resolve_component_kw_if_applicable(current_file_id, first));
-        let Some(mut current) = current else {
+            .or_else(|| self.resolve_component_kw_if_applicable(current_file_id, first))
+            .map(Ok)
+            .or_else(|| {
+                self.lookup_unqualified_mod_item_with_customizable_visibility_enforcement::<SHOULD_ENFORCE_VISIBILITY>(
+                    current_file_id,required_visibility,
+                    first,
+                )
+            });
+        let Some(first_component_lookup_result) = first_component_lookup_result else {
             return Err(NameComponentNotFoundError {
                 index: 0,
                 kind: NameComponentNotFoundErrorKind::NotFound,
             });
         };
+        let mut current = first_component_lookup_result?;
 
         for (index_in_remaining, component) in remaining.enumerate() {
             let next = self.graph.get_edge_dest(current.node, component).cloned();
@@ -316,14 +323,29 @@ impl ContextData<'_> {
             })
     }
 
-    fn lookup_mod_item(
+    fn lookup_unqualified_mod_item_with_customizable_visibility_enforcement<
+        const SHOULD_ENFORCE_VISIBILITY: bool,
+    >(
         &self,
         current_file_id: FileId,
+        required_visibility: Visibility,
         component: &IdentifierName,
-    ) -> Option<DotGraphEntry> {
+    ) -> Option<Result<DotGraphEntry, NameComponentNotFoundError>> {
         self.graph
             .get_edge_dest(DotGraphNode::Mod(current_file_id), component)
-            .cloned()
+            .map(|entry| {
+                if self
+                    .is_left_at_least_as_permissive_as_right(entry.visibility, required_visibility)
+                {
+                    Ok(entry.clone())
+                } else {
+                    Err(NameComponentNotFoundError {
+                        // The mod item is unqualified, so it must be the first component.
+                        index: 0,
+                        kind: NameComponentNotFoundErrorKind::Private(entry.visibility),
+                    })
+                }
+            })
     }
 
     fn resolve_component_kw_if_applicable(
