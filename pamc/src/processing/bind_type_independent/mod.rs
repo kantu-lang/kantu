@@ -297,7 +297,21 @@ fn get_visibility_from_weak_ancestor_node(
             };
             let entry = lookup_name(context, name_components.iter())?;
             match entry.node {
-                DotGraphNode::Mod(mod_id) => Ok(Visibility::Mod(mod_id)),
+                DotGraphNode::Mod(mod_id) => {
+                    let visibility = Visibility::Mod(mod_id);
+                    if context.is_left_at_least_as_permissive_as_right(
+                        visibility,
+                        Visibility::Mod(context.current_file_id()),
+                    ) {
+                        Ok(visibility)
+                    } else {
+                        Err(BindError::VisibilityMustBeGlobalOrNonStrictAncestor(
+                            VisibilityMustBeGlobalOrNonStrictAncestorError {
+                                weak_ancestor: ancestor.clone(),
+                            },
+                        ))
+                    }
+                }
                 DotGraphNode::LeafItem(_) => Err(BindError::ExpectedModButNameRefersToTerm(
                     ExpectedModButNameRefersToTermError { name_components },
                 )),
