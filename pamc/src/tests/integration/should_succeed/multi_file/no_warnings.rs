@@ -81,3 +81,13 @@ fn no_clash_because_priv() {
         ),
     );
 }
+
+#[test]
+fn opaque_nat() {
+    expect_success_with_no_warnings(
+        file!(),
+        checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/opaque_nat/pack.omlet"
+        ),
+    );
+}
