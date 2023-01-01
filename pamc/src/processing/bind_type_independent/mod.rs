@@ -105,12 +105,9 @@ fn add_single_import_to_context(
     let name_components =
         std::iter::once(&first_component_name).chain(item.other_components.iter());
 
-    let (end_node, end_original_visibility) = {
-        let entry = lookup_name(context, name_components.clone())?;
-        (entry.node, entry.original_visibility)
-    };
+    let end_entry = lookup_name(context, name_components.clone())?;
     let visibility = get_visibility(context, item.visibility.as_ref())?;
-    if !context.is_left_at_least_as_permissive_as_right(end_original_visibility, visibility) {
+    if !context.is_left_at_least_as_permissive_as_right(end_entry.visibility, visibility) {
         return Err(BindError::CannotLeakPrivateName(
             CannotLeakPrivateNameError {
                 name_component: name_components
@@ -118,7 +115,7 @@ fn add_single_import_to_context(
                     .expect("Must be non-empty since we chained onto std::iter::once()")
                     .clone(),
                 required_visibility: visibility,
-                actual_visibility: end_original_visibility,
+                actual_visibility: end_entry.visibility,
             },
         ));
     }
@@ -126,77 +123,12 @@ fn add_single_import_to_context(
         context,
         start,
         &import_name.name,
-        end_node,
+        end_entry.node,
         import_name,
         visibility,
-        end_original_visibility,
+        end_entry.original_visibility,
     )?;
     Ok(())
-}
-
-fn get_visibility(
-    context: &Context,
-    pub_clause: Option<&ub::PubClause>,
-) -> Result<Visibility, BindError> {
-    let Some(pub_clause) = pub_clause else {
-        return Ok(Visibility::Mod(context.current_file_id()));
-    };
-    let Some(ancestor) = &pub_clause.ancestor else {
-        return Ok(Visibility::Global);
-    };
-    get_visibility_from_weak_ancestor_node(context, ancestor)
-}
-
-fn get_visibility_from_weak_ancestor_node(
-    context: &Context,
-    ancestor: &ParenthesizedWeakAncestor,
-) -> Result<Visibility, BindError> {
-    match &ancestor.kind {
-        ub::WeakAncestorKind::Global => Ok(Visibility::Global),
-        ub::WeakAncestorKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
-        ub::WeakAncestorKind::Super(n) => {
-            if let Some(DotGraphEntry {
-                node: DotGraphNode::Mod(ancestor_id),
-                def: _,
-                visibility: _,
-                original_visibility: _,
-            }) = context.get_n_supers(n.get())
-            {
-                Ok(Visibility::Mod(ancestor_id))
-            } else {
-                Err(NameNotFoundError {
-                    name_components: vec![ub::Identifier {
-                        span: ancestor.span,
-                        name: IdentifierName::new("super".to_string()),
-                    }],
-                }
-                .into())
-            }
-        }
-        ub::WeakAncestorKind::PackRelative { path_after_pack_kw } => {
-            let name_components: Vec<ub::Identifier> = {
-                let pack_kw_name = IdentifierName::Reserved(ReservedIdentifierName::Pack);
-                let pack_kw = ub::Identifier {
-                    span: TextSpan {
-                        file_id: ancestor.span.file_id,
-                        start: ancestor.span.start,
-                        end: ancestor.span.start + pack_kw_name.src_str().len(),
-                    },
-                    name: pack_kw_name,
-                };
-                std::iter::once(pack_kw)
-                    .chain(path_after_pack_kw.iter().cloned())
-                    .collect()
-            };
-            let entry = lookup_name(context, name_components.iter())?;
-            match entry.node {
-                DotGraphNode::Mod(mod_id) => Ok(Visibility::Mod(mod_id)),
-                DotGraphNode::LeafItem(_) => Err(BindError::ExpectedModButNameRefersToTerm(
-                    ExpectedModButNameRefersToTermError { name_components },
-                )),
-            }
-        }
-    }
 }
 
 fn add_wildcard_import_to_context(
@@ -306,6 +238,71 @@ fn use_statement_first_component_into_identifier_name(
             span: first_component.span,
             name,
         },
+    }
+}
+
+fn get_visibility(
+    context: &Context,
+    pub_clause: Option<&ub::PubClause>,
+) -> Result<Visibility, BindError> {
+    let Some(pub_clause) = pub_clause else {
+        return Ok(Visibility::Mod(context.current_file_id()));
+    };
+    let Some(ancestor) = &pub_clause.ancestor else {
+        return Ok(Visibility::Global);
+    };
+    get_visibility_from_weak_ancestor_node(context, ancestor)
+}
+
+fn get_visibility_from_weak_ancestor_node(
+    context: &Context,
+    ancestor: &ParenthesizedWeakAncestor,
+) -> Result<Visibility, BindError> {
+    match &ancestor.kind {
+        ub::WeakAncestorKind::Global => Ok(Visibility::Global),
+        ub::WeakAncestorKind::Mod => Ok(Visibility::Mod(context.current_file_id())),
+        ub::WeakAncestorKind::Super(n) => {
+            if let Some(DotGraphEntry {
+                node: DotGraphNode::Mod(ancestor_id),
+                def: _,
+                visibility: _,
+                original_visibility: _,
+            }) = context.get_n_supers(n.get())
+            {
+                Ok(Visibility::Mod(ancestor_id))
+            } else {
+                Err(NameNotFoundError {
+                    name_components: vec![ub::Identifier {
+                        span: ancestor.span,
+                        name: IdentifierName::new("super".to_string()),
+                    }],
+                }
+                .into())
+            }
+        }
+        ub::WeakAncestorKind::PackRelative { path_after_pack_kw } => {
+            let name_components: Vec<ub::Identifier> = {
+                let pack_kw_name = IdentifierName::Reserved(ReservedIdentifierName::Pack);
+                let pack_kw = ub::Identifier {
+                    span: TextSpan {
+                        file_id: ancestor.span.file_id,
+                        start: ancestor.span.start,
+                        end: ancestor.span.start + pack_kw_name.src_str().len(),
+                    },
+                    name: pack_kw_name,
+                };
+                std::iter::once(pack_kw)
+                    .chain(path_after_pack_kw.iter().cloned())
+                    .collect()
+            };
+            let entry = lookup_name(context, name_components.iter())?;
+            match entry.node {
+                DotGraphNode::Mod(mod_id) => Ok(Visibility::Mod(mod_id)),
+                DotGraphNode::LeafItem(_) => Err(BindError::ExpectedModButNameRefersToTerm(
+                    ExpectedModButNameRefersToTermError { name_components },
+                )),
+            }
+        }
     }
 }
 
