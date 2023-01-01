@@ -16,16 +16,17 @@ pub(super) fn type_check_type_statement_dirty(
     state: &mut State,
     type_statement_id: NodeId<TypeStatement>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
+    let type_statement = state.registry.get(type_statement_id).clone();
+    state.required_transparency_for_substitution = Some(Transparency(type_statement.visibility.0));
+
     type_check_type_constructor_dirty(state, type_statement_id)??;
 
-    let type_statement = state.registry.get(type_statement_id);
-    let type_statement_visibility = type_statement.visibility;
     let variant_ids = state
         .registry
         .get_possibly_empty_list(type_statement.variant_list_id)
         .to_vec();
     for variant_id in variant_ids {
-        type_check_type_variant_dirty(state, variant_id, type_statement_visibility)??;
+        type_check_type_variant_dirty(state, variant_id, type_statement.visibility)??;
     }
 
     Ok(with_push_warning(()))
@@ -142,6 +143,8 @@ pub(super) fn type_check_let_statement_dirty(
     let_statement_id: NodeId<LetStatement>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let let_statement = state.registry.get(let_statement_id).clone();
+    state.required_transparency_for_substitution = Some(Transparency(let_statement.visibility.0));
+
     let type_id = get_type_of_expression_dirty(state, None, let_statement.value_id)?;
 
     let visibility_status =

@@ -155,6 +155,8 @@ struct State<'a> {
     equality_checker: &'a mut NodeEqualityChecker,
     warnings: &'a mut Vec<TypeCheckWarning>,
 
+    required_transparency_for_substitution: Option<Transparency>,
+
     context: &'a mut Context,
 }
 
@@ -166,6 +168,8 @@ impl<'a> State<'_> {
             registry: self.registry,
             equality_checker: self.equality_checker,
             warnings: self.warnings,
+
+            required_transparency_for_substitution: self.required_transparency_for_substitution,
         }
     }
 }
@@ -177,4 +181,6 @@ struct ContextlessState<'a> {
     registry: &'a mut NodeRegistry,
     equality_checker: &'a mut NodeEqualityChecker,
     warnings: &'a mut Vec<TypeCheckWarning>,
+
+    required_transparency_for_substitution: Option<Transparency>,
 }

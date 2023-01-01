@@ -323,6 +323,8 @@ impl Context {
                     registry: state.registry,
                     equality_checker: state.equality_checker,
                     warnings: state.warnings,
+                    required_transparency_for_substitution: state
+                        .required_transparency_for_substitution,
                     context: &mut context,
                 },
                 substituted_type_id,
@@ -363,6 +365,8 @@ impl Context {
                                 registry: state.registry,
                                 equality_checker: state.equality_checker,
                                 warnings: state.warnings,
+                                required_transparency_for_substitution: state
+                                    .required_transparency_for_substitution,
                                 context: &mut context,
                             },
                             substituted,
