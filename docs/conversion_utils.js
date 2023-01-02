@@ -1,5 +1,5 @@
 // Utils for converting JS representations of
-// Pamlihu types (e.g., Nat, List)
+// Kantu types (e.g., Nat, List)
 // to their native analogues (e.g., number, Array).
 
 function toNum(nat) {

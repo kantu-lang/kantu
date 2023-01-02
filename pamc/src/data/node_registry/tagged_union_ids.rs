@@ -138,7 +138,7 @@ impl NonEmptyMatchCaseParamListId {
     /// but rather the number of params that are explicitly listed.
     /// For example, if we have
     ///
-    /// ```pamlihu
+    /// ```kantu
     /// type Nat {
     ///    .O: Nat,
     ///    .S(~n: Nat): Nat,

@@ -118,7 +118,7 @@ fn generate_code_for_todo_error_thrower() -> Vec<FileItem> {
 /// plus a Const for each variant constructor.
 ///
 /// For example if we have
-/// ```pamlihu
+/// ```kantu
 /// type List(T: Type) {
 ///    .Nil(T: Type): List(T),
 ///    .Cons(T: Type; car: T, cdr: List(T)): List(T),
@@ -690,7 +690,7 @@ fn bijectively_sanitize_js_identifier_name(s: &str) -> ValidJsIdentifierName {
         // so we escape it to avoid name collisions.
         //
         // For example, if we didn't escape '$', then
-        // the Pamlihu names `a$u0027$` and `a'` would both
+        // the Kantu names `a$u0027$` and `a'` would both
         // be translated to the JavaScript name `a$u0027$`.
         if c.is_ascii_alphabetic() || c == '_' {
             out.push(c);
@@ -706,7 +706,7 @@ fn bijectively_sanitize_js_identifier_name(s: &str) -> ValidJsIdentifierName {
         // so we escape it to avoid name collisions.
         //
         // For example, if we didn't escape '$', then
-        // the Pamlihu names `a$u0027$` and `a'` would both
+        // the Kantu names `a$u0027$` and `a'` would both
         // be translated to the JavaScript name `a$u0027$`.
         if c.is_ascii_alphanumeric() || c == '_' {
             out.push(c);

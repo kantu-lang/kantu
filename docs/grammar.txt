@@ -1,6 +1,7 @@
 // This grammar specification is just for my personal reference.
 // It is not part of the official documentation.
 // It is also not used by any part of the code (e.g., by an automatic parser generator).
+// It may be outdated.
 
 file :=
     | file_item*

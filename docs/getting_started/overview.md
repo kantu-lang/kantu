@@ -1,4 +1,4 @@
-# Pamlihu overview
+# Kantu overview
 
 ## Disclaimer
 
@@ -79,7 +79,7 @@ Name shadowing (declaring two variables with the same name) is strictly forbidde
 
 However, keep in mind that the binding declared by a `let` statement does not go into scope until _after_ the statement is completely finished, making it possible to write things like this:
 
-```pamlihu
+```kantu
 let foo = fun foo(n: Nat): Nat {
     // The `let foo` statement is not complete,
     // so that `foo` is not in scope.
@@ -110,7 +110,7 @@ also applies to type parameters, variant parameters function parameters, and for
 
 So the below code is legal (although strongly discouraged, since it's not very readable):
 
-```pamlihu
+```kantu
 type Foo(a: forall(a: Nat) { Nat }) {}
 
 type Bar {
@@ -126,7 +126,7 @@ let x2 = forall(f: forall(f: Nat) { Nat }) { Unit };
 
 Also, keep in mind that type parameters are not in scope within the type variant declarations, so this is perfectly legal, clean code:
 
-```pamlihu
+```kantu
 type List(T: Type /* The `T` defined here...*/) {
     // ...and is NOT in scope here.
     .Nil(
@@ -145,7 +145,7 @@ type List(T: Type /* The `T` defined here...*/) {
 
 Use the `type` keyword to declare types. Syntax:
 
-```pamlihu
+```kantu
 type TypeName(
     TypeParam0: TypeParamType0,
     TypeParam1: TypeParamType1,
@@ -179,7 +179,7 @@ type TypeName(
 
 Examples:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -229,10 +229,10 @@ type ListOfEvenNats {
 }
 ```
 
-Pamlihu does not have the concept of a nullary function.
+Kantu does not have the concept of a nullary function.
 As a result, empty parameter lists `()` are syntactically invalid.
 
-Since Pamlihu is pure and total, there is no need for nullary
+Since Kantu is pure and total, there is no need for nullary
 functions--any time you want to write `fun _() { some_val }`,
 you should simply write `some_val`.
 
@@ -240,7 +240,7 @@ you should simply write `some_val`.
 
 Type declarations must pass a _positivity test_.
 This test is based on the notion of [strict positivity](https://cs.stackexchange.com/questions/55646/strict-positivity).
-However, Pamlihu imposes additional restrictions in order to simplify the positivity testing algorithm.
+However, Kantu imposes additional restrictions in order to simplify the positivity testing algorithm.
 
 You can probably skip this section, since odds are, the only time you will declare a type that violates
 the strict positivity requirement is if you deliberately try to.
@@ -254,7 +254,7 @@ one in a million who stumbled upon this error "out in the wild"), read on.
 Without the requirement, we could write "broken" types that
 allow us to prove false. For example:
 
-```pamlihu
+```kantu
 type False {}
 
 type Broken {
@@ -276,7 +276,7 @@ references in any `forall` parameter type.
 For example, the above example would be rejected by
 the positivity checker because...
 
-```pamlihu
+```kantu
 type Broken {
     .C(
         f:
@@ -291,7 +291,7 @@ However, this restriction is not enough!
 If we only had this restriction, we could circumvent it,
 such as in the code below
 
-```pamlihu
+```kantu
 type False {}
 
 type Not(T: Type) {
@@ -377,7 +377,7 @@ about it--you'll probably never need it.
 
 ## `let` statements
 
-```pamlihu
+```kantu
 let N = Nat;
 let O = Nat.O;
 let S = Nat.S;
@@ -387,7 +387,7 @@ let _3 = S(S(S(O)));
 Note that `let` aliases can't be used in `.` expressions.
 For example, the following code will not compile:
 
-```pamlihu
+```kantu
 let N = Nat;
 // Error: Invalid Dot expression LHS
 let S = N.S;
@@ -397,7 +397,7 @@ let S = N.S;
 
 The syntax is
 
-```pamlihu
+```kantu
 match matchee {
     .Variant0(param0_0, param0_1, param0_2, /* ... */) => case0_output,
     .Variant1(param1_0, param1_1, param1_2, /* ... */) => case1_output,
@@ -407,7 +407,7 @@ match matchee {
 
 Example:
 
-```pamlihu
+```kantu
 type Bool {
     .False: Bool,
     .True: Bool,
@@ -423,7 +423,7 @@ Wildcards are not supported. Impossible cases must have the `impossible` keyword
 written in place of the output.
 For example:
 
-```pamlihu
+```kantu
 type TypeEq(A: Type, B: Type) {
     .Refl(C: Type): TypeEq,
 }
@@ -453,7 +453,7 @@ let f = fun _(H: TypeEq(UnitX, UnitY)): False {
 
 The syntax for a function expression is
 
-```pamlihu
+```kantu
 fun name(arg0: Type0, arg1: Type1, /* ... */): ReturnType {
     return_value
 }
@@ -463,7 +463,7 @@ fun name(arg0: Type0, arg1: Type1, /* ... */): ReturnType {
 
 Example:
 
-```pamlihu
+```kantu
 type Bool {
     .False: Bool,
     .True: Bool,
@@ -483,7 +483,7 @@ let true = not(Bool.False);
 You can make functions anonymous by writing `_`
 instead of a name.
 
-```pamlihu
+```kantu
 let not = fun _(b: Bool): Bool {
     match b {
         .False => Bool.True,
@@ -513,7 +513,7 @@ However, the `-` is **not** included as part of its name.
 
 For example:
 
-```pamlihu
+```kantu
 let esoteric_identity_implementation = fun f(-n: Nat): Nat {
     match n {
         .O => Nat.O,
@@ -532,7 +532,7 @@ of a parameter introduced by a `match n` expression.
 
 For example, in
 
-```pamlihu
+```kantu
 let foo = fun _(n: Nat, m: Nat) {
     match n {
         .O => Nat.O,
@@ -563,7 +563,7 @@ abstract, so here are some concrete examples:
 
 **Permitted:**
 
-```pamlihu
+```kantu
 let always_returns_zero = fun zero_(-n: Nat): Nat {
     match n {
         .O => Nat.O,
@@ -574,7 +574,7 @@ let always_returns_zero = fun zero_(-n: Nat): Nat {
 
 **Forbidden:**
 
-```pamlihu
+```kantu
 let infinite_recursion = fun f(-n: Nat): Nat {
     // The compiler will not permit this because
     // the first parameter of `f` is decreasing
@@ -586,7 +586,7 @@ let infinite_recursion = fun f(-n: Nat): Nat {
 
 **Forbidden:**
 
-```pamlihu
+```kantu
 let no_decreasing_param = fun f(n: Nat): Nat {
     match n {
         .O => Nat.O,
@@ -604,7 +604,7 @@ let no_decreasing_param = fun f(n: Nat): Nat {
 You can also choose to make a function's parameters _labeled_.
 Syntax:
 
-```pamlihu
+```kantu
 fun name(label0~param0: Type0, label1~param1: Type1, /* ... */): ReturnType {
     return_value
 }
@@ -612,7 +612,7 @@ fun name(label0~param0: Type0, label1~param1: Type1, /* ... */): ReturnType {
 
 Example:
 
-```pamlihu
+```kantu
 let total_fruit = fun _(apples~a: Nat, bananas~ban: Nat, cherries~cher): Nat {
     plus(plus(a, ban), cher)
 };
@@ -621,7 +621,7 @@ let x = total_fruit(apples: Nat.O, bananas: Nat.S(Nat.O), cherries: Nat.O);
 
 If a label is the same as the parameter name, you can omit the label. For example,
 
-```pamlihu
+```kantu
 fun _(apples~apples: Nat): Nat {
     apples
 }
@@ -629,7 +629,7 @@ fun _(apples~apples: Nat): Nat {
 
 and
 
-```pamlihu
+```kantu
 fun _(~apples: Nat): Nat {
     apples
 }
@@ -650,7 +650,7 @@ the labels appear in the parameters of the defining type.
 
 For example:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(_: Nat): Nat,
@@ -678,7 +678,7 @@ let still_legal_but_frowned_upon = Color.C(b: O, g: O, r: O);
 
 Calling a labeled function with correctly labeled but misordered arguments (e.g., like `still_legal_but_frowned_upon` in the above example) will **always be legal**.
 
-However, in a future version of Pamlihu, this may result in warnings.
+However, in a future version of Kantu, this may result in warnings.
 
 #### Order of `~` and `-`
 
@@ -686,7 +686,7 @@ Rule: The `-` _always_ directly precedes the parameter name.
 
 Quiz: Which two out of the following (i.e., A, B, C, D) are correct?
 
-```pamlihu
+```kantu
 let A = fun f(x~-x: Nat): Nat { x };
 let B = fun f(~-x: Nat): Nat { x };
 let C = fun f(-x~x: Nat): Nat { x };
@@ -704,7 +704,7 @@ can all be labeled.
 
 Example:
 
-```pamlihu
+```kantu
 let f = fun _(~a: Nat): Nat { a }
 let F = forall(~a: Nat) { Nat };
 let expect_F = fun _(_: F): Unit { Unit.C };
@@ -737,7 +737,7 @@ a member of type _F_.
 
 Example:
 
-```pamlihu
+```kantu
 let f = fun _(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah): Unit { Unit.C };
 let F = forall(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah) { Unit };
 let expect_F = fun _(_: F): Unit { Unit.C };
@@ -761,7 +761,7 @@ In short, the labels _and_ the order must be the same.
 
 If you try writing the following code, you will get an error
 
-```pamlihu
+```kantu
 type Color {
     .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
@@ -780,7 +780,7 @@ This is because `match` cases corresponding to variants with labeled parameters 
 
 To fix this code, one could write
 
-```pamlihu
+```kantu
 let redness = fun _(c: Color): Nat {
     match c {
         .C(r: red, g: _, b: _) => red,
@@ -794,7 +794,7 @@ Writing `g: _, b: _` may be a hassle
 (especially if you have many parameters), so
 you can alternatively write
 
-```pamlihu
+```kantu
 let redness2 = fun _(c: Color): Nat {
     match c {
         .C(r: red, ...) => red,
@@ -813,7 +813,7 @@ Similar to how `~foo` can be used as shorthand for
 In the above example, if we used the name `r` instead of `red`, then we would have `r: r`, which
 would could be shortened to `:r`:
 
-```pamlihu
+```kantu
 let redness3 = fun _(c: Color): Nat {
     match c {
         .C(:r, ...) => r,
@@ -823,7 +823,7 @@ let redness3 = fun _(c: Color): Nat {
 
 ##### Matching param label order is strongly encouraged (but not required)
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(_: Nat): Nat,
@@ -861,7 +861,7 @@ It will always be legal to declare correctly labeled but misordered
 match case parameters (e.g., like in `still_legal_but_frowned_upon` in the
 above example).
 
-However, in a future version of Pamlihu, doing this may trigger some warnings.
+However, in a future version of Kantu, doing this may trigger some warnings.
 
 ## `forall` Expressions
 
@@ -871,13 +871,13 @@ A: We use `forall` expressions.
 
 The syntax is
 
-```pamlihu
+```kantu
 forall (param0: Type0, param1: Type1, param2: Type2, /* ... */) { ReturnType }
 ```
 
 Example:
 
-```pamlihu
+```kantu
 type Option(T: Type) {
     .None(T: Type): Option(T),
     .Some(T: Type, t: T): Option(T),
@@ -897,19 +897,19 @@ let map = fun _(T: Type, U: Type, o: Option(T), f: forall(t: T) { U }): Option(U
 
 Syntax:
 
-```pamlihu
+```kantu
 callee(arg0, arg1, arg2, /* ... */)
 ```
 
 Alternatively, if the function has labeled parameters:
 
-```pamlihu
+```kantu
 callee(label0: arg0, label1: arg1, label2: arg2, /* ... */)
 ```
 
 You can call type constructors, type variant constructors, and `fun`s. Example:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -951,7 +951,7 @@ certain equalities at compile time. They have zero runtime impact.
 
 Syntax:
 
-```pamlihu
+```kantu
 check (
     // Type assertions:
     expr0: Type0,
@@ -975,7 +975,7 @@ There must be at least one total assertions (i.e., `check () { output_expression
 
 Example:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -1011,7 +1011,7 @@ This way, we can use `check` expressions to debug confusing type errors.
 For normal form assertions, you can write `goal` in place of
 the left-hand side:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -1044,7 +1044,7 @@ let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
 For both type assertions and normal form assertions,
 you can write `?` in place of the right-hand side:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -1090,7 +1090,7 @@ care what you write in them, as long as they are syntactically correct.
 As a result, the below code will generate warnings,
 but no errors:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -1131,7 +1131,7 @@ Consequently, one is encouraged to fix the warnings when they get the time.
 
 Single line:
 
-```pamlihu
+```kantu
 // This is a single line comment
 let foo = bar(
     // Comments can pretty much go anywhere
@@ -1142,7 +1142,7 @@ let foo = bar(
 
 Multiline:
 
-```pamlihu
+```kantu
 /* This is a
 multiline
 comment */
@@ -1194,8 +1194,8 @@ src/
         baz.ph
 ```
 
-In Pamlihu, the smallest "shareable" unit of code is the _package_.
-Pamlihu packages are roughly analogous to npm packages or Rust crates.
+In Kantu, the smallest "shareable" unit of code is the _package_.
+Kantu packages are roughly analogous to npm packages or Rust crates.
 
 A package consists of a `pack.omlet` file and one or more
 `.ph` files.
@@ -1224,7 +1224,7 @@ denote an "empty" config.
 
 #### `src/mod.ph` (corresponds to the `pack` module):
 
-```pamlihu
+```kantu
 mod foo;
 pub mod bar;
 
@@ -1268,7 +1268,7 @@ change it.
 
 #### `src/foo.ph` (corresponds to the `pack.foo` module):
 
-```pamlihu
+```kantu
 pub type Nat {
     .O: Nat,
     .S(_: Nat): Nat,
@@ -1277,7 +1277,7 @@ pub type Nat {
 
 #### `src/bar/mod.ph` (corresponds to the `pack.bar` module):
 
-```pamlihu
+```kantu
 use super.Nat;
 
 pub let mult = fun f(-a: Nat, b: Nat): Nat {
@@ -1301,7 +1301,7 @@ we use fully qualified syntax.
 
 #### `src/bar/baz.ph` (corresponds to the `pack.bar.baz` module):
 
-```pamlihu
+```kantu
 use super.Nat;
 use super2.S;
 
@@ -1394,14 +1394,14 @@ Example:
 
 `src/mod.ph`
 
-```pamlihu
+```kantu
 pub mod nat;
 pub mod factorial;
 ```
 
 `src/nat.ph`
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(_: Nat): Nat,
@@ -1410,7 +1410,7 @@ type Nat {
 
 `src/factorial/mod.ph`
 
-```pamlihu
+```kantu
 mod plus;
 
 // `Nat` was declared by a module other than the current module,
@@ -1437,7 +1437,7 @@ pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
 
 `src/factorial/plus.ph`:
 
-```pamlihu
+```kantu
 // `Nat` was declared by a module other than the current module,
 // so we must use `.` syntax (specifically, `super2.nat.Nat`).
 pub let plus = fun plus(-a: super2.nat.Nat, b: super2.nat.Nat): super2.nat.Nat {
@@ -1470,7 +1470,7 @@ If you don't want to type a bunch of `.`s, you will find `use` very handy.
 
 Before:
 
-```pamlihu
+```kantu
 mod math;
 
 let x = math.nat.Nat.S(math.nat.Nat.O);
@@ -1478,7 +1478,7 @@ let x = math.nat.Nat.S(math.nat.Nat.O);
 
 After:
 
-```pamlihu
+```kantu
 mod math;
 
 use math.nat.Nat;
@@ -1499,7 +1499,7 @@ syntax, so we can simply write `baz` (instead of the full-blown `foo.bar.baz`) i
 
 You can write `use foo.bar.baz as qux;` to make the alias `qux` (instead of `baz`). Example:
 
-```pamlihu
+```kantu
 use math.nat.Nat as Foo;
 
 let plus = fun plus(-a: Foo, b: Foo): Foo {
@@ -1530,13 +1530,13 @@ type Empty {}
 
 `src/bar/mod.ph`:
 
-```pamlihu
+```kantu
 pub mod qux;
 ```
 
 ...then writing `use foo.*;` will be equivalent to writing
 
-```pamlihu
+```kantu
 use foo.bar;
 use foo.baz;
 ```
@@ -1550,11 +1550,11 @@ module item of the same name, the compiler will emit an error.
 
 ### Ordering of item processing
 
-Recall that Pamlihu forbids forward references.
+Recall that Kantu forbids forward references.
 
 In a single file project, it is trivial to see the order of module items--simply read the code from top-to-bottom.
 
-However, with multiple files, a Pamlihu developer must understand
+However, with multiple files, a Kantu developer must understand
 the order that the compiler processes module items, so they can
 avoid forward references.
 
@@ -1575,7 +1575,7 @@ Here's an example to test your understanding.
 
 `src/mod.ph`:
 
-```pamlihu
+```kantu
 pub mod nat;
 use nat.NaturalNumber as Nat;
 
@@ -1584,7 +1584,7 @@ pub mod plus;
 
 `src/nat.ph`:
 
-```pamlihu
+```kantu
 pub type NaturalNumber {
     .O: NaturalNumber,
     .S(_: NaturalNumber): NaturalNumber,
@@ -1593,7 +1593,7 @@ pub type NaturalNumber {
 
 `src/plus.ph`:
 
-```pamlihu
+```kantu
 use super.Nat;
 
 pub let plus = fun plus(-a: Nat, b: Nat): Nat {
@@ -1631,7 +1631,7 @@ For example, is the following code is valid.
 
 `src/mod.ph`:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -1664,7 +1664,7 @@ However, the following code is *in*valid.
 
 `src/mod.ph`:
 
-```pamlihu
+```kantu
 type Nat {
     .O: Nat,
     .S(n: Nat): Nat,
@@ -1690,7 +1690,7 @@ let my_number_equals_zero = identity(
 
 `src/my_constants.ph`:
 
-```pamlihu
+```kantu
 use super.*;
 pub let my_number = Nat.O;
 ```
@@ -1706,7 +1706,7 @@ and `EqNat.Refl(Nat.O)` cannot be judged to inhabit it.
 
 Write a module after the let. Here are some examples:
 
-```pamlihu
+```kantu
 // Global transparency
 pub let(*) my_number_2 = Nat.O;
 
@@ -1725,8 +1725,8 @@ For example, `*`, `mod`, `super`, `super2`, `pack`, `pack.some.module`.
 
 ## Tamnyban (internal use only)
 
-Tamnyban is a language for describing Pamlihu declarations.
-There is no need for a Pamlihu user to learn it.
+Tamnyban is a language for describing Kantu declarations.
+There is no need for a Kantu user to learn it.
 
 ### Evaluation and typechecking
 
@@ -1737,13 +1737,13 @@ transparency is required to substitute the constant.
 
 ### Name resolution
 
-In Pamlihu code, a name starting with `pack`, `super`, or `mod`
+In Kantu code, a name starting with `pack`, `super`, or `mod`
 is evaluated normally.
 Any other name `x.y.z` is treated as shorthand for `mod.x.y.z`.
 
 ### `let` statements
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) let(B) C.x = t;
 ```
 
@@ -1759,7 +1759,7 @@ Requirements:
   perspective of `B`.
 - Every name in `t` must be visible to `B`.
 
-In normal Pamlihu code, `C` is the module of the `let`
+In normal Kantu code, `C` is the module of the `let`
 statement.
 The user is allowed, but not required to
 explicitly provide `A` and `B`.
@@ -1775,7 +1775,7 @@ Specifically:
 
 ### `type` statements
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) type B.T(t1) { t2 }
 ```
 
@@ -1791,7 +1791,7 @@ Requirements:
   to `A`, and be well-typed from the perspective
   of `A`.
 
-In normal Pamlihu code, `B` is the module of the
+In normal Kantu code, `B` is the module of the
 `type` statement.
 The user is allowed, but not required to
 explicitly provide `A`.
@@ -1799,7 +1799,7 @@ If `A` is omitted, then it defaults to `B`.
 
 ### `mod` statements
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) mod B.M;
 ```
 
@@ -1812,7 +1812,7 @@ Requirements
 - `M` must be a single component.
 - `A` must be a non-strict ancesstor of `B`.
 
-In normal Pamlihu code, `B` is the module of the `mod` statement.
+In normal Kantu code, `B` is the module of the `mod` statement.
 `A` may be explicitly specified or omitted.
 If omitted, it defaults to `B`.
 
@@ -1820,7 +1820,7 @@ If omitted, it defaults to `B`.
 
 #### Alias a constant
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) use B.x as C.y&;
 ```
 
@@ -1833,7 +1833,7 @@ Requirements:
 - `B.x` must be visible to `C`.
 - `A` must be a non-strict ancestor of `C`.
 
-In normal Pamlihu code, `C` is the module of the `use` statement.
+In normal Kantu code, `C` is the module of the `use` statement.
 The user must explicitly specify `B`.
 The user is allowed, but not required to
 explicitly provide `A`.
@@ -1841,7 +1841,7 @@ If `A` is omitted, then it defaults to `C`.
 
 #### Alias a type
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) use B.T as C.U&;
 ```
 
@@ -1857,7 +1857,7 @@ Same requirements and defaults as constant aliases.
 
 #### Alias a module
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) use B as C.M&;
 ```
 
@@ -1873,13 +1873,13 @@ Same requirements, plus
 
 - `M` must be exactly one component long.
 
-In normal Pamlihu code, `C` is the module of the `use` statement.
+In normal Kantu code, `C` is the module of the `use` statement.
 The user must explicitly specify `B` and `M`.
 `A` may be specified or omitted (defaults to `C`).
 
 #### Alias an alias
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) use B& as C.M&;
 ```
 
@@ -1893,7 +1893,7 @@ for x in B&.dot_children:
 
 #### Wildcard `use` statements
 
-```pamlihu[tamnyban]
+```kantu[tamnyban]
 pub(A) use B.* as C.*;
 ```
 

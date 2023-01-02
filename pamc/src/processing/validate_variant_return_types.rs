@@ -15,7 +15,7 @@ use crate::data::{
 ///
 /// **Invalid:**
 ///
-/// ```pamlihu
+/// ```kantu
 /// type Bool {
 ///    .True: Nat,
 ///    .False: Nat,
@@ -27,7 +27,7 @@ use crate::data::{
 ///
 /// **Valid:**
 ///
-/// ```pamlihu
+/// ```kantu
 /// type Bool {
 ///   .True: Bool,
 ///   .False: Bool,
