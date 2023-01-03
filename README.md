@@ -13,3 +13,9 @@ In technical terms, some of Kantu's prominent features include [dependent types]
 ## Guides
 
 - [Language Overview](./docs/overview.md)
+
+## License
+
+Kantu is distributed under both the MIT license and the Apache License (Version 2.0).
+
+See [LICENSE-APACHE](./LICENSE-APACHE) and [LICENSE-MIT](./LICENSE-MIT) for details.
