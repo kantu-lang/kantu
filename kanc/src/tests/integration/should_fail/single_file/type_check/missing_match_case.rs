@@ -22,7 +22,7 @@ fn expect_missing_match_case_error(src: &str, expected_variant_names: &[&Identif
 #[test]
 fn missing_match_case() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/missing_match_case.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/missing_match_case.k"
     );
     expect_missing_match_case_error(src, &[&IdentifierName::new("False".to_string())]);
 }

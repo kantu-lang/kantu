@@ -22,7 +22,7 @@ fn expect_extraneous_labeled_call_arg_type_error(
 #[test]
 fn extraneous_arg() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/labeled_call_args/extraneous_arg.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/labeled_call_args/extraneous_arg.k"
     );
     expect_extraneous_labeled_call_arg_type_error(src, "max");
 }
@@ -58,7 +58,7 @@ fn expect_missing_labeled_call_arg_type_error<const N: usize>(
 #[test]
 fn missing_arg() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/labeled_call_args/missing_arg.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/labeled_call_args/missing_arg.k"
     );
     expect_missing_labeled_call_arg_type_error(src, ["right"]);
 }

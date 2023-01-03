@@ -18,7 +18,7 @@ fn expect_expression(src: &str, panicker: impl Fn(Expression)) {
 
 #[test]
 fn dot1() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot1.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot1.x.ksn");
     expect_expression(src, |expression| match &expression {
         Expression::Identifier(name) => {
             assert_eq!(&IdentifierName::new("a".to_string()), &name.name);
@@ -29,7 +29,7 @@ fn dot1() {
 
 #[test]
 fn dot2() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot2.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot2.x.ksn");
     expect_expression(src, |expression| match &expression {
         Expression::Dot(dot) => {
             assert_eq!(&IdentifierName::new("b".to_string()), &dot.right.name);
@@ -46,7 +46,7 @@ fn dot2() {
 
 #[test]
 fn dot3() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot3.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/dot3.x.ksn");
     expect_expression(src, |expression| match &expression {
         Expression::Dot(dot) => {
             assert_eq!(&IdentifierName::new("c".to_string()), &dot.right.name);
@@ -69,7 +69,7 @@ fn dot3() {
 
 #[test]
 fn call() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/call.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/call.x.ksn");
     expect_expression(src, |expression| {
         match &expression {
             Expression::Call(call) => {
@@ -107,7 +107,7 @@ fn call() {
 #[test]
 fn labeled_call() {
     let src =
-        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_call.x.pht");
+        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_call.x.ksn");
     expect_expression(src, |expression| {
         match &expression {
             Expression::Call(call) => {
@@ -160,7 +160,7 @@ fn labeled_call() {
 
 #[test]
 fn fun() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/fun.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/fun.x.ksn");
     expect_expression(src, |expression| match expression {
         Expression::Fun(fun) => {
             assert_eq!(IdentifierName::new("x".to_string()), fun.name.name);
@@ -188,7 +188,7 @@ fn fun() {
 #[test]
 fn labeled_fun() {
     let src =
-        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_fun.x.pht");
+        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_fun.x.ksn");
     expect_expression(src, |expression| match expression {
         Expression::Fun(fun) => {
             assert_eq!(IdentifierName::new("x".to_string()), fun.name.name);
@@ -221,7 +221,7 @@ fn labeled_fun() {
 
 #[test]
 fn match_() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/match.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/match.x.ksn");
     expect_expression(src, |expression| match expression {
         Expression::Match(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -231,7 +231,7 @@ fn match_() {
 #[test]
 fn labeled_match() {
     let src =
-        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_match.x.pht");
+        include_str!("../../sample_code/should_succeed/subterms/expressions/labeled_match.x.ksn");
     expect_expression(src, |expression| match expression {
         Expression::Match(match_) => {
             assert_eq!(15, match_.cases.len());
@@ -374,7 +374,7 @@ fn labeled_match() {
 
 #[test]
 fn forall() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/forall.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/forall.x.ksn");
     expect_expression(src, |expression| match expression {
         Expression::Forall(_) => {}
         other => panic!("Unexpected expression {:?}", other),
@@ -383,7 +383,7 @@ fn forall() {
 
 #[test]
 fn check() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/check.x.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/expressions/check.x.ksn");
     expect_expression(src, |expression| match expression {
         Expression::Check(check) => {
             assert_eq!(3, check.assertions.len());

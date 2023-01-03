@@ -20,7 +20,7 @@ fn expect_unexpected_non_eoi_token_error(
 #[test]
 fn super_dot_super() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/super_dot_super.ph"
+        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/super_dot_super.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::Super, "super");
 }
@@ -28,7 +28,7 @@ fn super_dot_super() {
 #[test]
 fn mod_dot_super() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/mod_dot_super.ph"
+        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/mod_dot_super.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::Super, "super");
 }
@@ -36,7 +36,7 @@ fn mod_dot_super() {
 #[test]
 fn mod_dot_mod() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/mod_dot_mod.ph"
+        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/mod_dot_mod.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::Mod, "mod");
 }
@@ -44,7 +44,7 @@ fn mod_dot_mod() {
 #[test]
 fn super_dot_mod() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/super_dot_mod.ph"
+        "../../../../sample_code/should_fail/single_file/parse/component_kw_in_dot_rhs/super_dot_mod.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::Mod, "mod");
 }

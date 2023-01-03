@@ -23,7 +23,7 @@ fn expect_call_arg_labeledness_mismatch_type_error(src: &str, expected_call_src:
 #[test]
 fn labeled_fun_unlabeled_args() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_fun_unlabeled_args.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_fun_unlabeled_args.k"
     );
     expect_call_arg_labeledness_mismatch_type_error(src, "plus(O, O,)");
 }
@@ -31,7 +31,7 @@ fn labeled_fun_unlabeled_args() {
 #[test]
 fn labeled_variant_unlabeled_args() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_variant_unlabeled_args.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_variant_unlabeled_args.k"
     );
     expect_call_arg_labeledness_mismatch_type_error(src, "Nat.S(Nat.O,)");
 }
@@ -39,7 +39,7 @@ fn labeled_variant_unlabeled_args() {
 #[test]
 fn labeled_type_unlabeled_args() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_type_unlabeled_args.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_type_unlabeled_args.k"
     );
     expect_call_arg_labeledness_mismatch_type_error(src, "List(Nat,)");
 }
@@ -47,7 +47,7 @@ fn labeled_type_unlabeled_args() {
 #[test]
 fn unlabeled_fun_labeled_args() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/unlabeled_fun_labeled_args.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/unlabeled_fun_labeled_args.k"
     );
     expect_call_arg_labeledness_mismatch_type_error(src, "plus(left: O, right: O,)");
 }
@@ -55,7 +55,7 @@ fn unlabeled_fun_labeled_args() {
 #[test]
 fn unlabeled_variant_labeled_args() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/unlabeled_variant_labeled_args.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/unlabeled_variant_labeled_args.k"
     );
     expect_call_arg_labeledness_mismatch_type_error(src, "Nat.S(pred: O,)");
 }
@@ -63,7 +63,7 @@ fn unlabeled_variant_labeled_args() {
 #[test]
 fn unlabeled_type_labeled_args() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/unlabeled_type_labeled_args.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/unlabeled_type_labeled_args.k"
     );
     expect_call_arg_labeledness_mismatch_type_error(src, "List(Item: Nat,)");
 }

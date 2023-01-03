@@ -19,33 +19,33 @@ fn expect_unexpected_non_eoi_token_error(
 
 #[test]
 fn dot_dot() {
-    let src = include_str!("../../../../sample_code/should_fail/single_file/parse/use/dot_dot.ph");
+    let src = include_str!("../../../../sample_code/should_fail/single_file/parse/use/dot_dot.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::Dot, ".");
 }
 
 #[test]
 fn dot_as() {
-    let src = include_str!("../../../../sample_code/should_fail/single_file/parse/use/dot_as.ph");
+    let src = include_str!("../../../../sample_code/should_fail/single_file/parse/use/dot_as.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::As, "as");
 }
 
 #[test]
 fn dot_semicolon() {
     let src =
-        include_str!("../../../../sample_code/should_fail/single_file/parse/use/dot_semicolon.ph");
+        include_str!("../../../../sample_code/should_fail/single_file/parse/use/dot_semicolon.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::Semicolon, ";");
 }
 
 #[test]
 fn dotless_star() {
     let src =
-        include_str!("../../../../sample_code/should_fail/single_file/parse/use/dotless_star.ph");
+        include_str!("../../../../sample_code/should_fail/single_file/parse/use/dotless_star.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::Star, "*");
 }
 
 #[test]
 fn dotless_ident() {
     let src =
-        include_str!("../../../../sample_code/should_fail/single_file/parse/use/dotless_ident.ph");
+        include_str!("../../../../sample_code/should_fail/single_file/parse/use/dotless_ident.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::StandardIdentifier, "baz");
 }

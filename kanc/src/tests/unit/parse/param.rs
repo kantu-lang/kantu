@@ -12,7 +12,7 @@ fn expect_param(src: &str, panicker: impl Fn(Param)) {
 
 #[test]
 fn undashed() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/params/undashed.p.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/params/undashed.p.ksn");
     expect_param(src, |param| {
         let expected_name = IdentifierName::new("a".to_string());
         assert_eq!(&expected_name, &param.name.name);
@@ -22,7 +22,7 @@ fn undashed() {
 
 #[test]
 fn dashed() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/params/dashed.p.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/params/dashed.p.ksn");
     expect_param(src, |param| {
         let expected_name = IdentifierName::new("b".to_string());
         assert_eq!(&expected_name, &param.name.name);
@@ -33,7 +33,7 @@ fn dashed() {
 #[test]
 fn underscore() {
     let src =
-        include_str!("../../sample_code/should_succeed/subterms/params/undashed_underscore.p.pht");
+        include_str!("../../sample_code/should_succeed/subterms/params/undashed_underscore.p.ksn");
     expect_param(src, |param| {
         let expected_name = IdentifierName::Reserved(ReservedIdentifierName::Underscore);
         assert_eq!(&expected_name, &param.name.name);
@@ -44,7 +44,7 @@ fn underscore() {
 #[test]
 fn dashed_underscore() {
     let src =
-        include_str!("../../sample_code/should_succeed/subterms/params/dashed_underscore.p.pht");
+        include_str!("../../sample_code/should_succeed/subterms/params/dashed_underscore.p.ksn");
     expect_param(src, |param| {
         let expected_name = IdentifierName::Reserved(ReservedIdentifierName::Underscore);
         assert_eq!(&expected_name, &param.name.name);

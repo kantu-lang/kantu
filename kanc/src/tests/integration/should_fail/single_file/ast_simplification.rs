@@ -13,7 +13,7 @@ fn expect_simplification_error(src: &str, panicker: impl Fn(SimplifyAstError)) {
 #[test]
 fn illegal_dot_lhs() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/ast_simplification/dot/illegal_dot_lhs.ph"
+        "../../../sample_code/should_fail/single_file/ast_simplification/dot/illegal_dot_lhs.k"
     );
     expect_simplification_error(src, |err| match err {
         SimplifyAstError::IllegalDotLhs(lhs) => {
@@ -35,25 +35,25 @@ mod labeled_params {
 
         #[test]
         fn explicitly_labeled_before_unlabeled_param() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/explicit_before_unlabeled.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/explicit_before_unlabeled.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn implicit_before_unlabeled() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/implicit_before_unlabeled.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/implicit_before_unlabeled.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn unlabeled_before_explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/unlabeled_before_explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/unlabeled_before_explicit.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn unlabeled_before_implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/unlabeled_before_implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/heterogeneous/unlabeled_before_implicit.k");
             expect_heterogeneous_params_error(src);
         }
 
@@ -71,19 +71,19 @@ mod labeled_params {
 
         #[test]
         fn explicit_underscore_label() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/underscore_label/explicit_underscore_label.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/underscore_label/explicit_underscore_label.k");
             expect_underscore_label_params_error(src);
         }
 
         #[test]
         fn implicit_underscore_label() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/underscore_label/implicit_underscore_label.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/underscore_label/implicit_underscore_label.k");
             expect_underscore_label_params_error(src);
         }
 
         #[test]
         fn second_label_is_underscore() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/underscore_label/second_label_is_underscore.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/underscore_label/second_label_is_underscore.k");
             expect_underscore_label_params_error(src);
         }
 
@@ -101,25 +101,25 @@ mod labeled_params {
 
         #[test]
         fn explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/explicit.k");
             expect_duplicate_label_params_error(src, "X");
         }
 
         #[test]
         fn implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/implicit.k");
             expect_duplicate_label_params_error(src, "z");
         }
 
         #[test]
         fn implicit_explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/implicit_explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/implicit_explicit.k");
             expect_duplicate_label_params_error(src, "x");
         }
 
         #[test]
         fn explicit_implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/explicit_implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_params/duplicate_labels/explicit_implicit.k");
             expect_duplicate_label_params_error(src, "y");
         }
 
@@ -146,25 +146,25 @@ mod labeled_call_args {
 
         #[test]
         fn explicitly_labeled_before_unlabeled_param() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/explicit_before_unlabeled.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/explicit_before_unlabeled.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn implicit_before_unlabeled() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/implicit_before_unlabeled.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/implicit_before_unlabeled.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn unlabeled_before_explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/unlabeled_before_explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/unlabeled_before_explicit.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn unlabeled_before_implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/unlabeled_before_implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/heterogeneous/unlabeled_before_implicit.k");
             expect_heterogeneous_params_error(src);
         }
 
@@ -182,25 +182,25 @@ mod labeled_call_args {
 
         #[test]
         fn explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/explicit.k");
             expect_duplicate_label_params_error(src, "min");
         }
 
         #[test]
         fn implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/implicit.k");
             expect_duplicate_label_params_error(src, "min");
         }
 
         #[test]
         fn implicit_explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/implicit_explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/implicit_explicit.k");
             expect_duplicate_label_params_error(src, "min");
         }
 
         #[test]
         fn explicit_implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/explicit_implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_call_args/duplicate_labels/explicit_implicit.k");
             expect_duplicate_label_params_error(src, "min");
         }
 
@@ -227,25 +227,25 @@ mod labeled_match_case_params {
 
         #[test]
         fn explicitly_labeled_before_unlabeled_param() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/explicit_before_unlabeled.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/explicit_before_unlabeled.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn implicit_before_unlabeled() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/implicit_before_unlabeled.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/implicit_before_unlabeled.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn unlabeled_before_explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/unlabeled_before_explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/unlabeled_before_explicit.k");
             expect_heterogeneous_params_error(src);
         }
 
         #[test]
         fn unlabeled_before_implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/unlabeled_before_implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/heterogeneous/unlabeled_before_implicit.k");
             expect_heterogeneous_params_error(src);
         }
 
@@ -263,19 +263,19 @@ mod labeled_match_case_params {
 
         #[test]
         fn explicit_underscore_label() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/underscore_label/explicit_underscore_label.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/underscore_label/explicit_underscore_label.k");
             expect_underscore_label_params_error(src);
         }
 
         #[test]
         fn implicit_underscore_label() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/underscore_label/implicit_underscore_label.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/underscore_label/implicit_underscore_label.k");
             expect_underscore_label_params_error(src);
         }
 
         #[test]
         fn second_label_is_underscore() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/underscore_label/second_label_is_underscore.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/underscore_label/second_label_is_underscore.k");
             expect_underscore_label_params_error(src);
         }
 
@@ -293,25 +293,25 @@ mod labeled_match_case_params {
 
         #[test]
         fn explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/explicit.k");
             expect_duplicate_label_params_error(src, "pred");
         }
 
         #[test]
         fn implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/implicit.k");
             expect_duplicate_label_params_error(src, "pred");
         }
 
         #[test]
         fn implicit_explicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/implicit_explicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/implicit_explicit.k");
             expect_duplicate_label_params_error(src, "pred");
         }
 
         #[test]
         fn explicit_implicit() {
-            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/explicit_implicit.ph");
+            let src = include_str!("../../../sample_code/should_fail/single_file/ast_simplification/labeled_match_case_params/duplicate_labels/explicit_implicit.k");
             expect_duplicate_label_params_error(src, "pred");
         }
 

@@ -52,7 +52,7 @@ fn expect_type_mismatch_error(
 #[test]
 fn adt() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/adt.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/adt.k"
     );
     expect_type_mismatch_error(src, "U2.U2", "U1", "U2");
 }
@@ -60,7 +60,7 @@ fn adt() {
 #[test]
 fn type_not_a_type() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/type_not_a_type.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/type_not_a_type.k"
     );
     expect_type_mismatch_error(src, "Type", "Type", "Type1");
 }
@@ -68,7 +68,7 @@ fn type_not_a_type() {
 #[test]
 fn ill_typed_param_type() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/ill_typed_param_type.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/ill_typed_param_type.k"
     );
     expect_type_mismatch_error(
         src,
@@ -81,7 +81,7 @@ fn ill_typed_param_type() {
 #[test]
 fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
     let src = include_str!(
-            "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/ill_typed_match_case_output_evaluates_to_well_typed_term.ph"
+            "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/ill_typed_match_case_output_evaluates_to_well_typed_term.k"
         );
     expect_type_mismatch_error(src, "Nat.O", "Bool", "Nat");
 }
@@ -89,7 +89,7 @@ fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
 #[test]
 fn differing_generated_underscore_name_expressions() {
     let src = include_str!(
-            "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/differing_generated_underscore_name_expressions.ph"
+            "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/differing_generated_underscore_name_expressions.k"
         );
     expect_type_mismatch_error(
         src,
@@ -102,7 +102,7 @@ fn differing_generated_underscore_name_expressions() {
 #[test]
 fn misordered_fun_params() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/misordered_fun_params.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/misordered_fun_params.k"
     );
     expect_type_mismatch_error(
         src,
@@ -115,7 +115,7 @@ fn misordered_fun_params() {
 #[test]
 fn wrong_empty() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/wrong_empty.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/wrong_empty.k"
     );
     expect_type_mismatch_error(src, "e1", "Empty2", "Empty1");
 }

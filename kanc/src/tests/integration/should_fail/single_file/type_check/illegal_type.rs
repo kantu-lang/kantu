@@ -21,7 +21,7 @@ fn expect_illegal_type_error(src: &str, expected_illegal_type_src: &str) {
 #[test]
 fn forall_output() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/forall_output.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/forall_output.k"
     );
     expect_illegal_type_error(src, "U.U");
 }
@@ -29,7 +29,7 @@ fn forall_output() {
 #[test]
 fn forall_param() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/forall_param.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/forall_param.k"
     );
     expect_illegal_type_error(src, "U.U");
 }
@@ -37,7 +37,7 @@ fn forall_param() {
 #[test]
 fn fun_param() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/fun_param.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/fun_param.k"
     );
     expect_illegal_type_error(src, "U.U");
 }
@@ -45,7 +45,7 @@ fn fun_param() {
 #[test]
 fn fun_return() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/fun_return.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/fun_return.k"
     );
     expect_illegal_type_error(src, "U.U");
 }
@@ -53,7 +53,7 @@ fn fun_return() {
 #[test]
 fn type_param() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/type_param.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/type_param.k"
     );
     expect_illegal_type_error(src, "U.U");
 }
@@ -61,7 +61,7 @@ fn type_param() {
 #[test]
 fn variant_param() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/variant_param.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_type/variant_param.k"
     );
     expect_illegal_type_error(src, "U.U");
 }

@@ -20,7 +20,7 @@ fn expect_unexpected_token_error(src: &str, expected_kind: TokenKind) {
 #[test]
 fn dashed_label() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/labeled_params/dashed_label.ph"
+        "../../../../sample_code/should_fail/single_file/parse/labeled_params/dashed_label.k"
     );
     expect_unexpected_token_error(src, TokenKind::Tilde);
 }
@@ -28,7 +28,7 @@ fn dashed_label() {
 #[test]
 fn dash_before_tilde() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/labeled_params/dash_before_tilde.ph"
+        "../../../../sample_code/should_fail/single_file/parse/labeled_params/dash_before_tilde.k"
     );
     expect_unexpected_token_error(src, TokenKind::Tilde);
 }

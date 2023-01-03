@@ -20,7 +20,7 @@ fn expect_let_statement(src: &str, panicker: impl Fn(LetStatement)) {
 #[test]
 fn empty_type() {
     let src =
-        include_str!("../../sample_code/should_succeed/subterms/file_items/empty_type.fi.pht");
+        include_str!("../../sample_code/should_succeed/subterms/file_items/empty_type.fi.ksn");
     expect_type_statement(src, |item| {
         let expected_name = IdentifierName::new("Empty".to_string());
         assert_eq!(&expected_name, &item.name.name);
@@ -30,7 +30,7 @@ fn empty_type() {
 
 #[test]
 fn nat() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/file_items/nat.fi.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/file_items/nat.fi.ksn");
     expect_type_statement(src, |item| {
         let expected_name = IdentifierName::new("Nat".to_string());
         assert_eq!(&expected_name, &item.name.name);
@@ -40,7 +40,7 @@ fn nat() {
 
 #[test]
 fn let_() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/file_items/let.fi.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/file_items/let.fi.ksn");
     expect_let_statement(src, |item| {
         let expected_name = IdentifierName::new("x".to_string());
         assert_eq!(&expected_name, &item.name.name);

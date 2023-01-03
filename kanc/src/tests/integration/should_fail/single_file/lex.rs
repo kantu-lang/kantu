@@ -11,14 +11,14 @@ fn expect_unexpected_ascii_digit_error(src: &str) {
 #[test]
 fn identifier_is_digit() {
     let src =
-        include_str!("../../../sample_code/should_fail/single_file/lex/identifier_is_digit.ph");
+        include_str!("../../../sample_code/should_fail/single_file/lex/identifier_is_digit.k");
     expect_unexpected_ascii_digit_error(src);
 }
 
 #[test]
 fn identifier_starts_with_digit() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/lex/identifier_starts_with_digit.ph"
+        "../../../sample_code/should_fail/single_file/lex/identifier_starts_with_digit.k"
     );
     expect_unexpected_ascii_digit_error(src);
 }

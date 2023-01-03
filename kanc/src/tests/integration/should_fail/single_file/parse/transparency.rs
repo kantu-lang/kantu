@@ -20,22 +20,20 @@ fn expect_unexpected_non_eoi_token_error(
 #[test]
 fn empty() {
     let src =
-        include_str!("../../../../sample_code/should_fail/single_file/parse/transparency/empty.ph");
+        include_str!("../../../../sample_code/should_fail/single_file/parse/transparency/empty.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
 }
 
 #[test]
 fn super1() {
-    let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/transparency/super1.ph"
-    );
+    let src =
+        include_str!("../../../../sample_code/should_fail/single_file/parse/transparency/super1.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::StandardIdentifier, "super1");
 }
 
 #[test]
 fn super9() {
-    let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/transparency/super9.ph"
-    );
+    let src =
+        include_str!("../../../../sample_code/should_fail/single_file/parse/transparency/super9.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::StandardIdentifier, "super9");
 }

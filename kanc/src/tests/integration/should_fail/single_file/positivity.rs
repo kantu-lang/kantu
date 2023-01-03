@@ -48,7 +48,7 @@ fn expect_illegal_variable_appearance_error(
 #[test]
 fn negative_recursion() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/negative_recursion.ph"
+        "../../../sample_code/should_fail/single_file/positivity/negative_recursion.k"
     );
     expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
 }
@@ -56,38 +56,36 @@ fn negative_recursion() {
 #[test]
 fn indirect_negative_recursion() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/indirect_negative_recursion.ph"
+        "../../../sample_code/should_fail/single_file/positivity/indirect_negative_recursion.k"
     );
     expect_illegal_variable_appearance_error(src, DbIndex(1), "T");
 }
 
 #[test]
 fn bad_matchee() {
-    let src =
-        include_str!("../../../sample_code/should_fail/single_file/positivity/bad_matchee.ph");
+    let src = include_str!("../../../sample_code/should_fail/single_file/positivity/bad_matchee.k");
     expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
 }
 
 #[test]
 fn bad_match_case_output() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/bad_match_case_output.ph"
+        "../../../sample_code/should_fail/single_file/positivity/bad_match_case_output.k"
     );
     expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
 }
 
 #[test]
 fn bad_forall_output() {
-    let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/bad_forall_output.ph"
-    );
+    let src =
+        include_str!("../../../sample_code/should_fail/single_file/positivity/bad_forall_output.k");
     expect_illegal_variable_appearance_error(src, DbIndex(1), "Bad");
 }
 
 #[test]
 fn bad_check_output() {
     let src =
-        include_str!("../../../sample_code/should_fail/single_file/positivity/bad_check_output.ph");
+        include_str!("../../../sample_code/should_fail/single_file/positivity/bad_check_output.k");
     expect_illegal_variable_appearance_error(src, DbIndex(0), "Bad");
 }
 
@@ -117,7 +115,7 @@ fn expect_non_name_variant_return_type_error(
 #[test]
 fn obscured_indirect_negative_recursion() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/obscured_indirect_negative_recursion.ph"
+        "../../../sample_code/should_fail/single_file/positivity/obscured_indirect_negative_recursion.k"
     );
     expect_non_name_variant_return_type_error(src, "NotC", 0);
 }
@@ -146,7 +144,7 @@ fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
 #[test]
 fn non_adt_callee() {
     let src =
-        include_str!("../../../sample_code/should_fail/single_file/positivity/non_adt_callee.ph");
+        include_str!("../../../sample_code/should_fail/single_file/positivity/non_adt_callee.k");
     let expected_call_src = "fun _(_: Unit,): Type { forall(b: Bad,) { Empty } }";
     expect_non_adt_callee_error(src, expected_call_src);
 }
@@ -165,7 +163,7 @@ fn expect_expected_type_got_fun_error(src: &str, expected_fun_name: &IdentifierN
 #[test]
 fn expected_type_got_fun() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/expected_type_got_fun.ph"
+        "../../../sample_code/should_fail/single_file/positivity/expected_type_got_fun.k"
     );
     let expected_fun_name = IdentifierName::new("this_should_not_be_here".to_string());
     expect_expected_type_got_fun_error(src, &expected_fun_name);
@@ -202,7 +200,7 @@ fn expect_variant_return_type_type_arg_arity_mismatch_error(
 #[test]
 fn expected_1_type_arg_got_0() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/expected_1_type_arg_got_0.ph"
+        "../../../sample_code/should_fail/single_file/positivity/expected_1_type_arg_got_0.k"
     );
     expect_variant_return_type_type_arg_arity_mismatch_error(src, 1, "Not");
 }
@@ -210,7 +208,7 @@ fn expected_1_type_arg_got_0() {
 #[test]
 fn expected_2_type_args_got_1() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/positivity/expected_2_type_args_got_1.ph"
+        "../../../sample_code/should_fail/single_file/positivity/expected_2_type_args_got_1.k"
     );
     expect_variant_return_type_type_arg_arity_mismatch_error(src, 2, "Not(Unit.C,)");
 }

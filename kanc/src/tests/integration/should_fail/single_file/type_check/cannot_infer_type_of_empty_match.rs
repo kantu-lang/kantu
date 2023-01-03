@@ -23,7 +23,7 @@ fn expect_cannot_infer_type_of_empty_match_error(src: &str, expected_match_src: 
 #[test]
 fn cannot_infer_type_of_empty_match() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_type_of_empty_match.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_type_of_empty_match.k"
     );
     expect_cannot_infer_type_of_empty_match_error(src, "match e {}");
 }

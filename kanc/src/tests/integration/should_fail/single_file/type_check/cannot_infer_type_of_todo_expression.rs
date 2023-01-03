@@ -12,7 +12,7 @@ fn expect_cannot_infer_type_todo_expression_error(src: &str) {
 #[test]
 fn param_type() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/param_type.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/param_type.k"
     );
     expect_cannot_infer_type_todo_expression_error(src);
 }
@@ -20,7 +20,7 @@ fn param_type() {
 #[test]
 fn let_value() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/let_value.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/let_value.k"
     );
     expect_cannot_infer_type_todo_expression_error(src);
 }
@@ -28,7 +28,7 @@ fn let_value() {
 #[test]
 fn matchee() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/matchee.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/matchee.k"
     );
     expect_cannot_infer_type_todo_expression_error(src);
 }

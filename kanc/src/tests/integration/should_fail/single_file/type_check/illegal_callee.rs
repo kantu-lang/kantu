@@ -21,7 +21,7 @@ fn expect_illegal_callee_error(src: &str, expected_illegal_callee_src: &str) {
 #[test]
 fn forall() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/forall.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/forall.k"
     );
     expect_illegal_callee_error(src, "forall(T: Type,) { Type }");
 }
@@ -29,7 +29,7 @@ fn forall() {
 #[test]
 fn non_nullary_adt_instance() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/non_nullary_adt_instance.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/non_nullary_adt_instance.k"
     );
     expect_illegal_callee_error(src, "Bar.B(U.U,)");
 }
@@ -37,7 +37,7 @@ fn non_nullary_adt_instance() {
 #[test]
 fn nullary_adt_instance() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/nullary_adt_instance.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/nullary_adt_instance.k"
     );
     expect_illegal_callee_error(src, "U.U");
 }
@@ -45,7 +45,7 @@ fn nullary_adt_instance() {
 #[test]
 fn nullary_type() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/nullary_type.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/nullary_type.k"
     );
     expect_illegal_callee_error(src, "U");
 }
@@ -53,7 +53,7 @@ fn nullary_type() {
 #[test]
 fn type0() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/type0.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/type0.k"
     );
     expect_illegal_callee_error(src, "Type");
 }

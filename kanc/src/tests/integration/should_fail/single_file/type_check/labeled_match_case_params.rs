@@ -33,7 +33,7 @@ fn expect_undefined_match_case_params_type_error<const N: usize>(
 #[test]
 fn extraneous_param() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/labeled_match_case_params/undefined_param.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/labeled_match_case_params/undefined_param.k"
     );
     expect_undefined_match_case_params_type_error(src, ["alpha", "hue"]);
 }
@@ -71,7 +71,7 @@ fn expect_missing_labeled_match_case_param_type_error<const N: usize>(
 #[test]
 fn missing_param() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/labeled_match_case_params/missing_param.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/labeled_match_case_params/missing_param.k"
     );
     expect_missing_labeled_match_case_param_type_error(src, ["r", "g"]);
 }

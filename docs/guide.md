@@ -1187,28 +1187,28 @@ We'll begin this section by examining an example project.
 ```text
 pack.omlet
 src/
-    mod.ph
-    foo.ph
+    mod.k
+    foo.k
     bar/
-        mod.ph
-        baz.ph
+        mod.k
+        baz.k
 ```
 
 In Kantu, the smallest "shareable" unit of code is the _package_.
 Kantu packages are roughly analogous to npm packages or Rust crates.
 
 A package consists of a `pack.omlet` file and one or more
-`.ph` files.
-The `.ph` files are held in a `src` directory.
+`.k` files.
+The `.k` files are held in a `src` directory.
 
 Packages are broken down into a tree of smaller components called _modules_.
 In fact, the package _is itself_ a module.
 We will subsequently refer to this module as "the package's root module",
 or simply "the package".
 
-Generally, each `.ph` file corresponds to a module.
+Generally, each `.k` file corresponds to a module.
 
-The top-level `mod.ph` file (i.e., the one in the same directory as `pack.omlet`) corresponds to the root module.
+The top-level `mod.k` file (i.e., the one in the same directory as `pack.omlet`) corresponds to the root module.
 
 #### `pack.omlet`:
 
@@ -1222,7 +1222,7 @@ In this example project, we do not have any external dependencies, and
 we use all the default compiler options, so we simply write `{}` to
 denote an "empty" config.
 
-#### `src/mod.ph` (corresponds to the `pack` module):
+#### `src/mod.k` (corresponds to the `pack` module):
 
 ```kantu
 mod foo;
@@ -1266,7 +1266,7 @@ As with all file items, the visibility defaults to `pub(mod)`,
 but you can use `pub` or `pub(<insert_modifier_here>)` to
 change it.
 
-#### `src/foo.ph` (corresponds to the `pack.foo` module):
+#### `src/foo.k` (corresponds to the `pack.foo` module):
 
 ```kantu
 pub type Nat {
@@ -1275,7 +1275,7 @@ pub type Nat {
 }
 ```
 
-#### `src/bar/mod.ph` (corresponds to the `pack.bar` module):
+#### `src/bar/mod.k` (corresponds to the `pack.bar` module):
 
 ```kantu
 use super.Nat;
@@ -1289,7 +1289,7 @@ pub let mult = fun f(-a: Nat, b: Nat): Nat {
 ```
 
 Note that since we created the aliases `Nat` and `O`
-back in `mod.ph`, and `pack` is this module's supermodule,
+back in `mod.k`, and `pack` is this module's supermodule,
 we can now access those aliases here
 by writing `super.Nat` and `super.O`.
 However, if we find that that's still too long to write,
@@ -1299,7 +1299,7 @@ Note that we decline to alias `super.O`, so when we reference
 it (i.e., in the output of the match expression's `.O` case),
 we use fully qualified syntax.
 
-#### `src/bar/baz.ph` (corresponds to the `pack.bar.baz` module):
+#### `src/bar/baz.k` (corresponds to the `pack.bar.baz` module):
 
 ```kantu
 use super.Nat;
@@ -1344,9 +1344,9 @@ Modules can be organized into a tree, with the `pack` module at the root.
 
 1. Create a `pack.omlet` file.
 2. In the same directory, create a `src/` directory.
-3. In that `src` directory, create a `mod.ph` file.
+3. In that `src` directory, create a `mod.k` file.
 
-The `mod.ph` file corresponds to the `pack` module.
+The `mod.k` file corresponds to the `pack` module.
 The `src` directory is referred to as the package's _source directory_.
 Not surprisingly, all submodules of `pack` will go in the package's source directory, submodules of those submodules will go in subdirectories of the
 source directory, submodules of _those_ submodules will go in subdirectories of _those_ subdirectories, and so on--turtles all the way down.
@@ -1355,26 +1355,26 @@ source directory, submodules of _those_ submodules will go in subdirectories of 
 
 There are two ways to create a module `foo`:
 
-1. Create a file `foo.ph`. Then add `mod foo;` to the supermodule file.
-2. Create a file `foo/mod.ph`. That is, create a `foo/` directory
-   and create a `mod.ph` file inside that directory.
+1. Create a file `foo.k`. Then add `mod foo;` to the supermodule file.
+2. Create a file `foo/mod.k`. That is, create a `foo/` directory
+   and create a `mod.k` file inside that directory.
 
    Then add `mod foo;` to the supermodule file.
 
    Note: You **must** choose this option if you want `foo` to have submodules.
 
-Create the files in the directory containing the `mod.ph` file of
+Create the files in the directory containing the `mod.k` file of
 `foo`'s desired parent.
 
 For example, if you to create `pack.foo` (i.e., you want `foo` to be the child of `pack`), then you should create its file(s) in the directory of the
-`mod.ph` file corresponding to `pack`.
+`mod.k` file corresponding to `pack`.
 In other words, create the file(s) in the package's source directory (i.e., `src/`).
-Then, you would add `mod foo;` to `src/mod.ph`.
+Then, you would add `mod foo;` to `src/mod.k`.
 
 As another example, if you want to create `pack.bar.baz.foo`
 (i.e., you want `foo` to be the child of `pack.bar.baz`), then
 create the file(s) in the `src/bar/baz/` directory.
-Then, you would add `mod foo;` to `src/bar/baz/mod.ph`.
+Then, you would add `mod foo;` to `src/bar/baz/mod.k`.
 
 ### Module items
 
@@ -1392,14 +1392,14 @@ Other modules' items must be referenced using `.` syntax.
 
 Example:
 
-`src/mod.ph`
+`src/mod.k`
 
 ```kantu
 pub mod nat;
 pub mod factorial;
 ```
 
-`src/nat.ph`
+`src/nat.k`
 
 ```kantu
 type Nat {
@@ -1408,7 +1408,7 @@ type Nat {
 }
 ```
 
-`src/factorial/mod.ph`
+`src/factorial/mod.k`
 
 ```kantu
 mod plus;
@@ -1435,7 +1435,7 @@ pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
 };
 ```
 
-`src/factorial/plus.ph`:
+`src/factorial/plus.k`:
 
 ```kantu
 // `Nat` was declared by a module other than the current module,
@@ -1519,7 +1519,7 @@ will not.
 
 For example, if we have
 
-`src/foo.ph`:
+`src/foo.k`:
 
 ```
 pub mod bar;
@@ -1528,7 +1528,7 @@ pub mod baz;
 type Empty {}
 ```
 
-`src/bar/mod.ph`:
+`src/bar/mod.k`:
 
 ```kantu
 pub mod qux;
@@ -1634,7 +1634,7 @@ Here's an example to test your understanding.
 
 #### Q: What order are the items processed in the example package below?
 
-`src/mod.ph`:
+`src/mod.k`:
 
 ```kantu
 pub mod nat;
@@ -1643,7 +1643,7 @@ use nat.NaturalNumber as Nat;
 pub mod plus;
 ```
 
-`src/nat.ph`:
+`src/nat.k`:
 
 ```kantu
 pub type NaturalNumber {
@@ -1652,7 +1652,7 @@ pub type NaturalNumber {
 }
 ```
 
-`src/plus.ph`:
+`src/plus.k`:
 
 ```kantu
 use super.Nat;
@@ -1690,7 +1690,7 @@ This has significant implications for dependent types.
 
 For example, is the following code is valid.
 
-`src/mod.ph`:
+`src/mod.k`:
 
 ```kantu
 type Nat {
@@ -1723,7 +1723,7 @@ its value (i.e., `Nat.O`) during evaluation, therefore
 
 However, the following code is *in*valid.
 
-`src/mod.ph`:
+`src/mod.k`:
 
 ```kantu
 type Nat {
@@ -1749,7 +1749,7 @@ let my_number_equals_zero = identity(
 );
 ```
 
-`src/my_constants.ph`:
+`src/my_constants.k`:
 
 ```kantu
 use super.*;

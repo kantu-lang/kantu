@@ -23,7 +23,7 @@ fn expect_recursion_error(src: &str, panicker: impl Fn(&NodeRegistry, IllegalFun
 #[test]
 fn rec_fun_same_param() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_same_param.ph"
+        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_same_param.k"
     );
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { callee_id, arg_id } => {
@@ -46,7 +46,7 @@ fn rec_fun_same_param() {
 #[test]
 fn rec_fun_non_substruct() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_non_substruct.ph"
+        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_non_substruct.k"
     );
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { callee_id, arg_id } => {
@@ -69,7 +69,7 @@ fn rec_fun_non_substruct() {
 #[test]
 fn rec_fun_non_ident() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_non_ident.ph"
+        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_non_ident.k"
     );
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { callee_id, arg_id } => {
@@ -92,7 +92,7 @@ fn rec_fun_non_ident() {
 #[test]
 fn rec_fun_no_decreasing_param() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_no_decreasing_param.ph"
+        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_no_decreasing_param.k"
     );
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::RecursivelyCalledFunctionWithoutDecreasingParam { callee_id } => {
@@ -109,7 +109,7 @@ fn rec_fun_no_decreasing_param() {
 #[test]
 fn rec_fun_right_index_wrong_label() {
     let src = include_str!(
-        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_right_index_wrong_label.ph"
+        "../../../sample_code/should_fail/single_file/illegal_recursion/rec_fun_right_index_wrong_label.k"
     );
     expect_recursion_error(src, |registry, err| match err {
         IllegalFunRecursionError::NonSubstructPassedToDecreasingParam { arg_id, callee_id } => {

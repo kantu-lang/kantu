@@ -15,7 +15,7 @@ fn expect_unexpected_non_eoi_token_error(src: &str, expected_kind: TokenKind) {
 #[test]
 fn question_checkee() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/check/question_checkee.ph"
+        "../../../../sample_code/should_fail/single_file/parse/check/question_checkee.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::Question);
 }
@@ -23,7 +23,7 @@ fn question_checkee() {
 #[test]
 fn question_output() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/check/question_output.ph"
+        "../../../../sample_code/should_fail/single_file/parse/check/question_output.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::Question);
 }

@@ -20,7 +20,7 @@ fn expect_unexpected_non_eoi_token_error(
 #[test]
 fn empty_use_vis() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_use_vis.ph"
+        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_use_vis.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
 }
@@ -28,7 +28,7 @@ fn empty_use_vis() {
 #[test]
 fn empty_mod_vis() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_mod_vis.ph"
+        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_mod_vis.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
 }
@@ -36,7 +36,7 @@ fn empty_mod_vis() {
 #[test]
 fn empty_type_vis() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_type_vis.ph"
+        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_type_vis.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
 }
@@ -44,7 +44,7 @@ fn empty_type_vis() {
 #[test]
 fn empty_let_vis() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_let_vis.ph"
+        "../../../../sample_code/should_fail/single_file/parse/visibility/empty_let_vis.k"
     );
     expect_unexpected_non_eoi_token_error(src, TokenKind::RParen, ")");
 }
@@ -52,13 +52,13 @@ fn empty_let_vis() {
 #[test]
 fn super1() {
     let src =
-        include_str!("../../../../sample_code/should_fail/single_file/parse/visibility/super1.ph");
+        include_str!("../../../../sample_code/should_fail/single_file/parse/visibility/super1.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::StandardIdentifier, "super1");
 }
 
 #[test]
 fn super9() {
     let src =
-        include_str!("../../../../sample_code/should_fail/single_file/parse/visibility/super9.ph");
+        include_str!("../../../../sample_code/should_fail/single_file/parse/visibility/super9.k");
     expect_unexpected_non_eoi_token_error(src, TokenKind::StandardIdentifier, "super9");
 }

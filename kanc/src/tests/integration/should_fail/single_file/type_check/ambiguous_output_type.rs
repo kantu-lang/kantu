@@ -26,7 +26,7 @@ fn expect_ambiguous_output_type_error(src: &str, expected_ambiguous_match_case_s
 #[test]
 fn ambiguous_output_type() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/ambiguous_output_type.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/ambiguous_output_type.k"
     );
     expect_ambiguous_output_type_error(src, ".S(problem) => Eq.Refl(Nat, Nat.S(problem,),),");
 }

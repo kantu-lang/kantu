@@ -15,7 +15,7 @@ fn expect_underscore_parse_error(src: &str) {
 #[test]
 fn type_() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/illegal_underscore/type.ph"
+        "../../../../sample_code/should_fail/single_file/parse/illegal_underscore/type.k"
     );
     expect_underscore_parse_error(src);
 }
@@ -23,7 +23,7 @@ fn type_() {
 #[test]
 fn variant() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/illegal_underscore/variant.ph"
+        "../../../../sample_code/should_fail/single_file/parse/illegal_underscore/variant.k"
     );
     expect_underscore_parse_error(src);
 }
@@ -31,7 +31,7 @@ fn variant() {
 #[test]
 fn let_() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/parse/illegal_underscore/let.ph"
+        "../../../../sample_code/should_fail/single_file/parse/illegal_underscore/let.k"
     );
     expect_underscore_parse_error(src);
 }

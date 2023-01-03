@@ -35,10 +35,7 @@ pub fn get_files_and_file_tree(project_path: ProjectPath) -> (Vec<simplified_ast
         .unwrap()
         .join(checked_unadjusted_pack_omlet_path);
     let (root_file, root_file_path) = {
-        let root_file_path = adjusted_pack_omlet_path
-            .parent()
-            .unwrap()
-            .join("src/mod.ph");
+        let root_file_path = adjusted_pack_omlet_path.parent().unwrap().join("src/mod.k");
         let src = fs::read_to_string(&root_file_path).expect("Failed to open file");
         let root_file = lex_and_parse_file(&src, FileId(0));
         (root_file, root_file_path)
@@ -77,19 +74,19 @@ fn parse_children_then_add(
         let child_file_id = get_unused_file_id(files);
 
         let (child_src, child_path) = {
-            if !file_path.ends_with("mod.ph") {
+            if !file_path.ends_with("mod.k") {
                 panic!("{:?} cannot have submodules.", file_path);
             }
             let child_leaf_file_path = file_path
                 .parent()
                 .unwrap()
                 .join(mod_name.src_str())
-                .with_extension("ph");
+                .with_extension("k");
             let child_nonleaf_file_path = file_path
                 .parent()
                 .unwrap()
                 .join(mod_name.src_str())
-                .join("mod.ph");
+                .join("mod.k");
 
             let file_res = fs::read_to_string(&child_leaf_file_path)
                 .map(|src| (src, child_leaf_file_path))

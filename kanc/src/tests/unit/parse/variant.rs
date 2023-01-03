@@ -12,7 +12,7 @@ fn expect_variant(src: &str, panicker: impl Fn(Variant)) {
 
 #[test]
 fn nullary() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/variants/nullary.tv.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/variants/nullary.tv.ksn");
     expect_variant(src, |variant| {
         let expected_name = IdentifierName::new("O".to_string());
         assert_eq!(&expected_name, &variant.name.name);
@@ -22,7 +22,7 @@ fn nullary() {
 
 #[test]
 fn unary() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/variants/unary.tv.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/variants/unary.tv.ksn");
     expect_variant(src, |variant| {
         let expected_name = IdentifierName::new("S".to_string());
         assert_eq!(&expected_name, &variant.name.name);
@@ -32,7 +32,7 @@ fn unary() {
 
 #[test]
 fn binary() {
-    let src = include_str!("../../sample_code/should_succeed/subterms/variants/binary.tv.pht");
+    let src = include_str!("../../sample_code/should_succeed/subterms/variants/binary.tv.ksn");
     expect_variant(src, |variant| {
         let expected_name = IdentifierName::new("Some".to_string());
         assert_eq!(&expected_name, &variant.name.name);

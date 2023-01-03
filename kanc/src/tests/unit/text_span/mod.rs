@@ -22,21 +22,21 @@ fn verify_that_spans_are_correct(src: &str) {
 #[test]
 fn hello_world() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/hello_world.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/hello_world.k"
     );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn ill_typed_until_substituted() {
-    let src = include_str!("../../sample_code/should_succeed/single_file/should_succeed_without_warnings/ill_typed_until_substituted.ph");
+    let src = include_str!("../../sample_code/should_succeed/single_file/should_succeed_without_warnings/ill_typed_until_substituted.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn plus_commutative() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/plus_commutative.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/plus_commutative.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -44,7 +44,7 @@ fn plus_commutative() {
 #[test]
 fn forall() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/forall.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/forall.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -52,7 +52,7 @@ fn forall() {
 #[test]
 fn exists() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/exists.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/exists.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -60,7 +60,7 @@ fn exists() {
 #[test]
 fn check() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/many_warnings.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/many_warnings.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -68,7 +68,7 @@ fn check() {
 #[test]
 fn comment() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/comment.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/comment.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -76,7 +76,7 @@ fn comment() {
 #[test]
 fn match_explosion() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/match_explosion.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/match_explosion.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -84,7 +84,7 @@ fn match_explosion() {
 #[test]
 fn underscore() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/underscore.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/underscore.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -92,7 +92,7 @@ fn underscore() {
 #[test]
 fn optional_commas() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/optional_commas.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/optional_commas.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -100,7 +100,7 @@ fn optional_commas() {
 #[test]
 fn labeled_params() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/labeled_params.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/labeled_params.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -108,7 +108,7 @@ fn labeled_params() {
 #[test]
 fn labeled_call_args() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/labeled_call_args.ph"
+        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/labeled_call_args.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -116,22 +116,21 @@ fn labeled_call_args() {
 #[test]
 fn visibility_and_transparency_modifiers() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_parse/visibility_and_transparency_modifiers.ph"
+        "../../sample_code/should_succeed/single_file/should_parse/visibility_and_transparency_modifiers.k"
     );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn use_as_is() {
-    let src =
-        include_str!("../../sample_code/should_succeed/single_file/should_parse/use/as_is.ph");
+    let src = include_str!("../../sample_code/should_succeed/single_file/should_parse/use/as_is.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn use_alternate_name() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_parse/use/alternate_name.ph"
+        "../../sample_code/should_succeed/single_file/should_parse/use/alternate_name.k"
     );
     verify_that_spans_are_correct(src);
 }
@@ -139,14 +138,14 @@ fn use_alternate_name() {
 #[test]
 fn use_wildcard() {
     let src =
-        include_str!("../../sample_code/should_succeed/single_file/should_parse/use/wildcard.ph");
+        include_str!("../../sample_code/should_succeed/single_file/should_parse/use/wildcard.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn component_kw_in_dot_lhs() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_parse/component_kw_in_dot_lhs.ph"
+        "../../sample_code/should_succeed/single_file/should_parse/component_kw_in_dot_lhs.k"
     );
     verify_that_spans_are_correct(src);
 }

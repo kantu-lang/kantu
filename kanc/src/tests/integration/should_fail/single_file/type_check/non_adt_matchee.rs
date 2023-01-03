@@ -35,7 +35,7 @@ fn expect_non_adt_matchee_error(src: &str, expected_matchee_src: &str, expected_
 #[test]
 fn type0() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/non_adt_matchee/type0.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/non_adt_matchee/type0.k"
     );
     expect_non_adt_matchee_error(src, "U", "Type");
 }
@@ -43,7 +43,7 @@ fn type0() {
 #[test]
 fn type1() {
     let src = include_str!(
-        "../../../../sample_code/should_fail/single_file/type_check/non_adt_matchee/type1.ph"
+        "../../../../sample_code/should_fail/single_file/type_check/non_adt_matchee/type1.k"
     );
     expect_non_adt_matchee_error(src, "Type", "Type1");
 }
