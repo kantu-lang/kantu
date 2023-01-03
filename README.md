@@ -12,4 +12,4 @@ In technical terms, some of Kantu's prominent features include [dependent types]
 
 ## Guides
 
-- [Language Overview](./docs/getting_started/overview.md)
+- [Language Overview](./docs/overview.md)

@@ -1,4 +1,4 @@
-# Kantu overview
+# Kantu language guide
 
 ## Disclaimer
 
