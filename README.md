@@ -1,6 +1,6 @@
 # Kantu
 
-Kantu (rhymes with "onto") is a programming language for writing programs that Run Correctly™.
+Kantu (rhymes with "onto") is a programming language for writing highly reliable programs.
 
 - Secure by default--no file, network, or environment access, unless explicitly enabled
 - Memory safe
