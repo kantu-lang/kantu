@@ -6,7 +6,7 @@ mod unfinished {
 
     #[derive(Clone, Debug, PartialEq, Eq, Hash)]
     pub enum Unfinished {
-        AtomicValue(String),
+        AtomValue(String),
         List(UnfinishedList),
         Map(UnfinishedMap),
     }
@@ -61,10 +61,10 @@ pub fn parse(src: &str) -> Result<Map, usize> {
 
     while let Some((i, c)) = remaining.next() {
         match stack.last_mut().expect("Stack should never be empty") {
-            Unfinished::AtomicValue(atomic_value) => match c {
+            Unfinished::AtomValue(atom_value) => match c {
                 '\n' => return Err(i),
                 '"' => {
-                    let top = Node::Atomic(AtomicValue(atomic_value.clone()));
+                    let top = Node::Atom(AtomValue(atom_value.clone()));
                     stack.pop().unwrap();
                     if let Some(return_val) =
                         reduce(&mut stack, top).expect(REDUCE_SHOULD_SUCCEED_MSG)
@@ -77,7 +77,7 @@ pub fn parse(src: &str) -> Result<Map, usize> {
                         return unexpected_eoi_err;
                     };
                     match next_c {
-                        '\\' | '"' | 'n' => atomic_value.push(next_c),
+                        '\\' | '"' | 'n' => atom_value.push(next_c),
                         'u' => {
                             let mut hex = String::with_capacity(4);
                             for _ in 0..4 {
@@ -94,12 +94,12 @@ pub fn parse(src: &str) -> Result<Map, usize> {
                             let Some(encoded_char) = std::char::from_u32(codepoint) else {
                                 return Err(next_i + 4);
                             };
-                            atomic_value.push(encoded_char);
+                            atom_value.push(encoded_char);
                         }
                         _ => return Err(next_i),
                     }
                 }
-                _other_char => atomic_value.push(c),
+                _other_char => atom_value.push(c),
             },
 
             Unfinished::List(UnfinishedList {
@@ -121,7 +121,7 @@ pub fn parse(src: &str) -> Result<Map, usize> {
                     *needs_newline_before_next_element = false;
                 }
                 '"' => {
-                    stack.push(Unfinished::AtomicValue("".to_string()));
+                    stack.push(Unfinished::AtomValue("".to_string()));
                 }
                 '{' => {
                     stack.push(Unfinished::Map(UnfinishedMap {
@@ -203,7 +203,7 @@ pub fn parse(src: &str) -> Result<Map, usize> {
                     if !pending_entry.has_equal {
                         return Err(i);
                     }
-                    stack.push(Unfinished::AtomicValue("".to_string()));
+                    stack.push(Unfinished::AtomValue("".to_string()));
                 }
                 '{' => {
                     if !pending_entry.has_equal {
@@ -313,7 +313,7 @@ fn reduce(stack: &mut Vec<Unfinished>, top: Node) -> Result<Option<Map>, ()> {
             Node::Map(top) => Ok(Some(top)),
             _ => Err(()),
         },
-        Some(Unfinished::AtomicValue(_)) => Err(()),
+        Some(Unfinished::AtomValue(_)) => Err(()),
         Some(Unfinished::List(UnfinishedList {
             elements,
             needs_newline_before_next_element,

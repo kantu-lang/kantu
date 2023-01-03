@@ -2,13 +2,13 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Node {
-    Atomic(AtomicValue),
+    Atom(AtomValue),
     List(List),
     Map(Map),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AtomicValue(pub String);
+pub struct AtomValue(pub String);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct List {
