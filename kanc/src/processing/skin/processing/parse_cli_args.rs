@@ -29,7 +29,23 @@ pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
             return Err(InvalidCliArgsError::InvalidPackOmletPath(p));
         }
     } else {
-        return Err(InvalidCliArgsError::CannotFindImplicitPackOmletPath);
+        let cwd = match std::env::current_dir() {
+            Ok(cwd) => cwd,
+            Err(_) => {
+                return Err(InvalidCliArgsError::NoExplicitPackOmletPathProvidedAndCwdCannotBeRead)
+            }
+        };
+        if let Some(p) = get_default_pack_omlet_path(cwd) {
+            p
+        } else {
+            return Err(InvalidCliArgsError::CannotFindImplicitPackOmletPath);
+        }
     };
-    Ok(CliOptions { pack_omlet_path })
+    Ok(CliOptions {
+        unvalidated_pack_omlet_path: pack_omlet_path,
+    })
+}
+
+fn get_default_pack_omlet_path(cwd: PathBuf) -> Option<PathBuf> {
+    unimplemented!()
 }
