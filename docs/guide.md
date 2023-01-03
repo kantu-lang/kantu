@@ -1548,6 +1548,67 @@ Remember that name shadowing is forbidden!
 Consequently, if a wildcard alias conflicts with an existing
 module item of the same name, the compiler will emit an error.
 
+#### Import merging
+
+Recall that Kantu forbids name-shadowing. However, this creates a
+problem when we have something like
+
+`src/mod.k`:
+
+```kantu
+type Nat {
+    .O: Nat,
+    .S(n: Nat): Nat,
+}
+
+type Bool {
+    .True: Bool,
+    .False: Bool,
+}
+
+mod arithmetic;
+use arithmetic.*;
+
+mod equality
+use equality.*;
+
+// ...
+```
+
+`src/arithmetic.k`:
+
+```kantu
+pub use super.*;
+
+pub let plus = fun plus(-a: Nat, b: Nat): Nat {
+    // ...
+};
+```
+
+`src/equality.k`:
+
+```kantu
+pub use super.*;
+
+pub let eq = fun eq(-a: Nat, b: Nat): Bool {
+    // ...
+};
+```
+
+The problem is that both there is both an `arithmetic.Nat` and an `equality.Nat`, so when we write both `use arithmetic.*;` and `use equality.*`, this creates 3 definitions of `Nat` (i.e., `pack.Nat`, `pack.arithmetic.Nat`, and `pack.equality.Nat`).
+
+However, observe that these aliases refer to the same type--`Nat`.
+
+To solve this issue, Kantu makes a special exception
+to the name-shadowing prohibition:
+When multiple aliases refer to the same item (i.e., `type` or `let` statement),
+an error is not triggered.
+This exception is known as "import merging".
+
+If the visibilities of the aliases differ, a `use` statement with a more permissive
+visibility will override the existing visibility,
+taking effect in all items below said `use` statement.
+
 ### Ordering of item processing
 
 Recall that Kantu forbids forward references.
