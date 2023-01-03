@@ -1,7 +1,7 @@
 use crate::{
     data::{
         bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
-        type_positivity_validation_result::TypePositivityError,
+        node_registry::NodeRegistry, type_positivity_validation_result::TypePositivityError,
         variant_return_type_validation_result::IllegalVariantReturnTypeError,
     },
     processing::{
@@ -17,6 +17,10 @@ use super::super::data::error::{
 
 pub trait FormatErrorForCli {
     fn format_for_cli(&self) -> String;
+}
+
+pub trait FormatErrorForWithRegistry {
+    fn format_for_cli_with_registry(&self, registry: &NodeRegistry) -> String;
 }
 
 impl FormatErrorForCli for InvalidCliArgsError {
@@ -49,44 +53,44 @@ impl FormatErrorForCli for BindError {
     }
 }
 
-impl FormatErrorForCli for IllegalVariantReturnTypeError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for IllegalVariantReturnTypeError {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for IllegalFunRecursionError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for IllegalFunRecursionError {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for TypePositivityError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for TypePositivityError {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for TypeCheckError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for TypeCheckError {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for CompileToJavaScriptError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for CompileToJavaScriptError {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         match *self {}
     }
 }
 
-impl FormatErrorForCli for TypeCheckWarning {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for TypeCheckWarning {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for WriteTargetFilesError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForWithRegistry for WriteTargetFilesError {
+    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
