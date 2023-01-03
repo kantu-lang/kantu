@@ -1,4 +1,4 @@
-use pamc::{
+use kanc::{
     data::{file_tree::FileTree, node_registry::NodeRegistry, FileId},
     processing::{
         bind_type_independent::bind_files,
