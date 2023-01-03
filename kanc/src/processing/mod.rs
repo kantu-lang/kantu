@@ -9,4 +9,6 @@ pub mod validate_fun_recursion;
 pub mod validate_type_positivity;
 pub mod validate_variant_return_types;
 
+pub mod skin;
+
 pub mod test_utils;
