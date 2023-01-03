@@ -47,7 +47,7 @@ mod unfinished {
     }
 }
 
-pub fn parse(src: &str) -> Result<Node, usize> {
+pub fn parse(src: &str) -> Result<Map, usize> {
     let unexpected_eoi_err = Err(src.len());
     let mut stack = vec![Unfinished::Map(UnfinishedMap {
         entries: vec![],
@@ -57,16 +57,9 @@ pub fn parse(src: &str) -> Result<Node, usize> {
             has_equal: false,
         },
     })];
-    let mut remaining = src.char_indices();
-    let mut is_current_line_all_whitespace = true;
+    let mut remaining = wrap_in_non_whitespace_tracker(src.char_indices());
 
     while let Some((i, c)) = remaining.next() {
-        if c == '\n' {
-            is_current_line_all_whitespace = true;
-        } else if !c.is_whitespace() {
-            is_current_line_all_whitespace = false;
-        }
-
         match stack.last_mut().expect("Stack should never be empty") {
             Unfinished::AtomicSrc(atomic_src) => match c {
                 '\n' => return Err(i),
@@ -90,6 +83,7 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                     match next_c {
                         '\\' | '"' | 'n' => atomic_src.push(next_c),
                         'u' => {
+                            atomic_src.push(next_c);
                             for _ in 0..4 {
                                 let Some((next_i, next_c)) = remaining.next() else {
                                     return unexpected_eoi_err;
@@ -143,7 +137,7 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                         needs_newline_before_next_element: true,
                     }));
                 }
-                '/' if is_current_line_all_whitespace => {
+                '/' if remaining.non_whitespace_on_current_line() == 1 => {
                     let Some((next_i, next_c)) = remaining.next() else {
                         return unexpected_eoi_err;
                     };
@@ -231,7 +225,7 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                         needs_newline_before_next_element: true,
                     }));
                 }
-                '/' if is_current_line_all_whitespace => {
+                '/' if remaining.non_whitespace_on_current_line() == 1 => {
                     let Some((next_i, next_c)) = remaining.next() else {
                         return unexpected_eoi_err;
                     };
@@ -265,14 +259,58 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                     },
             })),
             0,
-        ) if key.is_empty() => Ok(Node::Map(Map { entries })),
+        ) if key.is_empty() => Ok(Map { entries }),
         _ => unexpected_eoi_err,
     }
 }
 
-fn reduce(stack: &mut Vec<Unfinished>, top: Node) -> Result<Option<Node>, ()> {
+#[derive(Debug, Clone)]
+struct NonWhiteSpaceTracker<I> {
+    iter: I,
+    non_whitespace_on_current_line: usize,
+}
+
+impl<I> NonWhiteSpaceTracker<I> {
+    pub fn non_whitespace_on_current_line(&self) -> usize {
+        self.non_whitespace_on_current_line
+    }
+}
+
+fn wrap_in_non_whitespace_tracker<I: Iterator<Item = (usize, char)>>(
+    iter: I,
+) -> NonWhiteSpaceTracker<I> {
+    NonWhiteSpaceTracker {
+        iter,
+        non_whitespace_on_current_line: 0,
+    }
+}
+
+impl<I> Iterator for NonWhiteSpaceTracker<I>
+where
+    I: Iterator<Item = (usize, char)>,
+{
+    type Item = (usize, char);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Some((i, c)) = self.iter.next() else {
+            return None;
+        };
+        if c == '\n' {
+            self.non_whitespace_on_current_line = 0;
+        } else if !c.is_whitespace() {
+            self.non_whitespace_on_current_line += 1;
+        }
+
+        Some((i, c))
+    }
+}
+
+fn reduce(stack: &mut Vec<Unfinished>, top: Node) -> Result<Option<Map>, ()> {
     match stack.last_mut() {
-        None => Ok(Some(top)),
+        None => match top {
+            Node::Map(top) => Ok(Some(top)),
+            _ => Err(()),
+        },
         Some(Unfinished::AtomicSrc(_)) => Err(()),
         Some(Unfinished::List(UnfinishedList {
             elements,
@@ -340,7 +378,7 @@ fn parse_atomic_value(src_including_quotes: &str) -> Result<String, usize> {
                             let Some((next_i, next_c)) = remaining.next() else {
                                 return unexpected_eoi_error;
                             };
-                            if !c.is_ascii_hexdigit() {
+                            if !next_c.is_ascii_hexdigit() {
                                 return Err(next_i);
                             }
                             hex.push(next_c);
