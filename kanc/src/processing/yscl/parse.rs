@@ -79,8 +79,8 @@ pub fn parse(src: &str) -> Result<Map, usize> {
                     match next_c {
                         '\\' | '"' | 'n' => atom_value.push(next_c),
                         'u' => {
-                            let mut hex = String::with_capacity(4);
-                            for _ in 0..4 {
+                            let mut hex = String::with_capacity(6);
+                            for _ in 0..6 {
                                 let Some((next_i, next_c)) = remaining.next() else {
                                     return unexpected_eoi_err;
                                 };
@@ -92,7 +92,7 @@ pub fn parse(src: &str) -> Result<Map, usize> {
                             let codepoint = u32::from_str_radix(&hex, 16)
                                 .expect("Hex code should always be valid");
                             let Some(encoded_char) = std::char::from_u32(codepoint) else {
-                                return Err(next_i + 4);
+                                return Err(next_i + 6);
                             };
                             atom_value.push(encoded_char);
                         }

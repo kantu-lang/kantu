@@ -62,9 +62,9 @@ sequences = [
   // Newline
   "\n"
 
-  // Arbitrary Unicode codepoint
-  "\u263A"
-  // You can replace `263A` with any 4 hexadecimal characters.
+  // Arbitrary Unicode Scalar Value
+  "\u00263A"
+  // You can replace `u00263A` with any 6 hexadecimal characters.
 ]
 ```
 
@@ -95,3 +95,5 @@ sequences = [
         ipsum = "dolor"
     }
     ```
+
+- Surrogate pairs are not allowed in [Unicode Scalar Value](https://www.unicode.org/glossary/#unicode_scalar_value) escapes.

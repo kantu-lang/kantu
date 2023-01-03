@@ -53,7 +53,7 @@ sequences = [
   // Newline
   "\n"
 
-  // Arbitrary Unicode codepoint
-  "\u263A"
-  // You can replace `263A` with any 4 hexadecimal characters.
+  // Arbitrary Unicode Scalar Value
+  "\u00263A"
+  // You can replace `00263A` with any 6 hexadecimal characters.
 ]
