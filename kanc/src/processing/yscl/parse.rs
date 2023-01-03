@@ -29,6 +29,22 @@ mod unfinished {
         pub has_space_after_key: bool,
         pub has_equal: bool,
     }
+
+    impl Default for UnfinishedMapEntry {
+        fn default() -> Self {
+            Self {
+                key: "".to_string(),
+                has_space_after_key: false,
+                has_equal: false,
+            }
+        }
+    }
+
+    impl UnfinishedMapEntry {
+        pub fn reset(&mut self) {
+            *self = Self::default();
+        }
+    }
 }
 
 pub fn parse(src: &str) -> Result<Node, usize> {
@@ -220,8 +236,12 @@ fn reduce(stack: &mut Vec<Unfinished>, top: Node) -> Result<Option<Node>, ()> {
     match stack.last_mut() {
         None => Ok(Some(top)),
         Some(Unfinished::AtomicSrc(_)) => Err(()),
-        Some(Unfinished::List(UnfinishedList { elements, .. })) => {
+        Some(Unfinished::List(UnfinishedList {
+            elements,
+            needs_newline_before_next_element,
+        })) => {
             elements.push(top);
+            *needs_newline_before_next_element = true;
             Ok(None)
         }
         Some(Unfinished::Map(UnfinishedMap {
@@ -234,6 +254,9 @@ fn reduce(stack: &mut Vec<Unfinished>, top: Node) -> Result<Option<Node>, ()> {
                         .expect("Pending key should always be valid"),
                     value: top,
                 });
+
+                pending_entry.reset();
+
                 Ok(None)
             } else {
                 Err(())
