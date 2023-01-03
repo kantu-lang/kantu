@@ -21,94 +21,83 @@ fn verify_that_spans_are_correct(src: &str) {
 
 #[test]
 fn hello_world() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/hello_world.k"
-    );
+    let src =
+        include_str!("../../sample_code/should_succeed/single_file/no_warnings/hello_world.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn ill_typed_until_substituted() {
-    let src = include_str!("../../sample_code/should_succeed/single_file/should_succeed_without_warnings/ill_typed_until_substituted.k");
+    let src = include_str!(
+        "../../sample_code/should_succeed/single_file/no_warnings/ill_typed_until_substituted.k"
+    );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn plus_commutative() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/plus_commutative.k"
-    );
+    let src =
+        include_str!("../../sample_code/should_succeed/single_file/no_warnings/plus_commutative.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn forall() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/forall.k"
-    );
+    let src = include_str!("../../sample_code/should_succeed/single_file/no_warnings/forall.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn exists() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/exists.k"
-    );
+    let src = include_str!("../../sample_code/should_succeed/single_file/no_warnings/exists.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn check() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_with_warnings/check/many_warnings.k"
+        "../../sample_code/should_succeed/single_file/with_warnings/check/many_warnings.k"
     );
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn comment() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/comment.k"
-    );
+    let src = include_str!("../../sample_code/should_succeed/single_file/no_warnings/comment.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn match_explosion() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/match_explosion.k"
-    );
+    let src =
+        include_str!("../../sample_code/should_succeed/single_file/no_warnings/match_explosion.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn underscore() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/underscore.k"
-    );
+    let src = include_str!("../../sample_code/should_succeed/single_file/no_warnings/underscore.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn optional_commas() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/optional_commas.k"
-    );
+    let src =
+        include_str!("../../sample_code/should_succeed/single_file/no_warnings/optional_commas.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn labeled_params() {
-    let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/labeled_params.k"
-    );
+    let src =
+        include_str!("../../sample_code/should_succeed/single_file/no_warnings/labeled_params.k");
     verify_that_spans_are_correct(src);
 }
 
 #[test]
 fn labeled_call_args() {
     let src = include_str!(
-        "../../sample_code/should_succeed/single_file/should_succeed_without_warnings/labeled_call_args.k"
+        "../../sample_code/should_succeed/single_file/no_warnings/labeled_call_args.k"
     );
     verify_that_spans_are_correct(src);
 }
