@@ -5,13 +5,14 @@ use crate::{
 
 use std::path::PathBuf;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum InvalidCliArgsError {
     UnrecognizedArg(String),
     ExpectedPathAfterFlag(String),
     InvalidPackOmletPath(PathBuf),
     CannotFindImplicitPackOmletPath,
-    NoExplicitPackOmletPathProvidedAndCwdCannotBeRead,
+    CannotReadCwd(std::io::Error),
+    CwdIsNotAbsolute(PathBuf),
 }
 
 #[derive(Clone, Debug)]

@@ -17,7 +17,7 @@ pub fn read_kantu_files(
 ) -> Result<(Vec<unsimplified::File>, FileTree), ReadKantuFilesError> {
     let (root_file, root_file_path) = {
         let Some(pack_omlet_dir) = options
-        .pack_omlet_path
+        .pack_omlet_abs_path
         .parent() else {
             return Err(ReadKantuFilesError::CannotGetPackOmletDirectory);
         };
