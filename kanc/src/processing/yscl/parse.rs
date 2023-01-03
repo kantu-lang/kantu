@@ -48,6 +48,7 @@ mod unfinished {
 }
 
 pub fn parse(src: &str) -> Result<Node, usize> {
+    let unexpected_eoi_err = Err(src.len());
     let mut stack = vec![Unfinished::Map(UnfinishedMap {
         entries: vec![],
         pending_entry: UnfinishedMapEntry {
@@ -57,8 +58,15 @@ pub fn parse(src: &str) -> Result<Node, usize> {
         },
     })];
     let mut remaining = src.char_indices();
+    let mut is_current_line_all_whitespace = true;
 
     while let Some((i, c)) = remaining.next() {
+        if c == '\n' {
+            is_current_line_all_whitespace = true;
+        } else if !c.is_whitespace() {
+            is_current_line_all_whitespace = false;
+        }
+
         match stack.last_mut().expect("Stack should never be empty") {
             Unfinished::AtomicSrc(atomic_src) => match c {
                 '\n' => return Err(i),
@@ -77,14 +85,14 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                 '\\' => {
                     atomic_src.push(c);
                     let Some((next_i, next_c)) = remaining.next() else {
-                        return Err(src.len())
+                        return unexpected_eoi_err;
                     };
                     match next_c {
                         '\\' | '"' | 'n' => atomic_src.push(next_c),
                         'u' => {
                             for _ in 0..4 {
                                 let Some((next_i, next_c)) = remaining.next() else {
-                                    return Err(src.len())
+                                    return unexpected_eoi_err;
                                 };
                                 if !next_c.is_ascii_hexdigit() {
                                     return Err(next_i);
@@ -134,6 +142,21 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                         elements: vec![],
                         needs_newline_before_next_element: true,
                     }));
+                }
+                '/' if is_current_line_all_whitespace => {
+                    let Some((next_i, next_c)) = remaining.next() else {
+                        return unexpected_eoi_err;
+                    };
+                    match next_c {
+                        '/' => {
+                            while let Some((_, next_c)) = remaining.next() {
+                                if next_c == '\n' {
+                                    break;
+                                }
+                            }
+                        }
+                        _ => return Err(next_i),
+                    }
                 }
                 c if c.is_whitespace() => {}
                 _ => return Err(i),
@@ -208,6 +231,21 @@ pub fn parse(src: &str) -> Result<Node, usize> {
                         needs_newline_before_next_element: true,
                     }));
                 }
+                '/' if is_current_line_all_whitespace => {
+                    let Some((next_i, next_c)) = remaining.next() else {
+                        return unexpected_eoi_err;
+                    };
+                    match next_c {
+                        '/' => {
+                            while let Some((_, next_c)) = remaining.next() {
+                                if next_c == '\n' {
+                                    break;
+                                }
+                            }
+                        }
+                        _ => return Err(next_i),
+                    }
+                }
                 _ => return Err(i),
             },
         }
@@ -228,7 +266,7 @@ pub fn parse(src: &str) -> Result<Node, usize> {
             })),
             0,
         ) if key.is_empty() => Ok(Node::Map(Map { entries })),
-        _ => Err(src.len()),
+        _ => unexpected_eoi_err,
     }
 }
 
