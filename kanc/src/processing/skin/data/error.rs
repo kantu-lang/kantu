@@ -13,3 +13,6 @@ pub enum InvalidCompilerOptionsError {}
 
 #[derive(Clone, Debug)]
 pub enum ReadKantuFilesError {}
+
+#[derive(Clone, Debug)]
+pub enum WriteTargetFilesError {}

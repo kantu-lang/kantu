@@ -6,12 +6,13 @@ use crate::{
     },
     processing::{
         generate_code::targets::javascript::CompileToJavaScriptError,
-        simplify_ast::SimplifyAstError, type_check::TypeCheckError,
+        simplify_ast::SimplifyAstError,
+        type_check::{TypeCheckError, TypeCheckWarning},
     },
 };
 
 use super::super::data::error::{
-    InvalidCliArgsError, InvalidCompilerOptionsError, ReadKantuFilesError,
+    InvalidCliArgsError, InvalidCompilerOptionsError, ReadKantuFilesError, WriteTargetFilesError,
 };
 
 pub trait FormatErrorForCli {
@@ -75,5 +76,17 @@ impl FormatErrorForCli for TypeCheckError {
 impl FormatErrorForCli for CompileToJavaScriptError {
     fn format_for_cli(&self) -> String {
         match *self {}
+    }
+}
+
+impl FormatErrorForCli for TypeCheckWarning {
+    fn format_for_cli(&self) -> String {
+        unimplemented!()
+    }
+}
+
+impl FormatErrorForCli for WriteTargetFilesError {
+    fn format_for_cli(&self) -> String {
+        unimplemented!()
     }
 }

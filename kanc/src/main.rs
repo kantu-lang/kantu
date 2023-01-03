@@ -4,7 +4,7 @@ use kanc::{
         bind_type_independent::bind_files,
         generate_code::{
             targets::javascript::{
-                format::{format_file, FormatOptions},
+                format::{format_file as format_js_file, FormatOptions},
                 JavaScript,
             },
             CompileTarget,
@@ -14,6 +14,7 @@ use kanc::{
         skin::processing::{
             format::FormatErrorForCli, parse_cli_args::parse_args,
             read_compiler_options::read_compiler_options, read_kantu_files::read_kantu_files,
+            write_target_files::write_target_files,
         },
         type_check::type_check_file_items,
         validate_fun_recursion::validate_fun_recursion_in_file_items,
@@ -21,6 +22,8 @@ use kanc::{
         validate_variant_return_types::validate_variant_return_types_in_file_items,
     },
 };
+
+use std::path::PathBuf;
 
 fn main() -> Result<(), ()> {
     let args: Vec<String> = std::env::args().collect();
@@ -44,16 +47,37 @@ fn main() -> Result<(), ()> {
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
             .map_err(print_and_drop)?;
-    let err = type_check_file_items(&file_tree, &mut registry, file_item_list_id)
+    let warnings = type_check_file_items(&file_tree, &mut registry, file_item_list_id)
         .map_err(print_and_drop)?;
-    let js_ast =
+    let js_file =
         JavaScript::generate_code(&registry, file_item_list_id.raw()).map_err(print_and_drop)?;
-    println!(
-        "Compilation pipeline completed successfully!\n\n{}",
-        format_file(&js_ast, &FormatOptions { indentation: 4 })
+
+    let write_result = write_target_files(
+        &options,
+        vec![(
+            PathBuf::from("index.js"),
+            format_js_file(&js_file, &FormatOptions { indentation: 4 }),
+        )],
     );
-    // TODO: write to file
-    // TODO: Format intermediate errors
+
+    if warnings.is_empty() {
+        println!("Compiled successfully.");
+    } else {
+        println!("Compiled with warnings:\n");
+        for warning in &warnings {
+            println!("{}\n", warning.format_for_cli());
+        }
+    }
+
+    match write_result {
+        Ok(()) => println!("Successfully wrote output files."),
+        Err(err) => {
+            println!("Failed to write output files:\n");
+            println!("{}", err.format_for_cli());
+            return Err(());
+        }
+    }
+
     Ok(())
 }
 
