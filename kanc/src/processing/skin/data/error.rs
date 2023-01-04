@@ -17,7 +17,7 @@ pub enum InvalidCliArgsError {
 #[derive(Debug)]
 pub enum InvalidCompilerOptionsError {
     CannotReadPackYscl(PathBuf, std::io::Error),
-    CannotParsePackYscl(yscl::prelude::ParseError),
+    CannotParsePackYscl(String, yscl::prelude::ParseError),
     MissingEntry(String),
     ExpectedAtomButGotCollection(String),
     IllegalKantuVersion(String),

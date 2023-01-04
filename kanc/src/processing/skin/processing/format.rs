@@ -40,7 +40,7 @@ impl FormatErrorForCli for InvalidCliArgsError {
                 format!("Cannot read current working directory: {:?}", err)
             }
             InvalidCliArgsError::CwdIsNotAbsolute(path) => {
-                format!("Current working directory is not absolute: {:?}. There probably isn't anything you can do about this error except open an issue at https://github.com/kantu-lang/kantu/issues/new.", path)
+                format!("Current working directory is not absolute: {}. There probably isn't anything you can do about this error except open an issue at https://github.com/kantu-lang/kantu/issues/new.", path.display())
             }
         }
     }
@@ -48,10 +48,65 @@ impl FormatErrorForCli for InvalidCliArgsError {
 
 impl FormatErrorForCli for InvalidCompilerOptionsError {
     fn format_for_cli(&self) -> String {
-        unimplemented!()
+        match self {
+            InvalidCompilerOptionsError::CannotReadPackYscl(path, err) => {
+                format!(
+                    "Cannot read pack.yscl at {}. Error: {:?}",
+                    path.display(),
+                    err
+                )
+            }
+            InvalidCompilerOptionsError::CannotParsePackYscl(src, err) => match err {
+                yscl::prelude::ParseError::UnexpectedEoi => {
+                    "Could not parse pack.yscl: Unexpected end of input".to_string()
+                }
+                yscl::prelude::ParseError::UnexpectedChar(unexpected_ch, byte_index) => {
+                    let (line, col) = get_line_and_col(src, *byte_index);
+                    format!(
+                        "Unexpected {} on line {} col {} of pack.yscl.",
+                        unexpected_ch, line, col
+                    )
+                }
+                yscl::prelude::ParseError::DuplicateKey(duplicate_key, byte_index) => {
+                    let (line, col) = get_line_and_col(src, *byte_index);
+                    format!(
+                        "Duplicate key {:?} on line {} col {} of pack.yscl.",
+                        duplicate_key, line, col
+                    )
+                }
+            },
+            InvalidCompilerOptionsError::MissingEntry(entry) => {
+                format!("Missing entry {:?} in pack.yscl.", entry)
+            }
+            InvalidCompilerOptionsError::ExpectedAtomButGotCollection(entry) => {
+                format!(
+                    "Expected atom but got collection for entry {:?} in pack.yscl.",
+                    entry
+                )
+            }
+            InvalidCompilerOptionsError::IllegalKantuVersion(version) => {
+                format!("This compiler does not support Kantu version {:?}", version)
+            }
+        }
     }
 }
 
+fn get_line_and_col(src: &str, byte_index: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut col = 0;
+    for (i, c) in src.char_indices() {
+        if i == byte_index {
+            break;
+        }
+        if c == '\n' {
+            line += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+    }
+    (line, col)
+}
 impl FormatErrorForCli for ReadKantuFilesError {
     fn format_for_cli(&self) -> String {
         unimplemented!()
