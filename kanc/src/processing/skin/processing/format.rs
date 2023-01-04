@@ -25,7 +25,26 @@ pub trait FormatErrorForWithRegistry {
 
 impl FormatErrorForCli for InvalidCliArgsError {
     fn format_for_cli(&self) -> String {
-        unimplemented!()
+        match self {
+            InvalidCliArgsError::UnrecognizedArg(arg) => {
+                format!("Unrecognized CLI argument: {:?}", arg)
+            }
+            InvalidCliArgsError::ExpectedPathAfterFlag(flag) => {
+                format!("Expected path after flag: {:?}", flag)
+            }
+            InvalidCliArgsError::InvalidPackYsclPath(path) => {
+                format!("Invalid pack.yscl path: {:?}", path)
+            }
+            InvalidCliArgsError::CannotFindImplicitPackYsclPath => {
+                "Cannot find implicit pack.yscl path".to_string()
+            }
+            InvalidCliArgsError::CannotReadCwd(err) => {
+                format!("Cannot read current working directory: {:?}", err)
+            }
+            InvalidCliArgsError::CwdIsNotAbsolute(path) => {
+                format!("Current working directory is not absolute: {:?}", path)
+            }
+        }
     }
 }
 
