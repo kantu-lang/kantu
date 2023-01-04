@@ -9,7 +9,7 @@ pub mod flags {
 }
 
 pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
-    let mut remaining = args.iter();
+    let mut remaining = args.iter().skip(1);
     let mut pack_yscl_path: Option<String> = None;
 
     while let Some(arg) = remaining.next() {
