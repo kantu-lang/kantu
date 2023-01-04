@@ -15,8 +15,11 @@ pub enum InvalidCliArgsError {
     CwdIsNotAbsolute(PathBuf),
 }
 
-#[derive(Clone, Debug)]
-pub enum InvalidCompilerOptionsError {}
+#[derive(Debug)]
+pub enum InvalidCompilerOptionsError {
+    CannotReadPackOmlet(PathBuf, std::io::Error),
+    CannotParsePackOmlet(yscl::prelude::ParseError),
+}
 
 #[derive(Debug)]
 pub enum ReadKantuFilesError {

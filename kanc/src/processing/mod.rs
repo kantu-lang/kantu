@@ -11,7 +11,4 @@ pub mod validate_variant_return_types;
 
 pub mod skin;
 
-// TODO: Move to separate crate.
-pub mod yscl;
-
 pub mod test_utils;
