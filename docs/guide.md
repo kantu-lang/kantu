@@ -1213,7 +1213,7 @@ The top-level `mod.k` file (i.e., the one in the same directory as `pack.omlet`)
 #### `pack.omlet`:
 
 ```omlet
-kantu_version = 1.0.0
+kantu_version = "1.0.0"
 ```
 
 `pack.omlet` can be used to list external dependencies and specify
