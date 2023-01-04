@@ -35,5 +35,10 @@ pub enum ReadKantuFilesError {
     ParseError(PathBuf, ParseError),
 }
 
-#[derive(Clone, Debug)]
-pub enum WriteTargetFilesError {}
+#[derive(Debug)]
+pub enum WriteTargetFilesError {
+    CannotRemoveTargetDir(PathBuf, std::io::Error),
+    TargetDirExistsButIsNotDir(PathBuf),
+    CannotCreateTargetDir(PathBuf, std::io::Error),
+    CannotWriteFile(PathBuf, std::io::Error),
+}

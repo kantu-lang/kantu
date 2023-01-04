@@ -30,9 +30,16 @@ fn build_options(
     let Some(kantu_version) = KantuVersion::new(&kantu_version) else {
         return Err(InvalidCompilerOptionsError::IllegalKantuVersion(kantu_version));
     };
+    let target_dir = options
+        .pack_yscl_abs_path
+        .parent()
+        .expect("pack.yscl path should have parent")
+        .join("target")
+        .to_path_buf();
     Ok(CompilerOptions {
         pack_yscl_abs_path: options.pack_yscl_abs_path.clone(),
         kantu_version,
+        target_dir,
     })
 }
 

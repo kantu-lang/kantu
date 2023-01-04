@@ -9,6 +9,7 @@ pub struct CliOptions {
 pub struct CompilerOptions {
     pub pack_yscl_abs_path: PathBuf,
     pub kantu_version: KantuVersion,
+    pub target_dir: PathBuf,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
