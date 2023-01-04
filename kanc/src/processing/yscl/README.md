@@ -41,8 +41,6 @@ kantu_version = "1.0.0"
 dependencies = {
     foo = "2.0.3"
     bar = "bar"
-    // Duplicate keys are permitted
-    bar = "baz"
     lorem = {
         url = "https://github.com/kylejlin/nonexistent_repo"
     }
@@ -162,7 +160,7 @@ foo = "\u01f60a"
 
 // For this specific case, you could just directly write
 // the value without escaping--that is,
-foo = "😊"
+foo2 = "😊"
 ```
 
 ### WRONG: Newline between an entry's key and the start of its value
@@ -184,5 +182,42 @@ foo = "bar"
 
 lorem = {
     ipsum = "dolor"
+}
+```
+
+### WRONG: Duplicate keys
+
+```yscl
+license = "MIT"
+license = "APACHE"
+```
+
+### RIGHT
+
+There isn't a one-size-fits-all solution for this.
+The best solution will depend on what your goal is.
+
+In the above example, it looks like the author is trying
+to provide multiple licenses.
+In this case, using a list would be appropriate:
+
+```yscl
+license = [
+    "MIT"
+    "APACHE"
+]
+```
+
+Note that the same key may legally appear multiple times in
+the same _file_, just not in the same _map_.
+For example, the following is perfectly legal:
+
+```yscl
+jane_doe = {
+    age = "21"
+}
+
+taro_yamada = {
+    age = "24"
 }
 ```
