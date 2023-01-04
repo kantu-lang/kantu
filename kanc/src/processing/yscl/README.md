@@ -4,28 +4,39 @@ YSCL (rhymes with "rascal") is a general purpose config language that
 aims to be so simple that anyone can go
 from zero to absolute mastery in less than five minutes.
 
+YSCL files end with the `.yscl` extension.
+
 ## Learn by example
+
+`hello_world.yscl`:
 
 ```yscl
 // Hi, I'm a comment! I start with two slashes.
 // I am ignored by the parser.
 // I must go at the beginning of a line
-       // (leading whitespace is permitted, however).
+   // (leading whitespace is permitted, however).
 
-// This is an entry. Every file has zero or more of them.
+
+
+
+// Below is an entry. Every file has zero or more of them.
 kantu_version = "1.0.0"
 
 // Every entry has a _key_ and a _value_
 //
 // A key is one or more (ASCII) letters, digits, or underscores.
 //
-// The value can be...
+// The value can be any YSCL expression.
+// That is, it can be any of the following:
 //
-// 1. A string, like you saw above ("1.0.0")
+// 1. A string (for example, the "1.0.0" you saw above)
 // 2. A map (explained later)
 // 3. A list (explained later)
 
-// This is a map.
+
+
+
+// Below is a map.
 // A map is a sequence of entries enclosed in curly braces (`{}`)
 dependencies = {
     foo = "2.0.3"
@@ -39,17 +50,25 @@ dependencies = {
     // Note: There can only be one entry per line.
 }
 
-// This is a list.
-// A list is a sequence of values enclosed in square brackets (`[]`)
+
+
+
+// Below is a list.
+// A list is a sequence of elements enclosed in square brackets (`[]`).
 licenses = [
     "MIT"
+    // Elements are separated by newlines.
     "APACHE"
+    // Elements can be any YSCL expression.
     {
         url = "https://github.com/kylejlin/nonexistent_repo/CUSTOM_LICENSE"
     }
 
-    // Note: There can only be one value per line.
+    // Note: There can only be one element per line.
 ]
+
+
+
 
 // There are 4 supported string escape sequences:
 sequences = [
@@ -68,47 +87,102 @@ sequences = [
 ]
 ```
 
-## More details
+## Antipatterns and how to fix them
 
-- Files end with the `.yscl` extension
-- The file is implicitly a map
+The following antipatterns constitute illegal YSCL code,
+and will thus result in a parsing error.
 
-  - The top-level `{}` are implicit, and must **NOT** be included.
+### WRONG: Multiple entries per line
 
-    For example, the following is illegal:
+```yscl
+foo = "bar" lorem = "ipsum"
+```
 
-    ```yscl
-    // WRONG - Do not copy!
-    {
-        foo = "bar"
-        lorem = {
-            ipsum = "dolor"
-        }
-    }
-    ```
+### RIGHT: One entry per line
 
-    The following is correct:
+```yscl
+foo = "bar"
+lorem = "ipsum"
+```
 
-    ```yscl
-    foo = "bar"
-    lorem = {
-        ipsum = "dolor"
-    }
-    ```
+### WRONG: Multiple elements per line
 
-- Surrogate pairs are not allowed in [Unicode Scalar Value](https://www.unicode.org/glossary/#unicode_scalar_value) escapes.
-- Formally, every valid line of code is falls into exactly one of the following categories:
-  - Blank line (no non-whitespace)
-  - Comment. That is, `// blah` for some `blah`.
-    - Whitespace may optionally precede the `//`.
-  - Value start
-    - String: `"bar"` for some `bar`.
-    - List start: `[`.
-    - Map start: `{`.
-  - Entry start
-    - String: `foo = "bar"` for some `foo` and `bar`.
-    - List start: `foo = [` some `foo`.
-    - Map start: `foo = {` for some `foo.`
-  - End:
-    - List end: `]`.
-    - Map end: `}`.
+```yscl
+foo = ["bar" "baz"]
+```
+
+### RIGHT: One element per line
+
+```yscl
+foo = [
+    "bar"
+    "baz"
+]
+```
+
+### WRONG: "One-liner" maps (and lists)
+
+```yscl
+lorem = { ipsum = "dolor" }
+foo = ["bar"]
+```
+
+The enclosing `{}` (or `[]`, respectively) must be on different lines
+than any entries (or elements, respectively) they enclose.
+
+In the above example:
+
+- The entry `ipsum = "dolor"` is illegal because it is on the same line as the enclosing `{`
+- Likewise, the enclosing `}` is also illegal because it is on the same line as the entry `ipsum = "dolor"`
+- The element `"bar"` is illegal because it is on the same line as the enclosing `[`
+- Likewise, the enclosing `]` is also illegal because it is on the same line
+  as the element `bar`.
+
+### RIGHT: Entries and elements on their own line
+
+```yscl
+lorem = {
+    ipsum = "dolor"
+}
+foo = [
+    "bar"
+]
+```
+
+### WRONG: Unicode surrogate code points in `\u` escapes
+
+```yscl
+foo = "\u00D83D\u00DE0A"
+```
+
+### RIGHT: Unicode scalar values in `\u` escapes
+
+```yscl
+foo = "\u01f60a"
+
+// For this specific case, you could just directly write
+// the value without escaping--that is,
+foo = "😊"
+```
+
+### WRONG: Newline between an entry's key and the start of its value
+
+```yscl
+foo
+    = "bar"
+
+lorem =
+{
+    ipsum = "dolor"
+}
+```
+
+### RIGHT: An entry's value starts on the same line as its key
+
+```yscl
+foo = "bar"
+
+lorem = {
+    ipsum = "dolor"
+}
+```
