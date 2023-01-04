@@ -9,7 +9,6 @@ use std::path::PathBuf;
 pub enum InvalidCliArgsError {
     UnrecognizedArg(String),
     ExpectedPathAfterFlag(String),
-    InvalidPackYsclPath(PathBuf),
     CannotFindImplicitPackYsclPath,
     CannotReadCwd(std::io::Error),
     CwdIsNotAbsolute(PathBuf),

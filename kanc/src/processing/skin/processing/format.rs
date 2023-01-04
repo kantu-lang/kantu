@@ -27,22 +27,20 @@ impl FormatErrorForCli for InvalidCliArgsError {
     fn format_for_cli(&self) -> String {
         match self {
             InvalidCliArgsError::UnrecognizedArg(arg) => {
-                format!("Unrecognized CLI argument: {:?}", arg)
+                format!("Unrecognized CLI argument: {}", arg)
             }
             InvalidCliArgsError::ExpectedPathAfterFlag(flag) => {
-                format!("Expected path after flag: {:?}", flag)
-            }
-            InvalidCliArgsError::InvalidPackYsclPath(path) => {
-                format!("Invalid pack.yscl path: {:?}", path)
+                format!("Expected path after flag: {}", flag)
             }
             InvalidCliArgsError::CannotFindImplicitPackYsclPath => {
-                "Cannot find implicit pack.yscl path".to_string()
+                "Cannot find pack.yscl in current working directory or any of its ancestors."
+                    .to_string()
             }
             InvalidCliArgsError::CannotReadCwd(err) => {
                 format!("Cannot read current working directory: {:?}", err)
             }
             InvalidCliArgsError::CwdIsNotAbsolute(path) => {
-                format!("Current working directory is not absolute: {:?}", path)
+                format!("Current working directory is not absolute: {:?}. There probably isn't anything you can do about this error except open an issue at https://github.com/kantu-lang/kantu/issues/new.", path)
             }
         }
     }
