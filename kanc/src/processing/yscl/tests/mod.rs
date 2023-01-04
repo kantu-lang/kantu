@@ -20,6 +20,6 @@ fn assert_entry_count_eq(src: &str, expected_entry_count: usize) {
 
 #[test]
 fn hello_world() {
-    let src = include_str!("sample_code/hello_world.yscl");
+    let src = include_str!("sample_code/correct/hello_world.yscl");
     assert_entry_count_eq(src, 4);
 }
