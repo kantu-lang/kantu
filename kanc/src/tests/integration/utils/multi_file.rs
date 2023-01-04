@@ -7,18 +7,18 @@ use std::{
 
 #[derive(Clone, Copy, Debug)]
 pub struct ProjectPath<'a> {
-    /// `checked_unadjusted_pack_omlet_path` should **always** be created using the
+    /// `checked_unadjusted_pack_yscl_path` should **always** be created using the
     /// `checked_path!` macro.
-    pub checked_unadjusted_pack_omlet_path: &'a str,
+    pub checked_unadjusted_pack_yscl_path: &'a str,
 
     /// `callee_file_path` should **always** be `file!()`.
     ///
-    /// This is so it will be consistent with `checked_unadjusted_pack_omlet_path`.
+    /// This is so it will be consistent with `checked_unadjusted_pack_yscl_path`.
     ///
     /// The reason we make `callee_file_path` a parameter rather than simply
     /// hardcoding `file!()` in the function is because the value
     /// of `file!()` will change depending on where it is written.
-    /// The value of `checked_unadjusted_pack_omlet_path` is relative to the
+    /// The value of `checked_unadjusted_pack_yscl_path` is relative to the
     /// calling file, so the value of `callee_file_path` must also be relative to the calling file.
     /// Thus, we cannot hardcode `file!()` in the function definition,
     /// and must instead require the caller to pass it in as an argument.
@@ -28,14 +28,14 @@ pub struct ProjectPath<'a> {
 pub fn get_files_and_file_tree(project_path: ProjectPath) -> (Vec<simplified_ast::File>, FileTree) {
     let ProjectPath {
         callee_file_path,
-        checked_unadjusted_pack_omlet_path,
+        checked_unadjusted_pack_yscl_path,
     } = project_path;
-    let adjusted_pack_omlet_path = Path::new(callee_file_path)
+    let adjusted_pack_yscl_path = Path::new(callee_file_path)
         .parent()
         .unwrap()
-        .join(checked_unadjusted_pack_omlet_path);
+        .join(checked_unadjusted_pack_yscl_path);
     let (root_file, root_file_path) = {
-        let root_file_path = adjusted_pack_omlet_path.parent().unwrap().join("src/mod.k");
+        let root_file_path = adjusted_pack_yscl_path.parent().unwrap().join("src/mod.k");
         let src = fs::read_to_string(&root_file_path).expect("Failed to open file");
         let root_file = lex_and_parse_file(&src, FileId(0));
         (root_file, root_file_path)

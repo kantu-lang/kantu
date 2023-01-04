@@ -9,21 +9,21 @@ use std::path::PathBuf;
 pub enum InvalidCliArgsError {
     UnrecognizedArg(String),
     ExpectedPathAfterFlag(String),
-    InvalidPackOmletPath(PathBuf),
-    CannotFindImplicitPackOmletPath,
+    InvalidPackYsclPath(PathBuf),
+    CannotFindImplicitPackYsclPath,
     CannotReadCwd(std::io::Error),
     CwdIsNotAbsolute(PathBuf),
 }
 
 #[derive(Debug)]
 pub enum InvalidCompilerOptionsError {
-    CannotReadPackOmlet(PathBuf, std::io::Error),
-    CannotParsePackOmlet(yscl::prelude::ParseError),
+    CannotReadPackYscl(PathBuf, std::io::Error),
+    CannotParsePackYscl(yscl::prelude::ParseError),
 }
 
 #[derive(Debug)]
 pub enum ReadKantuFilesError {
-    CannotGetPackOmletDirectory,
+    CannotGetPackYsclDirectory,
     CannotReadFile(PathBuf, std::io::Error),
     ModHasMultipleFiles(PathBuf, PathBuf),
     NonModDotKHasSubmodules(PathBuf, unsimplified::ModStatement),

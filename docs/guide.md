@@ -1185,7 +1185,7 @@ We'll begin this section by examining an example project.
 #### File layout:
 
 ```text
-pack.omlet
+pack.yscl
 src/
     mod.k
     foo.k
@@ -1197,7 +1197,7 @@ src/
 In Kantu, the smallest "shareable" unit of code is the _package_.
 Kantu packages are roughly analogous to npm packages or Rust crates.
 
-A package consists of a `pack.omlet` file and one or more
+A package consists of a `pack.yscl` file and one or more
 `.k` files.
 The `.k` files are held in a `src` directory.
 
@@ -1208,15 +1208,15 @@ or simply "the package".
 
 Generally, each `.k` file corresponds to a module.
 
-The top-level `mod.k` file (i.e., the one in the same directory as `pack.omlet`) corresponds to the root module.
+The top-level `mod.k` file (i.e., the one in the same directory as `pack.yscl`) corresponds to the root module.
 
-#### `pack.omlet`:
+#### `pack.yscl`:
 
-```omlet
+```yscl
 kantu_version = "1.0.0"
 ```
 
-`pack.omlet` can be used to list external dependencies and specify
+`pack.yscl` can be used to list external dependencies and specify
 compiler options.
 In this example project, we do not have any external dependencies, and
 we use all the default compiler options, so we simply write `{}` to
@@ -1342,7 +1342,7 @@ Modules can be organized into a tree, with the `pack` module at the root.
 
 ### How to create a package
 
-1. Create a `pack.omlet` file.
+1. Create a `pack.yscl` file.
 2. In the same directory, create a `src/` directory.
 3. In that `src` directory, create a `mod.k` file.
 

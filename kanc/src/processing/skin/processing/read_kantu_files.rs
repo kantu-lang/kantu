@@ -16,12 +16,12 @@ pub fn read_kantu_files(
     options: &CompilerOptions,
 ) -> Result<(Vec<unsimplified::File>, FileTree), ReadKantuFilesError> {
     let (root_file, root_file_path) = {
-        let Some(pack_omlet_dir) = options
-        .pack_omlet_abs_path
+        let Some(pack_yscl_dir) = options
+        .pack_yscl_abs_path
         .parent() else {
-            return Err(ReadKantuFilesError::CannotGetPackOmletDirectory);
+            return Err(ReadKantuFilesError::CannotGetPackYsclDirectory);
         };
-        let root_file_path = pack_omlet_dir.join("src/mod.k");
+        let root_file_path = pack_yscl_dir.join("src/mod.k");
         let root_file = lex_and_parse_file(&root_file_path, FileId(0))?;
         (root_file, root_file_path)
     };

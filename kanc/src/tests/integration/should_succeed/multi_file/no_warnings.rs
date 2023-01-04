@@ -25,8 +25,8 @@ fn expect_success_with_no_warnings(project_path: ProjectPath) {
 fn factorial() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/factorial/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/factorial/pack.yscl"
         ),
     });
 }
@@ -35,8 +35,8 @@ fn factorial() {
 fn import_merging() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/import_merging/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/import_merging/pack.yscl"
         ),
     });
 }
@@ -45,8 +45,8 @@ fn import_merging() {
 fn alternate_name() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/alternate_name/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/alternate_name/pack.yscl"
         ),
     });
 }
@@ -55,8 +55,8 @@ fn alternate_name() {
 fn plus_commutative() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/plus_commutative/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/plus_commutative/pack.yscl"
         ),
     });
 }
@@ -65,8 +65,8 @@ fn plus_commutative() {
 fn no_clash_because_priv() {
     expect_success_with_no_warnings(ProjectPath{
         callee_file_path:   file!(),
-        checked_unadjusted_pack_omlet_path:   checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/no_clash_because_priv/pack.omlet"
+        checked_unadjusted_pack_yscl_path:   checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/no_clash_because_priv/pack.yscl"
         ),
    } );
 }
@@ -75,8 +75,8 @@ fn no_clash_because_priv() {
 fn opaque_nat() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/opaque_nat/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/opaque_nat/pack.yscl"
         ),
     });
 }
@@ -85,8 +85,8 @@ fn opaque_nat() {
 fn let_not_leaky_because_its_opaque() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/let_not_leaky_because_its_opaque/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/let_not_leaky_because_its_opaque/pack.yscl"
         ),
     });
 }
@@ -95,8 +95,8 @@ fn let_not_leaky_because_its_opaque() {
 fn pack_relative_with_alias() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/pack_relative_with_alias/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/pack_relative_with_alias/pack.yscl"
         ),
     });
 }
@@ -105,8 +105,8 @@ fn pack_relative_with_alias() {
 fn identity_eq_transparent() {
     expect_success_with_no_warnings(ProjectPath {
         callee_file_path: file!(),
-        checked_unadjusted_pack_omlet_path: checked_path!(
-            "../../../sample_code/should_succeed/multi_file/no_warnings/identity_eq_transparent/pack.omlet"
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/identity_eq_transparent/pack.yscl"
         ),
     });
 }
