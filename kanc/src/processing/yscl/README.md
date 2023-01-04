@@ -97,3 +97,18 @@ sequences = [
     ```
 
 - Surrogate pairs are not allowed in [Unicode Scalar Value](https://www.unicode.org/glossary/#unicode_scalar_value) escapes.
+- Formally, every valid line of code is falls into exactly one of the following categories:
+  - Blank line (no non-whitespace)
+  - Comment. That is, `// blah` for some `blah`.
+    - Whitespace may optionally precede the `//`.
+  - Value start
+    - String: `"bar"` for some `bar`.
+    - List start: `[`.
+    - Map start: `{`.
+  - Entry start
+    - String: `foo = "bar"` for some `foo` and `bar`.
+    - List start: `foo = [` some `foo`.
+    - Map start: `foo = {` for some `foo.`
+  - End:
+    - List end: `]`.
+    - Map end: `}`.
