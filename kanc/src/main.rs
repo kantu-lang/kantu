@@ -72,7 +72,10 @@ fn main() -> Result<(), ()> {
     }
 
     match write_result {
-        Ok(()) => println!("Successfully wrote output files."),
+        Ok(()) => println!(
+            "Successfully wrote output files to {}.",
+            options.target_dir.display()
+        ),
         Err(err) => {
             println!("Failed to write output files:\n");
             println!("{}", err.format_for_cli_with_registry(&registry));
