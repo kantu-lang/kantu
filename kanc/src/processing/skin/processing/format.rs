@@ -15,16 +15,12 @@ use super::super::data::error::{
     InvalidCliArgsError, InvalidCompilerOptionsError, ReadKantuFilesError, WriteTargetFilesError,
 };
 
-pub trait FormatErrorForCli {
-    fn format_for_cli(&self) -> String;
+pub trait FormatErrorForCli<T> {
+    fn format_for_cli(&self, data: T) -> String;
 }
 
-pub trait FormatErrorForWithRegistry {
-    fn format_for_cli_with_registry(&self, registry: &NodeRegistry) -> String;
-}
-
-impl FormatErrorForCli for InvalidCliArgsError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForCli<()> for InvalidCliArgsError {
+    fn format_for_cli(&self, (): ()) -> String {
         match self {
             InvalidCliArgsError::UnrecognizedArg(arg) => {
                 format!("Unrecognized CLI argument: {}", arg)
@@ -46,8 +42,8 @@ impl FormatErrorForCli for InvalidCliArgsError {
     }
 }
 
-impl FormatErrorForCli for InvalidCompilerOptionsError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
+    fn format_for_cli(&self, (): ()) -> String {
         match self {
             InvalidCompilerOptionsError::CannotReadPackYscl(path, err) => {
                 format!(
@@ -107,62 +103,63 @@ fn get_line_and_col(src: &str, byte_index: usize) -> (usize, usize) {
     }
     (line, col)
 }
-impl FormatErrorForCli for ReadKantuFilesError {
-    fn format_for_cli(&self) -> String {
+
+impl FormatErrorForCli<()> for ReadKantuFilesError {
+    fn format_for_cli(&self, (): ()) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for SimplifyAstError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForCli<()> for SimplifyAstError {
+    fn format_for_cli(&self, (): ()) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForCli for BindError {
-    fn format_for_cli(&self) -> String {
+impl FormatErrorForCli<()> for BindError {
+    fn format_for_cli(&self, (): ()) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForWithRegistry for IllegalVariantReturnTypeError {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for IllegalVariantReturnTypeError {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForWithRegistry for IllegalFunRecursionError {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for IllegalFunRecursionError {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForWithRegistry for TypePositivityError {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypePositivityError {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForWithRegistry for TypeCheckError {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypeCheckError {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForWithRegistry for CompileToJavaScriptError {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
-        match *self {}
-    }
-}
-
-impl FormatErrorForWithRegistry for TypeCheckWarning {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for CompileToJavaScriptError {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
 
-impl FormatErrorForWithRegistry for WriteTargetFilesError {
-    fn format_for_cli_with_registry(&self, _registry: &NodeRegistry) -> String {
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypeCheckWarning {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
+        unimplemented!()
+    }
+}
+
+impl<'a> FormatErrorForCli<&'a NodeRegistry> for WriteTargetFilesError {
+    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
 }
