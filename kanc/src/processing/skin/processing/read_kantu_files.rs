@@ -10,11 +10,20 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use rustc_hash::FxHashMap;
+
 // TODO: DRY (slighlty altered but mostly copied from `crate::tests::integration::utils`).
 // We could probably make the utils version depend on this one.
 pub fn read_kantu_files(
     options: &CompilerOptions,
-) -> Result<(Vec<unsimplified::File>, FileTree), ReadKantuFilesError> {
+) -> Result<
+    (
+        Vec<unsimplified::File>,
+        FileTree,
+        FxHashMap<FileId, PathBuf>,
+    ),
+    ReadKantuFilesError,
+> {
     let (root_file, root_file_src, root_file_path) = {
         let pack_yscl_dir = options
             .pack_yscl_abs_path
@@ -26,14 +35,18 @@ pub fn read_kantu_files(
     };
 
     let root_file_id = root_file.id;
-    let mut files_and_paths = vec![(root_file, root_file_src, root_file_path)];
+    let mut file_data = vec![(root_file, root_file_src, root_file_path)];
     let mut file_tree = TempFileTree::from_root(root_file_id);
-    parse_children_then_add(&mut files_and_paths, &mut file_tree, root_file_id)?;
-    let files = files_and_paths
-        .into_iter()
-        .map(|(file, _, _)| file)
-        .collect::<Vec<_>>();
-    Ok((files, file_tree.into()))
+    parse_children_then_add(&mut file_data, &mut file_tree, root_file_id)?;
+
+    let mut file_path_map = FxHashMap::default();
+    let mut files = Vec::with_capacity(file_data.len());
+    for (file, _src, path) in file_data {
+        file_path_map.insert(file.id, path);
+        files.push(file);
+    }
+
+    Ok((files, file_tree.into(), file_path_map))
 }
 
 fn lex_and_parse_file(

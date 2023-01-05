@@ -29,7 +29,7 @@ fn main() -> Result<(), ()> {
     let args: Vec<String> = std::env::args().collect();
     let options = parse_args(&args).print_err(())?;
     let options = read_compiler_options(&options).print_err(())?;
-    let (files, file_tree) = read_kantu_files(&options).print_err(())?;
+    let (files, file_tree, _file_path_map) = read_kantu_files(&options).print_err(())?;
     let files = files
         .into_iter()
         .map(|file| simplify_file(file))
