@@ -138,3 +138,9 @@ fn component_kw_in_dot_lhs() {
     );
     verify_that_spans_are_correct(src);
 }
+
+#[test]
+fn non_ascii() {
+    let src = include_str!("../../sample_code/should_succeed/single_file/should_parse/non_ascii.k");
+    verify_that_spans_are_correct(src);
+}
