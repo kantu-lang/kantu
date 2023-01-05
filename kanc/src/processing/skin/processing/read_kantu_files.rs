@@ -27,13 +27,13 @@ pub fn read_kantu_files(
 
     let root_file_id = root_file.id;
     let mut files_and_paths = vec![(root_file, root_file_src, root_file_path)];
-    let mut file_tree = FileTree::from_root(root_file_id);
+    let mut file_tree = TempFileTree::from_root(root_file_id);
     parse_children_then_add(&mut files_and_paths, &mut file_tree, root_file_id)?;
     let files = files_and_paths
         .into_iter()
         .map(|(file, _, _)| file)
         .collect::<Vec<_>>();
-    Ok((files, file_tree))
+    Ok((files, file_tree.into()))
 }
 
 fn lex_and_parse_file(
@@ -67,7 +67,7 @@ fn lex_and_parse_file(
 
 fn parse_children_then_add(
     files: &mut Vec<(unsimplified::File, String, PathBuf)>,
-    tree: &mut FileTree,
+    tree: &mut TempFileTree,
     file_id: FileId,
 ) -> Result<(), ReadKantuFilesError> {
     let (file, file_src, file_path) = files
@@ -92,7 +92,7 @@ fn parse_children_then_add(
         }
     }
 
-    for mod_statement in &mod_statements {
+    for mod_statement in mod_statements {
         let mod_name = &mod_statement.name.name;
         let child_file_id = get_unused_file_id(files);
 
@@ -117,12 +117,13 @@ fn parse_children_then_add(
                 }
             }
         };
-        tree.add_child(file_id, mod_name, child_file_id)
-            .map_err(|_| ReadKantuFilesError::MultipleModsWithSameName {
+        tree.add_child(file_id, mod_statement, child_file_id)
+            .map_err(|err| ReadKantuFilesError::MultipleModsWithSameName {
                 parent_mod_path: file_path.clone(),
-                mod_name: mod_name.clone(),
-                first_bispan: unimplemented!(),
-                second_bispan: TextBispan::new(&file_src, mod_statement.span)
+                mod_name: err.existing_mod.name.name.clone(),
+                first_bispan: TextBispan::new(&file_src, err.existing_mod.span)
+                    .expect("mod_statement.span should be valid"),
+                second_bispan: TextBispan::new(&file_src, err.new_mod.span)
                     .expect("mod_statement.span should be valid"),
             })?;
         let (child_file, child_src) = lex_and_parse_file(&child_path, child_file_id)?;

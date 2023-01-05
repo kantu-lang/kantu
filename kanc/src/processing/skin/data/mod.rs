@@ -1,5 +1,6 @@
 pub mod error;
 pub mod options;
+pub mod temp_file_tree;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum YsclCollectionKind {
@@ -9,5 +10,5 @@ pub enum YsclCollectionKind {
 
 pub mod prelude {
     pub use super::*;
-    pub use super::{error::*, options::*};
+    pub use super::{error::*, options::*, temp_file_tree::*};
 }
