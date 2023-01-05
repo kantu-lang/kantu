@@ -43,3 +43,48 @@ impl TextSpan {
         }
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TextBispan {
+    pub file_id: FileId,
+    /// Inclusive, 1-indexed
+    pub start_line: usize,
+    /// Inclusive, 0-indexed
+    pub start_col: usize,
+    /// Exclusive, 1-indexed
+    pub end_line: usize,
+    /// Exclusive, 0-indexed
+    pub end_col: usize,
+}
+
+impl TextBispan {
+    /// Returns `None` if either `span.start` or `span.end`
+    /// is outside `src`'s bounds.
+    pub fn new(src: &str, span: TextSpan) -> Option<Self> {
+        unimplemented!()
+    }
+}
+
+impl TextBispan {
+    pub fn inclusive_merge(self, other: TextBispan) -> TextBispan {
+        if self.file_id != other.file_id {
+            panic!("Cannot merge spans from different files.");
+        }
+
+        let start_line = self.start_line;
+        let start_col = self.start_col;
+        let end_line = other.end_line;
+        let end_col = other.end_col;
+        if end_line < start_line || (end_line == start_line && end_col < start_col) {
+            panic!("End of bispan is before start of bispan.");
+        }
+
+        TextBispan {
+            file_id: self.file_id,
+            start_line,
+            start_col,
+            end_line,
+            end_col,
+        }
+    }
+}

@@ -1,5 +1,5 @@
 use crate::{
-    data::{unsimplified_ast as unsimplified, unsimplified_ast::IdentifierName},
+    data::{unsimplified_ast as unsimplified, unsimplified_ast::IdentifierName, TextBispan},
     processing::{lex::LexError, parse::ParseError},
 };
 
@@ -34,11 +34,31 @@ pub enum InvalidCompilerOptionsError {
 #[derive(Debug)]
 pub enum ReadKantuFilesError {
     CannotReadFile(PathBuf, std::io::Error),
-    ModHasMultipleFiles(PathBuf, PathBuf),
-    NonModDotKHasSubmodules(PathBuf, unsimplified::ModStatement),
-    MultipleModsWithSameName(PathBuf, IdentifierName),
-    LexError(PathBuf, LexError),
-    ParseError(PathBuf, ParseError),
+    ModHasBothLeafAndModKFiles {
+        leaf_path: PathBuf,
+        mod_k_path: PathBuf,
+    },
+    NonModDotKHasSubmodules {
+        non_mod_dot_k_path: PathBuf,
+        mod_statement: unsimplified::ModStatement,
+        mod_statement_bispan: TextBispan,
+    },
+    MultipleModsWithSameName {
+        parent_mod_path: PathBuf,
+        mod_name: IdentifierName,
+        first_bispan: TextBispan,
+        second_bispan: TextBispan,
+    },
+    LexError {
+        path: PathBuf,
+        src: String,
+        err: LexError,
+    },
+    ParseError {
+        path: PathBuf,
+        src: String,
+        err: ParseError,
+    },
 }
 
 #[derive(Debug)]
