@@ -1,5 +1,6 @@
 pub use crate::data::{
     bind_error::*,
+    file_id::*,
     file_tree::FileTree,
     fun_recursion_validation_result::IllegalFunRecursionError,
     light_ast::*,
@@ -7,7 +8,6 @@ pub use crate::data::{
     simplified_ast,
     token::TokenKind,
     type_positivity_validation_result::TypePositivityError,
-    FileId,
 };
 pub use crate::processing::{
     bind_type_independent::bind_files,

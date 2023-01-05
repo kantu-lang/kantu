@@ -1,4 +1,4 @@
-use crate::data::{unsimplified_ast::IdentifierName, FileId};
+use crate::data::{file_id::*, unsimplified_ast::IdentifierName};
 
 use rustc_hash::FxHashMap;
 

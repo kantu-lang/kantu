@@ -1,12 +1,12 @@
 use crate::data::{
     bind_error::*,
     bound_ast::*,
+    file_id::*,
     file_tree::FileTree,
     non_empty_vec::*,
     // `ub` stands for "unbound".
     simplified_ast::{self as ub, ParenthesizedModScopeModifier},
     text_span::*,
-    FileId,
 };
 
 pub use crate::data::bind_error::*;

@@ -1,5 +1,5 @@
 use crate::{
-    data::{unsimplified_ast::*, FileId},
+    data::{file_id::*, unsimplified_ast::*},
     processing::{lex::lex, parse::parse},
 };
 

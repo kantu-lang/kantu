@@ -13,7 +13,3 @@ pub mod token;
 pub mod type_positivity_validation_result;
 pub mod unsimplified_ast;
 pub mod variant_return_type_validation_result;
-
-// TODO: Delete
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct FileId(pub usize);

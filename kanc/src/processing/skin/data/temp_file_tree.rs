@@ -1,7 +1,7 @@
 use crate::data::{
+    file_id::*,
     file_tree::FileTree,
     unsimplified_ast::{IdentifierName, ModStatement},
-    FileId,
 };
 
 use rustc_hash::FxHashMap;

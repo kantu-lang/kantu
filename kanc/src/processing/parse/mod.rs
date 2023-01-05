@@ -1,9 +1,9 @@
 use crate::data::{
+    file_id::*,
     non_empty_vec::NonEmptyVec,
     text_span::*,
     token::{Token, TokenKind},
     unsimplified_ast::*,
-    FileId,
 };
 
 use std::num::NonZeroUsize;
