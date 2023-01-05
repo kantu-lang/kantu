@@ -7,6 +7,8 @@ use crate::{
     },
     processing::{
         generate_code::targets::javascript::CompileToJavaScriptError,
+        lex::LexError,
+        parse::ParseError,
         simplify_ast::SimplifyAstError,
         type_check::{TypeCheckError, TypeCheckWarning},
     },
@@ -62,8 +64,7 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
                     let TextCoord { line, col } =
                         TextCoord::new(src, byte_index).expect("Byte index should be valid.");
                     format!(
-                        "[E0201] Could not parse pack.yscl: Unexpected {} on line {} col {} of pack.yscl.",
-                        unexpected_ch, line, col
+                        "[E0201] Could not parse pack.yscl: Unexpected {unexpected_ch} on pack.yscl:{line}:{col}."
                     )
                 }
                 yscl::prelude::ParseError::DuplicateKey(duplicate_key, byte_index) => {
@@ -71,8 +72,7 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
                     let TextCoord { line, col } =
                         TextCoord::new(src, byte_index).expect("Byte index should be valid.");
                     format!(
-                        "[E0201] Could not parse pack.yscl: Duplicate key {:?} on line {} col {} of pack.yscl.",
-                        duplicate_key, line, col
+                        "[E0201] Could not parse pack.yscl: Duplicate key {duplicate_key:?} on pack.yscl:{line}:{col}.",
                     )
                 }
             },
@@ -124,6 +124,21 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
                 )
             }
 
+            ReadKantuFilesError::NonModDotKHasSubmodules {
+                non_mod_dot_k_path,
+                mod_statement: _,
+                mod_statement_bispan,
+            } => {
+                let non_leaf_path = non_mod_dot_k_path.with_extension("").join("mod.k");
+                let non_leaf_path = non_leaf_path.display();
+                format!(
+                    "[E0302] {} is a leaf module, but it declared a submodule at {}. Leaf modules cannot have submodules. To fix this, either delete the submodule declaration or rename {} to {non_leaf_path}",
+                    non_mod_dot_k_path.display(),
+                    flc_display(non_mod_dot_k_path, mod_statement_bispan.start),
+                    non_mod_dot_k_path.display(),
+                )
+            }
+
             ReadKantuFilesError::MultipleModsWithSameName {
                 parent_mod_path,
                 mod_name,
@@ -131,7 +146,7 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
                 second_bispan,
             } => {
                 format!(
-                    "[E0302] Multiple definitions of mod {} in {}. First definition: {}. Second definition: {}.",
+                    "[E0303] Multiple definitions of mod {} in {}. First definition: {}. Second definition: {}.",
                     mod_name.src_str(),
                     parent_mod_path.display(),
                     flc_display(parent_mod_path, first_bispan.start),
@@ -139,19 +154,34 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
                 )
             }
 
-            ReadKantuFilesError::LexError { path, src, err } => {
-                let TextCoord { line, col } =
-                    TextCoord::new(src, err).expect("Byte index should be valid.");
-                format!(
-                    "[E0303] Lex error in {} at line {} col {}: {}",
-                    path.display(),
-                    line,
-                    col,
-                    err.message
-                )
-            }
+            ReadKantuFilesError::LexError { path, src, err } => match err {
+                LexError::UnexpectedEoi => {
+                    "[E0304] Could not lex file: Unexpected end of input".to_string()
+                }
+                LexError::UnexpectedCharacter(unexpected_ch, byte_index) => {
+                    let coord =
+                        TextCoord::new(src, *byte_index).expect("Byte index should be valid.");
+                    format!(
+                        "[E0304] Could not lex file: Unexpected {unexpected_ch} on {}.",
+                        flc_display(path, coord),
+                    )
+                }
+            },
 
-            _ => unimplemented!(),
+            ReadKantuFilesError::ParseError { path, src, err } => match err {
+                ParseError::UnexpectedEoi => {
+                    "[E0305] Could not parse file: Unexpected end of input".to_string()
+                }
+                ParseError::UnexpectedNonEoiToken(token) => {
+                    let coord = TextCoord::new(src, token.start_index)
+                        .expect("Byte index should be valid.");
+                    format!(
+                        "[E0305] Could not parse file: Unexpected token `{}` on {}.",
+                        token.content,
+                        flc_display(path, coord),
+                    )
+                }
+            },
         }
     }
 }

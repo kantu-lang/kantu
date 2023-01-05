@@ -6,8 +6,7 @@ use crate::data::{
 #[derive(Clone, Debug)]
 pub enum LexError {
     UnexpectedEoi,
-    UnexpectedAsciiDigit,
-    UnexpectedCharacter(char),
+    UnexpectedCharacter(char, ByteIndex),
 }
 
 pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
@@ -185,7 +184,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                 });
                 Ok(())
             } else if c.is_ascii_digit() {
-                Err(LexError::UnexpectedAsciiDigit)
+                Err(LexError::UnexpectedCharacter(c, i))
             } else if does_character_category_permit_it_to_be_used_in_identifier_name(c) {
                 state.pending_token = Some(PendingToken {
                     start_index: i,
@@ -194,7 +193,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                 });
                 Ok(())
             } else {
-                Err(LexError::UnexpectedCharacter(c))
+                Err(LexError::UnexpectedCharacter(c, i))
             }
         }
         Some(pending_token) => match pending_token.kind {
@@ -209,7 +208,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                     Ok(())
                 } else {
                     let Some(tokens) = try_as_is(pending_token.clone()) else {
-                        return Err(LexError::UnexpectedCharacter(c));
+                        return Err(LexError::UnexpectedCharacter(c, i));
                     };
                     state.tokens.extend(tokens);
                     state.pending_token = None;
@@ -227,7 +226,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                     Ok(())
                 } else {
                     let Some(tokens) = try_as_is(pending_token.clone()) else {
-                        return Err(LexError::UnexpectedCharacter(c));
+                        return Err(LexError::UnexpectedCharacter(c, i));
                     };
                     state.tokens.extend(tokens);
                     state.pending_token = None;
@@ -246,7 +245,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                     Ok(())
                 } else {
                     let Some(tokens) = try_as_is(pending_token.clone()) else {
-                        return Err(LexError::UnexpectedCharacter(c));
+                        return Err(LexError::UnexpectedCharacter(c, i));
                     };
                     state.tokens.extend(tokens);
                     state.pending_token = None;
@@ -276,7 +275,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                             }]
                         } else {
                             let Some(tokens) = try_as_is(pending_token.clone()) else {
-                                return Err(LexError::UnexpectedCharacter(c));
+                                return Err(LexError::UnexpectedCharacter(c, i));
                             };
                             tokens
                         },
@@ -306,7 +305,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                     Ok(())
                 } else {
                     let Some(tokens) = try_as_is(pending_token.clone()) else {
-                        return Err(LexError::UnexpectedCharacter(c));
+                        return Err(LexError::UnexpectedCharacter(c, i));
                     };
                     state.tokens.extend(tokens);
                     state.pending_token = None;

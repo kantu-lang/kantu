@@ -17,13 +17,13 @@ use std::num::NonZeroUsize;
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParseError {
     UnexpectedNonEoiToken(Token),
-    UnexpectedEndOfInput,
+    UnexpectedEoi,
 }
 
 impl ParseError {
     pub fn unexpected_token(token: Token) -> Self {
         if token.kind == TokenKind::Eoi {
-            ParseError::UnexpectedEndOfInput
+            ParseError::UnexpectedEoi
         } else {
             ParseError::UnexpectedNonEoiToken(token)
         }
@@ -52,7 +52,7 @@ pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseEr
         }
     }
 
-    Err(ParseError::UnexpectedEndOfInput)
+    Err(ParseError::UnexpectedEoi)
 }
 
 fn is_not_whitespace_or_comment(token: &Token) -> bool {

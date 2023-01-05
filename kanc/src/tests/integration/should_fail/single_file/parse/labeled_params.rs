@@ -6,7 +6,7 @@ fn expect_unexpected_token_error(src: &str, expected_kind: TokenKind) {
     let err = parse_file(tokens, file_id).expect_err("Parsing unexpectedly succeeded");
 
     if expected_kind == TokenKind::Eoi {
-        assert_eq!(ParseError::UnexpectedEndOfInput, err);
+        assert_eq!(ParseError::UnexpectedEoi, err);
     } else {
         match err {
             ParseError::UnexpectedNonEoiToken(token) => {
