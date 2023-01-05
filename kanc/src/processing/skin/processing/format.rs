@@ -14,6 +14,8 @@ use crate::{
 
 use super::super::data::prelude::*;
 
+use std::path::Path;
+
 pub trait FormatErrorForCli<T> {
     fn format_for_cli(&self, data: T) -> String;
 }
@@ -102,7 +104,55 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
 
 impl FormatErrorForCli<()> for ReadKantuFilesError {
     fn format_for_cli(&self, (): ()) -> String {
-        unimplemented!()
+        match self {
+            ReadKantuFilesError::CannotReadFile(path, err) => {
+                format!(
+                    "[E0300] Cannot read file at {}. Error: {:?}",
+                    path.display(),
+                    err
+                )
+            }
+
+            ReadKantuFilesError::ModHasBothLeafAndModKFiles {
+                leaf_path,
+                mod_k_path,
+            } => {
+                format!(
+                    "[E0301] Both {} and {} exist. The compiler doesn't know which file to use. Please delete one.",
+                    leaf_path.display(),
+                    mod_k_path.display(),
+                )
+            }
+
+            ReadKantuFilesError::MultipleModsWithSameName {
+                parent_mod_path,
+                mod_name,
+                first_bispan,
+                second_bispan,
+            } => {
+                format!(
+                    "[E0302] Multiple definitions of mod {} in {}. First definition: {}. Second definition: {}.",
+                    mod_name.src_str(),
+                    parent_mod_path.display(),
+                    flc_display(parent_mod_path, first_bispan.start),
+                    flc_display(parent_mod_path, second_bispan.start),
+                )
+            }
+
+            ReadKantuFilesError::LexError { path, src, err } => {
+                let TextCoord { line, col } =
+                    TextCoord::new(src, err).expect("Byte index should be valid.");
+                format!(
+                    "[E0303] Lex error in {} at line {} col {}: {}",
+                    path.display(),
+                    line,
+                    col,
+                    err.message
+                )
+            }
+
+            _ => unimplemented!(),
+        }
     }
 }
 
@@ -158,4 +208,8 @@ impl<'a> FormatErrorForCli<&'a NodeRegistry> for WriteTargetFilesError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
         unimplemented!()
     }
+}
+
+fn flc_display(path: &Path, coord: TextCoord) -> impl std::fmt::Display {
+    format!("{}:{}:{}", path.display(), coord.line, coord.col)
 }
