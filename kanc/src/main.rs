@@ -29,12 +29,12 @@ fn main() -> Result<(), ()> {
     let args: Vec<String> = std::env::args().collect();
     let options = parse_args(&args).print_err(())?;
     let options = read_compiler_options(&options).print_err(())?;
-    let (files, file_tree, _file_path_map) = read_kantu_files(&options).print_err(())?;
+    let (files, file_tree, file_path_map) = read_kantu_files(&options).print_err(())?;
     let files = files
         .into_iter()
         .map(|file| simplify_file(file))
         .collect::<Result<Vec<_>, _>>()
-        .print_err(())?;
+        .print_err(&file_path_map)?;
     let file_items = bind_files(file_tree.root(), files, &file_tree).print_err(())?;
     let mut registry = NodeRegistry::empty();
     let file_item_list_id = register_file_items(&mut registry, file_items);

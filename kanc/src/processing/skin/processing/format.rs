@@ -1,11 +1,12 @@
 use crate::{
     data::{
-        bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
-        node_registry::NodeRegistry, text_span::*,
-        type_positivity_validation_result::TypePositivityError,
+        bind_error::BindError, file_id::*,
+        fun_recursion_validation_result::IllegalFunRecursionError, node_registry::NodeRegistry,
+        text_span::*, type_positivity_validation_result::TypePositivityError,
         variant_return_type_validation_result::IllegalVariantReturnTypeError,
     },
     processing::{
+        format_unsimplified,
         generate_code::targets::javascript::CompileToJavaScriptError,
         lex::LexError,
         parse::ParseError,
@@ -16,7 +17,12 @@ use crate::{
 
 use super::super::data::prelude::*;
 
-use std::path::Path;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
+
+use rustc_hash::FxHashMap;
 
 pub trait FormatErrorForCli<T> {
     fn format_for_cli(&self, data: T) -> String;
@@ -186,9 +192,24 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
     }
 }
 
-impl FormatErrorForCli<()> for SimplifyAstError {
-    fn format_for_cli(&self, (): ()) -> String {
-        unimplemented!()
+impl<'a> FormatErrorForCli<&'a FxHashMap<FileId, PathBuf>> for SimplifyAstError {
+    fn format_for_cli(&self, file_path_map: &FxHashMap<FileId, PathBuf>) -> String {
+        match self {
+            SimplifyAstError::IllegalDotLhs(expr) => {
+                let path = file_path_map
+                    .get(&expr.span().file_id)
+                    .expect("File ID should be valid.");
+                let src = fs::read_to_string(path)
+                    .expect("[E9000] File path held in file path map should be valid.");
+                let start =
+                    TextCoord::new(&src, expr.span().start).expect("Byte index should be valid.");
+                let loc = flc_display(path, start);
+                let formatted_lhs =
+                    format_unsimplified::format_expression_with_default_options(expr);
+                format!("[E0400] Illegal LHS for dot expression. Currently, dot LHSs can only be identifiers or other dot expressions. However, at {loc} we encountered the following LHS:\n{formatted_lhs}")
+            }
+            _ => unimplemented!(),
+        }
     }
 }
 

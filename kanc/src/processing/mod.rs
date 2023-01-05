@@ -1,4 +1,5 @@
 pub mod bind_type_independent;
+pub mod format_unsimplified;
 pub mod generate_code;
 pub mod lex;
 pub mod lighten_ast;
