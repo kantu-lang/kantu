@@ -71,24 +71,26 @@ impl Accept for UnfinishedFile {
                     }))
                 }
                 TokenKind::Eoi => {
-                    let span = {
-                        let first_span = self.items.first().map(|item| item.span());
-                        let last_span = self.items.last().map(|item| item.span());
-                        match (first_span, last_span) {
-                            (Some(first_span), Some(last_span)) => {
-                                first_span.inclusive_merge(last_span)
-                            }
-                            _ => TextSpan {
-                                file_id,
-                                start: 0,
-                                end: 0,
+                    let file_span = {
+                        let first_span = self.items.first().map(|item| item.span()).unwrap_or_else(
+                            || -> TextSpan {
+                                TextSpan {
+                                    file_id,
+                                    start: ByteIndex(0),
+                                    end: ByteIndex(0),
+                                }
                             },
+                        );
+                        TextSpan {
+                            file_id,
+                            start: first_span.start,
+                            end: token.start_index,
                         }
                     };
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::File(
                         self.first_token.clone(),
                         File {
-                            span,
+                            span: file_span,
                             id: file_id,
                             items: self.items.clone(),
                         },

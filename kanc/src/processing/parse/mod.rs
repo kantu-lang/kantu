@@ -117,13 +117,13 @@ fn span_single(file_id: FileId, token: &Token) -> TextSpan {
     TextSpan {
         file_id,
         start,
-        end: start + token.content.len(),
+        end: ByteIndex(start.0 + token.content.len()),
     }
 }
 
 fn span_range_including_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
     let start = start.start_index;
-    let end = end.start_index + end.content.len();
+    let end = ByteIndex(end.start_index.0 + end.content.len());
 
     if end < start {
         panic!("End of span is before start of span.");

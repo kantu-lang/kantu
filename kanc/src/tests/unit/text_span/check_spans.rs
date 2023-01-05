@@ -502,8 +502,8 @@ impl DeepCheckSpans for GoalKwOrExpression {
 }
 
 fn get_spanned_slice(s: &str, span: TextSpan) -> Option<&str> {
-    if span.start <= s.len() && span.end <= s.len() {
-        Some(&s[span.start..span.end])
+    if span.start.0 <= s.len() && span.end.0 <= s.len() {
+        Some(&s[span.start.0..span.end.0])
     } else {
         None
     }

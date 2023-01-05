@@ -8,10 +8,8 @@ pub struct ByteIndex(pub usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TextSpan {
     pub file_id: FileId,
-    /// Inclusive TODO: Make this a ByteIndex
-    pub start: usize,
-    /// Exclusive TODO: Make this a ByteIndex
-    pub end: usize,
+    pub start: ByteIndex,
+    pub end: ByteIndex,
 }
 
 impl TextSpan {
@@ -98,8 +96,8 @@ impl TextBispan {
             panic!("Span start is after span end. {:?}", span);
         }
 
-        let start = TextCoord::new(src, ByteIndex(span.start))?;
-        let end = TextCoord::new(src, ByteIndex(span.end))?;
+        let start = TextCoord::new(src, span.start)?;
+        let end = TextCoord::new(src, span.end)?;
         Some(TextBispan {
             file_id: span.file_id,
             start,

@@ -298,7 +298,7 @@ fn get_mod_scope(
                     span: TextSpan {
                         file_id: scope_modifier.span.file_id,
                         start: scope_modifier.span.start,
-                        end: scope_modifier.span.start + pack_kw_name.src_str().len(),
+                        end: ByteIndex(scope_modifier.span.start.0 + pack_kw_name.src_str().len()),
                     },
                     name: pack_kw_name,
                 };

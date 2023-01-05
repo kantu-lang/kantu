@@ -1,4 +1,7 @@
-use crate::data::token::{Token, TokenKind};
+use crate::data::{
+    text_span::*,
+    token::{Token, TokenKind},
+};
 
 #[derive(Clone, Debug)]
 pub enum LexError {
@@ -13,6 +16,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
         pending_token: None,
     };
     for (i, c) in src.char_indices() {
+        let i = ByteIndex(i);
         handle_char(&mut state, c, i)?;
     }
 
@@ -25,7 +29,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
     }
 
     state.tokens.push(Token {
-        start_index: src.len(),
+        start_index: ByteIndex(src.len()),
         content: "".to_string(),
         kind: TokenKind::Eoi,
     });
@@ -46,7 +50,7 @@ struct LexState {
 /// to represent this constraint.
 #[derive(Clone, Debug)]
 struct PendingToken {
-    pub start_index: usize,
+    pub start_index: ByteIndex,
     pub content: String,
     pub kind: PendingTokenKind,
 }
@@ -89,7 +93,7 @@ fn try_as_is(pending_token: PendingToken) -> Option<Vec<Token>> {
                 kind: TokenKind::Dot,
             },
             Token {
-                start_index: start_index + 1,
+                start_index: ByteIndex(start_index.0 + 1),
                 content: ".".to_string(),
                 kind: TokenKind::Dot,
             },
@@ -142,7 +146,7 @@ fn try_as_is(pending_token: PendingToken) -> Option<Vec<Token>> {
     }
 }
 
-fn handle_char(state: &mut LexState, c: char, i: usize) -> Result<(), LexError> {
+fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexError> {
     match &mut state.pending_token {
         None => {
             if c == '=' {
