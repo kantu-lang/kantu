@@ -18,7 +18,10 @@ pub fn read_compiler_options(
         InvalidCompilerOptionsError::CannotReadPackYscl(options.pack_yscl_abs_path.clone(), raw_err)
     })?;
     let pack_yscl = parse_doc(&pack_yscl_src).map_err(|raw_err| {
-        InvalidCompilerOptionsError::CannotParsePackYscl(pack_yscl_src, raw_err)
+        InvalidCompilerOptionsError::CannotParsePackYscl {
+            src: pack_yscl_src,
+            err: raw_err,
+        }
     })?;
     build_options(options, &pack_yscl)
 }
@@ -45,14 +48,17 @@ fn build_options(
 }
 
 fn get_str_entry(pack: &yt::Map, key: &str) -> Result<String, InvalidCompilerOptionsError> {
-    pack.get(key)
-        .ok_or_else(|| InvalidCompilerOptionsError::MissingEntry(key.to_string()))?
-        .as_ref()
-        .atom()
-        .map(|atom| Ok(atom.value.clone()))
-        .unwrap_or_else(|| {
-            Err(InvalidCompilerOptionsError::ExpectedAtomButGotCollection(
-                key.to_owned(),
-            ))
-        })
+    let value = pack
+        .get(key)
+        .ok_or_else(|| InvalidCompilerOptionsError::MissingEntry {
+            key: key.to_string(),
+        })?
+        .as_ref();
+    match value {
+        yt::NodeRef::Atom(atom) => Ok(atom.value.clone()),
+        other => Err(InvalidCompilerOptionsError::ExpectedAtomButGotCollection {
+            key: key.to_owned(),
+            collection: other.to_owned(),
+        }),
+    }
 }

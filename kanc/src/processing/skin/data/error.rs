@@ -7,8 +7,8 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum InvalidCliArgsError {
-    UnrecognizedArg(String),
-    ExpectedPathAfterFlag(String),
+    UnrecognizedFlag(String),
+    MissingFlagValue(String),
     CannotFindImplicitPackYsclPath,
     CannotReadCwd(std::io::Error),
     CwdIsNotAbsolute(PathBuf),
@@ -17,9 +17,17 @@ pub enum InvalidCliArgsError {
 #[derive(Debug)]
 pub enum InvalidCompilerOptionsError {
     CannotReadPackYscl(PathBuf, std::io::Error),
-    CannotParsePackYscl(String, yscl::prelude::ParseError),
-    MissingEntry(String),
-    ExpectedAtomButGotCollection(String),
+    CannotParsePackYscl {
+        src: String,
+        err: yscl::prelude::ParseError,
+    },
+    MissingEntry {
+        key: String,
+    },
+    ExpectedAtomButGotCollection {
+        key: String,
+        collection: yscl::prelude::Node,
+    },
     IllegalKantuVersion(String),
 }
 

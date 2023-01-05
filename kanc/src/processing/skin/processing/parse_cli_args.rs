@@ -17,12 +17,12 @@ pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
             if let Some(path) = remaining.next() {
                 pack_yscl_path = Some(path.clone());
             } else {
-                return Err(InvalidCliArgsError::ExpectedPathAfterFlag(
+                return Err(InvalidCliArgsError::MissingFlagValue(
                     flags::PACK_YSCL.to_string(),
                 ));
             }
         } else {
-            return Err(InvalidCliArgsError::UnrecognizedArg(arg.clone()));
+            return Err(InvalidCliArgsError::UnrecognizedFlag(arg.clone()));
         }
     }
 
