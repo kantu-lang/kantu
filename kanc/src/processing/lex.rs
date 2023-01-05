@@ -12,7 +12,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
         tokens: vec![],
         pending_token: None,
     };
-    for (i, c) in src.chars().enumerate() {
+    for (i, c) in src.char_indices() {
         handle_char(&mut state, c, i)?;
     }
 
