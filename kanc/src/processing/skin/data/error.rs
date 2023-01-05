@@ -1,5 +1,7 @@
 use crate::{
-    data::{unsimplified_ast as unsimplified, unsimplified_ast::IdentifierName, TextBispan},
+    data::{
+        text_span::TextBispan, unsimplified_ast as unsimplified, unsimplified_ast::IdentifierName,
+    },
     processing::{lex::LexError, parse::ParseError},
 };
 

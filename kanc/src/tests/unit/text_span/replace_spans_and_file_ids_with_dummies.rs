@@ -1,4 +1,4 @@
-use crate::data::TextSpan;
+use crate::data::text_span::*;
 
 use super::*;
 

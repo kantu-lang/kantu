@@ -1,4 +1,4 @@
-use crate::{data::TextSpan, processing::lex::LexError};
+use crate::{data::text_span::*, processing::lex::LexError};
 
 use super::*;
 

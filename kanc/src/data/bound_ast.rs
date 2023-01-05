@@ -2,7 +2,9 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
-    simplified_ast as unbound, FileId, TextSpan,
+    simplified_ast as unbound,
+    text_span::*,
+    FileId,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

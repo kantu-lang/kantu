@@ -5,8 +5,8 @@ use crate::data::{
     non_empty_vec::*,
     // `ub` stands for "unbound".
     simplified_ast::{self as ub, ParenthesizedModScopeModifier},
+    text_span::*,
     FileId,
-    TextSpan,
 };
 
 pub use crate::data::bind_error::*;

@@ -1,6 +1,7 @@
 use crate::data::{
     non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
-    FileId, TextSpan,
+    text_span::*,
+    FileId,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

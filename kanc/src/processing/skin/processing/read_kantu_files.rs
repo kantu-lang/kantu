@@ -1,7 +1,7 @@
 use super::super::data::prelude::*;
 
 use crate::{
-    data::{file_tree::FileTree, unsimplified_ast as unsimplified, FileId, TextBispan},
+    data::{file_tree::FileTree, text_span::*, unsimplified_ast as unsimplified, FileId},
     processing::{lex::lex, parse::parse_file},
 };
 

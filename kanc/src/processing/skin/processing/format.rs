@@ -1,7 +1,8 @@
 use crate::{
     data::{
         bind_error::BindError, fun_recursion_validation_result::IllegalFunRecursionError,
-        node_registry::NodeRegistry, type_positivity_validation_result::TypePositivityError,
+        node_registry::NodeRegistry, text_span::*,
+        type_positivity_validation_result::TypePositivityError,
         variant_return_type_validation_result::IllegalVariantReturnTypeError,
     },
     processing::{
@@ -55,14 +56,18 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
                     "[E0201] Could not parse pack.yscl: Unexpected end of input".to_string()
                 }
                 yscl::prelude::ParseError::UnexpectedChar(unexpected_ch, byte_index) => {
-                    let (line, col) = get_line_and_col(src, *byte_index);
+                    let byte_index = ByteIndex(*byte_index);
+                    let TextCoord { line, col } =
+                        TextCoord::new(src, byte_index).expect("Byte index should be valid.");
                     format!(
                         "[E0201] Could not parse pack.yscl: Unexpected {} on line {} col {} of pack.yscl.",
                         unexpected_ch, line, col
                     )
                 }
                 yscl::prelude::ParseError::DuplicateKey(duplicate_key, byte_index) => {
-                    let (line, col) = get_line_and_col(src, *byte_index);
+                    let byte_index = ByteIndex(*byte_index);
+                    let TextCoord { line, col } =
+                        TextCoord::new(src, byte_index).expect("Byte index should be valid.");
                     format!(
                         "[E0201] Could not parse pack.yscl: Duplicate key {:?} on line {} col {} of pack.yscl.",
                         duplicate_key, line, col
@@ -93,23 +98,6 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
             }
         }
     }
-}
-
-fn get_line_and_col(src: &str, byte_index: usize) -> (usize, usize) {
-    let mut line = 1;
-    let mut col = 0;
-    for (i, c) in src.char_indices() {
-        if i == byte_index {
-            break;
-        }
-        if c == '\n' {
-            line += 1;
-            col = 0;
-        } else {
-            col += 1;
-        }
-    }
-    (line, col)
 }
 
 impl FormatErrorForCli<()> for ReadKantuFilesError {

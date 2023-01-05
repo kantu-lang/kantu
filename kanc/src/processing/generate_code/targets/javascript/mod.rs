@@ -5,7 +5,7 @@ use crate::data::{
         NonEmptyCallArgListId, NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId,
     },
     non_empty_vec::OptionalNonEmptyVecLen,
-    TextSpan,
+    text_span::*,
 };
 use crate::processing::generate_code::CompileTarget;
 

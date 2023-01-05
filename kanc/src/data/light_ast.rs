@@ -2,7 +2,8 @@ use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
     node_registry::{NodeId, NonEmptyListId},
-    simplified_ast as unbound, TextSpan,
+    simplified_ast as unbound,
+    text_span::*,
 };
 
 pub use crate::data::node_registry::FileItemNodeId;

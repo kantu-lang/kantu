@@ -1,9 +1,9 @@
 use crate::data::{
     non_empty_vec::NonEmptyVec,
     simplified_ast::*,
+    text_span::*,
     // `ust` stands for "unsimplified syntax tree".
     unsimplified_ast as ust,
-    TextSpan,
 };
 
 #[derive(Clone, Debug)]
