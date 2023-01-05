@@ -33,7 +33,6 @@ pub enum InvalidCompilerOptionsError {
 
 #[derive(Debug)]
 pub enum ReadKantuFilesError {
-    CannotGetPackYsclDirectory,
     CannotReadFile(PathBuf, std::io::Error),
     ModHasMultipleFiles(PathBuf, PathBuf),
     NonModDotKHasSubmodules(PathBuf, unsimplified::ModStatement),
