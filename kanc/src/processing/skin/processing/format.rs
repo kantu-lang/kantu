@@ -196,21 +196,116 @@ impl<'a> FormatErrorForCli<&'a FxHashMap<FileId, PathBuf>> for SimplifyAstError 
     fn format_for_cli(&self, file_path_map: &FxHashMap<FileId, PathBuf>) -> String {
         match self {
             SimplifyAstError::IllegalDotLhs(expr) => {
-                let path = file_path_map
-                    .get(&expr.span().file_id)
-                    .expect("File ID should be valid.");
-                let src = fs::read_to_string(path)
-                    .expect("[E9000] File path held in file path map should be valid.");
-                let start =
-                    TextCoord::new(&src, expr.span().start).expect("Byte index should be valid.");
-                let loc = flc_display(path, start);
+                let loc = format_span_start(expr.span(), file_path_map);
                 let formatted_lhs =
                     format_unsimplified::format_expression_with_default_options(expr);
-                format!("[E0400] Illegal LHS for dot expression. Currently, dot LHSs can only be identifiers or other dot expressions. However, at {loc} we encountered the following LHS:\n{formatted_lhs}")
+                format!("[E0400] Illegal LHS for dot expression. Currently, dot LHSs can only be identifiers or other dot expressions. At {loc} the following LHS has been found:\n{formatted_lhs}")
             }
-            _ => unimplemented!(),
+
+            SimplifyAstError::HeterogeneousParams(params) => {
+                let is_first_labeled = params[0].label.is_some();
+                let (first_display_with_capitalized_article, second_display_with_lowercase_article) =
+                    if is_first_labeled {
+                        ("A labeled parameter", "an unlabeled parameter")
+                    } else {
+                        ("An unlabeled parameter", "a labeled parameter")
+                    };
+                let first_loc = format_span_start(params[0].span, file_path_map);
+                let second_param = params
+                    .iter()
+                    .find(|param| param.label.is_some() != is_first_labeled)
+                    .expect("There should be at least one labeled and one unlabeled parameter.");
+                let second_loc = format_span_start(second_param.span, file_path_map);
+                format!("[E0401] A parameter list must be either all unlabeled or all labeled. {first_display_with_capitalized_article} is declared at {first_loc} but a {second_display_with_lowercase_article} is declarated at {second_loc}.")
+            }
+            SimplifyAstError::UnderscoreParamLabel(param) => {
+                let loc = format_span_start(param.span, file_path_map);
+                format!("[E0402] A parameter label cannot be `_`.  There is a parameter labeled `_` at {loc}.")
+            }
+            SimplifyAstError::DuplicateParamLabel(param1, param2) => {
+                let name = param1
+                    .label_name()
+                    .expect("Param 1 should have a label.")
+                    .src_str();
+                let loc1 = format_span_start(param1.span, file_path_map);
+                let loc2 = format_span_start(param2.span, file_path_map);
+                format!("[E0403] Multiple parameters have the label {name}. The first is at {loc1}. The second is at {loc2}.")
+            }
+
+            SimplifyAstError::HeterogeneousCallArgs(args) => {
+                let is_first_labeled = args[0].label.is_some();
+                let (first_display_with_capitalized_article, second_display_with_lowercase_article) =
+                    if is_first_labeled {
+                        ("A labeled argument", "an unlabeled argument")
+                    } else {
+                        ("An unlabeled argument", "a labeled argument")
+                    };
+                let first_loc = format_span_start(args[0].span, file_path_map);
+                let second_arg = args
+                    .iter()
+                    .find(|arg| arg.label.is_some() != is_first_labeled)
+                    .expect("There should be at least one labeled and one unlabeled argument.");
+                let second_loc = format_span_start(second_arg.span, file_path_map);
+                format!("[E0404] A call argument list must be either all unlabeled or all labeled. {first_display_with_capitalized_article} is declared at {first_loc} but {second_display_with_lowercase_article} is declarated at {second_loc}.")
+            }
+            SimplifyAstError::UnderscoreCallArgLabel(arg) => {
+                let loc = format_span_start(arg.span, file_path_map);
+                format!("[E0405] An argument label cannot be `_`.  There is an argument labeled `_` at {loc}.")
+            }
+            SimplifyAstError::DuplicateCallArgLabel(arg1, arg2) => {
+                let name = arg1
+                    .label_name()
+                    .expect("Arg 1 should have a label.")
+                    .src_str();
+                let loc1 = format_span_start(arg1.span, file_path_map);
+                let loc2 = format_span_start(arg2.span, file_path_map);
+                format!("[E0406] Multiple arguments have the label {name}. The first is at {loc1}. The second is at {loc2}.")
+            }
+
+            SimplifyAstError::HeterogeneousMatchCaseParams(params) => {
+                let is_first_labeled = params[0].label.is_some();
+                let (first_display_with_capitalized_article, second_display_with_lowercase_article) =
+                    if is_first_labeled {
+                        ("A labeled parameter", "an unlabeled parameter")
+                    } else {
+                        ("An unlabeled parameter", "a labeled parameter")
+                    };
+                let first_loc = format_span_start(params[0].span, file_path_map);
+                let second_param = params
+                    .iter()
+                    .find(|param| param.label.is_some() != is_first_labeled)
+                    .expect("There should be at least one labeled and one unlabeled parameter.");
+                let second_loc = format_span_start(second_param.span, file_path_map);
+                format!("[E0407] A match case parameter list must be either all unlabeled or all labeled. {first_display_with_capitalized_article} is declared at {first_loc} but a {second_display_with_lowercase_article} is declarated at {second_loc}.")
+            }
+            SimplifyAstError::UnderscoreMatchCaseParamLabel(param) => {
+                let loc = format_span_start(param.span, file_path_map);
+                format!("[E0408] A match case parameter label cannot be `_`.  There is a match case parameter labeled `_` at {loc}.")
+            }
+            SimplifyAstError::DuplicateMatchCaseParamLabel(param1, param2) => {
+                let name = param1
+                    .label_name()
+                    .expect("Param 1 should have a label.")
+                    .src_str();
+                let loc1 = format_span_start(param1.span, file_path_map);
+                let loc2 = format_span_start(param2.span, file_path_map);
+                format!("[E0409] Multiple match case parameters have the label {name}. The first is at {loc1}. The second is at {loc2}.")
+            }
         }
     }
+}
+
+fn format_span_start(
+    span: TextSpan,
+    file_path_map: &FxHashMap<FileId, PathBuf>,
+) -> impl std::fmt::Display {
+    let path = file_path_map
+        .get(&span.file_id)
+        .expect("File ID should be valid.");
+    let src =
+        fs::read_to_string(path).expect("[E9000] File path held in file path map should be valid.");
+    let start = TextCoord::new(&src, span.start).expect("Byte index should be valid.");
+    flc_display(path, start)
 }
 
 impl FormatErrorForCli<()> for BindError {
