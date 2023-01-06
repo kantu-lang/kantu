@@ -1,8 +1,9 @@
 use crate::{
     data::{
-        bind_error::BindError, file_id::*,
+        bind_error::BindError, bound_ast::ModScope, file_id::*, file_tree::*,
         fun_recursion_validation_result::IllegalFunRecursionError, node_registry::NodeRegistry,
         text_span::*, type_positivity_validation_result::TypePositivityError,
+        unsimplified_ast as unsimplified,
         variant_return_type_validation_result::IllegalVariantReturnTypeError,
     },
     processing::{
@@ -23,6 +24,8 @@ use std::{
 };
 
 use rustc_hash::FxHashMap;
+
+type FilePathMap = FxHashMap<FileId, PathBuf>;
 
 pub trait FormatErrorForCli<T> {
     fn format_for_cli(&self, data: T) -> String;
@@ -192,8 +195,8 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
     }
 }
 
-impl<'a> FormatErrorForCli<&'a FxHashMap<FileId, PathBuf>> for SimplifyAstError {
-    fn format_for_cli(&self, file_path_map: &FxHashMap<FileId, PathBuf>) -> String {
+impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
+    fn format_for_cli(&self, file_path_map: &FilePathMap) -> String {
         match self {
             SimplifyAstError::IllegalDotLhs(expr) => {
                 let loc = format_span_start(expr.span(), file_path_map);
@@ -295,10 +298,7 @@ impl<'a> FormatErrorForCli<&'a FxHashMap<FileId, PathBuf>> for SimplifyAstError 
     }
 }
 
-fn format_span_start(
-    span: TextSpan,
-    file_path_map: &FxHashMap<FileId, PathBuf>,
-) -> impl std::fmt::Display {
+fn format_span_start(span: TextSpan, file_path_map: &FilePathMap) -> impl std::fmt::Display {
     let path = file_path_map
         .get(&span.file_id)
         .expect("File ID should be valid.");
@@ -308,10 +308,155 @@ fn format_span_start(
     flc_display(path, start)
 }
 
-impl FormatErrorForCli<()> for BindError {
-    fn format_for_cli(&self, (): ()) -> String {
-        // TODO: Improve error message formatting.
-        format!("[E05??] {:#?}", self)
+impl<'a> FormatErrorForCli<(&'a FilePathMap, &'a FileTree)> for BindError {
+    fn format_for_cli(&self, (file_path_map, file_tree): (&FilePathMap, &FileTree)) -> String {
+        use crate::data::bind_error::*;
+
+        match self {
+            BindError::NameNotFound(NameNotFoundError { name_components }) => {
+                let name_display = name_components_display(name_components);
+                let loc = format_span_start(name_components[0].span, file_path_map);
+                format!(r#"[E0500] Could not find name `{name_display}` at {loc}."#)
+            }
+
+            BindError::NameIsPrivate(NameIsPrivateError {
+                name_component,
+                required_visibility,
+                actual_visibility,
+            }) => {
+                let name_display = name_component.name.src_str();
+                let loc = format_span_start(name_component.span, file_path_map);
+                let required_vis_display = mod_scope_display(required_visibility.0, file_tree);
+                let actual_vis_display = mod_scope_display(actual_visibility.0, file_tree);
+                format!(
+                    r#"[E0501] Could not access name `{name_display}` at {loc}. The required visibility is `{required_vis_display}`, but the actual visibility is `{actual_vis_display}`."#
+                )
+            }
+
+            BindError::CannotLeakPrivateName(CannotLeakPrivateNameError {
+                name_component,
+                required_visibility,
+                actual_visibility,
+            }) => {
+                let name_display = name_component.name.src_str();
+                let loc = format_span_start(name_component.span, file_path_map);
+                let required_vis_display = mod_scope_display(required_visibility.0, file_tree);
+                let actual_vis_display = mod_scope_display(actual_visibility.0, file_tree);
+                format!(
+                    r#"[E0502] Could not leak name `{name_display}` at {loc}. The required visibility is `{required_vis_display}`, but the actual visibility is `{actual_vis_display}`."#
+                )
+            }
+
+            BindError::NameClash(NameClashError { name, old, new }) => {
+                fn symbol_source_display(
+                    source: &OwnedSymbolSource,
+                    file_path_map: &FilePathMap,
+                ) -> impl std::fmt::Display {
+                    match source {
+                        OwnedSymbolSource::Builtin | OwnedSymbolSource::Mod(_) => {
+                            "defined as a builtin".to_string()
+                        }
+                        OwnedSymbolSource::Identifier(ident) => {
+                            let loc = format_span_start(ident.span, file_path_map);
+                            format!("defined at {}", loc)
+                        }
+                        OwnedSymbolSource::WildcardImport(use_statement) => {
+                            let loc = format_span_start(use_statement.span, file_path_map);
+                            format!("defined by a wildcard `use` statement at {}", loc)
+                        }
+                    }
+                }
+                let name_display = name.src_str();
+                let first_display = symbol_source_display(old, file_path_map);
+                let second_display = symbol_source_display(new, file_path_map);
+                format!(
+                    r#"[E0503] There are conflicting definitions for `{name_display}`. The first is {first_display}. The second is {second_display}."#
+                )
+            }
+
+            BindError::ExpectedTermButNameRefersToMod(ExpectedTermButNameRefersToModError {
+                name_components,
+            }) => {
+                let name_display = name_components_display(name_components);
+                let loc = format_span_start(name_components[0].span, file_path_map);
+                format!(
+                    r#"[E0504] Expected a term, but the name "{name_display}" at {loc} refers to a module."#
+                )
+            }
+
+            BindError::ExpectedModButNameRefersToTerm(ExpectedModButNameRefersToTermError {
+                name_components,
+            }) => {
+                let name_display = name_components_display(name_components);
+                let loc = format_span_start(name_components[0].span, file_path_map);
+                format!(
+                    r#"[E0505] Expected a module, but the name "{name_display}" at {loc} refers to a term."#
+                )
+            }
+
+            BindError::CannotUselesslyImportItemAsSelf(CannotUselesslyImportItemAsSelfError {
+                use_statement,
+            }) => {
+                let loc = format_span_start(use_statement.span, file_path_map);
+                format!(
+                    r#"[E0506] A non-renamed non-wildcard `use` statement cannot import a "singleton dot chain". For example, `use foo;` is illegal, but `use foo.bar;` is legal. This is because `foo` has only 1 component--`foo`, while `foo.bar` has 2 components--`foo` and `bar`. A non-renamed non-wildcard `use` statement was found at {loc}."#
+                )
+            }
+
+            BindError::ModFileNotFound(ModFileNotFoundError { mod_name }) => {
+                let mod_name_display = mod_name.name.src_str();
+                let loc = format_span_start(mod_name.span, file_path_map);
+                format!(
+                    r#"[E0507] Could not find a file for the module `{mod_name_display}` defined at {loc}."#
+                )
+            }
+
+            BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(
+                VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
+                    visibility_modifier,
+                    actual_visibility,
+                    defining_mod_id,
+                },
+            ) => {
+                let loc = format_span_start(visibility_modifier.span, file_path_map);
+                let actual_vis_display = mod_scope_display(actual_visibility.0, file_tree);
+                let mod_vis_display = mod_scope_display(ModScope::Mod(*defining_mod_id), file_tree);
+                format!(
+                    r#"[E0508] The visibility modifier at {loc} has a visibility of `{actual_vis_display}`, which is insufficient for the defining module. The minimum visibility is `{mod_vis_display}`."#
+                )
+            }
+
+            BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
+                TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
+                    transparency_modifier,
+                    actual_transparency,
+                    defining_mod_id,
+                },
+            ) => {
+                let loc = format_span_start(transparency_modifier.span, file_path_map);
+                let actual_transp_display = mod_scope_display(actual_transparency.0, file_tree);
+                let mod_transp_display =
+                    mod_scope_display(ModScope::Mod(*defining_mod_id), file_tree);
+                format!(
+                    r#"[E0509] The transparency modifier at {loc} has a transparency of `{actual_transp_display}`, which is insufficient for the defining module. The minimum transparency is `{mod_transp_display}`."#
+                )
+            }
+
+            BindError::TransparencyWasNotAtLeastAsRestrictiveAsVisibility(
+                TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError {
+                    transparency_modifier,
+                    transparency,
+                    visibility,
+                },
+            ) => {
+                let loc = format_span_start(transparency_modifier.span, file_path_map);
+                let transp_display = mod_scope_display(transparency.0, file_tree);
+                let vis_display = mod_scope_display(visibility.0, file_tree);
+                format!(
+                    r#"[E0510] The transparency modifier at `{loc}` has a transparency of "{transp_display}", which is not a subset of the associated visibility (`{vis_display}`). An item's transparency must be a subset of its visibility."#
+                )
+            }
+        }
     }
 }
 
@@ -365,4 +510,36 @@ impl<'a> FormatErrorForCli<&'a NodeRegistry> for WriteTargetFilesError {
 
 fn flc_display(path: &Path, coord: TextCoord) -> impl std::fmt::Display {
     format!("{}:{}:{}", path.display(), coord.line, coord.col)
+}
+
+fn name_components_display(name_components: &[unsimplified::Identifier]) -> impl std::fmt::Display {
+    name_components
+        .iter()
+        .map(|component| component.name.src_str())
+        .collect::<Vec<_>>()
+        .join(".")
+}
+
+fn mod_scope_display(scope: ModScope, file_tree: &FileTree) -> impl std::fmt::Display {
+    let vis_file_id = match scope {
+        ModScope::Mod(id) => id,
+        ModScope::Global => return "*".to_string(),
+    };
+    let edge_labels_descending = {
+        let mut current = vis_file_id;
+        let mut labels = vec![];
+        while let Some((parent, label)) = file_tree.parent_and_label(current) {
+            labels.push(label);
+            current = parent;
+        }
+        labels.reverse();
+        labels
+    };
+
+    let mut out = "pack".to_string();
+    for label in edge_labels_descending {
+        out.push('.');
+        out.push_str(label.src_str());
+    }
+    out
 }

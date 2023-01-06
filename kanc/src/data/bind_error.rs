@@ -2,6 +2,8 @@ use crate::data::{file_id::*, simplified_ast as unbound, simplified_ast::Identif
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BindError {
+    // TODO: Make NameNotFoundError have a single name component.
+    // Actually, we should probably do this for all the errors.
     NameNotFound(NameNotFoundError),
     NameIsPrivate(NameIsPrivateError),
     CannotLeakPrivateName(CannotLeakPrivateNameError),
@@ -16,8 +18,8 @@ pub enum BindError {
     TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
         TransparencyWasNotAtLeastAsPermissiveAsCurrentModError,
     ),
-    TransparencyWasNotAtLeastAsPermissiveAsVisibility(
-        TransparencyWasNotAtLeastAsPermissiveAsVisibilityError,
+    TransparencyWasNotAtLeastAsRestrictiveAsVisibility(
+        TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError,
     ),
 }
 
@@ -31,7 +33,7 @@ impl From<NameNotFoundError> for BindError {
     }
 }
 
-pub use crate::data::bound_ast::Visibility;
+pub use crate::data::bound_ast::{Transparency, Visibility};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameIsPrivateError {
@@ -120,6 +122,8 @@ impl From<ModFileNotFoundError> for BindError {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
     pub visibility_modifier: unbound::ParenthesizedModScopeModifier,
+    pub actual_visibility: Visibility,
+    pub defining_mod_id: FileId,
 }
 impl From<VisibilityWasNotAtLeastAsPermissiveAsCurrentModError> for BindError {
     fn from(error: VisibilityWasNotAtLeastAsPermissiveAsCurrentModError) -> Self {
@@ -130,6 +134,8 @@ impl From<VisibilityWasNotAtLeastAsPermissiveAsCurrentModError> for BindError {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
     pub transparency_modifier: unbound::ParenthesizedModScopeModifier,
+    pub actual_transparency: Transparency,
+    pub defining_mod_id: FileId,
 }
 impl From<TransparencyWasNotAtLeastAsPermissiveAsCurrentModError> for BindError {
     fn from(error: TransparencyWasNotAtLeastAsPermissiveAsCurrentModError) -> Self {
@@ -138,11 +144,13 @@ impl From<TransparencyWasNotAtLeastAsPermissiveAsCurrentModError> for BindError 
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {
+pub struct TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError {
     pub transparency_modifier: unbound::ParenthesizedModScopeModifier,
+    pub transparency: Transparency,
+    pub visibility: Visibility,
 }
-impl From<TransparencyWasNotAtLeastAsPermissiveAsVisibilityError> for BindError {
-    fn from(error: TransparencyWasNotAtLeastAsPermissiveAsVisibilityError) -> Self {
-        Self::TransparencyWasNotAtLeastAsPermissiveAsVisibility(error)
+impl From<TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError> for BindError {
+    fn from(error: TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError) -> Self {
+        Self::TransparencyWasNotAtLeastAsRestrictiveAsVisibility(error)
     }
 }

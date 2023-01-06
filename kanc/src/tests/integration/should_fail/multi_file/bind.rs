@@ -195,6 +195,8 @@ fn visibility_not_at_least_as_permissive_as_current_mod() {
         |err| match err {
             BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
                 visibility_modifier,
+                actual_visibility: _,
+                defining_mod_id: _,
             }) => {
                 match visibility_modifier.kind {
                     simplified_ast::ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
@@ -221,6 +223,8 @@ fn transparency_not_at_least_as_permissive_as_current_mod() {
         |err| match err {
             BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
                 transparency_modifier,
+                actual_transparency: _,
+                defining_mod_id: _,
             }) => {
                 match transparency_modifier.kind {
                     simplified_ast::ModScopeModifierKind::PackRelative { path_after_pack_kw } => {
@@ -402,12 +406,14 @@ fn visibility_stricter_than_transparency() {
             ),
         },
         |err| match err {
-            BindError::TransparencyWasNotAtLeastAsPermissiveAsVisibility(TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {
-                transparency_modifier: transparency,
+            BindError::TransparencyWasNotAtLeastAsRestrictiveAsVisibility(TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError {
+                transparency_modifier,
+                transparency: _,
+                visibility: _,
             }) => {
                 assert_eq!(
                     simplified_ast::ModScopeModifierKind::Global,
-                    transparency.kind
+                    transparency_modifier.kind
                 );
             }
             _ => panic!("Unexpected error: {:?}", err),

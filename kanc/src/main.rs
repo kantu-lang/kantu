@@ -35,7 +35,8 @@ fn main() -> Result<(), ()> {
         .map(|file| simplify_file(file))
         .collect::<Result<Vec<_>, _>>()
         .print_err(&file_path_map)?;
-    let file_items = bind_files(file_tree.root(), files, &file_tree).print_err(())?;
+    let file_items =
+        bind_files(file_tree.root(), files, &file_tree).print_err((&file_path_map, &file_tree))?;
     let mut registry = NodeRegistry::empty();
     let file_item_list_id = register_file_items(&mut registry, file_items);
 
@@ -102,7 +103,7 @@ where
         match self {
             Ok(ok) => Ok(ok),
             Err(err) => {
-                println!("{}", err.format_for_cli(data));
+                println!("Error: {}", err.format_for_cli(data));
                 Err(())
             }
         }
