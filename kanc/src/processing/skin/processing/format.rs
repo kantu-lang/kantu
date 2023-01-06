@@ -45,7 +45,7 @@ impl FormatErrorForCli<()> for InvalidCliArgsError {
                 format!("[E0103] Cannot read current working directory: {:?}", err)
             }
             InvalidCliArgsError::CwdIsNotAbsolute(path) => {
-                format!("[E0104] Current working directory is not absolute: {}. There probably isn't anything you can do about this error except open an issue at https://github.com/kantu-lang/kantu/issues/new.", path.display())
+                format!("[E9901] Current working directory is not absolute: {}. There probably isn't anything you can do about this error except open an issue at https://github.com/kantu-lang/kantu/issues/new.", path.display())
             }
         }
     }
@@ -303,56 +303,63 @@ fn format_span_start(
         .get(&span.file_id)
         .expect("File ID should be valid.");
     let src =
-        fs::read_to_string(path).expect("[E9000] File path held in file path map should be valid.");
+        fs::read_to_string(path).expect("[E9900] File path held in file path map should be valid.");
     let start = TextCoord::new(&src, span.start).expect("Byte index should be valid.");
     flc_display(path, start)
 }
 
 impl FormatErrorForCli<()> for BindError {
     fn format_for_cli(&self, (): ()) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[E05??] {:#?}", self)
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for IllegalVariantReturnTypeError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[E06??] {:#?}", self)
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for IllegalFunRecursionError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[E07??] {:#?}", self)
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypePositivityError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[E08??] {:#?}", self)
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypeCheckError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[E20??] {:#?}", self)
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for CompileToJavaScriptError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        match *self {}
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypeCheckWarning {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[W20??] {:#?}", self)
     }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for WriteTargetFilesError {
     fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        unimplemented!()
+        // TODO: Improve error message formatting.
+        format!("[E80??] {:#?}", self)
     }
 }
 
