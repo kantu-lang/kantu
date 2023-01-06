@@ -283,12 +283,19 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
 
 impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
     fn format_for_cli(&self, file_path_map: &FilePathMap) -> String {
+        const INDENT_SIZE_IN_SPACES: usize = 4;
         match self {
             SimplifyAstError::IllegalDotLhs(expr) => {
                 let loc = format_span_start(expr.span(), file_path_map);
-                let formatted_lhs =
-                    format_unsimplified::format_expression_with_default_options(expr);
-                format!("[E0400] Illegal LHS for dot expression. Currently, dot LHSs can only be identifiers or other dot expressions. At {loc} the following LHS has been found:\n{formatted_lhs}")
+                let i0 = " ".repeat(INDENT_SIZE_IN_SPACES);
+                let formatted_lhs = format_unsimplified::format_expression(
+                    expr,
+                    1,
+                    &format_unsimplified::FormatOptions {
+                        ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
+                    },
+                );
+                format!("[E0400] Illegal LHS for dot expression. Currently, dot LHSs can only be identifiers or other dot expressions. At {loc} the following LHS has been found:\n{i0}{formatted_lhs}")
             }
 
             SimplifyAstError::HeterogeneousParams(params) => {
@@ -598,7 +605,7 @@ impl<'a>
                 );
                 let expr_display = format_bound::format_expression(
                     &expand_expression(registry, *expression_id),
-                    i0.len(),
+                    1,
                     &format_bound::FormatOptions {
                         ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
                         print_db_indices: options.show_db_indices,
@@ -607,7 +614,7 @@ impl<'a>
                 );
                 let type_display = format_bound::format_expression(
                     &expand_expression(registry, non_type0_or_type1_type_id.raw()),
-                    i0.len(),
+                    1,
                     &format_bound::FormatOptions {
                         ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
                         print_db_indices: options.show_db_indices,
