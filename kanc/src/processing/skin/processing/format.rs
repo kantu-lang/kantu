@@ -12,6 +12,7 @@ use crate::{
         lex::LexError,
         parse::ParseError,
         simplify_ast::SimplifyAstError,
+        test_utils::{expand_lightened::expand_expression, format as format_bound},
         type_check::{TypeCheckError, TypeCheckWarning},
     },
 };
@@ -298,7 +299,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
     }
 }
 
-fn format_span_start(span: TextSpan, file_path_map: &FilePathMap) -> impl std::fmt::Display {
+fn format_span_start(span: TextSpan, file_path_map: &FilePathMap) -> String {
     let path = file_path_map
         .get(&span.file_id)
         .expect("File ID should be valid.");
@@ -351,7 +352,7 @@ impl<'a> FormatErrorForCli<(&'a FilePathMap, &'a FileTree)> for BindError {
                 fn symbol_source_display(
                     source: &OwnedSymbolSource,
                     file_path_map: &FilePathMap,
-                ) -> impl std::fmt::Display {
+                ) -> String {
                     match source {
                         OwnedSymbolSource::Builtin | OwnedSymbolSource::Mod(_) => {
                             "defined as a builtin".to_string()
@@ -481,11 +482,74 @@ impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypePositivityError {
     }
 }
 
-impl<'a> FormatErrorForCli<&'a NodeRegistry> for TypeCheckError {
-    fn format_for_cli(&self, _registry: &NodeRegistry) -> String {
-        // TODO: Improve error message formatting.
-        format!("[E20??] {:#?}", self)
+impl<'a>
+    FormatErrorForCli<(
+        &'a CompilerOptions,
+        &'a FilePathMap,
+        &'a FileTree,
+        &'a NodeRegistry,
+    )> for TypeCheckError
+{
+    fn format_for_cli(
+        &self,
+        (options, file_path_map, _file_tree, registry): (
+            &CompilerOptions,
+            &FilePathMap,
+            &FileTree,
+            &NodeRegistry,
+        ),
+    ) -> String {
+        const INDENT_SIZE_IN_SPACES: usize = 4;
+
+        match self {
+            TypeCheckError::ExpectedTermOfTypeType0OrType1 {
+                expression_id,
+                non_type0_or_type1_type_id,
+            } => {
+                let i0 = " ".repeat(INDENT_SIZE_IN_SPACES);
+                let loc = format_optional_span_start(
+                    registry.expression_ref(*expression_id).span(),
+                    file_path_map,
+                );
+                let expr_display = format_bound::format_expression(
+                    &expand_expression(registry, *expression_id),
+                    i0.len(),
+                    &format_bound::FormatOptions {
+                        ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
+                        print_db_indices: options.show_db_indices,
+                        print_fun_body_status: false,
+                    },
+                );
+                let type_display = format_bound::format_expression(
+                    &expand_expression(registry, non_type0_or_type1_type_id.raw()),
+                    i0.len(),
+                    &format_bound::FormatOptions {
+                        ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
+                        print_db_indices: options.show_db_indices,
+                        print_fun_body_status: false,
+                    },
+                );
+                format!("[E2000] Expected the term at {loc} to either be `Type` or some term of type `Type`. However, the expression was\n{i0}{expr_display}\nand its type was\n{i0}{type_display}.")
+            }
+
+            // TODO: Complete
+            other => format!("[E20??] {:#?}", other),
+        }
     }
+}
+
+fn format_optional_span_start(span: Option<TextSpan>, file_path_map: &FilePathMap) -> String {
+    const NOT_FOUND_MESSAGE: &str = "<LOCATION_NOT_FOUND>";
+    let Some(span) = span else {
+        return NOT_FOUND_MESSAGE.to_string();
+    };
+    let path = file_path_map
+        .get(&span.file_id)
+        .expect("File ID should be valid.");
+    let src =
+        fs::read_to_string(path).expect("[E9900] File path held in file path map should be valid.");
+    let start = TextCoord::new(&src, span.start).expect("Byte index should be valid.");
+    flc_display(path, start)
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for CompileToJavaScriptError {
@@ -508,11 +572,11 @@ impl<'a> FormatErrorForCli<&'a NodeRegistry> for WriteTargetFilesError {
     }
 }
 
-fn flc_display(path: &Path, coord: TextCoord) -> impl std::fmt::Display {
+fn flc_display(path: &Path, coord: TextCoord) -> String {
     format!("{}:{}:{}", path.display(), coord.line, coord.col)
 }
 
-fn name_components_display(name_components: &[unsimplified::Identifier]) -> impl std::fmt::Display {
+fn name_components_display(name_components: &[unsimplified::Identifier]) -> String {
     name_components
         .iter()
         .map(|component| component.name.src_str())
@@ -520,7 +584,7 @@ fn name_components_display(name_components: &[unsimplified::Identifier]) -> impl
         .join(".")
 }
 
-fn mod_scope_display(scope: ModScope, file_tree: &FileTree) -> impl std::fmt::Display {
+fn mod_scope_display(scope: ModScope, file_tree: &FileTree) -> String {
     let vis_file_id = match scope {
         ModScope::Mod(id) => id,
         ModScope::Global => return "*".to_string(),

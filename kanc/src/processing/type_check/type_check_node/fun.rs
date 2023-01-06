@@ -19,7 +19,10 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     {
         let return_type_type_id = get_type_of_expression_dirty(state, None, fun.return_type_id)?;
         if !is_term_equal_to_type0_or_type1(state, return_type_type_id) {
-            return tainted_err(TypeCheckError::IllegalTypeExpression(fun.return_type_id));
+            return tainted_err(TypeCheckError::ExpectedTermOfTypeType0OrType1 {
+                expression_id: fun.return_type_id,
+                non_type0_or_type1_type_id: return_type_type_id,
+            });
         }
     }
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
