@@ -1,4 +1,4 @@
-use super::super::data::{error::InvalidCliArgsError, options::CliOptions};
+use super::super::data::prelude::*;
 
 use std::path::{Path, PathBuf};
 
@@ -6,11 +6,13 @@ use path_clean::PathClean;
 
 pub mod flags {
     pub const PACK_YSCL: &str = "--pack";
+    pub const SINGLE_FILE: &str = "--file";
 }
 
 pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
     let mut remaining = args.iter().skip(1);
     let mut pack_yscl_path: Option<String> = None;
+    let mut single_file_path: Option<String> = None;
 
     while let Some(arg) = remaining.next() {
         if arg == flags::PACK_YSCL {
@@ -19,6 +21,15 @@ pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
             } else {
                 return Err(InvalidCliArgsError::MissingFlagValue(
                     flags::PACK_YSCL.to_string(),
+                ));
+            }
+        }
+        if arg == flags::SINGLE_FILE {
+            if let Some(path) = remaining.next() {
+                single_file_path = Some(path.clone());
+            } else {
+                return Err(InvalidCliArgsError::MissingFlagValue(
+                    flags::SINGLE_FILE.to_string(),
                 ));
             }
         } else {
@@ -35,20 +46,58 @@ pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
         }
     };
 
-    let pack_yscl_abs_path = if let Some(p) = pack_yscl_path {
-        let p = PathBuf::from(p);
-        if p.is_absolute() {
-            p.to_path_buf()
-        } else {
-            abs_cwd.join(p)
+    let pack_abs_path = match (pack_yscl_path, single_file_path) {
+        (Some(_), Some(_)) => {
+            return Err(InvalidCliArgsError::MutuallyExclusiveFlagsBothProvided(
+                flags::PACK_YSCL.to_string(),
+                flags::SINGLE_FILE.to_string(),
+            ));
         }
-        .clean()
-    } else if let Some(p) = get_default_pack_yscl_path(&abs_cwd) {
-        p
-    } else {
-        return Err(InvalidCliArgsError::CannotFindImplicitPackYsclPath);
+
+        (Some(pack_yscl_path), None) => {
+            let p = PathBuf::from(pack_yscl_path);
+
+            if !p.ends_with("pack.yscl") {
+                return Err(InvalidCliArgsError::PackYsclPathDidNotEndWithPackYscl(p));
+            }
+
+            PackPath::PackYscl(
+                if p.is_absolute() {
+                    p.to_path_buf()
+                } else {
+                    abs_cwd.join(p)
+                }
+                .clean(),
+            )
+        }
+
+        (None, Some(single_file_path)) => {
+            let p = PathBuf::from(single_file_path);
+
+            if p.extension() != Some("k".as_ref()) {
+                return Err(InvalidCliArgsError::SingleFilePathDidNotHaveKExtension(p));
+            }
+
+            PackPath::SingleFile(
+                if p.is_absolute() {
+                    p.to_path_buf()
+                } else {
+                    abs_cwd.join(p)
+                }
+                .clean(),
+            )
+        }
+
+        (None, None) => {
+            if let Some(p) = get_default_pack_yscl_path(&abs_cwd) {
+                PackPath::PackYscl(p)
+            } else {
+                return Err(InvalidCliArgsError::CannotFindImplicitPackYsclPath);
+            }
+        }
     };
-    Ok(CliOptions { pack_yscl_abs_path })
+
+    Ok(CliOptions { pack_abs_path })
 }
 
 fn get_default_pack_yscl_path(abs_cwd: &Path) -> Option<PathBuf> {
