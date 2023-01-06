@@ -2,12 +2,18 @@ use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub struct CliOptions {
-    pub pack_yscl_abs_path: PathBuf,
+    pub pack_abs_path: PackPath,
+}
+
+#[derive(Clone, Debug)]
+pub enum PackPath {
+    PackYscl(PathBuf),
+    SingleFile(PathBuf),
 }
 
 #[derive(Clone, Debug)]
 pub struct CompilerOptions {
-    pub pack_yscl_abs_path: PathBuf,
+    pub pack_abs_path: PackPath,
 
     pub kantu_version: KantuVersion,
     pub target_dir: PathBuf,

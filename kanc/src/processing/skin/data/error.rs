@@ -11,6 +11,9 @@ use std::path::PathBuf;
 pub enum InvalidCliArgsError {
     UnrecognizedFlag(String),
     MissingFlagValue(String),
+    MutuallyExclusiveFlagsBothProvided(String, String),
+    PackYsclPathDidNotEndWithPackYscl(PathBuf),
+    SingleFilePathDidNotHaveKExtension(PathBuf),
     CannotFindImplicitPackYsclPath,
     CannotReadCwd(std::io::Error),
     CwdIsNotAbsolute(PathBuf),
@@ -29,6 +32,10 @@ pub enum InvalidCompilerOptionsError {
     ExpectedAtomButGotCollection {
         key: String,
         collection: yscl::prelude::Node,
+    },
+    ExpectedBoolButGot {
+        key: String,
+        value: yscl::prelude::Node,
     },
     IllegalKantuVersion(String),
 }

@@ -48,6 +48,17 @@ impl FormatErrorForCli<()> for InvalidCliArgsError {
             InvalidCliArgsError::CannotReadCwd(err) => {
                 format!("[E0103] Cannot read current working directory: {:?}", err)
             }
+            InvalidCliArgsError::MutuallyExclusiveFlagsBothProvided(flag1, flag2) => {
+                format!("[E0104] Flags {flag1} and {flag2} are mutually exclusive, but both were provided.")
+            }
+            InvalidCliArgsError::PackYsclPathDidNotEndWithPackYscl(path) => {
+                let flag = super::parse_cli_args::flags::PACK_YSCL;
+                format!(r#"[E0105] The file passed to "{flag}" must be named "pack.yscl", but it was named {}"#, path.display())
+            }
+            InvalidCliArgsError::SingleFilePathDidNotHaveKExtension(path) => {
+                let flag = super::parse_cli_args::flags::SINGLE_FILE;
+                format!(r#"[E0106] The file passed to "{flag}" must have a ".k" extension, but the file was {}"#, path.display())
+            }
             InvalidCliArgsError::CwdIsNotAbsolute(path) => {
                 format!("[E9901] Current working directory is not absolute: {}. There probably isn't anything you can do about this error except open an issue at https://github.com/kantu-lang/kantu/issues/new.", path.display())
             }
@@ -91,7 +102,7 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
             }
             InvalidCompilerOptionsError::ExpectedAtomButGotCollection { key, collection } => {
                 format!(
-                    "[E0203] Illegal type for entry {:?} in pack.yscl. Expected string, got {}.",
+                    "[E0203] Illegal type for entry `{:?}` in pack.yscl. Expected string, got {}.",
                     key,
                     match &collection {
                         yscl::prelude::Node::Atom(_) => unreachable!(),
@@ -108,7 +119,81 @@ impl FormatErrorForCli<()> for InvalidCompilerOptionsError {
                     SUPPORTED_VERSIONS,
                 )
             }
+            InvalidCompilerOptionsError::ExpectedBoolButGot { key, value } => {
+                let value_display = yscl_node_display(value);
+                format!(
+                    r#"[E0205] Illegal type for entry `{key}` in pack.yscl. Expected "true" or "false", got {value_display}."#
+                )
+            }
         }
+    }
+}
+
+fn yscl_node_display(node: &yscl::prelude::Node) -> String {
+    yscl_format::format_node(node, 0)
+}
+
+mod yscl_format {
+    use yscl::prelude::*;
+
+    const INDENT_SIZE_IN_SPACES: usize = 4;
+
+    pub fn format_node(node: &Node, indent: usize) -> String {
+        match node {
+            Node::Atom(atom) => format_atom(atom, indent),
+            Node::Map(map) => format_map(map, indent),
+            Node::List(list) => format_list(list, indent),
+        }
+    }
+
+    pub fn format_atom(atom: &Atom, _: usize) -> String {
+        atom.value.clone()
+    }
+
+    pub fn format_map(map: &Map, indent: usize) -> String {
+        if map.entries.is_empty() {
+            return "{}".to_string();
+        }
+
+        let i0 = " ".repeat(indent * INDENT_SIZE_IN_SPACES);
+        let i1 = " ".repeat((indent + 1) * INDENT_SIZE_IN_SPACES);
+        let mut out = "{".to_string();
+
+        for entry in &map.entries {
+            out.push_str("\n");
+            out.push_str(&i1);
+            out.push_str(&entry.key);
+            out.push_str(" = ");
+            out.push_str(&format_node(&entry.value, indent + 1));
+        }
+
+        out.push_str("\n");
+        out.push_str(&i0);
+        out.push_str("}");
+
+        out
+    }
+
+    pub fn format_list(list: &List, indent: usize) -> String {
+        if list.elements.is_empty() {
+            return "[]".to_string();
+        }
+
+        let i0 = " ".repeat(indent * INDENT_SIZE_IN_SPACES);
+        let i1 = " ".repeat((indent + 1) * INDENT_SIZE_IN_SPACES);
+        let mut out = "[".to_string();
+
+        for element in &list.elements {
+            out.push_str("\n");
+            out.push_str(&i1);
+            out.push_str(&format_node(element, indent + 1));
+        }
+
+        out.push_str("\n");
+        out.push_str(&i0);
+        out.push_str("]");
+
+        out
     }
 }
 

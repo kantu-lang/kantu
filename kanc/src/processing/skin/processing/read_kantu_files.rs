@@ -24,9 +24,44 @@ pub fn read_kantu_files(
     ),
     ReadKantuFilesError,
 > {
+    match &options.pack_abs_path {
+        PackPath::SingleFile(p) => read_kantu_files_from_single_file_path(p),
+        PackPath::PackYscl(p) => read_kantu_files_from_pack_yscl_path(p),
+    }
+}
+
+fn read_kantu_files_from_single_file_path(
+    pack_single_file_path: &PathBuf,
+) -> Result<
+    (
+        Vec<unsimplified::File>,
+        FileTree,
+        FxHashMap<FileId, PathBuf>,
+    ),
+    ReadKantuFilesError,
+> {
+    let file_id = FileId(0);
+    let (file, _) = lex_and_parse_file(pack_single_file_path, file_id)?;
+    let file_tree = TempFileTree::from_root(file_id);
+
+    let mut file_path_map = FxHashMap::default();
+    file_path_map.insert(file_id, pack_single_file_path.clone());
+
+    Ok((vec![file], file_tree.into(), file_path_map))
+}
+
+fn read_kantu_files_from_pack_yscl_path(
+    pack_yscl_abs_path: &PathBuf,
+) -> Result<
+    (
+        Vec<unsimplified::File>,
+        FileTree,
+        FxHashMap<FileId, PathBuf>,
+    ),
+    ReadKantuFilesError,
+> {
     let (root_file, root_file_src, root_file_path) = {
-        let pack_yscl_dir = options
-            .pack_yscl_abs_path
+        let pack_yscl_dir = pack_yscl_abs_path
             .parent()
             .expect("pack.yscl path should have parent");
         let root_file_path = pack_yscl_dir.join("src/mod.k");
