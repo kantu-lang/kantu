@@ -260,6 +260,8 @@ fn get_visibility(
         Err(BindError::VisibilityWasNotAtLeastAsPermissiveAsCurrentMod(
             VisibilityWasNotAtLeastAsPermissiveAsCurrentModError {
                 visibility_modifier: scope_modifier.clone(),
+                actual_visibility: Visibility(scope),
+                defining_mod_id: context.current_file_id(),
             },
         ))
     }
@@ -590,6 +592,8 @@ fn get_transparency(
             BindError::TransparencyWasNotAtLeastAsPermissiveAsCurrentMod(
                 TransparencyWasNotAtLeastAsPermissiveAsCurrentModError {
                     transparency_modifier: transparency_modifier.clone(),
+                    actual_transparency: Transparency(scope),
+                    defining_mod_id: context.current_file_id(),
                 },
             ),
         );
@@ -615,9 +619,11 @@ fn verify_visibility_is_at_least_as_permissive_as_transparency(
 ) -> Result<(), BindError> {
     if !context.is_left_at_least_as_permissive_as_right(visibility.0, transparency.0) {
         return Err(
-            BindError::TransparencyWasNotAtLeastAsPermissiveAsVisibility(
-                TransparencyWasNotAtLeastAsPermissiveAsVisibilityError {
+            BindError::TransparencyWasNotAtLeastAsRestrictiveAsVisibility(
+                TransparencyWasNotAtLeastAsRestrictiveAsVisibilityError {
                     transparency_modifier: scope_modifier.clone(),
+                    transparency,
+                    visibility,
                 },
             ),
         );

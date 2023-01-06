@@ -6,7 +6,7 @@ use rustc_hash::FxHashMap;
 pub struct FileTree {
     root: FileId,
     children: FxHashMap<FileId, FxHashMap<IdentifierName, FileId>>,
-    parents: FxHashMap<FileId, FileId>,
+    parents: FxHashMap<FileId, (FileId, IdentifierName)>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -48,7 +48,17 @@ impl FileTree {
     }
 
     pub fn parent(&self, file_id: FileId) -> Option<FileId> {
-        self.parents.get(&file_id).copied()
+        self.parents.get(&file_id).map(|(parent, _)| *parent)
+    }
+
+    pub fn label_of_edge_leading_to_parent(&self, file_id: FileId) -> Option<&IdentifierName> {
+        self.parents.get(&file_id).map(|(_, label)| label)
+    }
+
+    pub fn parent_and_label(&self, file_id: FileId) -> Option<(FileId, &IdentifierName)> {
+        self.parents
+            .get(&file_id)
+            .map(|(parent, label)| (*parent, label))
     }
 
     pub fn add_child(
@@ -72,7 +82,7 @@ impl FileTree {
             return Err(ChildAlreadyExistsError(old_entry));
         }
 
-        self.parents.insert(child, parent);
+        self.parents.insert(child, (parent, name.clone()));
         Ok(())
     }
 
@@ -87,8 +97,8 @@ impl FileTree {
                 return true;
             }
 
-            if let Some(parent) = self.parents.get(&current_ancestor) {
-                current_ancestor = *parent;
+            if let Some(parent) = self.parent(current_ancestor) {
+                current_ancestor = parent;
             } else {
                 return false;
             }
