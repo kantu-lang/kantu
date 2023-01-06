@@ -38,7 +38,10 @@ use without_spans::*;
 
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
-    IllegalTypeExpression(ExpressionId),
+    ExpectedTermOfTypeType0OrType1 {
+        expression_id: ExpressionId,
+        non_type0_or_type1_type_id: NormalFormId,
+    },
     IllegalCallee(ExpressionId),
     WrongNumberOfArguments {
         call_id: NodeId<Call>,

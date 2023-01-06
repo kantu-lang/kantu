@@ -48,8 +48,8 @@ fn main() -> Result<(), ()> {
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
             .print_err(&registry)?;
-    let warnings =
-        type_check_file_items(&file_tree, &mut registry, file_item_list_id).print_err(&registry)?;
+    let warnings = type_check_file_items(&file_tree, &mut registry, file_item_list_id)
+        .print_err((&options, &file_path_map, &file_tree, &registry))?;
     let js_file =
         JavaScript::generate_code(&registry, file_item_list_id.raw()).print_err(&registry)?;
 

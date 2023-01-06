@@ -2,9 +2,12 @@ use super::*;
 
 fn expect_illegal_type_error(src: &str, expected_illegal_type_src: &str) {
     expect_type_check_error(src, |registry, err| match err {
-        TypeCheckError::IllegalTypeExpression(id) => {
+        TypeCheckError::ExpectedTermOfTypeType0OrType1 {
+            expression_id,
+            non_type0_or_type1_type_id: _,
+        } => {
             let actual_src = format_expression(
-                &expand_expression(registry, id),
+                &expand_expression(registry, expression_id),
                 0,
                 &FormatOptions {
                     ident_size_in_spaces: 4,

@@ -80,7 +80,10 @@ pub(in crate::processing::type_check) fn type_check_unlabeled_param_dirty(
     let param = state.registry.get(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
-        return tainted_err(TypeCheckError::IllegalTypeExpression(param.type_id));
+        return tainted_err(TypeCheckError::ExpectedTermOfTypeType0OrType1 {
+            expression_id: param.type_id,
+            non_type0_or_type1_type_id: param_type_type_id,
+        });
     }
 
     let normalized_type_id = evaluate_well_typed_expression(state, param.type_id);
@@ -97,7 +100,10 @@ pub(in crate::processing::type_check) fn type_check_labeled_param_dirty(
     let param = state.registry.get(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
     if !is_term_equal_to_type0_or_type1(state, param_type_type_id) {
-        return tainted_err(TypeCheckError::IllegalTypeExpression(param.type_id));
+        return tainted_err(TypeCheckError::ExpectedTermOfTypeType0OrType1 {
+            expression_id: param.type_id,
+            non_type0_or_type1_type_id: param_type_type_id,
+        });
     }
 
     let normalized_type_id = evaluate_well_typed_expression(state, param.type_id);
