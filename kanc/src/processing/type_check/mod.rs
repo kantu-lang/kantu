@@ -4,8 +4,8 @@ use crate::data::{
     node_equality_checker::NodeEqualityChecker,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    text_span::*,
     type_positivity_validation_result::TypePositivityValidated,
-    TextSpan,
 };
 
 use eval::*;

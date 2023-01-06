@@ -1,4 +1,4 @@
-use crate::data::{simplified_ast as unbound, simplified_ast::IdentifierName, FileId};
+use crate::data::{file_id::*, simplified_ast as unbound, simplified_ast::IdentifierName};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BindError {

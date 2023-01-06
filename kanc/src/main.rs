@@ -1,18 +1,21 @@
 use kanc::{
-    data::{file_tree::FileTree, node_registry::NodeRegistry, FileId},
+    data::node_registry::NodeRegistry,
     processing::{
         bind_type_independent::bind_files,
         generate_code::{
             targets::javascript::{
-                format::{format_file, FormatOptions},
+                format::{format_file as format_js_file, FormatOptions},
                 JavaScript,
             },
             CompileTarget,
         },
-        lex::lex,
         lighten_ast::register_file_items,
-        parse::parse_file,
         simplify_ast::simplify_file,
+        skin::processing::{
+            format::FormatErrorForCli, parse_cli_args::parse_args,
+            read_compiler_options::read_compiler_options, read_kantu_files::read_kantu_files,
+            write_target_files::write_target_files,
+        },
         type_check::type_check_file_items,
         validate_fun_recursion::validate_fun_recursion_in_file_items,
         validate_type_positivity::validate_type_positivity_in_file_items,
@@ -20,52 +23,88 @@ use kanc::{
     },
 };
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let in_flag_index = if let Some(i) = args.iter().position(|arg| arg == "--in") {
-        i
-    } else {
-        panic!("Cannot find --in flag.")
-    };
-    if in_flag_index >= args.len() - 1 {
-        panic!("There needs to be an argument after the --in flag.")
-    }
-    let in_file_path = &args[in_flag_index + 1];
-    let file_content = if let Ok(content) = std::fs::read_to_string(in_file_path) {
-        content
-    } else {
-        panic!(
-            "Error reading {}. Perhaps the path is invalid.",
-            in_file_path
-        );
-    };
+use std::path::PathBuf;
 
-    let file_id = FileId(0);
-    let tokens = lex(&file_content).expect("Lexing failed");
-    let file = parse_file(tokens, file_id).expect("Parsing failed");
-    let file = simplify_file(file).expect("AST Simplification failed");
-    let file_items =
-        bind_files(file_id, vec![file], &FileTree::from_root(file_id)).expect("Binding failed");
+fn main() -> Result<(), ()> {
+    let args: Vec<String> = std::env::args().collect();
+    let options = parse_args(&args).print_err(())?;
+    let options = read_compiler_options(&options).print_err(())?;
+    let (files, file_tree, file_path_map) = read_kantu_files(&options).print_err(())?;
+    let files = files
+        .into_iter()
+        .map(|file| simplify_file(file))
+        .collect::<Result<Vec<_>, _>>()
+        .print_err(&file_path_map)?;
+    let file_items = bind_files(file_tree.root(), files, &file_tree).print_err(())?;
     let mut registry = NodeRegistry::empty();
     let file_item_list_id = register_file_items(&mut registry, file_items);
+
     let file_item_list_id =
         validate_variant_return_types_in_file_items(&registry, file_item_list_id)
-            .expect("Variant return type validation failed");
+            .print_err(&registry)?;
     let file_item_list_id = validate_fun_recursion_in_file_items(&mut registry, file_item_list_id)
-        .expect("Fun recursion validation failed");
+        .print_err(&registry)?;
     let file_item_list_id =
         validate_type_positivity_in_file_items(&mut registry, file_item_list_id)
-            .expect("Type positivity validation failed");
-    type_check_file_items(
-        &FileTree::from_root(file_id),
-        &mut registry,
-        file_item_list_id,
-    )
-    .expect("Type checking failed");
-    let js_ast = JavaScript::generate_code(&registry, file_item_list_id.raw())
-        .expect("Code generation failed");
-    println!(
-        "Compilation pipeline completed successfully!\n\n{}",
-        format_file(&js_ast, &FormatOptions { indentation: 4 })
+            .print_err(&registry)?;
+    let warnings =
+        type_check_file_items(&file_tree, &mut registry, file_item_list_id).print_err(&registry)?;
+    let js_file =
+        JavaScript::generate_code(&registry, file_item_list_id.raw()).print_err(&registry)?;
+
+    let write_result = write_target_files(
+        &options,
+        vec![(
+            PathBuf::from("index.js"),
+            format_js_file(&js_file, &FormatOptions { indentation: 4 }),
+        )],
     );
+
+    if warnings.is_empty() {
+        println!("Compiled successfully.");
+    } else {
+        println!("Compiled with warnings:\n");
+        for warning in &warnings {
+            println!("{}\n", warning.format_for_cli(&registry));
+        }
+    }
+
+    match write_result {
+        Ok(()) => println!(
+            "Successfully wrote output files to {}.",
+            options.target_dir.display()
+        ),
+        Err(err) => {
+            println!("Failed to write output files:\n");
+            println!("{}", err.format_for_cli(&registry));
+            return Err(());
+        }
+    }
+
+    Ok(())
+}
+
+trait PrintErr<T> {
+    type Ok;
+    type Err;
+
+    fn print_err(self, data: T) -> Result<Self::Ok, Self::Err>;
+}
+
+impl<O, E, T> PrintErr<T> for Result<O, E>
+where
+    E: FormatErrorForCli<T>,
+{
+    type Ok = O;
+    type Err = ();
+
+    fn print_err(self, data: T) -> Result<O, ()> {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(err) => {
+                println!("{}", err.format_for_cli(data));
+                Err(())
+            }
+        }
+    }
 }

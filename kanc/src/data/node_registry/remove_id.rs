@@ -8,7 +8,8 @@ use crate::data::{
         NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId, ParamLabelId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
-    simplified_ast as unbound, TextSpan,
+    simplified_ast as unbound,
+    text_span::*,
 };
 
 // TODO: We could probably greatly simplify this by just making a

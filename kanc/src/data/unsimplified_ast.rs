@@ -1,4 +1,4 @@
-use crate::data::{non_empty_vec::NonEmptyVec, FileId, TextSpan};
+use crate::data::{file_id::*, non_empty_vec::NonEmptyVec, text_span::*};
 
 use std::num::NonZeroUsize;
 

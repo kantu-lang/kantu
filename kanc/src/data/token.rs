@@ -1,6 +1,8 @@
+use crate::data::text_span::*;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Token {
-    pub start_index: usize,
+    pub start_index: ByteIndex,
     pub content: String,
     pub kind: TokenKind,
 }

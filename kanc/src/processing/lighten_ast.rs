@@ -3,7 +3,7 @@ use crate::data::{
     light_ast::*,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_vec::NonEmptyVec,
-    TextSpan,
+    text_span::*,
 };
 
 fn dummy_id<T>() -> NodeId<T> {

@@ -1,4 +1,4 @@
-use crate::data::TextSpan;
+use crate::data::text_span::*;
 
 use super::*;
 
@@ -470,7 +470,7 @@ fn dummy_id() -> FileId {
 fn dummy_span() -> TextSpan {
     TextSpan {
         file_id: dummy_id(),
-        start: 0,
-        end: 0,
+        start: ByteIndex(0),
+        end: ByteIndex(0),
     }
 }

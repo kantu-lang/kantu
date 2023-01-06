@@ -6,9 +6,17 @@ version = 3
 name = "kanc"
 version = "0.1.0"
 dependencies = [
+ "path-clean",
  "rustc-hash",
  "unicode-general-category",
+ "yscl",
 ]
+
+[[package]]
+name = "path-clean"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecba01bf2678719532c5e3059e0b5f0811273d94b397088b82e3bd0a78c78fdd"
 
 [[package]]
 name = "rustc-hash"
@@ -21,3 +29,9 @@ name = "unicode-general-category"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1218098468b8085b19a2824104c70d976491d247ce194bbd9dc77181150cdfd6"
+
+[[package]]
+name = "yscl"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a614e3d9d9c505eb9d8af62246c0fcea4dace57a77ebe5d25f954b80745dc6a"

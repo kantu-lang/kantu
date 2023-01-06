@@ -1,7 +1,7 @@
 use crate::data::{
     light_ast::*,
     non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
-    TextSpan,
+    text_span::*,
 };
 
 use std::{fmt::Debug, hash::Hash, num::NonZeroUsize};

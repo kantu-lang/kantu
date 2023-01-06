@@ -27,8 +27,8 @@ fn leaky_let_type() {
     expect_type_check_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/type_check/leaky_let_type/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/type_check/leaky_let_type/pack.yscl"
             ),
         },
         |registry, err| match err {
@@ -107,8 +107,8 @@ fn insufficient_transparency() {
     expect_type_mismatch_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/type_check/insufficient_transparency/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/type_check/insufficient_transparency/pack.yscl"
             ),
         },
         "Eq.Refl(T, t,)",

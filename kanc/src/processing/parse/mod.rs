@@ -1,8 +1,9 @@
 use crate::data::{
+    file_id::*,
     non_empty_vec::NonEmptyVec,
+    text_span::*,
     token::{Token, TokenKind},
     unsimplified_ast::*,
-    FileId, TextSpan,
 };
 
 use std::num::NonZeroUsize;
@@ -16,13 +17,13 @@ use std::num::NonZeroUsize;
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParseError {
     UnexpectedNonEoiToken(Token),
-    UnexpectedEndOfInput,
+    UnexpectedEoi,
 }
 
 impl ParseError {
     pub fn unexpected_token(token: Token) -> Self {
         if token.kind == TokenKind::Eoi {
-            ParseError::UnexpectedEndOfInput
+            ParseError::UnexpectedEoi
         } else {
             ParseError::UnexpectedNonEoiToken(token)
         }
@@ -51,7 +52,7 @@ pub fn parse<T: Parse>(tokens: Vec<Token>, file_id: FileId) -> Result<T, ParseEr
         }
     }
 
-    Err(ParseError::UnexpectedEndOfInput)
+    Err(ParseError::UnexpectedEoi)
 }
 
 fn is_not_whitespace_or_comment(token: &Token) -> bool {
@@ -116,13 +117,13 @@ fn span_single(file_id: FileId, token: &Token) -> TextSpan {
     TextSpan {
         file_id,
         start,
-        end: start + token.content.len(),
+        end: ByteIndex(start.0 + token.content.len()),
     }
 }
 
 fn span_range_including_end(file_id: FileId, start: &Token, end: &Token) -> TextSpan {
     let start = start.start_index;
-    let end = end.start_index + end.content.len();
+    let end = ByteIndex(end.start_index.0 + end.content.len());
 
     if end < start {
         panic!("End of span is before start of span.");

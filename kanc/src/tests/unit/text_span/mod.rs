@@ -1,5 +1,5 @@
 use crate::{
-    data::{non_empty_vec::NonEmptyVec, unsimplified_ast::*, FileId},
+    data::{file_id::*, non_empty_vec::NonEmptyVec, unsimplified_ast::*},
     processing::{
         lex::lex,
         parse::{parse, Parse, ParseError},
@@ -136,5 +136,11 @@ fn component_kw_in_dot_lhs() {
     let src = include_str!(
         "../../sample_code/should_succeed/single_file/should_parse/component_kw_in_dot_lhs.k"
     );
+    verify_that_spans_are_correct(src);
+}
+
+#[test]
+fn non_ascii() {
+    let src = include_str!("../../sample_code/should_succeed/single_file/should_parse/non_ascii.k");
     verify_that_spans_are_correct(src);
 }

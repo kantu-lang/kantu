@@ -12,8 +12,8 @@ fn name_clash() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/name_clash/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/name_clash/pack.yscl"
             ),
         },
         |err| match err {
@@ -34,8 +34,8 @@ fn leaky_use_single() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/leaky_use_single/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/leaky_use_single/pack.yscl"
             ),
         },
         |err| match err {
@@ -56,8 +56,8 @@ fn leaky_use_single_nested() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/use_priv/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_priv/pack.yscl"
             ),
         },
         |err| match err {
@@ -78,8 +78,8 @@ fn leaky_type() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/leaky_type/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/leaky_type/pack.yscl"
             ),
         },
         |err| match err {
@@ -100,8 +100,8 @@ fn wildcard_downgrades_visibility() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/wildcard_downgrades_visibility/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/wildcard_downgrades_visibility/pack.yscl"
             ),
         },
         |err| match err {
@@ -122,8 +122,8 @@ fn leaky_let_value() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/leaky_let_value/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/leaky_let_value/pack.yscl"
             ),
         },
         |err| match err {
@@ -144,8 +144,8 @@ fn let_value_priv() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/let_value_priv/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/let_value_priv/pack.yscl"
             ),
         },
         |err| match err {
@@ -166,8 +166,8 @@ fn type_priv() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/type_priv/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/type_priv/pack.yscl"
             ),
         },
         |err| match err {
@@ -188,8 +188,8 @@ fn visibility_not_at_least_as_permissive_as_current_mod() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/visibility_not_at_least_as_permissive_as_current_mod/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/visibility_not_at_least_as_permissive_as_current_mod/pack.yscl"
             ),
         },
         |err| match err {
@@ -214,8 +214,8 @@ fn transparency_not_at_least_as_permissive_as_current_mod() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/transparency_not_at_least_as_permissive_as_current_mod/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/transparency_not_at_least_as_permissive_as_current_mod/pack.yscl"
             ),
         },
         |err| match err {
@@ -240,8 +240,8 @@ fn use_mod_as_is() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/use_mod_as_is/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_mod_as_is/pack.yscl"
             ),
         },
         |err| match err {
@@ -263,8 +263,8 @@ fn use_super_as_is() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/use_super_as_is/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_super_as_is/pack.yscl"
             ),
         },
         |err| match err {
@@ -288,8 +288,8 @@ fn use_pack_as_is() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/use_pack_as_is/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_pack_as_is/pack.yscl"
             ),
         },
         |err| match err {
@@ -311,8 +311,8 @@ fn use_identifier_as_is() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/use_identifier_as_is/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/use_identifier_as_is/pack.yscl"
             ),
         },
         |err| match &err {
@@ -334,8 +334,8 @@ fn mod_file_not_found() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/mod_file_not_found/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/mod_file_not_found/pack.yscl"
             ),
         },
         |err| match err {
@@ -352,8 +352,8 @@ fn term_in_visibility_modifier() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/term_in_visibility_modifier/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/term_in_visibility_modifier/pack.yscl"
             ),
         },
         |err| match err {
@@ -370,8 +370,8 @@ fn expected_term_got_mod() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/expected_term_got_mod/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/expected_term_got_mod/pack.yscl"
             ),
         },
         |err| match err {
@@ -397,8 +397,8 @@ fn visibility_stricter_than_transparency() {
     expect_bind_error(
         ProjectPath {
             callee_file_path: file!(),
-            checked_unadjusted_pack_omlet_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/bind/visibility_stricter_than_transparency/pack.omlet"
+            checked_unadjusted_pack_yscl_path: checked_path!(
+                "../../../sample_code/should_fail/multi_file/bind/visibility_stricter_than_transparency/pack.yscl"
             ),
         },
         |err| match err {

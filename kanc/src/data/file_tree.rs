@@ -1,4 +1,4 @@
-use crate::data::{unsimplified_ast::IdentifierName, FileId};
+use crate::data::{file_id::*, unsimplified_ast::IdentifierName};
 
 use rustc_hash::FxHashMap;
 
@@ -16,7 +16,7 @@ pub enum CannotFindChildError {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ChildAlreadyExistsError;
+pub struct ChildAlreadyExistsError(pub FileId);
 
 impl FileTree {
     pub fn from_root(root: FileId) -> Self {
@@ -69,7 +69,7 @@ impl FileTree {
                 .entry(parent)
                 .or_default()
                 .insert(name.clone(), old_entry);
-            return Err(ChildAlreadyExistsError);
+            return Err(ChildAlreadyExistsError(old_entry));
         }
 
         self.parents.insert(child, parent);
