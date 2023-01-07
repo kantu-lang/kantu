@@ -23,8 +23,7 @@ pub fn parse_args(args: &[String]) -> Result<CliOptions, InvalidCliArgsError> {
                     flags::PACK_YSCL.to_string(),
                 ));
             }
-        }
-        if arg == flags::SINGLE_FILE {
+        } else if arg == flags::SINGLE_FILE {
             if let Some(path) = remaining.next() {
                 single_file_path = Some(path.clone());
             } else {

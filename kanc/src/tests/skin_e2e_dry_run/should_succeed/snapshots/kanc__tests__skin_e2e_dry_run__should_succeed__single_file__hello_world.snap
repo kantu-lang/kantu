@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_succeed/single_file.rs
+expression: output
+---
+"Compiled successfully.\nSkipped writing output files, but would have tried writing them to <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_succeed/single_file/no_warnings/target.\n"
