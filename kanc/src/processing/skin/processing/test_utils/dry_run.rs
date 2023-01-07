@@ -46,7 +46,7 @@ pub fn run_pipeline_without_writing_files(args: &[String]) -> Result<String, Str
         JavaScript::generate_code(&registry, file_item_list_id.raw()).fmt_err(&registry)?;
 
     if warnings.is_empty() {
-        out.push_str("Compiled successfully.");
+        out.push_str("Compiled successfully.\n");
     } else {
         out.push_str("Compiled with warnings:\n");
         for warning in &warnings {
@@ -55,7 +55,7 @@ pub fn run_pipeline_without_writing_files(args: &[String]) -> Result<String, Str
     }
 
     out.push_str(&format!(
-        "Skipped writing output files, but would have tried writing them to {}.",
+        "Skipped writing output files, but would have tried writing them to {}.\n",
         options.target_dir.display()
     ));
 
