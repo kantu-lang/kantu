@@ -36,9 +36,6 @@ pub use crate::processing::{
 
 pub use std::num::NonZeroUsize;
 
-#[macro_use]
-pub mod macros;
-
 mod multi_file;
 pub use multi_file::*;
 
