@@ -2,6 +2,6 @@
 mod utils;
 use utils::*;
 
-mod e2e_dry_run;
 mod integration;
+mod skin_e2e_dry_run;
 mod unit;
