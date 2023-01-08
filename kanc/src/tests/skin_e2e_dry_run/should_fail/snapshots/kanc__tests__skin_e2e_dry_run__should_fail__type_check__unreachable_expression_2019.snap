@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2019] Unreachable expression\n    U1.C<7>\nat <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/unreachable_expression.k:15:20.\nThis expression is considered unreachable because it is contained in an obviously impossible match case. Please mark the match case as `impossible`."
