@@ -611,6 +611,19 @@ impl<'a>
                 format!("[E2000] Expected the term at {loc} to either be `Type` or some term of type `Type`. However, the expression was\n{indented_expr_display}\nand its type was\n{indented_type_display}.")
             }
 
+            TypeCheckError::IllegalCallee {
+                callee_id,
+                callee_type_id,
+            } => {
+                let loc = format_optional_span_start(
+                    registry.expression_ref(*callee_id).span(),
+                    file_path_map,
+                );
+                let indented_type_display =
+                    format_expression_with_one_indent(callee_type_id.raw(), options, registry);
+                format!("[E2001] A call expression's callee must have a `forall` type, but the callee at {loc} has type {indented_type_display}.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }

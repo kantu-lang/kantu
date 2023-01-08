@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2001] A call expression's callee must have a `forall` type, but the callee at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/illegal_callee/forall.k:3:10 has type     Type<1>."
