@@ -246,7 +246,7 @@ fn match_case_incorrectly_marked_impossible_2015() {
 }
 
 #[test]
-fn cannot_infer_type_of_empty_match() {
+fn cannot_infer_type_of_empty_match_2016() {
     let path = concat_paths(
         file!(),
         checked_path!(
