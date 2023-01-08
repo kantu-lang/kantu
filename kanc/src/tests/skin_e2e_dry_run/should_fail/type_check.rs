@@ -51,3 +51,29 @@ fn call_labeledness_mismatch_2003() {
         get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
     insta::assert_debug_snapshot!(output);
 }
+
+#[test]
+fn missing_labeled_call_args_2004_one_arg() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/single_file/type_check/labeled_call_args/missing_arg.k"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}
+
+#[test]
+fn missing_labeled_call_args_2004_multiple_args() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/single_file/type_check/labeled_call_args/multiple_missing_args.k"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}

@@ -62,3 +62,11 @@ fn missing_arg() {
     );
     expect_missing_labeled_call_arg_type_error(src, ["right"]);
 }
+
+#[test]
+fn multiple_missing_args() {
+    let src = include_str!(
+        "../../../../sample_code/should_fail/single_file/type_check/labeled_call_args/multiple_missing_args.k"
+    );
+    expect_missing_labeled_call_arg_type_error(src, ["g", "b"]);
+}
