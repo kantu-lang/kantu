@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2003] Expected labeled arguments, but received unlabeled arguments at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/call_arg_labeledness_mismatch/labeled_fun_unlabeled_args.k:16:12"
