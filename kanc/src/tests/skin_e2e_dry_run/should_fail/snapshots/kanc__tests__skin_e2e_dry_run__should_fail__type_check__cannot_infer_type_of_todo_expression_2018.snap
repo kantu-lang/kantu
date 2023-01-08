@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2018] Cannot infer the type of a `todo` expression at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/cannot_infer_todo_type/let_value.k:1:10."
