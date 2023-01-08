@@ -730,6 +730,33 @@ impl<'a>
                 format!("[E2008] Missing labeled parameter{missing_param_pluralizer} {missing_param_display} at {loc}")
             }
 
+            TypeCheckError::UndefinedLabeledMatchCaseParams {
+                case_id,
+                case_param_list_id,
+            } => {
+                let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
+                let undefined_param_pluralizer = pluralizing_s(case_param_list_id.len.get());
+                let undefined_param_display = {
+                    let missing = registry.get_list(*case_param_list_id);
+                    let (l_bracket, r_bracket) = match undefined_param_pluralizer {
+                        OptionalPluralizingS::None => ("", ""),
+                        OptionalPluralizingS::S => ("[", "]"),
+                    };
+                    format!(
+                        "{l_bracket}{}{r_bracket}",
+                        missing
+                            .iter()
+                            .map(|label_id| {
+                                let label_id = registry.get(*label_id).label_identifier_id();
+                                format!("`{}`", registry.get(label_id).name.src_str())
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                };
+                format!("[E2009] Undefined labeled parameter{undefined_param_pluralizer} {undefined_param_display} at {loc}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
