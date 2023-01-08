@@ -1,9 +1,9 @@
 use crate::{
     data::{
         bind_error::BindError, bound_ast::ModScope, file_id::*, file_tree::*,
-        fun_recursion_validation_result::IllegalFunRecursionError, node_registry::NodeRegistry,
-        text_span::*, type_positivity_validation_result::TypePositivityError,
-        unsimplified_ast as unsimplified,
+        fun_recursion_validation_result::IllegalFunRecursionError, node_registry::ExpressionId,
+        node_registry::NodeRegistry, text_span::*,
+        type_positivity_validation_result::TypePositivityError, unsimplified_ast as unsimplified,
         variant_return_type_validation_result::IllegalVariantReturnTypeError,
     },
     processing::{
@@ -31,6 +31,8 @@ type FilePathMap = FxHashMap<FileId, PathBuf>;
 pub trait FormatErrorForCli<T> {
     fn format_for_cli(&self, data: T) -> String;
 }
+
+const INDENT_SIZE_IN_SPACES: usize = 4;
 
 impl FormatErrorForCli<()> for InvalidCliArgsError {
     fn format_for_cli(&self, (): ()) -> String {
@@ -136,7 +138,7 @@ fn yscl_node_display(node: &yscl::prelude::Node) -> String {
 mod yscl_format {
     use yscl::prelude::*;
 
-    const INDENT_SIZE_IN_SPACES: usize = 4;
+    use super::INDENT_SIZE_IN_SPACES;
 
     pub fn format_node(node: &Node, indent: usize) -> String {
         match node {
@@ -283,7 +285,6 @@ impl FormatErrorForCli<()> for ReadKantuFilesError {
 
 impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
     fn format_for_cli(&self, file_path_map: &FilePathMap) -> String {
-        const INDENT_SIZE_IN_SPACES: usize = 4;
         match self {
             SimplifyAstError::IllegalDotLhs(expr) => {
                 let loc = format_span_start(expr.span(), file_path_map);
@@ -591,37 +592,23 @@ impl<'a>
             &NodeRegistry,
         ),
     ) -> String {
-        const INDENT_SIZE_IN_SPACES: usize = 4;
-
         match self {
             TypeCheckError::ExpectedTermOfTypeType0OrType1 {
                 expression_id,
                 non_type0_or_type1_type_id,
             } => {
-                let i0 = " ".repeat(INDENT_SIZE_IN_SPACES);
                 let loc = format_optional_span_start(
                     registry.expression_ref(*expression_id).span(),
                     file_path_map,
                 );
-                let expr_display = format_bound::format_expression(
-                    &expand_expression(registry, *expression_id),
-                    1,
-                    &format_bound::FormatOptions {
-                        ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
-                        print_db_indices: options.show_db_indices,
-                        print_fun_body_status: false,
-                    },
+                let indented_expr_display =
+                    format_expression_with_one_indent(*expression_id, options, registry);
+                let indented_type_display = format_expression_with_one_indent(
+                    non_type0_or_type1_type_id.raw(),
+                    options,
+                    registry,
                 );
-                let type_display = format_bound::format_expression(
-                    &expand_expression(registry, non_type0_or_type1_type_id.raw()),
-                    1,
-                    &format_bound::FormatOptions {
-                        ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
-                        print_db_indices: options.show_db_indices,
-                        print_fun_body_status: false,
-                    },
-                );
-                format!("[E2000] Expected the term at {loc} to either be `Type` or some term of type `Type`. However, the expression was\n{i0}{expr_display}\nand its type was\n{i0}{type_display}.")
+                format!("[E2000] Expected the term at {loc} to either be `Type` or some term of type `Type`. However, the expression was\n{indented_expr_display}\nand its type was\n{indented_type_display}.")
             }
 
             // TODO: Complete
@@ -642,6 +629,24 @@ fn format_optional_span_start(span: Option<TextSpan>, file_path_map: &FilePathMa
         fs::read_to_string(path).expect("[E9900] File path held in file path map should be valid.");
     let start = TextCoord::new(&src, span.start).expect("Byte index should be valid.");
     flc_display(path, start)
+}
+
+fn format_expression_with_one_indent(
+    expression_id: ExpressionId,
+    options: &CompilerOptions,
+    registry: &NodeRegistry,
+) -> String {
+    let i0 = " ".repeat(INDENT_SIZE_IN_SPACES);
+    let expr_display = format_bound::format_expression(
+        &expand_expression(registry, expression_id),
+        1,
+        &format_bound::FormatOptions {
+            ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
+            print_db_indices: options.show_db_indices,
+            print_fun_body_status: false,
+        },
+    );
+    format!("{i0}{expr_display}")
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for CompileToJavaScriptError {
