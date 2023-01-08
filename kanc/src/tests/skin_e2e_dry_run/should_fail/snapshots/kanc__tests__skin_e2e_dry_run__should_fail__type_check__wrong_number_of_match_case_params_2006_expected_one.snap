@@ -2,4 +2,4 @@
 source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
 expression: output
 ---
-"Error: [E2006] Expected 0 arguments but received 1 at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_0_actually_1.k:7:4."
+"Error: [E2006] Expected 0 parameters but received 1 at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_0_actually_1.k:7:4."

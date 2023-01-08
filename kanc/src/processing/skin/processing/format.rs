@@ -688,7 +688,7 @@ impl<'a>
             } => {
                 let expected_pluralizer = pluralizing_s(*expected);
                 let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
-                format!("[E2006] Expected {expected} argument{expected_pluralizer} but received {actual} at {loc}.")
+                format!("[E2006] Expected {expected} parameter{expected_pluralizer} but received {actual} at {loc}.")
             }
 
             // TODO: Complete
