@@ -591,7 +591,7 @@ impl<'a>
 {
     fn format_for_cli(
         &self,
-        (options, file_path_map, _file_tree, registry): (
+        (options, file_path_map, file_tree, registry): (
             &CompilerOptions,
             &FilePathMap,
             &FileTree,
@@ -883,8 +883,33 @@ impl<'a>
                 format!("[E2019] Unreachable expression\n{indented_expression_display}\nat {loc}.\nThis expression is considered unreachable because it is contained in an obviously impossible match case. Please mark the match case as `impossible`.")
             }
 
-            // TODO: Complete
-            other => format!("[E20??] {:#?}", other),
+            TypeCheckError::LetStatementTypeContainsPrivateName {
+                let_statement_id,
+                let_statement_type_id,
+                name_id,
+                name_visibility,
+            } => {
+                let loc =
+                    format_optional_span_start(registry.get(*let_statement_id).span, file_path_map);
+                let indented_type_display = format_expression_with_one_indent(
+                    let_statement_type_id.raw(),
+                    options,
+                    registry,
+                );
+                let name_display = {
+                    let name_component_list_id = registry.get(*name_id).component_list_id;
+                    registry
+                        .get_list(name_component_list_id)
+                        .iter()
+                        .map(|id| registry.get(*id).name.src_str())
+                        .collect::<Vec<_>>()
+                        .join(".")
+                };
+                let name_vis_display = mod_scope_display(name_visibility.0, file_tree);
+                let let_vis = registry.get(*let_statement_id).visibility;
+                let let_vis_display = mod_scope_display(let_vis.0, file_tree);
+                format!("[E2020] The `let` statement at {loc} has the type\n{indented_type_display}\nThis type expression contains the name `{name_display}`, which has a visibility of `{name_vis_display}`. This is illegal, since the `let` statement has a visibility of `{let_vis_display}`.")
+            }
         }
     }
 }

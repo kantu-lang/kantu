@@ -155,11 +155,13 @@ pub(super) fn type_check_let_statement_dirty(
 
     let visibility_status =
         verify_expression_is_visible_from(state, type_id.raw(), let_statement.visibility);
-    if let Err(private_name_id) = visibility_status {
-        return tainted_err(TypeCheckError::LetStatementTypeContainsPrivateName(
+    if let Err((private_name_id, private_name_visibility)) = visibility_status {
+        return tainted_err(TypeCheckError::LetStatementTypeContainsPrivateName {
             let_statement_id,
-            private_name_id,
-        ));
+            let_statement_type_id: type_id,
+            name_id: private_name_id,
+            name_visibility: private_name_visibility,
+        });
     }
 
     let normalized_value_id = evaluate_well_typed_expression(state, let_statement.value_id);

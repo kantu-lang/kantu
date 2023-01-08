@@ -32,7 +32,12 @@ fn leaky_let_type() {
             ),
         },
         |registry, err| match err {
-            TypeCheckError::LetStatementTypeContainsPrivateName(let_id, private_name_id) => {
+            TypeCheckError::LetStatementTypeContainsPrivateName {
+                let_statement_id: let_id,
+                let_statement_type_id: _,
+                name_id: private_name_id,
+                name_visibility: _,
+            } => {
                 let let_statement = registry.get(let_id);
                 let let_name = registry.get(let_statement.name_id);
                 assert_eq!("_2", let_name.name.src_str());

@@ -296,3 +296,16 @@ fn unreachable_expression_2019() {
         get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
     insta::assert_debug_snapshot!(output);
 }
+
+#[test]
+fn let_statement_type_contains_private_name_2020() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/multi_file/type_check/leaky_let_type/pack.yscl"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--pack", &path]);
+    insta::assert_debug_snapshot!(output);
+}
