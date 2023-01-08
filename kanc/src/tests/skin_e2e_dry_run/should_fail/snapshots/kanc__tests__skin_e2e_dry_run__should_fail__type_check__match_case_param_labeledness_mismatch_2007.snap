@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2007] Expected labeled parameters, but received unlabeled parameters at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/match_case_param_labeledness_mismatch/labeled_variant_unlabeled_case.k:9:8"

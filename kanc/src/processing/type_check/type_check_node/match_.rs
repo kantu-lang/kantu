@@ -357,6 +357,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
     let NonEmptyMatchCaseParamListId::Unlabeled(case_param_list_id) = case_param_list_id else {
         return tainted_err(TypeCheckError::MatchCaseLabelednessMismatch {
             case_id,
+            param_list_id: case_param_list_id,
         });
      };
     if case_param_list_id.len != expected_case_param_arity {
@@ -482,6 +483,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
     let NonEmptyMatchCaseParamListId::UniquelyLabeled { param_list_id: explicit_case_param_list_id, triple_dot } = case_param_list_id else {
         return tainted_err(TypeCheckError::MatchCaseLabelednessMismatch {
             case_id,
+            param_list_id: case_param_list_id,
         })
     };
     let explicit_case_param_ids = state
@@ -703,7 +705,10 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
                 }
             }
             NonEmptyMatchCaseParamListId::UniquelyLabeled { .. } => {
-                TypeCheckError::MatchCaseLabelednessMismatch { case_id }
+                TypeCheckError::MatchCaseLabelednessMismatch {
+                    case_id,
+                    param_list_id: case_param_list_id,
+                }
             }
         });
     }

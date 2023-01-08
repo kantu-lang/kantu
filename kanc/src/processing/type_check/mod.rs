@@ -69,6 +69,7 @@ pub enum TypeCheckError {
     },
     MatchCaseLabelednessMismatch {
         case_id: NodeId<MatchCase>,
+        param_list_id: NonEmptyMatchCaseParamListId,
     },
     MissingLabeledMatchCaseParams {
         case_id: NodeId<MatchCase>,
