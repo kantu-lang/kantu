@@ -260,11 +260,12 @@ pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
 
 pub fn verify_variant_to_case_bijection(
     registry: &mut NodeRegistry,
+    match_id: NodeId<Match>,
     variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
     case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
     verify_there_are_no_duplicate_cases(registry, case_list_id)?;
-    verify_that_every_variant_has_a_case(registry, variant_name_list_id, case_list_id)?;
+    verify_that_every_variant_has_a_case(registry, match_id, variant_name_list_id, case_list_id)?;
     verify_that_every_case_has_a_variant(registry, variant_name_list_id, case_list_id)?;
     Ok(())
 }
@@ -304,6 +305,7 @@ fn verify_there_are_no_duplicate_cases(
 
 fn verify_that_every_variant_has_a_case(
     registry: &mut NodeRegistry,
+    match_id: NodeId<Match>,
     variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
     case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 ) -> Result<(), TypeCheckError> {
@@ -331,6 +333,7 @@ fn verify_that_every_variant_has_a_case(
         let missing_variant_name_list_id = registry.add_list(missing_variant_name_ids);
         return Err(TypeCheckError::MissingMatchCases {
             missing_variant_name_list_id,
+            match_id,
         });
     }
 

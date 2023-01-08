@@ -94,6 +94,7 @@ pub enum TypeCheckError {
         new_match_case_id: NodeId<MatchCase>,
     },
     MissingMatchCases {
+        match_id: NodeId<Match>,
         missing_variant_name_list_id: NonEmptyListId<NodeId<Identifier>>,
     },
     ExtraneousMatchCase {

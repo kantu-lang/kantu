@@ -809,6 +809,31 @@ impl<'a>
                 format!("[E2012] Multiple `{variant_name}` match cases were defined. The first was defined at {loc1}. The second was defined at {loc2}. The compiler does not know which of the cases to use. Please delete one of them.")
             }
 
+            TypeCheckError::MissingMatchCases {
+                match_id,
+                missing_variant_name_list_id,
+            } => {
+                let loc = format_optional_span_start(registry.get(*match_id).span, file_path_map);
+                let missing_cases_pluralizer =
+                    pluralizing_s(missing_variant_name_list_id.len.get());
+                let missing_cases_display = {
+                    let missing = registry.get_list(*missing_variant_name_list_id);
+                    let (l_bracket, r_bracket) = match missing_cases_pluralizer {
+                        OptionalPluralizingS::None => ("", ""),
+                        OptionalPluralizingS::S => ("[", "]"),
+                    };
+                    format!(
+                        "{l_bracket}{}{r_bracket}",
+                        missing
+                            .iter()
+                            .map(|label_id| format!("`{}`", registry.get(*label_id).name.src_str()))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                };
+                format!("[E2013] Missing match case{missing_cases_pluralizer} for {missing_cases_display} at {loc}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
