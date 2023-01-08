@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2011] At <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/non_adt_matchee/type1.k:6:10, the expression\n    Type<4>\nwhich has type\n    Type1<5>\nappears as a `match` expression's matchee. A matchee must have a type that is an algebraic data type (i.e., a type defined with a `type` statement)."

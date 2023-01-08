@@ -775,6 +775,21 @@ impl<'a>
                 format!("[E2010] At {loc}, expect type\n{idented_expected_display}\nbut found\n{indented_expr_display}\nwhich had a type of\n{indented_actual_display}")
             }
 
+            TypeCheckError::NonAdtMatchee {
+                matchee_id,
+                type_id,
+            } => {
+                let loc = format_optional_span_start(
+                    registry.expression_ref(*matchee_id).span(),
+                    file_path_map,
+                );
+                let indented_matchee_display =
+                    format_expression_with_one_indent(*matchee_id, options, registry);
+                let indented_type_display =
+                    format_expression_with_one_indent(type_id.raw(), options, registry);
+                format!("[E2011] At {loc}, the expression\n{indented_matchee_display}\nwhich has type\n{indented_type_display}\nappears as a `match` expression's matchee. A matchee must have a type that is an algebraic data type (i.e., a type defined with a `type` statement).")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
