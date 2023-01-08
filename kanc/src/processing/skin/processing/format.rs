@@ -1,9 +1,15 @@
 use crate::{
     data::{
-        bind_error::BindError, bound_ast::ModScope, file_id::*, file_tree::*,
-        fun_recursion_validation_result::IllegalFunRecursionError, node_registry::ExpressionId,
-        node_registry::NodeRegistry, text_span::*,
-        type_positivity_validation_result::TypePositivityError, unsimplified_ast as unsimplified,
+        bind_error::BindError,
+        bound_ast::ModScope,
+        file_id::*,
+        file_tree::*,
+        fun_recursion_validation_result::IllegalFunRecursionError,
+        node_registry::ExpressionId,
+        node_registry::{NodeRegistry, NonEmptyCallArgListId},
+        text_span::*,
+        type_positivity_validation_result::TypePositivityError,
+        unsimplified_ast as unsimplified,
         variant_return_type_validation_result::IllegalVariantReturnTypeError,
     },
     processing::{
@@ -632,6 +638,16 @@ impl<'a>
                 let expected_pluralizer = pluralizing_s(*expected);
                 let loc = format_optional_span_start(registry.get(*call_id).span, file_path_map);
                 format!("[E2002] Expected {expected} argument{expected_pluralizer} but received {actual} at {loc}.")
+            }
+
+            TypeCheckError::CallLabelednessMismatch { call_id } => {
+                let loc = format_optional_span_start(registry.get(*call_id).span, file_path_map);
+
+                let (actual_display, expected_display) = match registry.get(*call_id).arg_list_id {
+                    NonEmptyCallArgListId::UniquelyLabeled(_) => ("labeled", "unlabeled"),
+                    NonEmptyCallArgListId::Unlabeled(_) => ("unlabeled", "labeled"),
+                };
+                format!("[E2003] Expected {expected_display} arguments, but received {actual_display} arguments at {loc}")
             }
 
             // TODO: Complete
