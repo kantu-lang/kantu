@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2000] Expected the term at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/illegal_type/forall_output.k:5:25 to either be `Type` or some term of type `Type`. However, the expression was\n    U.U<1>\nand its type was\n    U<2>."
