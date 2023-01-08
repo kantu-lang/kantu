@@ -201,7 +201,10 @@ fn get_type_of_allegedly_non_impossible_match_case_dirty(
 
     match output_type_id.try_downshift(variant_arity, state.registry) {
         Ok(output_type_id) => Ok(output_type_id),
-        Err(_) => tainted_err(TypeCheckError::AmbiguousOutputType { case_id }),
+        Err(_) => tainted_err(TypeCheckError::AmbiguousMatchCaseOutputType {
+            case_id,
+            non_shifted_output_type_id: output_type_id,
+        }),
     }
 }
 

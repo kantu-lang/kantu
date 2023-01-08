@@ -107,8 +107,9 @@ pub enum TypeCheckError {
     CannotInferTypeOfEmptyMatch {
         match_id: NodeId<Match>,
     },
-    AmbiguousOutputType {
+    AmbiguousMatchCaseOutputType {
         case_id: NodeId<MatchCase>,
+        non_shifted_output_type_id: NormalFormId,
     },
     CannotInferTypeOfTodoExpression(NodeId<TodoExpression>),
     UnreachableExpression(ExpressionId),
