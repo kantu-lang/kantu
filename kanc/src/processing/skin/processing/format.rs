@@ -790,6 +790,25 @@ impl<'a>
                 format!("[E2011] At {loc}, the expression\n{indented_matchee_display}\nwhich has type\n{indented_type_display}\nappears as a `match` expression's matchee. A matchee must have a type that is an algebraic data type (i.e., a type defined with a `type` statement).")
             }
 
+            TypeCheckError::DuplicateMatchCase {
+                existing_match_case_id,
+                new_match_case_id,
+            } => {
+                let variant_name = registry
+                    .get(registry.get(*existing_match_case_id).variant_name_id)
+                    .name
+                    .src_str();
+                let loc1 = format_optional_span_start(
+                    registry.get(*existing_match_case_id).span,
+                    file_path_map,
+                );
+                let loc2 = format_optional_span_start(
+                    registry.get(*new_match_case_id).span,
+                    file_path_map,
+                );
+                format!("[E2012] Multiple `{variant_name}` match cases were defined. The first was defined at {loc1}. The second was defined at {loc2}. The compiler does not know which of the cases to use. Please delete one of them.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }

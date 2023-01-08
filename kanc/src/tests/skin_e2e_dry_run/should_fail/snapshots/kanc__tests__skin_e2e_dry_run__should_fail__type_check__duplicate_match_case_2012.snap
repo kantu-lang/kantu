@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2012] Multiple `U` match cases were defined. The first was defined at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/duplicate_match_case.k:11:4. The second was defined at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/duplicate_match_case.k:12:4. The compiler does not know which of the cases to use. Please delete one of them."
