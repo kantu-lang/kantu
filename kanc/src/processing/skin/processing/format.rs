@@ -757,6 +757,24 @@ impl<'a>
                 format!("[E2009] Undefined labeled parameter{undefined_param_pluralizer} {undefined_param_display} at {loc}")
             }
 
+            TypeCheckError::TypeMismatch {
+                expression_id,
+                expected_type_id,
+                actual_type_id,
+            } => {
+                let loc = format_optional_span_start(
+                    registry.expression_ref(*expression_id).span(),
+                    file_path_map,
+                );
+                let idented_expected_display =
+                    format_expression_with_one_indent(expected_type_id.raw(), options, registry);
+                let indented_expr_display =
+                    format_expression_with_one_indent(*expression_id, options, registry);
+                let indented_actual_display =
+                    format_expression_with_one_indent(actual_type_id.raw(), options, registry);
+                format!("[E2010] At {loc}, expect type\n{idented_expected_display}\nbut found\n{indented_expr_display}\nwhich had a type of\n{indented_actual_display}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
