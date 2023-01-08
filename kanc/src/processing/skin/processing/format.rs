@@ -706,6 +706,30 @@ impl<'a>
                 format!("[E2007] Expected {expected_display} parameters, but received {actual_display} parameters at {loc}")
             }
 
+            TypeCheckError::MissingLabeledMatchCaseParams {
+                case_id,
+                missing_label_list_id,
+            } => {
+                let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
+                let missing_param_pluralizer = pluralizing_s(missing_label_list_id.len.get());
+                let missing_param_display = {
+                    let missing = registry.get_list(*missing_label_list_id);
+                    let (l_bracket, r_bracket) = match missing_param_pluralizer {
+                        OptionalPluralizingS::None => ("", ""),
+                        OptionalPluralizingS::S => ("[", "]"),
+                    };
+                    format!(
+                        "{l_bracket}{}{r_bracket}",
+                        missing
+                            .iter()
+                            .map(|label_id| format!("`{}`", registry.get(*label_id).name.src_str()))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                };
+                format!("[E2008] Missing labeled param{missing_param_pluralizer} {missing_param_display} at {loc}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
