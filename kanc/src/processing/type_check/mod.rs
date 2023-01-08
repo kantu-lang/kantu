@@ -98,6 +98,7 @@ pub enum TypeCheckError {
         missing_variant_name_list_id: NonEmptyListId<NodeId<Identifier>>,
     },
     ExtraneousMatchCase {
+        // TODO: Make this a list
         case_id: NodeId<MatchCase>,
     },
     AllegedlyImpossibleMatchCaseWasNotObviouslyImpossible {

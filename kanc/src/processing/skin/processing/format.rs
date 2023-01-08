@@ -834,6 +834,15 @@ impl<'a>
                 format!("[E2013] Missing match case{missing_cases_pluralizer} for {missing_cases_display} at {loc}")
             }
 
+            TypeCheckError::ExtraneousMatchCase { case_id } => {
+                let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
+                let variant_name = registry
+                    .get(registry.get(*case_id).variant_name_id)
+                    .name
+                    .src_str();
+                format!("[E2014] Extraneous match case for non-existent variant `{variant_name}` at {loc}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
