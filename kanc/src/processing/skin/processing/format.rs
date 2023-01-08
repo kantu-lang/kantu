@@ -727,7 +727,7 @@ impl<'a>
                             .join(", ")
                     )
                 };
-                format!("[E2008] Missing labeled param{missing_param_pluralizer} {missing_param_display} at {loc}")
+                format!("[E2008] Missing labeled parameter{missing_param_pluralizer} {missing_param_display} at {loc}")
             }
 
             // TODO: Complete
