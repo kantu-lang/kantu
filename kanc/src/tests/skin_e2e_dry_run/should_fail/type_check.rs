@@ -192,3 +192,14 @@ fn duplicate_match_case_2012() {
         get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
     insta::assert_debug_snapshot!(output);
 }
+
+#[test]
+fn missing_match_case_2013_missing_one() {
+    let path = concat_paths(
+        file!(),
+        checked_path!("../../sample_code/should_fail/single_file/type_check/missing_match_case.k"),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}

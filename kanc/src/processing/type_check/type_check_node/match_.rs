@@ -19,6 +19,7 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
 
     verify_variant_to_case_bijection(
         state.registry,
+        match_id,
         matchee_type.variant_name_list_id,
         match_.case_list_id,
     )

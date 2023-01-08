@@ -3,6 +3,7 @@ use super::*;
 fn expect_missing_match_case_error(src: &str, expected_variant_names: &[&IdentifierName]) {
     expect_type_check_error(src, |registry, err| match err {
         TypeCheckError::MissingMatchCases {
+            match_id: _,
             missing_variant_name_list_id,
         } => {
             let missing_variant_name_ids = registry.get_list(missing_variant_name_list_id);

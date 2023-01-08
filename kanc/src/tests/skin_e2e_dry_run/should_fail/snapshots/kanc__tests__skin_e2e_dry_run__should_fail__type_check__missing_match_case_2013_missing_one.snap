@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2013] Missing match case for `False` at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/missing_match_case.k:6:10"
