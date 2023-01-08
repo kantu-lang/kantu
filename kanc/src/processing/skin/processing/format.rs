@@ -868,6 +868,11 @@ impl<'a>
                 format!("[E2017] The output type of a match case at {loc} contains one or more of the match case's parameters. The case's output type was\n{indented_type}\nThe compiler cannot infer a type that does not contain any of the match case's parameters. Either try moving the `match` expression to a position that supports type inference, or try substituting expressions that contain match case parameters with expressions that do not contain match case parameters (assuming this is possible).")
             }
 
+            TypeCheckError::CannotInferTypeOfTodoExpression(todo_id) => {
+                let loc = format_optional_span_start(registry.get(*todo_id).span, file_path_map);
+                format!("[E2018] Cannot infer the type of a `todo` expression at {loc}.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
