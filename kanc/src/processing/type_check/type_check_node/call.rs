@@ -14,7 +14,10 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
     let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
         id
     } else {
-        return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
+        return tainted_err(TypeCheckError::IllegalCallee {
+            callee_id: call.callee_id,
+            callee_type_id,
+        });
     };
     let arg_ids = match call.arg_list_id {
         NonEmptyCallArgListId::Unlabeled(arg_list_id) => {
@@ -139,7 +142,10 @@ fn correct_call_arg_order_dirty(
     let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
     let ExpressionId::Forall(callee_type_id) = callee_type_id.raw() else {
-        return tainted_err(TypeCheckError::IllegalCallee(call.callee_id));
+        return tainted_err(TypeCheckError::IllegalCallee {
+            callee_id:call.callee_id,
+            callee_type_id,
+        });
     };
     let callee_type = state.registry.get(callee_type_id).clone();
 

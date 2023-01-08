@@ -42,7 +42,10 @@ pub enum TypeCheckError {
         expression_id: ExpressionId,
         non_type0_or_type1_type_id: NormalFormId,
     },
-    IllegalCallee(ExpressionId),
+    IllegalCallee {
+        callee_id: ExpressionId,
+        callee_type_id: NormalFormId,
+    },
     WrongNumberOfArguments {
         call_id: NodeId<Call>,
         expected: usize,
