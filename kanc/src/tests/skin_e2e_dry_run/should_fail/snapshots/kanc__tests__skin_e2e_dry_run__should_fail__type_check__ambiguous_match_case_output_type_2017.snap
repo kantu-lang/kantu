@@ -1,0 +1,5 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+expression: output
+---
+"Error: [E2017] The output type of a match case at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/ambiguous_match_case_output_type.k:13:12 contains one or more of the match case's parameters. The case's output type was\n    Eq<4>(\n        Nat<7>,\n        Nat.S<5>(\n            problem<0>,\n        ),\n        Nat.S<5>(\n            problem<0>,\n        ),\n    )\nThe compiler cannot infer a type that does not contain any of the match case's parameters. Either try moving the `match` expression to a position that supports type inference, or try substituting expressions that contain match case parameters with expressions that do not contain match case parameters (assuming this is possible)."
