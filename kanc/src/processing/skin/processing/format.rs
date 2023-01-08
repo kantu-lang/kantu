@@ -624,6 +624,16 @@ impl<'a>
                 format!("[E2001] A call expression's callee must have a `forall` type, but the callee at {loc} has type {indented_type_display}.")
             }
 
+            TypeCheckError::WrongNumberOfArguments {
+                call_id,
+                expected,
+                actual,
+            } => {
+                let expected_pluralizer = pluralizing_s(*expected);
+                let loc = format_optional_span_start(registry.get(*call_id).span, file_path_map);
+                format!("[E2002] Expected {expected} argument{expected_pluralizer} but received {actual} at {loc}.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
@@ -660,6 +670,14 @@ fn format_expression_with_one_indent(
         },
     );
     format!("{i0}{expr_display}")
+}
+
+fn pluralizing_s(n: usize) -> &'static str {
+    if n == 1 {
+        ""
+    } else {
+        "s"
+    }
 }
 
 impl<'a> FormatErrorForCli<&'a NodeRegistry> for CompileToJavaScriptError {
