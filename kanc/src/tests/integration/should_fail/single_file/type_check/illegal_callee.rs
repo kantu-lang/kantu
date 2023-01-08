@@ -2,9 +2,12 @@ use super::*;
 
 fn expect_illegal_callee_error(src: &str, expected_illegal_callee_src: &str) {
     expect_type_check_error(src, |registry, err| match err {
-        TypeCheckError::IllegalCallee(id) => {
+        TypeCheckError::IllegalCallee {
+            callee_id,
+            callee_type_id: _,
+        } => {
             let actual_src = format_expression(
-                &expand_expression(registry, id),
+                &expand_expression(registry, callee_id),
                 0,
                 &FormatOptions {
                     ident_size_in_spaces: 4,
