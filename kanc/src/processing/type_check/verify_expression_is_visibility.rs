@@ -4,7 +4,7 @@ pub(super) fn verify_expression_is_visible_from(
     state: &State,
     expression_id: ExpressionId,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let state = OffsetState {
         state,
         extra_entries_in_context: 0,
@@ -53,7 +53,7 @@ fn verify_expression(
     state: OffsetState,
     expression_id: ExpressionId,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     match expression_id {
         ExpressionId::Name(id) => verify_name_expression(state, id, perspective),
         ExpressionId::Todo(_) => Ok(()),
@@ -69,11 +69,11 @@ fn verify_name_expression(
     state: OffsetState,
     id: NodeId<NameExpression>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let name = state.registry().get(id);
     let visibility = state.get_visibility(name.db_index);
     if !is_left_at_least_as_permissive_as_right(state.file_tree(), visibility.0, perspective.0) {
-        return Err(id);
+        return Err((id, visibility));
     }
     Ok(())
 }
@@ -82,7 +82,7 @@ fn verify_call(
     state: OffsetState,
     id: NodeId<Call>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let call = state.registry().get(id);
     verify_expression(state, call.callee_id, perspective)?;
     verify_arg_list(state, call.arg_list_id, perspective)?;
@@ -93,7 +93,7 @@ fn verify_arg_list(
     state: OffsetState,
     id: NonEmptyCallArgListId,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     match id {
         NonEmptyCallArgListId::Unlabeled(id) => verify_expression_list(state, id, perspective),
         NonEmptyCallArgListId::UniquelyLabeled(id) => {
@@ -106,7 +106,7 @@ fn verify_expression_list(
     state: OffsetState,
     list_id: NonEmptyListId<ExpressionId>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let list = state.registry().get_list(list_id);
     for &id in list.iter() {
         verify_expression(state, id, perspective)?;
@@ -118,7 +118,7 @@ fn verify_labeled_call_arg_list(
     state: OffsetState,
     list_id: NonEmptyListId<LabeledCallArgId>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let list = state.registry().get_list(list_id);
     for &id in list.iter() {
         verify_labeled_call_arg(state, id, perspective)?;
@@ -130,7 +130,7 @@ fn verify_labeled_call_arg(
     state: OffsetState,
     id: LabeledCallArgId,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     match id {
         LabeledCallArgId::Explicit {
             label_id: _,
@@ -148,7 +148,7 @@ fn verify_fun(
     state: OffsetState,
     id: NodeId<Fun>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let fun = state.registry().get(id);
     verify_param_list(state, fun.param_list_id, perspective)?;
     verify_expression(
@@ -168,7 +168,7 @@ fn verify_param_list(
     state: OffsetState,
     id: NonEmptyParamListId,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     match id {
         NonEmptyParamListId::Unlabeled(id) => verify_unlabeled_param_list(state, id, perspective),
         NonEmptyParamListId::UniquelyLabeled(id) => {
@@ -181,7 +181,7 @@ fn verify_unlabeled_param_list(
     state: OffsetState,
     list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let list = state.registry().get_list(list_id);
     for (i, param_id) in list.iter().copied().enumerate() {
         let param_state = state.extend(i);
@@ -195,7 +195,7 @@ fn verify_labeled_param_list(
     state: OffsetState,
     list_id: NonEmptyListId<NodeId<LabeledParam>>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let list = state.registry().get_list(list_id);
     for (i, param_id) in list.iter().copied().enumerate() {
         let param_state = state.extend(i);
@@ -209,7 +209,7 @@ fn verify_match(
     state: OffsetState,
     id: NodeId<Match>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let match_ = state.registry().get(id);
     verify_expression(state, match_.matchee_id, perspective)?;
     verify_optional_match_case_list(state, match_.case_list_id, perspective)?;
@@ -220,7 +220,7 @@ fn verify_optional_match_case_list(
     state: OffsetState,
     list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let Some(list_id) = list_id else {
         return Ok(());
     };
@@ -231,7 +231,7 @@ fn verify_match_case_list(
     state: OffsetState,
     list_id: NonEmptyListId<NodeId<MatchCase>>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let list = state.registry().get_list(list_id);
     for &id in list.iter() {
         verify_match_case(state, id, perspective)?;
@@ -243,7 +243,7 @@ fn verify_match_case(
     state: OffsetState,
     id: NodeId<MatchCase>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let case = state.registry().get(id);
     verify_match_case_output(
         state.extend(
@@ -261,7 +261,7 @@ fn verify_match_case_output(
     state: OffsetState,
     id: MatchCaseOutputId,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     match id {
         MatchCaseOutputId::Some(id) => verify_expression(state, id, perspective),
         MatchCaseOutputId::ImpossibilityClaim(_) => Ok(()),
@@ -272,7 +272,7 @@ fn verify_forall(
     state: OffsetState,
     id: NodeId<Forall>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let forall = state.registry().get(id);
     verify_param_list(state, forall.param_list_id, perspective)?;
     verify_expression(
@@ -287,7 +287,7 @@ fn verify_check_expression(
     state: OffsetState,
     id: NodeId<Check>,
     perspective: Visibility,
-) -> Result<(), NodeId<NameExpression>> {
+) -> Result<(), (NodeId<NameExpression>, Visibility)> {
     let check = state.registry().get(id);
     verify_expression(state, check.output_id, perspective)?;
     Ok(())

@@ -115,7 +115,18 @@ pub enum TypeCheckError {
     // TODO: Track explosion sources, so we can give the user a
     // specific line number to mark as `impossible`.
     UnreachableExpression(ExpressionId),
-    LetStatementTypeContainsPrivateName(NodeId<LetStatement>, NodeId<NameExpression>),
+    // TODO: Be more strict with this error, since I think it
+    // only tracks the rightmost visibility (so a dot chain could
+    // still have a middle component that is not visible from
+    // the perspective of the `let` statement's transparency).
+    // Actually, this might severely complicate things, so maybe
+    // we let it slide.
+    LetStatementTypeContainsPrivateName {
+        let_statement_id: NodeId<LetStatement>,
+        let_statement_type_id: NormalFormId,
+        name_id: NodeId<NameExpression>,
+        name_visibility: Visibility,
+    },
 }
 
 #[derive(Clone, Debug)]

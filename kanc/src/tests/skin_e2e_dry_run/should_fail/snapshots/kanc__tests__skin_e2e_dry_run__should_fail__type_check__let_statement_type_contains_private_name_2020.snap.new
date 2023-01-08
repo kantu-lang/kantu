@@ -1,0 +1,6 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
+assertion_line: 310
+expression: output
+---
+"Error: [E2020] The `let` statement at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/multi_file/type_check/leaky_let_type/src/mod.k:8:0 has the type\n    Nat\nThis type expression contains the name `Nat`, which has a visibility of `pack`. This is illegal, since the `let` statement has a visibility of `*`."
