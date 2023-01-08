@@ -650,6 +650,30 @@ impl<'a>
                 format!("[E2003] Expected {expected_display} arguments, but received {actual_display} arguments at {loc}")
             }
 
+            TypeCheckError::MissingLabeledCallArgs {
+                call_id,
+                missing_label_list_id,
+            } => {
+                let loc = format_optional_span_start(registry.get(*call_id).span, file_path_map);
+                let missing_arg_pluralizer = pluralizing_s(missing_label_list_id.len.get());
+                let missing_arg_display = {
+                    let missing = registry.get_list(*missing_label_list_id);
+                    let (l_bracket, r_bracket) = match missing_arg_pluralizer {
+                        OptionalPluralizingS::None => ("", ""),
+                        OptionalPluralizingS::S => ("[", "]"),
+                    };
+                    format!(
+                        "{l_bracket}{}{r_bracket}",
+                        missing
+                            .iter()
+                            .map(|label_id| format!("`{}`", registry.get(*label_id).name.src_str()))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                };
+                format!("[E2004] Missing labeled argument{missing_arg_pluralizer} {missing_arg_display} at {loc}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
@@ -688,11 +712,26 @@ fn format_expression_with_one_indent(
     format!("{i0}{expr_display}")
 }
 
-fn pluralizing_s(n: usize) -> &'static str {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum OptionalPluralizingS {
+    None,
+    S,
+}
+
+fn pluralizing_s(n: usize) -> OptionalPluralizingS {
     if n == 1 {
-        ""
+        OptionalPluralizingS::None
     } else {
-        "s"
+        OptionalPluralizingS::S
+    }
+}
+
+impl std::fmt::Display for OptionalPluralizingS {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OptionalPluralizingS::None => Ok(()),
+            OptionalPluralizingS::S => write!(f, "s"),
+        }
     }
 }
 
