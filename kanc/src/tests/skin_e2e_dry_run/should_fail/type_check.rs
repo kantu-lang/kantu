@@ -25,3 +25,16 @@ fn illegal_callee_2001() {
         get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
     insta::assert_debug_snapshot!(output);
 }
+
+#[test]
+fn wrong_number_of_arguments_2002() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/single_file/type_check/wrong_number_of_arguments/fun.k"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}
