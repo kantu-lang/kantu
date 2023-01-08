@@ -848,6 +848,13 @@ impl<'a>
                 format!("[E2015] A match case was marked as `impossible` at {loc}, but it was not obviously impossible.")
             }
 
+            TypeCheckError::CannotInferTypeOfEmptyMatch { match_id } => {
+                let loc = format_optional_span_start(registry.get(*match_id).span, file_path_map);
+                format!(
+                    "[E2016] Cannot infer the type of a `match` expression with no cases at {loc}."
+                )
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
