@@ -6,7 +6,7 @@ use crate::{
         file_tree::*,
         fun_recursion_validation_result::IllegalFunRecursionError,
         node_registry::ExpressionId,
-        node_registry::{NodeRegistry, NonEmptyCallArgListId},
+        node_registry::{NodeRegistry, NonEmptyCallArgListId, NonEmptyMatchCaseParamListId},
         text_span::*,
         type_positivity_validation_result::TypePositivityError,
         unsimplified_ast as unsimplified,
@@ -689,6 +689,21 @@ impl<'a>
                 let expected_pluralizer = pluralizing_s(*expected);
                 let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
                 format!("[E2006] Expected {expected} parameter{expected_pluralizer} but received {actual} at {loc}.")
+            }
+
+            TypeCheckError::MatchCaseLabelednessMismatch {
+                case_id,
+                param_list_id,
+            } => {
+                let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
+
+                let (actual_display, expected_display) = match param_list_id {
+                    NonEmptyMatchCaseParamListId::UniquelyLabeled { .. } => {
+                        ("labeled", "unlabeled")
+                    }
+                    NonEmptyMatchCaseParamListId::Unlabeled(_) => ("unlabeled", "labeled"),
+                };
+                format!("[E2007] Expected {expected_display} parameters, but received {actual_display} parameters at {loc}")
             }
 
             // TODO: Complete
