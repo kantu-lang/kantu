@@ -90,3 +90,29 @@ fn extraneous_labeled_call_arg_2005() {
         get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
     insta::assert_debug_snapshot!(output);
 }
+
+#[test]
+fn wrong_number_of_match_case_params_2006_expected_zero() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_1_actually_0.k"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}
+
+#[test]
+fn wrong_number_of_match_case_params_2006_expected_one() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_0_actually_1.k"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}
