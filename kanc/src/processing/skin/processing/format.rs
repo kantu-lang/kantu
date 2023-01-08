@@ -843,6 +843,11 @@ impl<'a>
                 format!("[E2014] Extraneous match case for non-existent variant `{variant_name}` at {loc}")
             }
 
+            TypeCheckError::AllegedlyImpossibleMatchCaseWasNotObviouslyImpossible { case_id } => {
+                let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
+                format!("[E2015] A match case was marked as `impossible` at {loc}, but it was not obviously impossible.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
