@@ -674,6 +674,13 @@ impl<'a>
                 format!("[E2004] Missing labeled argument{missing_arg_pluralizer} {missing_arg_display} at {loc}")
             }
 
+            TypeCheckError::ExtraneousLabeledCallArg { call_id: _, arg_id } => {
+                let loc =
+                    format_optional_span_start(registry.get(arg_id.label_id()).span, file_path_map);
+                let arg_display = registry.get(arg_id.label_id()).name.src_str();
+                format!("[E2005] Extraneous labeled argument `{arg_display}` at {loc}")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
