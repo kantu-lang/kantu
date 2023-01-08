@@ -681,6 +681,16 @@ impl<'a>
                 format!("[E2005] Extraneous labeled argument `{arg_display}` at {loc}")
             }
 
+            TypeCheckError::WrongNumberOfMatchCaseParams {
+                case_id,
+                expected,
+                actual,
+            } => {
+                let expected_pluralizer = pluralizing_s(*expected);
+                let loc = format_optional_span_start(registry.get(*case_id).span, file_path_map);
+                format!("[E2006] Expected {expected} argument{expected_pluralizer} but received {actual} at {loc}.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
