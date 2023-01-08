@@ -283,3 +283,16 @@ fn cannot_infer_type_of_todo_expression_2018() {
         get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
     insta::assert_debug_snapshot!(output);
 }
+
+#[test]
+fn unreachable_expression_2019() {
+    let path = concat_paths(
+        file!(),
+        checked_path!(
+            "../../sample_code/should_fail/single_file/type_check/unreachable_expression.k"
+        ),
+    );
+    let output =
+        get_manifest_path_and_backslash_normalized_output(vec![DUMMY_EXEC_PATH, "--file", &path]);
+    insta::assert_debug_snapshot!(output);
+}

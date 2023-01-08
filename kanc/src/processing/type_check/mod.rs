@@ -112,6 +112,8 @@ pub enum TypeCheckError {
         non_shifted_output_type_id: NormalFormId,
     },
     CannotInferTypeOfTodoExpression(NodeId<TodoExpression>),
+    // TODO: Track explosion sources, so we can give the user a
+    // specific line number to mark as `impossible`.
     UnreachableExpression(ExpressionId),
     LetStatementTypeContainsPrivateName(NodeId<LetStatement>, NodeId<NameExpression>),
 }

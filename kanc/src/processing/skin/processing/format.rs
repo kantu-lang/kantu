@@ -873,6 +873,16 @@ impl<'a>
                 format!("[E2018] Cannot infer the type of a `todo` expression at {loc}.")
             }
 
+            TypeCheckError::UnreachableExpression(expression_id) => {
+                let loc = format_optional_span_start(
+                    registry.expression_ref(*expression_id).span(),
+                    file_path_map,
+                );
+                let indented_expression_display =
+                    format_expression_with_one_indent(*expression_id, options, registry);
+                format!("[E2019] Unreachable expression\n{indented_expression_display}\nat {loc}.\nThis expression is considered unreachable because it is contained in an obviously impossible match case. Please mark the match case as `impossible`.")
+            }
+
             // TODO: Complete
             other => format!("[E20??] {:#?}", other),
         }
