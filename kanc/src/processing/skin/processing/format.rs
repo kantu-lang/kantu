@@ -772,7 +772,7 @@ impl<'a>
                     format_expression_with_one_indent(*expression_id, options, registry);
                 let indented_actual_display =
                     format_expression_with_one_indent(actual_type_id.raw(), options, registry);
-                format!("[E2010] At {loc}, expect type\n{idented_expected_display}\nbut found\n{indented_expr_display}\nwhich had a type of\n{indented_actual_display}")
+                format!("[E2010] At {loc}, expected type\n{idented_expected_display}\nbut found\n{indented_expr_display}\nwhich had a type of\n{indented_actual_display}")
             }
 
             TypeCheckError::NonAdtMatchee {
