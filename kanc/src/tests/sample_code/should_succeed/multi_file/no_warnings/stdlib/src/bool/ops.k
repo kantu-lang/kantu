@@ -28,6 +28,8 @@ pub let(*) eq = fun _(a: Bool, b: Bool): Bool {
     }
 };
 
-pub let(*) xor = fun _(a: Bool, b: Bool): Bool {
+pub let(*) neq = fun _(a: Bool, b: Bool): Bool {
     not(eq(a, b))
 };
+
+pub let(*) xor = neq;
