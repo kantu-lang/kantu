@@ -411,13 +411,27 @@ fn get_param_name_ids(
 }
 
 fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalFormId {
+    let fun_type_id = get_type_of_fun_dirty(state, fun_id).expect(
+        "Fun was presumed to be well-typed, yet calling `get_type_of_fun_dirty` returned an `Err`.",
+    );
+
     let fun = state.registry.get(fun_id).clone();
     let normalized_param_list_id =
         normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id)
             .ignore_push_warning_i_know_what_i_am_doing();
 
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
-    state.context.pop_n(fun.param_list_id.len());
+
+    state
+        .context
+        .push(ContextEntry {
+            type_id: fun_type_id,
+            definition: ContextEntryDefinition::Uninterpreted,
+        })
+        .ignore_push_warning_i_know_what_i_am_doing();
+    let normalized_body_id = evaluate_well_typed_expression(state, fun.body_id);
+
+    state.context.pop_n(fun.param_list_id.len() + 1);
 
     NormalFormId::unchecked_new(ExpressionId::Fun(
         state
@@ -428,7 +442,7 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
                 name_id: fun.name_id,
                 param_list_id: normalized_param_list_id,
                 return_type_id: normalized_return_type_id.raw(),
-                body_id: fun.body_id,
+                body_id: normalized_body_id.raw(),
                 skip_type_checking_body: fun.skip_type_checking_body,
             })
             .without_spans(state.registry),
@@ -735,8 +749,8 @@ trait IgnorePushWarning {
     fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output;
 }
 
-impl IgnorePushWarning for Result<NonEmptyParamListId, Tainted<Infallible>> {
-    type Output = NonEmptyParamListId;
+impl<T> IgnorePushWarning for Result<T, Tainted<Infallible>> {
+    type Output = T;
 
     fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output {
         match self {
