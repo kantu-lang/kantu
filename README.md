@@ -12,12 +12,15 @@ Kantu is [pure](https://en.wikipedia.org/wiki/Purely_functional_programming) and
 
 ## Why Kantu?
 
-Kantu allows you to enforce extremely precise statically checked
-conditions on your code.
+With Kantu, you can specify extremely precise properties
+about the behavior of your code, and the compiler will
+check those properties at compile-time.
+Think "type system on steroids."
 
-We are all familiar with static (i.e., compile-time) checks in
+We are all familiar with compile-time checks in
 some form or another.
-For example, consider the following Rust code
+Among the most famous is type checking.
+Consider the following Rust code
 
 ```rust
 /// Returns the index of `target` in `list`,
@@ -36,6 +39,7 @@ In this example, the compiler will check that
 
 If either of these conditions are not satisfied, the compiler will emit
 a type error.
+Thus, we can say that the compiler _checks type-correctness_.
 
 However, apart from type-correctness, the compiler doesn't check
 much else.
@@ -112,21 +116,38 @@ to O(n), completely defeating the purpose of binary search
 
 **With Kantu, you can perform these checks at _compile time_!**
 
+How? Through type checking!
+
+"Wait, type checking? Isn't that the same as, say, Rust?"
+
+The key difference is that Kantu supports [dependent types](https://en.wikipedia.org/wiki/Dependent_type), which allow types to depend on
+_terms_.
+This lets us get much more precise with our types.
+
+For example, consider the Java generic type `ArrayList<T>`.
+What if we wanted to extend the type to include the
+length of the list?
+Something like `ArrayList<T, n>`, where `T` is a type
+and `n` is a number.
+
+Well, it turns out this is unfortunately impossible.
+Java generic types can only depend on
+_types_ (like `T`), not _terms_ (like `n`).
+However, this is possible with Kantu's dependent types!
+
+Returning to the binary search example,
+we can define a (dependent) type that represents
+what it means for the binary search to be "correct":
+
 ```kantu
-let binary_search = fun _(
-    list: List(Nat),
-    target: Nat,
-): Option(Nat) {
-    // <Write business logic here>
-};
+// Assume that `binary_search` has already
+// been defined above.
 
 use std.list.*;
 use std.eq.*;
 
-// Correctness definition
-let binary_search_correctness = fun _(
+let BinarySearchOutputCorrect = fun _(
     list: List(Nat),
-    ascending: Ascending(list),
     target: Nat,
 ): Type {
     match binary_search(list, target) {
@@ -139,14 +160,31 @@ let binary_search_correctness = fun _(
     }
 };
 
-// Correctness proof
-let binary_search_correct = fun _(
+let BinarySearchCorrect = forall(
     list: List(Nat),
     ascending: Ascending(list),
     target: Nat,
-): binary_search_correctness(list, ascending, target) {
-    // <Write proof here>
+) {
+    BinarySearchOutputCorrect(list, target)
 };
+```
+
+Then, we can prove that this property holds by
+writing a term of type `BinarySearchCorrect`:
+
+```kantu
+use std.ascribe;
+
+let binary_search_correct = ascribe(
+    BinarySearchCorrect,
+    fun _(
+        list: List(Nat),
+        ascending: Ascending(list),
+        target: Nat,
+    ): BinarySearchOutputCorrect(list, target) {
+        // <Write implementation here>
+    }
+);
 ```
 
 > If you don't understand the above code, no worries!
@@ -195,3 +233,7 @@ easier to create tooling for.
 Kantu is distributed under both the MIT license and the Apache License (Version 2.0).
 
 See [LICENSE-APACHE](./LICENSE-APACHE) and [LICENSE-MIT](./LICENSE-MIT) for details.
+
+```
+
+```
