@@ -422,10 +422,11 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
 
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
 
+    let shifted_fun_type_id = fun_type_id.upshift(fun.param_list_id.len(), state.registry);
     state
         .context
         .push(ContextEntry {
-            type_id: fun_type_id,
+            type_id: shifted_fun_type_id,
             definition: ContextEntryDefinition::Uninterpreted,
         })
         .ignore_push_warning_i_know_what_i_am_doing();
