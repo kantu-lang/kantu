@@ -15,30 +15,21 @@ fn expect_type_mismatch_error(
             let actual_expression_src = format_expression(
                 &expand_expression(registry, expression_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_expression_src, expected_expression_src);
 
             let actual_expected_type_src = format_expression(
                 &expand_expression(registry, expected_type_id.raw()),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_expected_type_src, expected_expected_type_src);
 
             let actual_actual_type_src = format_expression(
                 &expand_expression(registry, actual_type_id.raw()),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_actual_type_src, expected_actual_type_src);
         }

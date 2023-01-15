@@ -129,10 +129,7 @@ fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
             let actual_src = format_expression(
                 &expand_expression(registry, callee_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(expected_callee_src, &actual_src);
         }
@@ -184,10 +181,7 @@ fn expect_variant_return_type_type_arg_arity_mismatch_error(
             let actual_src = format_expression(
                 &expand_expression(registry, return_type_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(expected_return_type_src, &actual_src);
         }

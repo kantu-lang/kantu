@@ -9,10 +9,7 @@ fn expect_illegal_callee_error(src: &str, expected_illegal_callee_src: &str) {
             let actual_src = format_expression(
                 &expand_expression(registry, callee_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_src, expected_illegal_callee_src);
         }
