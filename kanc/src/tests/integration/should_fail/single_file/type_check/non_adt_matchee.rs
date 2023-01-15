@@ -12,7 +12,6 @@ fn expect_non_adt_matchee_error(src: &str, expected_matchee_src: &str, expected_
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_matchee_src, expected_matchee_src);
@@ -23,7 +22,6 @@ fn expect_non_adt_matchee_error(src: &str, expected_matchee_src: &str, expected_
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_type_src, expected_type_src);

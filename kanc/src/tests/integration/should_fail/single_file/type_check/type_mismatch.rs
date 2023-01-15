@@ -18,7 +18,6 @@ fn expect_type_mismatch_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_expression_src, expected_expression_src);
@@ -29,7 +28,6 @@ fn expect_type_mismatch_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_expected_type_src, expected_expected_type_src);
@@ -40,7 +38,6 @@ fn expect_type_mismatch_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_actual_type_src, expected_actual_type_src);

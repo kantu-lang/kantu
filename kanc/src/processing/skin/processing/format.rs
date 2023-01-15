@@ -940,7 +940,6 @@ fn format_expression_with_one_indent(
         &format_bound::FormatOptions {
             ident_size_in_spaces: INDENT_SIZE_IN_SPACES,
             print_db_indices: options.show_db_indices,
-            print_fun_body_status: false,
         },
     );
     format!("{i0}{expr_display}")

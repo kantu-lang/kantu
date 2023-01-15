@@ -90,7 +90,6 @@ pub enum TypeCheckFailureReasonSummary {
 const FORMAT_OPTIONS: FormatOptions = FormatOptions {
     ident_size_in_spaces: 4,
     print_db_indices: false,
-    print_fun_body_status: false,
 };
 
 pub fn assert_expectations_match_actual_warnings(

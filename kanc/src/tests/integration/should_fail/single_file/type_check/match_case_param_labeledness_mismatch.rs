@@ -12,7 +12,6 @@ fn expect_match_case_param_labeledness_mismatch_error(src: &str, expected_case_s
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_call_src, expected_case_src);

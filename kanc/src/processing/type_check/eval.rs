@@ -453,7 +453,6 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
                 param_list_id: normalized_param_list_id,
                 return_type_id: normalized_return_type_id.raw(),
                 body_id: normalized_body_id.raw(),
-                skip_type_checking_body: fun.skip_type_checking_body,
             })
             .without_spans(state.registry),
     ))

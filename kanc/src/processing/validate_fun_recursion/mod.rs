@@ -572,7 +572,6 @@ fn validate_fun_recursion_in_fun_dirty(
         param_list_id,
         return_type_id,
         body_id,
-        skip_type_checking_body: fun.skip_type_checking_body,
     }))
 }
 

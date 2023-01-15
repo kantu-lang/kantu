@@ -12,7 +12,6 @@ fn expect_illegal_type_error(src: &str, expected_illegal_type_src: &str) {
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_src, expected_illegal_type_src);

@@ -132,7 +132,6 @@ fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(expected_callee_src, &actual_src);
@@ -188,7 +187,6 @@ fn expect_variant_return_type_type_arg_arity_mismatch_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(expected_return_type_src, &actual_src);

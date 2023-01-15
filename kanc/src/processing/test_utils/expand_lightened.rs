@@ -276,14 +276,12 @@ pub fn expand_fun(registry: &NodeRegistry, id: NodeId<light::Fun>) -> Fun {
     let params = expand_param_list(registry, light.param_list_id);
     let return_type = expand_expression(registry, light.return_type_id);
     let body = expand_expression(registry, light.body_id);
-    let skip_type_checking_body = light.skip_type_checking_body;
     Fun {
         span: light.span,
         name,
         params,
         return_type,
         body,
-        skip_type_checking_body,
     }
 }
 

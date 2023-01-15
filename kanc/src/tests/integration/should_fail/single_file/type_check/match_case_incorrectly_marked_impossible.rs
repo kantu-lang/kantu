@@ -12,7 +12,6 @@ fn expect_match_case_incorrectly_marked_impossible_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(

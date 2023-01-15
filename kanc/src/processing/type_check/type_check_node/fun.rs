@@ -1,7 +1,5 @@
 use super::*;
 
-// TODO: Maybe we don't need `skip_type_checking_body` if we add it to the context
-// as `Uninterpreted`.
 pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     state: &mut State,
     fun_id: NodeId<Fun>,

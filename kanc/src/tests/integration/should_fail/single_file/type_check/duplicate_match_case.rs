@@ -16,7 +16,6 @@ fn expect_duplicate_match_case_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(
@@ -30,7 +29,6 @@ fn expect_duplicate_match_case_error(
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(&actual_new_match_case_src, expected_new_match_case_src);

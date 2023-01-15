@@ -125,12 +125,6 @@ pub struct Fun {
     pub param_list_id: NonEmptyParamListId,
     pub return_type_id: ExpressionId,
     pub body_id: ExpressionId,
-    /// This is used by the type checker to
-    /// determine whether it can skip type-checking
-    /// the function's body.
-    /// This is necessary to prevent infinite recursion
-    /// when checking recursive functions.
-    pub skip_type_checking_body: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

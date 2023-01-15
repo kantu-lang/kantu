@@ -9,7 +9,6 @@ fn expect_cannot_infer_type_of_empty_match_error(src: &str, expected_match_src: 
                 &FormatOptions {
                     ident_size_in_spaces: 4,
                     print_db_indices: false,
-                    print_fun_body_status: false,
                 },
             );
             assert_eq_up_to_white_space(expected_match_src, &actual_src);
