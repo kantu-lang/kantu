@@ -149,6 +149,43 @@ let binary_search_correct = fun _(
 };
 ```
 
+> If you don't understand the above code, no worries!
+> The [Language Overview](./docs/overview.md) should make
+> everything make sense.
+
+This might seem more verbose than the original Rust example
+(i.e., the one with no runtime checks), and it is.
+However, this has the benefit of being _verifiably correct_!
+
+Across all programming languages, programs usually to obey this law:
+
+![Code safety is inversely proportional to brevity](./docs/assets/code_safety_vs_brevity.jpg "Code safety vs. brevity")
+
+Kantu's selling point is that it empowers _you_, the programmer,
+to choose where on the curve you want to be.
+When you don't care much about correctness and just want to
+write concise, readable code, you can!
+When you desperately want to ensure at all costs that
+a given piece of code is correct, you can!
+
+### Why not Coq/Lean/Agda/Idris?
+
+Actually, all those are perfectly fine, too.
+Maybe even _better_, if you're working on a
+"highly mathy" project.
+For example, the Four Color Theorem has been
+proven in [Coq](https://github.com/coq-community/fourcolor),
+but writing the same proof in Kantu would be tedious,
+if not impossible.
+
+However, all those languages are, well, ...big.
+They contain a lot of features--more than you will
+probably ever need for general-purpose programming.
+
+Kantu deliberately aims to be as simple as possible,
+which not only makes it easier to learn, but also
+easier to create tooling for.
+
 ## Guides
 
 - [Language Overview](./docs/overview.md)
