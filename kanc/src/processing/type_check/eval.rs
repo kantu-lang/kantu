@@ -411,25 +411,15 @@ fn get_param_name_ids(
 }
 
 fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalFormId {
-    untaint_err(state, fun_id, evaluate_well_typed_fun_pseudo_dirty).safe_unwrap()
-}
-
-// TODO: Redesign (this is a code smell)
-// We use the term "pseudo dirty" to indicate that this function is not really
-// dirty, but we use the Tainted pattern to stay consistent with the rest of
-// the code.
-fn evaluate_well_typed_fun_pseudo_dirty(
-    state: &mut State,
-    fun_id: NodeId<Fun>,
-) -> Result<NormalFormId, Tainted<Infallible>> {
     let fun = state.registry.get(fun_id).clone();
     let normalized_param_list_id =
-        normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id)?;
+        normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id)
+            .ignore_push_warning_i_know_what_i_am_doing();
 
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
     state.context.pop_n(fun.param_list_id.len());
 
-    Ok(NormalFormId::unchecked_new(ExpressionId::Fun(
+    NormalFormId::unchecked_new(ExpressionId::Fun(
         state
             .registry
             .add_and_overwrite_id(Fun {
@@ -442,7 +432,7 @@ fn evaluate_well_typed_fun_pseudo_dirty(
                 skip_type_checking_body: fun.skip_type_checking_body,
             })
             .without_spans(state.registry),
-    )))
+    ))
 }
 
 fn normalize_params_as_much_as_possible_and_leave_in_context(
@@ -702,24 +692,14 @@ fn evaluate_well_typed_match(state: &mut State, match_id: NodeId<Match>) -> Norm
 }
 
 fn evaluate_well_typed_forall(state: &mut State, forall_id: NodeId<Forall>) -> NormalFormId {
-    untaint_err(state, forall_id, evaluate_well_typed_forall_pseudo_dirty).safe_unwrap()
-}
-
-// TODO: Redesign (this is a code smell)
-// We use the term "pseudo dirty" to indicate that this function is not really
-// dirty, but we use the Tainted pattern to stay consistent with the rest of
-// the code.
-fn evaluate_well_typed_forall_pseudo_dirty(
-    state: &mut State,
-    forall_id: NodeId<Forall>,
-) -> Result<NormalFormId, Tainted<Infallible>> {
     let forall = state.registry.get(forall_id).clone();
     let normalized_param_list_id =
-        normalize_params_as_much_as_possible_and_leave_in_context(state, forall.param_list_id)?;
+        normalize_params_as_much_as_possible_and_leave_in_context(state, forall.param_list_id)
+            .ignore_push_warning_i_know_what_i_am_doing();
     let normalized_output_id = evaluate_well_typed_expression(state, forall.output_id);
     state.context.pop_n(forall.param_list_id.len());
 
-    Ok(NormalFormId::unchecked_new(ExpressionId::Forall(
+    NormalFormId::unchecked_new(ExpressionId::Forall(
         state
             .registry
             .add_and_overwrite_id(Forall {
@@ -729,10 +709,39 @@ fn evaluate_well_typed_forall_pseudo_dirty(
                 output_id: normalized_output_id.raw(),
             })
             .without_spans(state.registry),
-    )))
+    ))
 }
 
 fn evaluate_well_typed_check(state: &mut State, check_id: NodeId<Check>) -> NormalFormId {
     let check = state.registry.get(check_id);
     evaluate_well_typed_expression(state, check.output_id)
+}
+
+/// Push warnings exist to force (at the type-system level) the
+/// developer to acknowledge that they are pushing a value onto the
+/// context.
+///
+/// This is important because if a function returns early with an `Err`
+/// using `?`, then the context will not be popped.
+/// Therefore, the developer must take care to use some `untaint_err` to
+/// clean up the context.
+///
+/// However, in `evaluate_well_typed_expression`
+/// doesn't return a `Result`--it either succeeds or it panics.
+/// Therefore, cleanup is not necessary.
+trait IgnorePushWarning {
+    type Output;
+
+    fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output;
+}
+
+impl IgnorePushWarning for Result<NonEmptyParamListId, Tainted<Infallible>> {
+    type Output = NonEmptyParamListId;
+
+    fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output {
+        match self {
+            Ok(id) => id,
+            Err(_) => unreachable!(),
+        }
+    }
 }
