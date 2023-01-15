@@ -411,6 +411,23 @@ fn get_param_name_ids(
 }
 
 fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalFormId {
+    use crate::processing::test_utils::{expand_lightened::*, format::*};
+    static mut DEBUG: usize = 0;
+    unsafe {
+        DEBUG += 1;
+        if DEBUG == 10 {
+            panic!("Oh no!");
+        }
+    }
+
+    println!(
+        "EVALUATING FUN: {}",
+        format_expression_with_default_options(&expand_expression(
+            state.registry,
+            ExpressionId::Fun(fun_id)
+        ))
+    );
+
     let fun_type_id = get_type_of_fun_dirty(state, fun_id).expect(
         "Fun was presumed to be well-typed, yet calling `get_type_of_fun_dirty` returned an `Err`.",
     );

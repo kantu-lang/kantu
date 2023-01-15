@@ -39,38 +39,38 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
             .without_spans(state.registry),
     ));
 
-    {
-        let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
-        let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
-        let shifted_fun = state.registry.get(shifted_fun_id).clone();
-        let body_skipped_fun_id = state.registry.add_and_overwrite_id(Fun {
-            skip_type_checking_body: true,
-            ..shifted_fun
-        });
-        let normalized_fun_id =
-            evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
-        state.context.push(ContextEntry {
-            type_id: shifted_fun_type_id,
-            definition: ContextEntryDefinition::Alias {
-                value_id: normalized_fun_id,
-                visibility: Visibility(ModScope::Global),
-                transparency: Transparency(ModScope::Global),
-            },
-        })?;
-    }
-
-    // We need to upshift the return type by one level before comparing it
-    // to the body type, to account for the fact that the function has been
-    // added to the context.
-    let normalized_return_type_id_relative_to_body = {
-        let shifted_return_type_id = fun.return_type_id.upshift(1, state.registry);
-        evaluate_well_typed_expression(state, shifted_return_type_id)
-    };
-    // Shadow the old variable to prevent it from being accidentally used.
-    #[allow(unused_variables)]
-    let normalized_return_type_id = ();
-
     if !fun.skip_type_checking_body {
+        {
+            let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
+            let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
+            let shifted_fun = state.registry.get(shifted_fun_id).clone();
+            let body_skipped_fun_id = state.registry.add_and_overwrite_id(Fun {
+                skip_type_checking_body: true,
+                ..shifted_fun
+            });
+            let normalized_fun_id =
+                evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
+            state.context.push(ContextEntry {
+                type_id: shifted_fun_type_id,
+                definition: ContextEntryDefinition::Alias {
+                    value_id: normalized_fun_id,
+                    visibility: Visibility(ModScope::Global),
+                    transparency: Transparency(ModScope::Global),
+                },
+            })?;
+        }
+
+        // We need to upshift the return type by one level before comparing it
+        // to the body type, to account for the fact that the function has been
+        // added to the context.
+        let normalized_return_type_id_relative_to_body = {
+            let shifted_return_type_id = fun.return_type_id.upshift(1, state.registry);
+            evaluate_well_typed_expression(state, shifted_return_type_id)
+        };
+        // Shadow the old variable to prevent it from being accidentally used.
+        #[allow(unused_variables)]
+        let normalized_return_type_id = ();
+
         let normalized_body_type_id = get_type_of_expression_dirty(
             state,
             Some(normalized_return_type_id_relative_to_body),
@@ -96,8 +96,10 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
                 });
             }
         }
+
+        state.context.pop_n(1);
     }
 
-    state.context.pop_n(param_arity + 1);
+    state.context.pop_n(param_arity);
     Ok(fun_type_id)
 }
