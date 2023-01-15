@@ -428,10 +428,6 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
         ))
     );
 
-    let fun_type_id = get_type_of_fun_dirty(state, fun_id).expect(
-        "Fun was presumed to be well-typed, yet calling `get_type_of_fun_dirty` returned an `Err`.",
-    );
-
     let fun = state.registry.get(fun_id).clone();
     let normalized_param_list_id =
         normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id)
@@ -439,11 +435,24 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
 
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
 
-    let shifted_fun_type_id = fun_type_id.upshift(fun.param_list_id.len(), state.registry);
+    let fun_type_id = {
+        let shifted_normalized_param_list_id =
+            normalized_param_list_id.upshift(fun.param_list_id.len(), state.registry);
+        let shifted_normalized_return_type_id =
+            normalized_return_type_id.upshift(fun.param_list_id.len(), state.registry);
+        NormalFormId::unchecked_new(ExpressionId::Forall(state.registry.add_and_overwrite_id(
+            Forall {
+                id: dummy_id(),
+                span: None,
+                param_list_id: shifted_normalized_param_list_id,
+                output_id: shifted_normalized_return_type_id.raw(),
+            },
+        )))
+    };
     state
         .context
         .push(ContextEntry {
-            type_id: shifted_fun_type_id,
+            type_id: fun_type_id,
             definition: ContextEntryDefinition::Uninterpreted,
         })
         .ignore_push_warning_i_know_what_i_am_doing();
