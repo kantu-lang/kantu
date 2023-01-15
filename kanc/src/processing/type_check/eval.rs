@@ -415,7 +415,7 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
     static mut DEBUG: usize = 0;
     unsafe {
         DEBUG += 1;
-        if DEBUG == 30 {
+        if DEBUG == 30000 {
             panic!("Oh no!");
         }
     }

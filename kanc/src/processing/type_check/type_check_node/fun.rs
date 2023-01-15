@@ -48,15 +48,9 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
                 skip_type_checking_body: true,
                 ..shifted_fun
             });
-            let normalized_fun_id =
-                evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
             state.context.push(ContextEntry {
                 type_id: shifted_fun_type_id,
-                definition: ContextEntryDefinition::Alias {
-                    value_id: normalized_fun_id,
-                    visibility: Visibility(ModScope::Global),
-                    transparency: Transparency(ModScope::Global),
-                },
+                definition: ContextEntryDefinition::Uninterpreted,
             })?;
         }
 

@@ -26,7 +26,6 @@ pub let plus_S = fun plus_S_(-a: OpaqueNat, b: OpaqueNat): Eq(OpaqueNat, OpaqueS
     }
 };
 
-/*
 pub let plus_O = fun plus_O_(-n: OpaqueNat): Eq(OpaqueNat, plus(n, OpaqueO), n) {
     match n {
         .O => Eq.Refl(Nat, Nat.O),
@@ -66,4 +65,3 @@ pub let plus_comm = fun plus_comm(-a: OpaqueNat, b: OpaqueNat): Eq(OpaqueNat, pl
             },
     }
 };
-*/
