@@ -42,12 +42,6 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     if !fun.skip_type_checking_body {
         {
             let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
-            let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
-            let shifted_fun = state.registry.get(shifted_fun_id).clone();
-            let body_skipped_fun_id = state.registry.add_and_overwrite_id(Fun {
-                skip_type_checking_body: true,
-                ..shifted_fun
-            });
             state.context.push(ContextEntry {
                 type_id: shifted_fun_type_id,
                 definition: ContextEntryDefinition::Uninterpreted,
