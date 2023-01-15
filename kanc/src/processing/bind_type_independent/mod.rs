@@ -722,7 +722,6 @@ fn bind_fun_dirty(context: &mut Context, fun: ub::Fun) -> Result<Expression, Bin
         params,
         return_type,
         body,
-        skip_type_checking_body: false,
     }));
 
     context.pop_n(param_arity + 1);

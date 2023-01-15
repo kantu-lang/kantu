@@ -6,11 +6,7 @@ fn expect_unreachable_expression_error(src: &str, expected_expression_src: &str)
             let actual_expression_src = format_expression(
                 &expand_expression(registry, expression_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_expression_src, expected_expression_src);
         }

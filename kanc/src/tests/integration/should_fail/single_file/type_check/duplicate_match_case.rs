@@ -13,11 +13,7 @@ fn expect_duplicate_match_case_error(
             let actual_existing_match_case_src = format_match_case(
                 &expand_match_case(registry, existing_match_case_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(
                 &actual_existing_match_case_src,
@@ -27,11 +23,7 @@ fn expect_duplicate_match_case_error(
             let actual_new_match_case_src = format_match_case(
                 &expand_match_case(registry, new_match_case_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_new_match_case_src, expected_new_match_case_src);
         }

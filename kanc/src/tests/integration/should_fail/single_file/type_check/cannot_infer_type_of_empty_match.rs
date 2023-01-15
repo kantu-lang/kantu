@@ -6,11 +6,7 @@ fn expect_cannot_infer_type_of_empty_match_error(src: &str, expected_match_src: 
             let actual_src = format_match(
                 &expand_match(registry, match_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(expected_match_src, &actual_src);
         }

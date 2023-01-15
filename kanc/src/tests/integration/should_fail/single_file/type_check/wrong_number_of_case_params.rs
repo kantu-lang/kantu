@@ -14,11 +14,7 @@ fn expect_wrong_number_of_case_params_error(
             let actual_src = format_match_case(
                 &expand_match_case(registry, case_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_src, expected_illegal_match_case_src);
             assert_eq!(expected_expected_arity, actual_expected_arity);

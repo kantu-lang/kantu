@@ -311,7 +311,6 @@ impl ShiftDbIndices for NodeId<Fun> {
             param_list_id: shifted_param_list_id,
             return_type_id: shifted_return_type_id,
             body_id: shifted_body_id,
-            skip_type_checking_body: fun.skip_type_checking_body,
         }))
     }
 }

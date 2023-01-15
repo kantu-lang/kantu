@@ -221,7 +221,6 @@ impl WithoutSpans for NodeId<Fun> {
             param_list_id,
             return_type_id,
             body_id,
-            skip_type_checking_body: original.skip_type_checking_body,
         })
     }
 }

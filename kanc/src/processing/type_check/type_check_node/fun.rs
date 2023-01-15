@@ -1,7 +1,5 @@
 use super::*;
 
-// TODO: Maybe we don't need `skip_type_checking_body` if we add it to the context
-// as `Uninterpreted`.
 pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     state: &mut State,
     fun_id: NodeId<Fun>,
@@ -39,25 +37,11 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
             .without_spans(state.registry),
     ));
 
-    {
-        let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
-        let shifted_fun_id = fun_id.upshift(param_arity, state.registry);
-        let shifted_fun = state.registry.get(shifted_fun_id).clone();
-        let body_skipped_fun_id = state.registry.add_and_overwrite_id(Fun {
-            skip_type_checking_body: true,
-            ..shifted_fun
-        });
-        let normalized_fun_id =
-            evaluate_well_typed_expression(state, ExpressionId::Fun(body_skipped_fun_id));
-        state.context.push(ContextEntry {
-            type_id: shifted_fun_type_id,
-            definition: ContextEntryDefinition::Alias {
-                value_id: normalized_fun_id,
-                visibility: Visibility(ModScope::Global),
-                transparency: Transparency(ModScope::Global),
-            },
-        })?;
-    }
+    let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
+    state.context.push(ContextEntry {
+        type_id: shifted_fun_type_id,
+        definition: ContextEntryDefinition::Uninterpreted,
+    })?;
 
     // We need to upshift the return type by one level before comparing it
     // to the body type, to account for the fact that the function has been
@@ -70,31 +54,29 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     #[allow(unused_variables)]
     let normalized_return_type_id = ();
 
-    if !fun.skip_type_checking_body {
-        let normalized_body_type_id = get_type_of_expression_dirty(
-            state,
-            Some(normalized_return_type_id_relative_to_body),
-            fun.body_id,
-        )?;
+    let normalized_body_type_id = get_type_of_expression_dirty(
+        state,
+        Some(normalized_return_type_id_relative_to_body),
+        fun.body_id,
+    )?;
 
-        let equality_status = get_rewritten_term_equality_status(
-            state,
-            normalized_body_type_id,
-            normalized_return_type_id_relative_to_body,
-        );
+    let equality_status = get_rewritten_term_equality_status(
+        state,
+        normalized_body_type_id,
+        normalized_return_type_id_relative_to_body,
+    );
 
-        match equality_status {
-            RewrittenTermEqualityStatus::Equal => (),
-            RewrittenTermEqualityStatus::Exploded => {
-                return tainted_err(TypeCheckError::UnreachableExpression(fun.body_id));
-            }
-            RewrittenTermEqualityStatus::NotEqual => {
-                return tainted_err(TypeCheckError::TypeMismatch {
-                    expression_id: fun.body_id,
-                    expected_type_id: normalized_return_type_id_relative_to_body,
-                    actual_type_id: normalized_body_type_id,
-                });
-            }
+    match equality_status {
+        RewrittenTermEqualityStatus::Equal => (),
+        RewrittenTermEqualityStatus::Exploded => {
+            return tainted_err(TypeCheckError::UnreachableExpression(fun.body_id));
+        }
+        RewrittenTermEqualityStatus::NotEqual => {
+            return tainted_err(TypeCheckError::TypeMismatch {
+                expression_id: fun.body_id,
+                expected_type_id: normalized_return_type_id_relative_to_body,
+                actual_type_id: normalized_body_type_id,
+            });
         }
     }
 

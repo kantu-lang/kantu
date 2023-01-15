@@ -9,22 +9,14 @@ fn expect_non_adt_matchee_error(src: &str, expected_matchee_src: &str, expected_
             let actual_matchee_src = format_expression(
                 &expand_expression(registry, matchee_id),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_matchee_src, expected_matchee_src);
 
             let actual_type_src = format_expression(
                 &expand_expression(registry, type_id.raw()),
                 0,
-                &FormatOptions {
-                    ident_size_in_spaces: 4,
-                    print_db_indices: false,
-                    print_fun_body_status: false,
-                },
+                &FORMAT_OPTIONS_FOR_COMPARISON,
             );
             assert_eq_up_to_white_space(&actual_type_src, expected_type_src);
         }

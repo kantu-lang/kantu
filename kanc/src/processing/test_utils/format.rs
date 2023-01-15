@@ -8,7 +8,6 @@ fn indent(indent_level: usize, options: &FormatOptions) -> String {
 pub struct FormatOptions {
     pub ident_size_in_spaces: usize,
     pub print_db_indices: bool,
-    pub print_fun_body_status: bool,
 }
 
 impl Default for FormatOptions {
@@ -16,7 +15,6 @@ impl Default for FormatOptions {
         Self {
             ident_size_in_spaces: 4,
             print_db_indices: true,
-            print_fun_body_status: true,
         }
     }
 }
@@ -62,12 +60,7 @@ pub fn format_ident(ident: &Identifier) -> &str {
 pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) -> String {
     let callee = match &call.callee {
         Expression::Fun(fun) => {
-            let body_status = if options.print_fun_body_status {
-                format!("<<{}>>", fun.skip_type_checking_body)
-            } else {
-                "".to_string()
-            };
-            format!("{}{}", format_ident(&fun.name), body_status)
+            format!("{}", format_ident(&fun.name))
         }
         _ => format_expression(&call.callee, indent_level, options),
     };
@@ -115,18 +108,12 @@ pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) ->
 pub fn format_fun(fun: &Fun, indent_level: usize, options: &FormatOptions) -> String {
     let i0 = indent(indent_level, options);
     let i1 = indent(indent_level + 1, options);
-    let body_status = if options.print_fun_body_status {
-        format!("<<{}>>", fun.skip_type_checking_body)
-    } else {
-        "".to_string()
-    };
     let params = format_params(&fun.params, indent_level + 1, options);
     let return_type = format_expression(&fun.return_type, indent_level + 1, options);
     let body = format_expression(&fun.body, indent_level + 1, options);
     format!(
-        "fun {}{}(\n{}\n{}): {} {{\n{}{}\n{}}}",
+        "fun {}(\n{}\n{}): {} {{\n{}{}\n{}}}",
         format_ident(&fun.name),
-        body_status,
         params,
         &i0,
         return_type,

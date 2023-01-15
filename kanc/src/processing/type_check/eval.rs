@@ -417,7 +417,31 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
             .ignore_push_warning_i_know_what_i_am_doing();
 
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
-    state.context.pop_n(fun.param_list_id.len());
+
+    let fun_type_id = {
+        let shifted_normalized_param_list_id =
+            normalized_param_list_id.upshift(fun.param_list_id.len(), state.registry);
+        let shifted_normalized_return_type_id =
+            normalized_return_type_id.upshift(fun.param_list_id.len(), state.registry);
+        NormalFormId::unchecked_new(ExpressionId::Forall(state.registry.add_and_overwrite_id(
+            Forall {
+                id: dummy_id(),
+                span: None,
+                param_list_id: shifted_normalized_param_list_id,
+                output_id: shifted_normalized_return_type_id.raw(),
+            },
+        )))
+    };
+    state
+        .context
+        .push(ContextEntry {
+            type_id: fun_type_id,
+            definition: ContextEntryDefinition::Uninterpreted,
+        })
+        .ignore_push_warning_i_know_what_i_am_doing();
+    let normalized_body_id = evaluate_well_typed_expression(state, fun.body_id);
+
+    state.context.pop_n(fun.param_list_id.len() + 1);
 
     NormalFormId::unchecked_new(ExpressionId::Fun(
         state
@@ -428,8 +452,7 @@ fn evaluate_well_typed_fun(state: &mut State, fun_id: NodeId<Fun>) -> NormalForm
                 name_id: fun.name_id,
                 param_list_id: normalized_param_list_id,
                 return_type_id: normalized_return_type_id.raw(),
-                body_id: fun.body_id,
-                skip_type_checking_body: fun.skip_type_checking_body,
+                body_id: normalized_body_id.raw(),
             })
             .without_spans(state.registry),
     ))
@@ -735,8 +758,8 @@ trait IgnorePushWarning {
     fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output;
 }
 
-impl IgnorePushWarning for Result<NonEmptyParamListId, Tainted<Infallible>> {
-    type Output = NonEmptyParamListId;
+impl<T> IgnorePushWarning for Result<T, Tainted<Infallible>> {
+    type Output = T;
 
     fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output {
         match self {

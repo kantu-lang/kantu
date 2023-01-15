@@ -42,6 +42,11 @@ pub use multi_file::*;
 mod warning_comparison;
 pub use warning_comparison::*;
 
+pub const FORMAT_OPTIONS_FOR_COMPARISON: FormatOptions = FormatOptions {
+    ident_size_in_spaces: 4,
+    print_db_indices: false,
+};
+
 pub fn component_identifier_names(
     registry: &NodeRegistry,
     name_id: NodeId<NameExpression>,

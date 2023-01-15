@@ -87,12 +87,6 @@ pub enum TypeCheckFailureReasonSummary {
     TypeCheckError,
 }
 
-const FORMAT_OPTIONS: FormatOptions = FormatOptions {
-    ident_size_in_spaces: 4,
-    print_db_indices: false,
-    print_fun_body_status: false,
-};
-
 pub fn assert_expectations_match_actual_warnings(
     registry: &NodeRegistry,
     expected_warnings: &[TypeCheckWarningSummary],
@@ -392,7 +386,7 @@ fn summarize_type_assertion_warning(
                 assertion_src: format_check_assertion(
                     &expand_check_assertion(registry, *assertion_id),
                     0,
-                    &FORMAT_OPTIONS,
+                    &FORMAT_OPTIONS_FOR_COMPARISON,
                 ),
             }
         }
@@ -401,7 +395,7 @@ fn summarize_type_assertion_warning(
                 assertion_src: format_check_assertion(
                     &expand_check_assertion(registry, *assertion_id),
                     0,
-                    &FORMAT_OPTIONS,
+                    &FORMAT_OPTIONS_FOR_COMPARISON,
                 ),
             }
         }
@@ -441,7 +435,7 @@ fn summarize_normal_form_assertion_warning(
                 assertion_src: format_check_assertion(
                     &expand_check_assertion(registry, *assertion_id),
                     0,
-                    &FORMAT_OPTIONS,
+                    &FORMAT_OPTIONS_FOR_COMPARISON,
                 ),
             }
         }
@@ -482,7 +476,11 @@ fn format_goal_kw_or_expr(
 }
 
 fn format_expr(registry: &NodeRegistry, id: ExpressionId) -> String {
-    format_expression(&expand_expression(registry, id), 0, &FORMAT_OPTIONS)
+    format_expression(
+        &expand_expression(registry, id),
+        0,
+        &FORMAT_OPTIONS_FOR_COMPARISON,
+    )
 }
 
 pub fn summarize_type_check_failure_reason(
