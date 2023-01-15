@@ -39,55 +39,49 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
             .without_spans(state.registry),
     ));
 
-    if !fun.skip_type_checking_body {
-        {
-            let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
-            state.context.push(ContextEntry {
-                type_id: shifted_fun_type_id,
-                definition: ContextEntryDefinition::Uninterpreted,
-            })?;
+    let shifted_fun_type_id = fun_type_id.upshift(param_arity, state.registry);
+    state.context.push(ContextEntry {
+        type_id: shifted_fun_type_id,
+        definition: ContextEntryDefinition::Uninterpreted,
+    })?;
+
+    // We need to upshift the return type by one level before comparing it
+    // to the body type, to account for the fact that the function has been
+    // added to the context.
+    let normalized_return_type_id_relative_to_body = {
+        let shifted_return_type_id = fun.return_type_id.upshift(1, state.registry);
+        evaluate_well_typed_expression(state, shifted_return_type_id)
+    };
+    // Shadow the old variable to prevent it from being accidentally used.
+    #[allow(unused_variables)]
+    let normalized_return_type_id = ();
+
+    let normalized_body_type_id = get_type_of_expression_dirty(
+        state,
+        Some(normalized_return_type_id_relative_to_body),
+        fun.body_id,
+    )?;
+
+    let equality_status = get_rewritten_term_equality_status(
+        state,
+        normalized_body_type_id,
+        normalized_return_type_id_relative_to_body,
+    );
+
+    match equality_status {
+        RewrittenTermEqualityStatus::Equal => (),
+        RewrittenTermEqualityStatus::Exploded => {
+            return tainted_err(TypeCheckError::UnreachableExpression(fun.body_id));
         }
-
-        // We need to upshift the return type by one level before comparing it
-        // to the body type, to account for the fact that the function has been
-        // added to the context.
-        let normalized_return_type_id_relative_to_body = {
-            let shifted_return_type_id = fun.return_type_id.upshift(1, state.registry);
-            evaluate_well_typed_expression(state, shifted_return_type_id)
-        };
-        // Shadow the old variable to prevent it from being accidentally used.
-        #[allow(unused_variables)]
-        let normalized_return_type_id = ();
-
-        let normalized_body_type_id = get_type_of_expression_dirty(
-            state,
-            Some(normalized_return_type_id_relative_to_body),
-            fun.body_id,
-        )?;
-
-        let equality_status = get_rewritten_term_equality_status(
-            state,
-            normalized_body_type_id,
-            normalized_return_type_id_relative_to_body,
-        );
-
-        match equality_status {
-            RewrittenTermEqualityStatus::Equal => (),
-            RewrittenTermEqualityStatus::Exploded => {
-                return tainted_err(TypeCheckError::UnreachableExpression(fun.body_id));
-            }
-            RewrittenTermEqualityStatus::NotEqual => {
-                return tainted_err(TypeCheckError::TypeMismatch {
-                    expression_id: fun.body_id,
-                    expected_type_id: normalized_return_type_id_relative_to_body,
-                    actual_type_id: normalized_body_type_id,
-                });
-            }
+        RewrittenTermEqualityStatus::NotEqual => {
+            return tainted_err(TypeCheckError::TypeMismatch {
+                expression_id: fun.body_id,
+                expected_type_id: normalized_return_type_id_relative_to_body,
+                actual_type_id: normalized_body_type_id,
+            });
         }
-
-        state.context.pop_n(1);
     }
 
-    state.context.pop_n(param_arity);
+    state.context.pop_n(param_arity + 1);
     Ok(fun_type_id)
 }
