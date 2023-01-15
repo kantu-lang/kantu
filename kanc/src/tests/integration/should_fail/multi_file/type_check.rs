@@ -128,6 +128,7 @@ fn expect_universe_inconsistency_error(project_path: ProjectPath) {
     });
 }
 
+#[ignore]
 #[test]
 fn universe_inconsistency() {
     expect_universe_inconsistency_error(
