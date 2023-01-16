@@ -31,7 +31,9 @@ impl OffsetContext<'_> {
             .checked_sub(self.extra_entries_in_context)
             .map(DbIndex);
         if let Some(adjusted_db_index) = adjusted_db_index {
-            self.raw.get_definition(adjusted_db_index, registry)
+            self.raw
+                .get_definition(adjusted_db_index, registry)
+                .upshift(self.extra_entries_in_context, registry)
         } else {
             ContextEntryDefinition::Uninterpreted
         }
