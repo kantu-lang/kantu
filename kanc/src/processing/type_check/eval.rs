@@ -39,8 +39,8 @@ impl OffsetContext<'_> {
 }
 
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
-    let (context, contextless) = state.detach_context();
-    let state = EvalState {
+    let (context, mut contextless) = state.detach_context();
+    let mut state = EvalState {
         raw: &mut contextless,
         context: OffsetContext {
             raw: context,
@@ -308,7 +308,11 @@ fn can_unlabeled_fun_be_applied(
 
     let normalized_arg_ids = state.raw.registry.get_list(normalized_arg_list_id);
     let decreasing_arg_id = NormalFormId::unchecked_new(normalized_arg_ids[decreasing_param_index]);
-    is_variant_expression(state, decreasing_arg_id)
+    determine_whether_expression_is_variant_using_node_registry_and_definition_getter(
+        state.raw.registry,
+        |db_index, registry| state.context.get_definition(db_index, registry),
+        decreasing_arg_id,
+    )
 }
 
 fn get_decreasing_param_index(
@@ -361,7 +365,11 @@ fn can_labeled_fun_be_applied(
     }).expect(
         "A well-typed labeled Call should have a labeled arg corresponding to each param label.",
     );
-    is_variant_expression(state, decreasing_arg_id)
+    determine_whether_expression_is_variant_using_node_registry_and_definition_getter(
+        state.raw.registry,
+        |db_index, registry| state.context.get_definition(db_index, registry),
+        decreasing_arg_id,
+    )
 }
 
 fn get_decreasing_param_label_id(
@@ -480,20 +488,6 @@ fn evaluate_fun(state: &mut EvalState, fun_id: NodeId<Fun>) -> NormalFormId {
 
     let normalized_return_type_id = evaluate_expression(state, fun.return_type_id);
 
-    let fun_type_id = {
-        let shifted_normalized_param_list_id =
-            normalized_param_list_id.upshift(fun.param_list_id.len(), state.raw.registry);
-        let shifted_normalized_return_type_id =
-            normalized_return_type_id.upshift(fun.param_list_id.len(), state.raw.registry);
-        NormalFormId::unchecked_new(ExpressionId::Forall(
-            state.raw.registry.add_and_overwrite_id(Forall {
-                id: dummy_id(),
-                span: None,
-                param_list_id: shifted_normalized_param_list_id,
-                output_id: shifted_normalized_return_type_id.raw(),
-            }),
-        ))
-    };
     state.context.push_uninterpreted();
     let normalized_body_id = evaluate_expression(state, fun.body_id);
 
@@ -609,7 +603,11 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
 
     let (normalized_matchee_variant_name_id, normalized_matchee_arg_list_id) =
         if let Some((variant_name_id, arg_list_id)) =
-            try_as_variant_expression(state, normalized_matchee_id.raw())
+            try_as_variant_expression_with_node_registry_and_definition_getter(
+                state.raw.registry,
+                |db_index, registry| state.context.get_definition(db_index, registry),
+                normalized_matchee_id.raw(),
+            )
         {
             (variant_name_id, arg_list_id)
         } else {

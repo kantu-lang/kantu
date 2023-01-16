@@ -657,21 +657,37 @@ pub(super) fn try_as_variant_expression(
     state: &mut State,
     expression_id: ExpressionId,
 ) -> Option<(NodeId<Identifier>, Option<NonEmptyCallArgListId>)> {
+    try_as_variant_expression_with_node_registry_and_definition_getter(
+        state.registry,
+        |db_index, registry| state.context.get_definition(db_index, registry),
+        expression_id,
+    )
+}
+
+/// If the provided expression is has a variant at
+/// the top level, this returns IDs for the variant name
+/// and the variant's argument list.
+/// Otherwise, returns `None`.
+pub(super) fn try_as_variant_expression_with_node_registry_and_definition_getter(
+    registry: &mut NodeRegistry,
+    mut get_definition: impl FnMut(DbIndex, &mut NodeRegistry) -> ContextEntryDefinition,
+    expression_id: ExpressionId,
+) -> Option<(NodeId<Identifier>, Option<NonEmptyCallArgListId>)> {
     match expression_id {
         ExpressionId::Name(name_id) => {
-            let db_index = state.registry.get(name_id).db_index;
-            let definition = state.context.get_definition(db_index, state.registry);
+            let db_index = registry.get(name_id).db_index;
+            let definition = get_definition(db_index, registry);
             match definition {
                 ContextEntryDefinition::Variant { name_id, .. } => Some((name_id, None)),
                 _ => None,
             }
         }
         ExpressionId::Call(call_id) => {
-            let call = state.registry.get(call_id).clone();
+            let call = registry.get(call_id).clone();
             match call.callee_id {
                 ExpressionId::Name(name_id) => {
-                    let db_index = state.registry.get(name_id).db_index;
-                    let definition = state.context.get_definition(db_index, state.registry);
+                    let db_index = registry.get(name_id).db_index;
+                    let definition = get_definition(db_index, registry);
                     match definition {
                         ContextEntryDefinition::Variant { name_id, .. } => {
                             Some((name_id, Some(call.arg_list_id)))
@@ -691,6 +707,22 @@ pub(super) fn try_as_variant_expression(
 pub(super) fn is_variant_expression(state: &mut State, expression_id: NormalFormId) -> bool {
     try_as_variant_expression(state, expression_id.raw()).is_some()
 }
+
+/// If the provided expression is has a variant at
+/// the top level,this returns true.
+pub(super) fn determine_whether_expression_is_variant_using_node_registry_and_definition_getter(
+    registry: &mut NodeRegistry,
+    get_definition: impl FnMut(DbIndex, &mut NodeRegistry) -> ContextEntryDefinition,
+    expression_id: NormalFormId,
+) -> bool {
+    try_as_variant_expression_with_node_registry_and_definition_getter(
+        registry,
+        get_definition,
+        expression_id.raw(),
+    )
+    .is_some()
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Exploded;
 
