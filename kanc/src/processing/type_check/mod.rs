@@ -186,7 +186,11 @@ struct State<'a> {
 
 impl<'a> State<'_> {
     fn without_context(&'a mut self) -> ContextlessState<'a> {
-        ContextlessState {
+        self.detach_context().1
+    }
+
+    fn detach_context(&'a mut self) -> (&mut Context, ContextlessState<'a>) {
+        let contextless = ContextlessState {
             file_tree: self.file_tree,
             substitution_context: self.substitution_context,
             registry: self.registry,
@@ -194,7 +198,8 @@ impl<'a> State<'_> {
             warnings: self.warnings,
 
             required_transparency_for_substitution: self.required_transparency_for_substitution,
-        }
+        };
+        (self.context, contextless)
     }
 }
 
