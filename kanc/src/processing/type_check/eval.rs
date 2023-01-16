@@ -22,24 +22,37 @@ impl OffsetContext<'_> {
     }
 }
 
-// TODO: Idea: Make this take a `type_id` param, to prove that the
-// expression is well-typed.
-pub(super) fn evaluate_well_typed_expression(
-    state: &mut EvalState,
-    id: ExpressionId,
-) -> NormalFormId {
+pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
+    let (context, contextless) = state.detach_context();
+    let state = EvalState {
+        raw: &mut contextless,
+        context: OffsetContext {
+            raw: context,
+            extra_entries_in_context: 0,
+        },
+    };
+    evaluate_expression(&mut state, id)
+}
+
+// As a convention, since every function in this module
+// only deals with well-typed expressions,
+// we'll omit the `well_typed` prefix
+// from private function names,
+// and leave it as implicit.
+
+fn evaluate_expression(state: &mut EvalState, id: ExpressionId) -> NormalFormId {
     match id {
-        ExpressionId::Name(name_id) => evaluate_well_typed_name_expression(state, name_id),
-        ExpressionId::Todo(todo_id) => evaluate_well_typed_todo_expression(state, todo_id),
-        ExpressionId::Call(call_id) => evaluate_well_typed_call(state, call_id),
-        ExpressionId::Fun(fun_id) => evaluate_well_typed_fun(state, fun_id),
-        ExpressionId::Match(match_id) => evaluate_well_typed_match(state, match_id),
-        ExpressionId::Forall(forall_id) => evaluate_well_typed_forall(state, forall_id),
-        ExpressionId::Check(check_id) => evaluate_well_typed_check(state, check_id),
+        ExpressionId::Name(name_id) => evaluate_name_expression(state, name_id),
+        ExpressionId::Todo(todo_id) => evaluate_todo_expression(state, todo_id),
+        ExpressionId::Call(call_id) => evaluate_call(state, call_id),
+        ExpressionId::Fun(fun_id) => evaluate_fun(state, fun_id),
+        ExpressionId::Match(match_id) => evaluate_match(state, match_id),
+        ExpressionId::Forall(forall_id) => evaluate_forall(state, forall_id),
+        ExpressionId::Check(check_id) => evaluate_check(state, check_id),
     }
 }
 
-fn evaluate_well_typed_name_expression(
+fn evaluate_name_expression(
     state: &mut EvalState,
     name_id: NodeId<NameExpression>,
 ) -> NormalFormId {
@@ -86,15 +99,12 @@ fn evaluate_well_typed_name_expression(
     }
 }
 
-fn evaluate_well_typed_todo_expression(
-    _: &mut EvalState,
-    todo_id: NodeId<TodoExpression>,
-) -> NormalFormId {
+fn evaluate_todo_expression(_: &mut EvalState, todo_id: NodeId<TodoExpression>) -> NormalFormId {
     // `todo` expressions are, by definition, normal forms.
     NormalFormId::unchecked_new(ExpressionId::Todo(todo_id))
 }
 
-fn evaluate_well_typed_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
+fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
     fn register_normalized_nonsubstituted_call(
         registry: &mut NodeRegistry,
         normalized_callee_id: NormalFormId,
@@ -113,9 +123,9 @@ fn evaluate_well_typed_call(state: &mut EvalState, call_id: NodeId<Call>) -> Nor
 
     let call = state.raw.registry.get(call_id).clone();
 
-    let normalized_callee_id = evaluate_well_typed_expression(state, call.callee_id);
+    let normalized_callee_id = evaluate_expression(state, call.callee_id);
 
-    let normalized_arg_list_id = evaluate_well_typed_call_arg_list(state, call.arg_list_id);
+    let normalized_arg_list_id = evaluate_call_arg_list(state, call.arg_list_id);
 
     match normalized_callee_id.raw() {
         ExpressionId::Fun(fun_id) => {
@@ -238,7 +248,7 @@ fn evaluate_well_typed_call(state: &mut EvalState, call_id: NodeId<Call>) -> Nor
 
             let body_id = fun.body_id.subst_all(&substitutions, state.raw);
             let shifted_body_id = body_id.downshift(param_arity + 1, state.raw.registry);
-            evaluate_well_typed_expression(state, shifted_body_id)
+            evaluate_expression(state, shifted_body_id)
         }
         ExpressionId::Name(_)
         | ExpressionId::Call(_)
@@ -359,7 +369,7 @@ fn get_decreasing_param_label_id(
         })
 }
 
-fn evaluate_well_typed_call_arg_list(
+fn evaluate_call_arg_list(
     state: &mut EvalState,
     arg_list_id: NonEmptyCallArgListId,
 ) -> NonEmptyCallArgListId {
@@ -370,7 +380,7 @@ fn evaluate_well_typed_call_arg_list(
                 .registry
                 .get_list(arg_list_id)
                 .to_non_empty_vec()
-                .into_mapped(|arg_id| evaluate_well_typed_expression(state, arg_id).raw());
+                .into_mapped(|arg_id| evaluate_expression(state, arg_id).raw());
             NonEmptyCallArgListId::Unlabeled(state.raw.registry.add_list(arg_ids))
         }
         NonEmptyCallArgListId::UniquelyLabeled(arg_list_id) => {
@@ -379,16 +389,13 @@ fn evaluate_well_typed_call_arg_list(
                 .registry
                 .get_list(arg_list_id)
                 .to_non_empty_vec()
-                .into_mapped(|arg_id| evaluate_well_typed_labeled_call_arg(state, arg_id));
+                .into_mapped(|arg_id| evaluate_labeled_call_arg(state, arg_id));
             NonEmptyCallArgListId::UniquelyLabeled(state.raw.registry.add_list(arg_ids))
         }
     }
 }
 
-fn evaluate_well_typed_labeled_call_arg(
-    state: &mut EvalState,
-    arg_id: LabeledCallArgId,
-) -> LabeledCallArgId {
+fn evaluate_labeled_call_arg(state: &mut EvalState, arg_id: LabeledCallArgId) -> LabeledCallArgId {
     match arg_id {
         LabeledCallArgId::Implicit {
             label_id,
@@ -431,7 +438,7 @@ fn evaluate_well_typed_labeled_call_arg(
         }
         LabeledCallArgId::Explicit { label_id, value_id } => LabeledCallArgId::Explicit {
             label_id,
-            value_id: evaluate_well_typed_expression(state, value_id).raw(),
+            value_id: evaluate_expression(state, value_id).raw(),
         },
     }
 }
@@ -454,12 +461,12 @@ fn get_param_name_ids(
     }
 }
 
-fn evaluate_well_typed_fun(state: &mut EvalState, fun_id: NodeId<Fun>) -> NormalFormId {
+fn evaluate_fun(state: &mut EvalState, fun_id: NodeId<Fun>) -> NormalFormId {
     let fun = state.raw.registry.get(fun_id).clone();
     let normalized_param_list_id =
         normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id);
 
-    let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
+    let normalized_return_type_id = evaluate_expression(state, fun.return_type_id);
 
     let fun_type_id = {
         let shifted_normalized_param_list_id =
@@ -476,7 +483,7 @@ fn evaluate_well_typed_fun(state: &mut EvalState, fun_id: NodeId<Fun>) -> Normal
         ))
     };
     state.context.push_uninterpreted();
-    let normalized_body_id = evaluate_well_typed_expression(state, fun.body_id);
+    let normalized_body_id = evaluate_expression(state, fun.body_id);
 
     state.context.pop_n(fun.param_list_id.len() + 1);
 
@@ -519,7 +526,7 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
     let remaining_param_ids = remaining_param_ids.to_vec();
     let normalized_first_param_id = {
         let first_param = state.raw.registry.get(first_param_id).clone();
-        let normalized_param_type_id = evaluate_well_typed_expression(state, first_param.type_id);
+        let normalized_param_type_id = evaluate_expression(state, first_param.type_id);
         state.context.push_uninterpreted();
         state.raw.registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
@@ -533,7 +540,7 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
     let remaining_param_ids = remaining_param_ids.to_vec();
     for param_id in remaining_param_ids.iter().copied() {
         let param = state.raw.registry.get(param_id).clone();
-        let normalized_param_type_id = evaluate_well_typed_expression(state, param.type_id);
+        let normalized_param_type_id = evaluate_expression(state, param.type_id);
         normalized_param_ids.push(state.raw.registry.add_and_overwrite_id(UnlabeledParam {
             id: dummy_id(),
             span: None,
@@ -555,7 +562,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     let remaining_param_ids = remaining_param_ids.to_vec();
     let normalized_first_param_id = {
         let first_param = state.raw.registry.get(first_param_id).clone();
-        let normalized_param_type_id = evaluate_well_typed_expression(state, first_param.type_id);
+        let normalized_param_type_id = evaluate_expression(state, first_param.type_id);
         state.context.push_uninterpreted();
         state.raw.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
@@ -570,7 +577,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     let remaining_param_ids = remaining_param_ids.to_vec();
     for param_id in remaining_param_ids.iter().copied() {
         let param = state.raw.registry.get(param_id).clone();
-        let normalized_param_type_id = evaluate_well_typed_expression(state, param.type_id);
+        let normalized_param_type_id = evaluate_expression(state, param.type_id);
         normalized_param_ids.push(state.raw.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
@@ -584,9 +591,9 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     NonEmptyParamListId::UniquelyLabeled(state.raw.registry.add_list(normalized_param_ids))
 }
 
-fn evaluate_well_typed_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormId {
+fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormId {
     let match_ = state.raw.registry.get(match_id).clone();
-    let normalized_matchee_id = evaluate_well_typed_expression(state, match_.matchee_id);
+    let normalized_matchee_id = evaluate_expression(state, match_.matchee_id);
 
     let (normalized_matchee_variant_name_id, normalized_matchee_arg_list_id) =
         if let Some((variant_name_id, arg_list_id)) =
@@ -742,14 +749,14 @@ fn evaluate_well_typed_match(state: &mut EvalState, match_id: NodeId<Match>) -> 
         }
     };
 
-    evaluate_well_typed_expression(state, substituted_body)
+    evaluate_expression(state, substituted_body)
 }
 
-fn evaluate_well_typed_forall(state: &mut EvalState, forall_id: NodeId<Forall>) -> NormalFormId {
+fn evaluate_forall(state: &mut EvalState, forall_id: NodeId<Forall>) -> NormalFormId {
     let forall = state.raw.registry.get(forall_id).clone();
     let normalized_param_list_id =
         normalize_params_as_much_as_possible_and_leave_in_context(state, forall.param_list_id);
-    let normalized_output_id = evaluate_well_typed_expression(state, forall.output_id);
+    let normalized_output_id = evaluate_expression(state, forall.output_id);
     state.context.pop_n(forall.param_list_id.len());
 
     NormalFormId::unchecked_new(ExpressionId::Forall(
@@ -766,9 +773,9 @@ fn evaluate_well_typed_forall(state: &mut EvalState, forall_id: NodeId<Forall>) 
     ))
 }
 
-fn evaluate_well_typed_check(state: &mut EvalState, check_id: NodeId<Check>) -> NormalFormId {
+fn evaluate_check(state: &mut EvalState, check_id: NodeId<Check>) -> NormalFormId {
     let check = state.raw.registry.get(check_id);
-    evaluate_well_typed_expression(state, check.output_id)
+    evaluate_expression(state, check.output_id)
 }
 
 // TODO: Delete
@@ -781,7 +788,7 @@ fn evaluate_well_typed_check(state: &mut EvalState, check_id: NodeId<Check>) -> 
 // /// Therefore, the developer must take care to use some `untaint_err` to
 // /// clean up the context.
 // ///
-// /// However, in `evaluate_well_typed_expression`
+// /// However, in `evaluate_expression`
 // /// doesn't return a `Result`--it either succeeds or it panics.
 // /// Therefore, cleanup is not necessary.
 // trait IgnorePushWarning {
