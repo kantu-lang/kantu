@@ -20,6 +20,22 @@ impl OffsetContext<'_> {
     fn pop_n(&mut self, n: usize) {
         self.extra_entries_in_context -= n;
     }
+
+    fn get_definition(
+        &self,
+        db_index: DbIndex,
+        registry: &mut NodeRegistry,
+    ) -> ContextEntryDefinition {
+        let adjusted_db_index = db_index
+            .0
+            .checked_sub(self.extra_entries_in_context)
+            .map(DbIndex);
+        if let Some(adjusted_db_index) = adjusted_db_index {
+            self.raw.get_definition(adjusted_db_index, registry)
+        } else {
+            ContextEntryDefinition::Uninterpreted
+        }
+    }
 }
 
 pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
@@ -58,7 +74,6 @@ fn evaluate_name_expression(
 ) -> NormalFormId {
     let name = state.raw.registry.get(name_id);
     let definition = state
-        .raw
         .context
         .get_definition(name.db_index, state.raw.registry);
     match definition {
@@ -402,10 +417,7 @@ fn evaluate_labeled_call_arg(state: &mut EvalState, arg_id: LabeledCallArgId) ->
             db_index,
             value_id,
         } => {
-            let definition = state
-                .raw
-                .context
-                .get_definition(db_index, state.raw.registry);
+            let definition = state.context.get_definition(db_index, state.raw.registry);
             if let ContextEntryDefinition::Alias {
                 value_id: alias_value_id,
                 transparency,
