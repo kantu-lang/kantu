@@ -789,33 +789,3 @@ fn evaluate_check(state: &mut EvalState, check_id: NodeId<Check>) -> NormalFormI
     let check = state.raw.registry.get(check_id);
     evaluate_expression(state, check.output_id)
 }
-
-// TODO: Delete
-// /// Push warnings exist to force (at the type-system level) the
-// /// developer to acknowledge that they are pushing a value onto the
-// /// context.
-// ///
-// /// This is important because if a function returns early with an `Err`
-// /// using `?`, then the context will not be popped.
-// /// Therefore, the developer must take care to use some `untaint_err` to
-// /// clean up the context.
-// ///
-// /// However, in `evaluate_expression`
-// /// doesn't return a `Result`--it either succeeds or it panics.
-// /// Therefore, cleanup is not necessary.
-// trait IgnorePushWarning {
-//     type Output;
-
-//     fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output;
-// }
-
-// impl<T> IgnorePushWarning for Result<T, Tainted<Infallible>> {
-//     type Output = T;
-
-//     fn ignore_push_warning_i_know_what_i_am_doing(self) -> Self::Output {
-//         match self {
-//             Ok(id) => id,
-//             Err(_) => unreachable!(),
-//         }
-//     }
-// }
