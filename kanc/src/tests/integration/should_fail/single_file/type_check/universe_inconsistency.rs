@@ -15,8 +15,8 @@ fn currys_paradox() {
 }
 
 // TODO: Fix
-#[ignore]
 #[test]
+#[ignore]
 fn russells_paradox() {
     let src = include_str!("../../../../sample_code/should_fail/single_file/type_check/universe_inconsistency/russells_paradox.k");
     expect_universe_inconsistency_error(src);

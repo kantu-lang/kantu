@@ -3,8 +3,6 @@
 //
 // See section "Russell's Paradox in Agda".
 
-// TODO: Rewrite this proof to use less `ascribe`s.
-
 let ascribe = fun _(T: Type, t: T): T {
     t
 };
@@ -86,13 +84,19 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
             ) => match H_exists_r_such_that_extracting_r_yields_s {
                 .c(
                     _NonSelfContainingSet_2,
-                    _,
+                    _ExtractingArgYieldsSPredicate,
                     r,
                     H_extracting_r_yields_s,
                 ) => check (
                     r: NonSelfContainingSet,
                     H_extracting_r_yields_s: Equal(Set, s, extract_nsc(r)),
                 ) {
+                    // `r`'s "main type" is `_NonSelfContainingSet_2`, which
+                    // is not an ADT itself.
+                    // However, it is equal to `NonSelfContainingSet`, which
+                    // _is_ an ADT.
+                    // Thus, we must use type ascription before performing the
+                    // match.
                     match ascribe(NonSelfContainingSet, r) {
                         .c(
                             _Set,
@@ -103,18 +107,23 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                             r': Set,
                             r'_not_in_r': NonSelfContaining(r'),
                         ) {
+                            // Similarly, `H_extracting_r_yields_s`'s "main type" is
+                            // `_ExtractingArgYieldsSPredicate(r)`, which
+                            // is not an ADT itself.
+                            // However, it is equal to `Equal(Set, s, r')`,
+                            // which _is_ an ADT.
+                            // So once again, we must use type ascription before
+                            // performing the match.
                             match ascribe(
-                                Equal(Set, r', extract_nsc(r)),
-                                Equal.refl(Set, r'),
+                                Equal(Set, s, r'),
+                                H_extracting_r_yields_s,
                             ) {
-                                .refl(_, _) => match ascribe(
-                                    Equal(Set, s, r'),
-                                    H_extracting_r_yields_s,
-                                ) {
-                                    .refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
-                                        H_self_containing
-                                    ),
-                                },
+                                // Once again, `r'_not_in_r'`'s "main type" is
+                                // `_NonSelfContaining(r')`.
+                                // So once again, we ascribe before matching.
+                                .refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
+                                    H_self_containing
+                                ),
                             }
                         },
                     }
@@ -130,15 +139,15 @@ let delta_not_in_delta = fun _(
     delta_members_are_nsc(delta, H_delta_in_delta)(H_delta_in_delta)
 };
 
-let wrapped_delta = ascribe(
-    NonSelfContainingSet,
-    Exists.c(
-        Set,
-        NonSelfContaining,
-        delta,
-        delta_not_in_delta,
-    ),
+let wrapped_delta = Exists.c(
+    Set,
+    NonSelfContaining,
+    delta,
+    delta_not_in_delta,
 );
+
+type Unit { .trivial: Unit }
+let _check = check (wrapped_delta: NonSelfContainingSet) { Unit.trivial };
 
 let delta_in_delta = In.c(
     delta,
@@ -150,10 +159,7 @@ let delta_in_delta = In.c(
             Equal(Set, delta, extract_nsc(r_elem))
         },
         wrapped_delta,
-        ascribe(
-            Equal(Set, delta, extract_nsc(wrapped_delta)),
-            Equal.refl(Set, delta),
-        ),
+        Equal.refl(Set, delta),
     ),
 );
 
