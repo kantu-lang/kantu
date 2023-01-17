@@ -150,11 +150,8 @@ let delta_in_delta = In.c(
             Equal(Set, delta, extract_nsc(r_elem))
         },
         wrapped_delta,
-        ascribe(
-            Equal(Set, delta, extract_nsc(wrapped_delta)),
-            Equal.refl(Set, delta),
-        ),
+        Equal.refl(Set, delta),
     ),
 );
 
-let false = delta_not_in_delta(delta_in_delta);
+// let false = delta_not_in_delta(delta_in_delta);
