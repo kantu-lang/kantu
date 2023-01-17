@@ -1,5 +1,19 @@
 # Kantu
 
+> ## 🚧🏗🚧 NOTICE: Kantu is currently under heavy construction 🚧🏗🚧
+>
+> Consequently, it does not yet have any high-quality documentation.
+>
+> The current documentation was created for internal use only,
+> and is almost certainly not up to date.
+> Of course, if you want to take a look (at your own risk!), we can't stop you.
+>
+> However, we _strongly recommend_ checking back in April 2023.
+>
+> Thank you for your patience and understanding!
+
+## Introduction
+
 Kantu (rhymes with "onto") is a programming language for writing highly reliable programs.
 
 - Secure by default--no file, network, or environment access, unless explicitly enabled
