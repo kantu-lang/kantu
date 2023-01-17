@@ -93,6 +93,12 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                     r: NonSelfContainingSet,
                     H_extracting_r_yields_s: Equal(Set, s, extract_nsc(r)),
                 ) {
+                    // `r`'s "main type" is `_NonSelfContainingSet_2`, which
+                    // is not an ADT itself.
+                    // However, it is equal to `NonSelfContainingSet`, which
+                    // _is_ an ADT.
+                    // Thus, we must use type ascription before performing the
+                    // match.
                     match ascribe(NonSelfContainingSet, r) {
                         .c(
                             _Set,
