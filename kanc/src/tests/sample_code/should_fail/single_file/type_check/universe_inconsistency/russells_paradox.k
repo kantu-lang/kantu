@@ -3,8 +3,6 @@
 //
 // See section "Russell's Paradox in Agda".
 
-// TODO: Rewrite this proof to use less `ascribe`s.
-
 let ascribe = fun _(T: Type, t: T): T {
     t
 };
