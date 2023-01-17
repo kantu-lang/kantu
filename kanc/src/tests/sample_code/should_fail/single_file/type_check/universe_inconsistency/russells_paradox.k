@@ -141,15 +141,15 @@ let delta_not_in_delta = fun _(
     delta_members_are_nsc(delta, H_delta_in_delta)(H_delta_in_delta)
 };
 
-let wrapped_delta = ascribe(
-    NonSelfContainingSet,
-    Exists.c(
-        Set,
-        NonSelfContaining,
-        delta,
-        delta_not_in_delta,
-    ),
+let wrapped_delta = Exists.c(
+    Set,
+    NonSelfContaining,
+    delta,
+    delta_not_in_delta,
 );
+
+type Unit { .trivial: Unit }
+let _check = check (wrapped_delta: NonSelfContainingSet) { Unit.trivial };
 
 let delta_in_delta = In.c(
     delta,
