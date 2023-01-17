@@ -86,7 +86,7 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
             ) => match H_exists_r_such_that_extracting_r_yields_s {
                 .c(
                     _NonSelfContainingSet_2,
-                    _,
+                    _ExtractingArgYieldsSPredicate,
                     r,
                     H_extracting_r_yields_s,
                 ) => check (
@@ -109,6 +109,13 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                             r': Set,
                             r'_not_in_r': NonSelfContaining(r'),
                         ) {
+                            // Similarly, `H_extracting_r_yields_s`'s "main type" is
+                            // `_ExtractingArgYieldsSPredicate(r)`, which
+                            // is not an ADT itself.
+                            // However, it is equal to `Equal(Set, s, r')`,
+                            // which _is_ an ADT.
+                            // So once again, we must use type ascription before
+                            // performing the match.
                             match ascribe(
                                 Equal(Set, s, r'),
                                 H_extracting_r_yields_s,
