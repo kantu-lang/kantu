@@ -163,4 +163,4 @@ let delta_in_delta = In.c(
     ),
 );
 
-// let false = delta_not_in_delta(delta_in_delta);
+let false = delta_not_in_delta(delta_in_delta);
