@@ -15,6 +15,7 @@ mod match_case_param_labeledness_mismatch;
 mod missing_match_case;
 mod non_adt_matchee;
 mod type_mismatch;
+mod universe_inconsistency;
 mod unreachable_expression;
 mod wrong_number_of_args;
 mod wrong_number_of_case_params;

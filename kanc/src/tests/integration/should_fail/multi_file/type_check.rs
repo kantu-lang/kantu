@@ -109,20 +109,3 @@ fn insufficient_transparency() {
         "Eq(T, t, t,)",
     );
 }
-
-fn expect_universe_inconsistency_error(project_path: ProjectPath) {
-    expect_type_check_error(project_path, |_registry, err| match err {
-        _ => unimplemented!(),
-    });
-}
-
-#[ignore]
-#[test]
-fn currys_paradox() {
-    expect_universe_inconsistency_error(ProjectPath {
-        callee_file_path: file!(),
-        checked_unadjusted_pack_yscl_path: checked_path!(
-            "../../../sample_code/should_fail/multi_file/type_check/currys_paradox/pack.yscl"
-        ),
-    });
-}
