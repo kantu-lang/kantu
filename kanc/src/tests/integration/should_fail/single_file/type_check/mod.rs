@@ -45,6 +45,6 @@ fn expect_type_check_error(src: &str, panicker: impl Fn(&NodeRegistry, TypeCheck
         &mut registry,
         file_item_list_id,
     )
-    .expect_err("Type checking unexpected succeeded");
+    .expect_err("Type checking unexpectedly succeeded");
     panicker(&registry, err);
 }
