@@ -118,13 +118,11 @@ fn expect_universe_inconsistency_error(project_path: ProjectPath) {
 
 #[ignore]
 #[test]
-fn universe_inconsistency() {
-    expect_universe_inconsistency_error(
-        ProjectPath {
-            callee_file_path: file!(),
-            checked_unadjusted_pack_yscl_path: checked_path!(
-                "../../../sample_code/should_fail/multi_file/type_check/universe_inconsistency/pack.yscl"
-            ),
-        },
-    );
+fn currys_paradox() {
+    expect_universe_inconsistency_error(ProjectPath {
+        callee_file_path: file!(),
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_fail/multi_file/type_check/currys_paradox/pack.yscl"
+        ),
+    });
 }
