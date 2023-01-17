@@ -6,6 +6,7 @@ fn expect_universe_inconsistency_error(src: &str) {
     });
 }
 
+// TODO: Fix
 #[ignore]
 #[test]
 fn currys_paradox() {
@@ -13,6 +14,7 @@ fn currys_paradox() {
     expect_universe_inconsistency_error(src);
 }
 
+// TODO: Fix
 #[ignore]
 #[test]
 fn russells_paradox() {
