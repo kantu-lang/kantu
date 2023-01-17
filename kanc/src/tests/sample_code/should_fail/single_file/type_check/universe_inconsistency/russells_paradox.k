@@ -110,17 +110,12 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                             r'_not_in_r': NonSelfContaining(r'),
                         ) {
                             match ascribe(
-                                Equal(Set, r', extract_nsc(r)),
-                                Equal.refl(Set, r'),
+                                Equal(Set, s, r'),
+                                H_extracting_r_yields_s,
                             ) {
-                                .refl(_, _) => match ascribe(
-                                    Equal(Set, s, r'),
-                                    H_extracting_r_yields_s,
-                                ) {
-                                    .refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
-                                        H_self_containing
-                                    ),
-                                },
+                                .refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
+                                    H_self_containing
+                                ),
                             }
                         },
                     }
