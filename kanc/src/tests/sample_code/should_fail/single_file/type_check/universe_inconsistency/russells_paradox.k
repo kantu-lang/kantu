@@ -120,6 +120,9 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                                 Equal(Set, s, r'),
                                 H_extracting_r_yields_s,
                             ) {
+                                // Once again, `r'_not_in_r'`'s "main type" is
+                                // `_NonSelfContaining(r')`.
+                                // So once again, we ascribe before matching.
                                 .refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
                                     H_self_containing
                                 ),
