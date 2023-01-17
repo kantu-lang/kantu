@@ -17,7 +17,6 @@
 Kantu (rhymes with "onto") is a programming language for writing highly reliable programs.
 
 - Secure by default--no file, network, or environment access, unless explicitly enabled
-- Memory safe
 - No runtime exceptions
 - Guaranteed termination (no infinite loops/recursion)
 - Arbitrary preconditions and postconditions can be checked at compile-time
