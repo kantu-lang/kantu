@@ -613,6 +613,8 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
         {
             (variant_name_id, arg_list_id)
         } else {
+            let normalized_case_list_id =
+                normalize_possibly_empty_match_case_list(state, match_.case_list_id);
             return NormalFormId::unchecked_new(ExpressionId::Match(
                 state
                     .raw
@@ -621,7 +623,7 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
                         id: dummy_id(),
                         span: None,
                         matchee_id: normalized_matchee_id.raw(),
-                        case_list_id: match_.case_list_id,
+                        case_list_id: normalized_case_list_id,
                     })
                     .without_spans(state.raw.registry),
             ));
@@ -762,6 +764,54 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
     };
 
     evaluate_expression(state, substituted_body)
+}
+
+fn normalize_possibly_empty_match_case_list(
+    state: &mut EvalState,
+    list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+) -> Option<NonEmptyListId<NodeId<MatchCase>>> {
+    list_id.map(|list_id| normalize_match_case_list(state, list_id))
+}
+
+fn normalize_match_case_list(
+    state: &mut EvalState,
+    list_id: NonEmptyListId<NodeId<MatchCase>>,
+) -> NonEmptyListId<NodeId<MatchCase>> {
+    let ids = state.raw.registry.get_list(list_id).to_non_empty_vec();
+    let normalized_ids = ids.into_mapped(|id| normalize_match_case(state, id));
+    state.raw.registry.add_list(normalized_ids)
+}
+
+fn normalize_match_case(
+    state: &mut EvalState,
+    match_case_list_id: NodeId<MatchCase>,
+) -> NodeId<MatchCase> {
+    let case = state.raw.registry.get(match_case_list_id).clone();
+
+    let explicit_arity = case
+        .param_list_id
+        .map(|param_list_id| param_list_id.explicit_len())
+        .unwrap_or(0);
+    for _ in 0..explicit_arity {
+        state.context.push_uninterpreted();
+    }
+    let normalized_output_id = match case.output_id {
+        MatchCaseOutputId::Some(case_output_id) => {
+            MatchCaseOutputId::Some(evaluate_expression(state, case_output_id).raw())
+        }
+        MatchCaseOutputId::ImpossibilityClaim(kw_span) => {
+            MatchCaseOutputId::ImpossibilityClaim(kw_span)
+        }
+    };
+    state.context.pop_n(explicit_arity);
+
+    state.raw.registry.add_and_overwrite_id(MatchCase {
+        id: dummy_id(),
+        span: None,
+        variant_name_id: case.variant_name_id,
+        param_list_id: case.param_list_id,
+        output_id: normalized_output_id,
+    })
 }
 
 fn evaluate_forall(state: &mut EvalState, forall_id: NodeId<Forall>) -> NormalFormId {
