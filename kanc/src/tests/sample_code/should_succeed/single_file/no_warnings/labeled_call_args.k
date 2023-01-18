@@ -1,78 +1,78 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Color {
-    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let pred = fun _(a: Nat): Nat {
     match a {
-        .O => Nat.O,
-        .S(a') => a',
+        .o => Nat.o,
+        .s(a') => a',
     }
 };
 
 let plus = fun plus_(-a: Nat, b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => Nat.S(plus_(a', b)),
+        .o => b,
+        .s(a') => Nat.s(plus_(a', b)),
     }
 };
 let mult = fun mult_(-a: Nat, b: Nat): Nat {
     match a {
-        .O => Nat.O,
-        .S(a') => plus(b, mult_(a', b)),
+        .o => Nat.o,
+        .s(a') => plus(b, mult_(a', b)),
     }
 };
 let pow = fun pow_(~base: Nat, ~-power: Nat): Nat {
     match power {
-        .O => Nat.S(Nat.O),
-        .S(power') => mult(base, pow_(:base, power: power')),
+        .o => Nat.s(Nat.o),
+        .s(power') => mult(base, pow_(:base, power: power')),
     }
 };
 
-let _2 = Nat.S(Nat.S(Nat.O));
+let _2 = Nat.s(Nat.s(Nat.o));
 let _8 = mult(_2, mult(_2, _2));
 let _256 = pow(base: _2, power: _8);
 let _255 = pred(_256);
 
-let white1 = Color.C(r: _255, g: _255, b: _255);
+let white1 = Color.c(r: _255, g: _255, b: _255);
 
 let white2 = fun _(r: Nat, g: Nat, b: Nat): Color {
-    Color.C(:r, :g, :b)
+    Color.c(:r, :g, :b)
 }(_255, _255, _255);
 
 let white3 = fun _(r: Nat, b: Nat): Color {
-    Color.C(:r, g: _255, :b)
+    Color.c(:r, g: _255, :b)
 }(_255, _255);
 
 let white4 = fun _(g: Nat): Color {
-    Color.C(r: _255, :g, b: _255)
+    Color.c(r: _255, :g, b: _255)
 }(_255);
 
 let redness = fun _(~c: Color): Nat {
     match c {
-        .C(:r, g: _, b: _) => r,
+        .c(:r, g: _, b: _) => r,
     }
 };
 
 let redness2 = fun _(~c: Color): Nat {
     match c {
-        .C(:r, ...) => r,
+        .c(:r, ...) => r,
     }
 };
 
 let redness3 = fun _(~c: Color): Nat {
     match c {
-        .C(:r, g: _, ...) => r,
+        .c(:r, g: _, ...) => r,
     }
 };
 
 let redness4 = fun _(~c: Color): Nat {
     match c {
-        .C(...) => match c { .C(:r, ...) => r },
+        .c(...) => match c { .c(:r, ...) => r },
     }
 };
 
@@ -81,7 +81,7 @@ let redness4 = fun _(~c: Color): Nat {
 // Maybe match case param warnings, too, but I haven't
 // checked yet (it's late and I want to get to bed rather
 // than scrutinize every line of this file)
-let _1 = redness(c: Color.C(r: Nat.S(Nat.O), b: Nat.O, g: Nat.O));
+let _1 = redness(c: Color.c(r: Nat.s(Nat.o), b: Nat.o, g: Nat.o));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
     f(d: c)
@@ -92,14 +92,14 @@ let apply2 = fun _(c: Color, f: forall(c~_: Color) { Nat }): Nat {
 };
 
 type List(~T: Type) {
-    .Nil(U: Type): List(T: U),
-    .Cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
+    .nil(U: Type): List(T: U),
+    .cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
 }
 
 let foo = fun foo_(xylophone~x: Nat, yodeler~-y: Nat): Nat {
-    Nat.O
+    Nat.o
 };
 
 let bar = fun bar_(~-a: Nat): Nat {
-    Nat.O
+    Nat.o
 };

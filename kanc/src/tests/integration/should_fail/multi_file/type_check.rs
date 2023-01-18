@@ -104,7 +104,7 @@ fn insufficient_transparency() {
                 "../../../sample_code/should_fail/multi_file/type_check/insufficient_transparency/pack.yscl"
             ),
         },
-        "Eq.Refl(T, t,)",
+        "Eq.refl(T, t,)",
         "Eq(T, t, identity(T, t,),)",
         "Eq(T, t, t,)",
     );

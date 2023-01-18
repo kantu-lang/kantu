@@ -1,3 +1,3 @@
 pub(pack) type Foo {
-    .C: Foo,
+    .c: Foo,
 }

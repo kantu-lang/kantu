@@ -1,7 +1,7 @@
 type Empty {}
 
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 let identity = fun _(T: Type, t: T): T { t };
@@ -14,13 +14,13 @@ let broken = fun _(u: Unit): Empty {
 
 let broke2 = fun _(u: Unit): Empty {
     match u {
-        .C => todo,
+        .c => todo,
     }
 };
 
 let broken3 = fun _(u: Unit): Empty {
     match ascribe(Unit, todo) {
-        .C => todo,
+        .c => todo,
     }
 };
 

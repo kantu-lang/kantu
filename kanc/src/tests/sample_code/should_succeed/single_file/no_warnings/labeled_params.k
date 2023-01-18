@@ -1,33 +1,33 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Color {
-    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let redness = fun _(~c: Color): Nat {
     match c {
-        .C(:r, g: _, b: _) => r,
+        .c(:r, g: _, b: _) => r,
     }
 };
 
 let redness2 = fun _(~c: Color): Nat {
     match c {
-        .C(:r, ...) => r,
+        .c(:r, ...) => r,
     }
 };
 
 let redness3 = fun _(~c: Color): Nat {
     match c {
-        .C(:r, g: _, ...) => r,
+        .c(:r, g: _, ...) => r,
     }
 };
 
 let redness4 = fun _(~c: Color): Nat {
     match c {
-        .C(...) => match c { .C(:r, ...) => r },
+        .c(...) => match c { .c(:r, ...) => r },
     }
 };
 
@@ -36,7 +36,7 @@ let redness4 = fun _(~c: Color): Nat {
 // Maybe match case param warnings, too, but I haven't
 // checked yet (it's late and I want to get to bed rather
 // than scrutinize every line of this file)
-let _1 = redness(c: Color.C(r: Nat.S(Nat.O), b: Nat.O, g: Nat.O));
+let _1 = redness(c: Color.c(r: Nat.s(Nat.o), b: Nat.o, g: Nat.o));
 
 let apply = fun _(c: Color, f: forall(~d: Color) { Nat }): Nat {
     f(d: c)
@@ -47,14 +47,14 @@ let apply2 = fun _(c: Color, f: forall(c~_: Color) { Nat }): Nat {
 };
 
 type List(~T: Type) {
-    .Nil(U: Type): List(T: U),
-    .Cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
+    .nil(U: Type): List(T: U),
+    .cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
 }
 
 let foo = fun foo_(xylophone~x: Nat, yodeler~-y: Nat): Nat {
-    Nat.O
+    Nat.o
 };
 
 let bar = fun bar_(~-a: Nat): Nat {
-    Nat.O
+    Nat.o
 };

@@ -1,12 +1,12 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 let no_goal_exists = check (goal = Nat) {
-    Nat.O
+    Nat.o
 };
 
 let no_goal_exists_question = check (goal = ?) {
-    Nat.O
+    Nat.o
 };

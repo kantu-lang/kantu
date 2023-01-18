@@ -1,6 +1,6 @@
 pub type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
-let(*) _0 = Nat.O;
+let(*) _0 = Nat.o;

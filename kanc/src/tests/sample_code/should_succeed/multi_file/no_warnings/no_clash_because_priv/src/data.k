@@ -1,11 +1,11 @@
 pub type Unit1 {
-    .C: Unit1,
+    .c: Unit1,
 }
 
 pub type Unit2 {
-    .C: Unit2,
+    .c: Unit2,
 }
 
 pub type Unit3 {
-    .C: Unit3,
+    .c: Unit3,
 }

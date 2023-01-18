@@ -1,7 +1,7 @@
 type U {
-    .T: U,
+    .t: U,
 }
 
-let foo = match U.T {
-    .T() => U.T,
+let foo = match U.t {
+    .t() => U.t,
 };

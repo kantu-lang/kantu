@@ -1,39 +1,39 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Eq(T: Type, a: T, b: T) {
-    .Refl(T: Type, c: T): Eq(T, c, c),
+    .refl(T: Type, c: T): Eq(T, c, c),
 }
 
 let eq_comm = fun _(T: Type, a: T, b: T, H: Eq(T, a, b)): Eq(T, b, a) {
     match H {
-        .Refl(U, c) =>
+        .refl(U, c) =>
             check (goal = Eq(U, c, c)) {
-                Eq.Refl(U, c)
+                Eq.refl(U, c)
             },
     }
 };
 
 let foo = fun _(n: Nat): Nat {
     match n {
-        .O => check (n: Nat, n = Nat.O) {
-            Nat.O
+        .o => check (n: Nat, n = Nat.o) {
+            Nat.o
         },
-        .S(n') => check (n: Nat, n = Nat.S(n')) {
-            Nat.O
+        .s(n') => check (n: Nat, n = Nat.s(n')) {
+            Nat.o
         },
     }
 };
 
 let goal_checkee = fun _(n: Nat): Nat {
     match n {
-        .O => check (goal = Nat) {
-            Nat.O
+        .o => check (goal = Nat) {
+            Nat.o
         },
-        .S(n') => check (goal = Nat) {
-            Nat.O
+        .s(n') => check (goal = Nat) {
+            Nat.o
         },
     }
 };

@@ -1,8 +1,8 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type Bar(T: Type, x: T) {
-    .B: Bar(Bar(U, U.U), Bar.C),
-    .C: Bar(U, U.U),
+    .b: Bar(Bar(U, U.u), Bar.c),
+    .c: Bar(U, U.u),
 }

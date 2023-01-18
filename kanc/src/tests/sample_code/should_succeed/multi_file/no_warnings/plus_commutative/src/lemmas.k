@@ -1,21 +1,21 @@
 use super.*;
 
-pub let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.S(plus(a, b)), plus(a, Nat.S(b))) {
+pub let plus_S = fun plus_S_(-a: Nat, b: Nat): Eq(Nat, Nat.s(plus(a, b)), plus(a, Nat.s(b))) {
     match a {
-        .O => Eq.Refl(Nat, Nat.S(b)),
-        .S(a') =>
+        .o => Eq.refl(Nat, Nat.s(b)),
+        .s(a') =>
             match plus_S_(a', b) {
-                .Refl(_Nat, _c) => Eq.Refl(Nat, Nat.S(Nat.S(plus(a', b)))),
+                .refl(_Nat, _c) => Eq.refl(Nat, Nat.s(Nat.s(plus(a', b)))),
             },
     }
 };
 
-pub let plus_O = fun plus_O_(-n: Nat): Eq(Nat, plus(n, Nat.O), n) {
+pub let plus_O = fun plus_O_(-n: Nat): Eq(Nat, plus(n, Nat.o), n) {
     match n {
-        .O => Eq.Refl(Nat, Nat.O),
-        .S(n') =>
+        .o => Eq.refl(Nat, Nat.o),
+        .s(n') =>
             match plus_O_(n') {
-                .Refl(_Nat, _n) => Eq.Refl(Nat, Nat.S(plus(n', Nat.O))),
+                .refl(_Nat, _n) => Eq.refl(Nat, Nat.s(plus(n', Nat.o))),
             },
     }
 };

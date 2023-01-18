@@ -1,13 +1,13 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type Bool {
-    .True: Bool,
-    .False: Bool,
+    .true: Bool,
+    .false: Bool,
 }
 
-let foo = match U.U {
-    .U => Bool.True,
-    .U => Bool.False,
+let foo = match U.u {
+    .u => Bool.true,
+    .u => Bool.false,
 };

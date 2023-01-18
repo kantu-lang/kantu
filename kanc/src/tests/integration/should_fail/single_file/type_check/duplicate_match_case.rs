@@ -36,5 +36,5 @@ fn duplicate_match_case() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/duplicate_match_case.k"
     );
-    expect_duplicate_match_case_error(src, ".U => Bool.True,", ".U => Bool.False,");
+    expect_duplicate_match_case_error(src, ".u => Bool.true,", ".u => Bool.false,");
 }

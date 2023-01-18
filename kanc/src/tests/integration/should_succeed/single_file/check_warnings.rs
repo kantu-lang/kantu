@@ -138,22 +138,22 @@ fn mismatched_nf_comparees() {
         NormalFormAssertionCompareeMismatch {
             original_left_src: "goal".to_string(),
             rewritten_left_src: "Nat".to_string(),
-            original_right_src: "Eq(Nat, Nat.O, Nat.O,)".to_string(),
-            rewritten_right_src: "Eq(Nat, Nat.O, Nat.O,)".to_string(),
+            original_right_src: "Eq(Nat, Nat.o, Nat.o,)".to_string(),
+            rewritten_right_src: "Eq(Nat, Nat.o, Nat.o,)".to_string(),
         },
         NormalFormAssertionCompareeMismatch {
             original_left_src: "n".to_string(),
-            rewritten_left_src: "Nat.S(n',)".to_string(),
-            original_right_src: "Nat.S(n,)".to_string(),
-            rewritten_right_src: "Nat.S(Nat.S(n',),)".to_string(),
+            rewritten_left_src: "Nat.s(n',)".to_string(),
+            original_right_src: "Nat.s(n,)".to_string(),
+            rewritten_right_src: "Nat.s(Nat.s(n',),)".to_string(),
         },
         NormalFormAssertionCompareeQuestionMark {
             original_left_src: "m".to_string(),
-            rewritten_left_src: "Nat.O".to_string(),
+            rewritten_left_src: "Nat.o".to_string(),
         },
         NormalFormAssertionCompareeQuestionMark {
             original_left_src: "m".to_string(),
-            rewritten_left_src: "Nat.S(m',)".to_string(),
+            rewritten_left_src: "Nat.s(m',)".to_string(),
         },
     ];
     expect_success_with_warnings(src, &expected_warnings);

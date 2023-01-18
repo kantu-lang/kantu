@@ -1,9 +1,9 @@
 type Boolish {
-    .True: Boolish,
-    .False: Boolish,
-    .Maybe: Boolish,
+    .true: Boolish,
+    .false: Boolish,
+    .maybe: Boolish,
 }
 
-let foo = match Boolish.True {
-    .True => Boolish.False,
+let foo = match Boolish.true {
+    .true => Boolish.false,
 };

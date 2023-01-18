@@ -1,9 +1,9 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type Bar {
-    .B(x: U): Bar,
+    .b(x: U): Bar,
 }
 
-let foo = Bar.B(U.U)(U.U);
+let foo = Bar.b(U.u)(U.u);

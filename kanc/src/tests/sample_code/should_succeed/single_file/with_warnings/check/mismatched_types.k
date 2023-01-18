@@ -1,6 +1,6 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Unit {}
@@ -8,12 +8,12 @@ type Unit {}
 let mismatched_types = fun _(m: Nat): Nat {
     match m {
         // WARNING
-        .O => check (m: Unit) {
-            Nat.O
+        .o => check (m: Unit) {
+            Nat.o
         },
         // WARNING
-        .S(m') => check (m: ?) {
-            Nat.O
+        .s(m') => check (m: ?) {
+            Nat.o
         },
     }
 };

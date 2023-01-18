@@ -1,16 +1,16 @@
 type Empty {}
 
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 type Bool {
-    .True: Bool,
-    .False: Bool,
+    .true: Bool,
+    .false: Bool,
 }
 
 let foo = fun _(e: Empty): Bool {
     match match e {} {
-        .C => Bool.True,
+        .c => Bool.true,
     }
 };

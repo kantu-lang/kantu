@@ -19,5 +19,5 @@ fn unreachable_expression() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/unreachable_expression.k"
     );
-    expect_unreachable_expression_error(src, "U1.C");
+    expect_unreachable_expression_error(src, "U1.c");
 }

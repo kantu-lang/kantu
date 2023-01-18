@@ -1,7 +1,7 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
-let foo = fun foo_(x: U): U.U {
-    U.U
+let foo = fun foo_(x: U): U.u {
+    U.u
 };

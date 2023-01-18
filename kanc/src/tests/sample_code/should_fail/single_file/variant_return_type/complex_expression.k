@@ -1,7 +1,7 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type Foo {
-    .Bar(a: U): match U.U { .U => Foo },
+    .bar(a: U): match U.u { .u => Foo },
 }

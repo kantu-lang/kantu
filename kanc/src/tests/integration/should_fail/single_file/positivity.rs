@@ -117,7 +117,7 @@ fn obscured_indirect_negative_recursion() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/positivity/obscured_indirect_negative_recursion.k"
     );
-    expect_non_name_variant_return_type_error(src, "NotC", 0);
+    expect_non_name_variant_return_type_error(src, "not_c", 0);
 }
 
 fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {
@@ -202,5 +202,5 @@ fn expected_2_type_args_got_1() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/positivity/expected_2_type_args_got_1.k"
     );
-    expect_variant_return_type_type_arg_arity_mismatch_error(src, 2, "Not(Unit.C,)");
+    expect_variant_return_type_type_arg_arity_mismatch_error(src, 2, "Not(Unit.c,)");
 }

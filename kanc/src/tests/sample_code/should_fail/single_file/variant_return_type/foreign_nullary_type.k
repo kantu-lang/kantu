@@ -1,7 +1,7 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type Foo {
-    .F: U,
+    .f: U,
 }

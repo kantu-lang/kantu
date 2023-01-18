@@ -32,6 +32,6 @@ fn ambiguous_match_case_output_type() {
     );
     expect_ambiguous_match_case_output_type_error(
         src,
-        ".S(problem) => Eq.Refl(Nat, Nat.S(problem,),),",
+        ".s(problem) => Eq.refl(Nat, Nat.s(problem,),),",
     );
 }

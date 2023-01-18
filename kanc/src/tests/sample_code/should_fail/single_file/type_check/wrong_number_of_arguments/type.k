@@ -1,7 +1,7 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type V(t: U) {}
 
-let foo = V(U.U, U.U);
+let foo = V(U.u, U.u);

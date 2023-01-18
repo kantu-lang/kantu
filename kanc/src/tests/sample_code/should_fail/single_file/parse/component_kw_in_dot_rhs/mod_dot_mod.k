@@ -1,1 +1,1 @@
-let x = mod.mod.Nat.O;
+let x = mod.mod.Nat.o;

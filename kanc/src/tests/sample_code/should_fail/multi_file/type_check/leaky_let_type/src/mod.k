@@ -1,8 +1,8 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 use Nat.*;
 
-pub let _2 = S(S(O));
+pub let _2 = s(s(o));

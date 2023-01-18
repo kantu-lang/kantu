@@ -10,5 +10,5 @@ mod pub_export;
 pub use pub_export.Foo;
 
 pub let foo_to_bar = fun _(_: Foo): Bar {
-    Bar.C
+    Bar.c
 };

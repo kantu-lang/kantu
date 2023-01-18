@@ -1,19 +1,19 @@
 type Empty {}
 
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 type Bad {
-    .C(f: match Unit.C { .C => forall(b: Bad) { Empty } }): Bad,
+    .c(f: match Unit.c { .c => forall(b: Bad) { Empty } }): Bad,
 }
 
 let not_bad = fun _(b: Bad): Empty {
     match b {
-        .C(f) => f(b),
+        .c(f) => f(b),
     }
 };
 
-let bad = Bad.C(not_bad);
+let bad = Bad.c(not_bad);
 
 let empty = not_bad(Bad);

@@ -22,5 +22,5 @@ fn extraneous_match_case() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/extraneous_match_case.k"
     );
-    expect_extraneous_match_case_error(src, ".Maybe => Nat.S(Nat.S(Nat.O,),),");
+    expect_extraneous_match_case_error(src, ".maybe => Nat.s(Nat.s(Nat.o,),),");
 }

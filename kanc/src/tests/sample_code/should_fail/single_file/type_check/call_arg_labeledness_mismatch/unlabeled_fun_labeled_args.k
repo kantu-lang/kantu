@@ -1,16 +1,16 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 let plus = fun plus_(-a: Nat, b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => Nat.S(plus_(a', b)),
+        .o => b,
+        .s(a') => Nat.s(plus_(a', b)),
     }
 };
 
-let O = Nat.O;
+let o = Nat.o;
 
-let right = plus(O, O);
-let wrong = plus(left: O, right: O);
+let right = plus(o, o);
+let wrong = plus(left: o, right: o);

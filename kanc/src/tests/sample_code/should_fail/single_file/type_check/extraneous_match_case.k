@@ -1,15 +1,15 @@
 type Bool {
-    .True: Bool,
-    .False: Bool,
+    .true: Bool,
+    .false: Bool,
 }
 
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
-let foo = match Bool.True {
-    .True => Nat.O,
-    .False => Nat.S(Nat.O),
-    .Maybe => Nat.S(Nat.S(Nat.O)),
+let foo = match Bool.true {
+    .true => Nat.o,
+    .false => Nat.s(Nat.o),
+    .maybe => Nat.s(Nat.s(Nat.o)),
 };

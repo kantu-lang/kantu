@@ -78,7 +78,7 @@ fn reference_variant_in_prev_variant() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/bind/ref_variant_in_prev_variant.k"
     );
-    expect_name_not_found_error(src, ["Bar", "C"]);
+    expect_name_not_found_error(src, ["Bar", "c"]);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn reference_variant_in_variant_return_type() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/bind/ref_variant_in_variant_return_type.k"
     );
-    expect_name_not_found_error(src, ["Bar", "B"]);
+    expect_name_not_found_error(src, ["Bar", "b"]);
 }
 
 #[test]
@@ -94,7 +94,7 @@ fn reference_variant_in_variant_param_type() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/bind/ref_variant_in_variant_param_type.k"
     );
-    expect_name_not_found_error(src, ["Bar", "D"]);
+    expect_name_not_found_error(src, ["Bar", "d"]);
 }
 
 fn expect_name_clash_error(src: &str, expected_source_name: &str) {
@@ -124,7 +124,7 @@ fn fun_shadows_own_param() {
 fn duplicate_variants() {
     let src =
         include_str!("../../../sample_code/should_fail/single_file/bind/duplicate_variants.k");
-    expect_name_clash_error(src, "F");
+    expect_name_clash_error(src, "f");
 }
 
 #[test]

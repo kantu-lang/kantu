@@ -25,5 +25,5 @@ fn match_case_incorrectly_marked_impossible() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/match_case_incorrectly_marked_impossible.k"
     );
-    expect_match_case_incorrectly_marked_impossible_error(src, ".O => impossible,");
+    expect_match_case_incorrectly_marked_impossible_error(src, ".o => impossible,");
 }

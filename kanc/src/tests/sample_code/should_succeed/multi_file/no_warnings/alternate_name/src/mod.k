@@ -5,11 +5,11 @@ pub mod ops;
 pub use ops as blops;
 
 use Blat.*;
-use O as Z;
+use o as z;
 
 pub let mult = fun mult(-a: Blat, b: Blat): Blat {
     match a {
-        .O => Z,
-        .S(a') => blops.plus(b, mult(a', b)),
+        .o => z,
+        .s(a') => blops.plus(b, mult(a', b)),
     }
 };

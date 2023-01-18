@@ -1,1 +1,1 @@
-let x = plus(y, Nat.S(Nat.O));
+let x = plus(y, Nat.s(Nat.o));

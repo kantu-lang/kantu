@@ -25,7 +25,7 @@ fn missing_single_match_case() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/missing_match_case/missing_one.k"
     );
-    expect_missing_match_case_error(src, &[&IdentifierName::new("False".to_string())]);
+    expect_missing_match_case_error(src, &[&IdentifierName::new("false".to_string())]);
 }
 
 #[test]
@@ -36,8 +36,8 @@ fn missing_multiple_match_cases() {
     expect_missing_match_case_error(
         src,
         &[
-            &IdentifierName::new("False".to_string()),
-            &IdentifierName::new("Maybe".to_string()),
+            &IdentifierName::new("false".to_string()),
+            &IdentifierName::new("maybe".to_string()),
         ],
     );
 }

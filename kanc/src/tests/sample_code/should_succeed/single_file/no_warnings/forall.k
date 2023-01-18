@@ -1,25 +1,25 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 let apply = fun apply_(n: Nat, f: forall(m: Nat) { Nat }): Nat {
     f(n)
 };
 
-let two = apply(Nat.S(Nat.O), Nat.S);
+let two = apply(Nat.s(Nat.o), Nat.s);
 
 let plus = fun plus_(-a: Nat, b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => Nat.S(plus_(a', b)),
+        .o => b,
+        .s(a') => Nat.s(plus_(a', b)),
     }
 };
 
 let mult = fun mult_(-a: Nat, b: Nat): Nat {
     match a {
-        .O => Nat.O,
-        .S(a') => plus(b, mult_(a', b)),
+        .o => Nat.o,
+        .s(a') => plus(b, mult_(a', b)),
     }
 };
 

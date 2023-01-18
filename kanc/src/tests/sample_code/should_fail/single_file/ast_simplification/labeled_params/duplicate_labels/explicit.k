@@ -1,8 +1,8 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 let f = fun _(X~x: Nat, X~y: Nat): Nat {
-    Nat.O
+    Nat.o
 };

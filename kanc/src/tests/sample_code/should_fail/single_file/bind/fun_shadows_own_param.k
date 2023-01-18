@@ -1,7 +1,7 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 let f = fun g(g: U): U {
-    U.U
+    U.u
 };

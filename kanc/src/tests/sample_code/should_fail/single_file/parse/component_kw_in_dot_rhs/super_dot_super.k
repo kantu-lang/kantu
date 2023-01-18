@@ -1,1 +1,1 @@
-let x = super.super.Nat.O;
+let x = super.super.Nat.o;

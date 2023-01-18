@@ -1,5 +1,5 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
-let _ = U.U;
+let _ = U.u;

@@ -1,6 +1,6 @@
 mod nat;
 
 type NatList {
-    .Nil: NatList,
-    .Cons(car: nat.Nat, cdr: NatList): NatList,
+    .nil: NatList,
+    .cons(car: nat.Nat, cdr: NatList): NatList,
 }
