@@ -93,123 +93,12 @@ impl Accept for UnfinishedUseStatement {
                     }
 
                     TokenKind::Super => {
+                        let n = get_n_from_super_n_token(&token).expect(
+                            "A token with kind `TokenKind::Super` should be a superN token.",
+                        );
                         let first_component = UseStatementFirstComponent {
                             span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(1).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super2 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(2).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super3 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(3).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super4 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(4).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super5 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(5).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super6 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(6).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super7 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(7).unwrap(),
-                            ),
-                        };
-                        *self = UnfinishedUseStatement::AtLeastOneComponent {
-                            first_token: first_token.clone(),
-                            visibility: visibility.clone(),
-                            first_component,
-                            other_components: vec![],
-                            has_trailing_dot: false,
-                        };
-                        AcceptResult::ContinueToNextToken
-                    }
-                    TokenKind::Super8 => {
-                        let first_component = UseStatementFirstComponent {
-                            span: span_single(file_id, &token),
-                            kind: UseStatementFirstComponentKind::Super(
-                                NonZeroUsize::new(8).unwrap(),
-                            ),
+                            kind: UseStatementFirstComponentKind::Super(n),
                         };
                         *self = UnfinishedUseStatement::AtLeastOneComponent {
                             first_token: first_token.clone(),

@@ -431,14 +431,9 @@ fn get_token_kind_of_non_underscore_keyword(s: &str) -> Option<TokenKind> {
         "prot" => Some(TokenKind::Prot),
         "priv" => Some(TokenKind::Priv),
         "mod" => Some(TokenKind::Mod),
-        "super" => Some(TokenKind::Super),
-        "super2" => Some(TokenKind::Super2),
-        "super3" => Some(TokenKind::Super3),
-        "super4" => Some(TokenKind::Super4),
-        "super5" => Some(TokenKind::Super5),
-        "super6" => Some(TokenKind::Super6),
-        "super7" => Some(TokenKind::Super7),
-        "super8" => Some(TokenKind::Super8),
+        "super" | "super2" | "super3" | "super4" | "super5" | "super6" | "super7" | "super8" => {
+            Some(TokenKind::Super)
+        }
         "pack" => Some(TokenKind::Pack),
         "use" => Some(TokenKind::Use),
         "as" => Some(TokenKind::As),

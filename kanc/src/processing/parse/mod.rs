@@ -156,6 +156,17 @@ fn unexpected_finished_item_err(item: &FinishedStackItem) -> ParseError {
     ParseError::unexpected_token(item.first_token().clone())
 }
 
+/// Returns `None` if the token is not a superN token.
+fn get_n_from_super_n_token(token: &Token) -> Option<NonZeroUsize> {
+    if token.content == "super" {
+        Some(NonZeroUsize::new(1).unwrap())
+    } else if token.content.starts_with("super") {
+        token.content["super".len()..].parse().ok()
+    } else {
+        None
+    }
+}
+
 use unfinished::*;
 mod unfinished;
 

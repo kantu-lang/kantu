@@ -9,13 +9,6 @@ impl Accept for UnfinishedDelimitedExpression {
                     | TokenKind::Underscore
                     | TokenKind::Mod
                     | TokenKind::Super
-                    | TokenKind::Super2
-                    | TokenKind::Super3
-                    | TokenKind::Super4
-                    | TokenKind::Super5
-                    | TokenKind::Super6
-                    | TokenKind::Super7
-                    | TokenKind::Super8
                     | TokenKind::Pack
                     | TokenKind::StandardIdentifier => {
                         let expression = Expression::Identifier(Identifier {

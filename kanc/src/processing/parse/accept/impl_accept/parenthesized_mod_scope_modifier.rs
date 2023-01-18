@@ -37,76 +37,16 @@ impl Accept for UnfinishedParenthesizedModScopeModifier {
                     }
 
                     TokenKind::Super => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(1).unwrap(),
-                        )
-                    }
-                    TokenKind::Super2 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(2).unwrap(),
-                        )
-                    }
-                    TokenKind::Super3 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(3).unwrap(),
-                        )
-                    }
-                    TokenKind::Super4 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(4).unwrap(),
-                        )
-                    }
-                    TokenKind::Super5 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(5).unwrap(),
-                        )
-                    }
-                    TokenKind::Super6 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(6).unwrap(),
-                        )
-                    }
-                    TokenKind::Super7 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(7).unwrap(),
-                        )
-                    }
-                    TokenKind::Super8 => {
-                        let l_paren_token = l_paren_token.clone();
-                        self.set_to_super_n(
-                            file_id,
-                            l_paren_token,
-                            &token,
-                            NonZeroUsize::new(8).unwrap(),
-                        )
+                        let n = get_n_from_super_n_token(&token).expect("super_n_token.content should be of the form \"superN\" where N is a positive integer");
+                        let span = span_range_including_end(file_id, &l_paren_token, &token);
+                        *self = UnfinishedParenthesizedModScopeModifier::ReadyForRParen {
+                            l_paren_token: l_paren_token.clone(),
+                            modifier: ParenthesizedModScopeModifier {
+                                span,
+                                kind: ModScopeModifierKind::Super(n),
+                            },
+                        };
+                        AcceptResult::ContinueToNextToken
                     }
 
                     TokenKind::Pack => {
@@ -184,25 +124,5 @@ impl Accept for UnfinishedParenthesizedModScopeModifier {
                 other_item => wrapped_unexpected_finished_item_err(&other_item),
             },
         }
-    }
-}
-
-impl UnfinishedParenthesizedModScopeModifier {
-    fn set_to_super_n(
-        &mut self,
-        file_id: FileId,
-        l_paren_token: Token,
-        super_n_token: &Token,
-        n: NonZeroUsize,
-    ) -> AcceptResult {
-        let span = span_range_including_end(file_id, &l_paren_token, super_n_token);
-        *self = UnfinishedParenthesizedModScopeModifier::ReadyForRParen {
-            l_paren_token: l_paren_token,
-            modifier: ParenthesizedModScopeModifier {
-                span,
-                kind: ModScopeModifierKind::Super(n),
-            },
-        };
-        AcceptResult::ContinueToNextToken
     }
 }
