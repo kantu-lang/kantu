@@ -1,6 +1,6 @@
 type Foo {
-    .F: Foo,
+    .f: Foo,
 }
 
-let f = fun g(U: Type, U: Type): Foo { Foo.F };
+let f = fun g(U: Type, U: Type): Foo { Foo.f };
  

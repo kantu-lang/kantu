@@ -44,5 +44,5 @@ fn variant() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_arguments/variant.k"
     );
-    expect_wrong_number_of_arguments_error(src, "Bar.B(Empty, Empty,)", 1);
+    expect_wrong_number_of_arguments_error(src, "Bar.b(Empty, Empty,)", 1);
 }

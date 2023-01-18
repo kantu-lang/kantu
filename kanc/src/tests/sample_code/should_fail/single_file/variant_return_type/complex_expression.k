@@ -3,5 +3,5 @@ type U {
 }
 
 type Foo {
-    .Bar(a: U): match U.u { .u => Foo },
+    .bar(a: U): match U.u { .u => Foo },
 }

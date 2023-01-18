@@ -3,9 +3,9 @@ type Unit {
 }
 
 type Foo(T: Type) {
-    .Bar: Foo(Unit),
+    .bar: Foo(Unit),
 }
 
-let unit = match Foo.Bar {
-    .Bar => Unit.c,
+let unit = match Foo.bar {
+    .bar => Unit.c,
 };

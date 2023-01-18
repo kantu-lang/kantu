@@ -28,11 +28,11 @@ type Variant2 {
 }
 type Variant3 {
     .o: Variant3,
-    .P: Variant3
+    .p: Variant3
 }
 type Variant4 {
     .o: Variant4,
-    .P: Variant4,
+    .p: Variant4,
 }
 
 let fun1 = fun x(a: U): U { U.u };

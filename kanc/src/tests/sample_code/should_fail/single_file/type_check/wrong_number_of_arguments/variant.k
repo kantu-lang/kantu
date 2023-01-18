@@ -1,7 +1,7 @@
 type Empty {}
 
 type Bar {
-    .B(T: Type): Bar,
+    .b(T: Type): Bar,
 }
 
-let foo = Bar.B(Empty, Empty);
+let foo = Bar.b(Empty, Empty);

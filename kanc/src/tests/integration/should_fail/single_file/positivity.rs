@@ -117,7 +117,7 @@ fn obscured_indirect_negative_recursion() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/positivity/obscured_indirect_negative_recursion.k"
     );
-    expect_non_name_variant_return_type_error(src, "NotC", 0);
+    expect_non_name_variant_return_type_error(src, "not_c", 0);
 }
 
 fn expect_non_adt_callee_error(src: &str, expected_callee_src: &str) {

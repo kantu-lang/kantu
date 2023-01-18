@@ -3,5 +3,5 @@ type U {
 }
 
 type Foo {
-    .F: U,
+    .f: U,
 }

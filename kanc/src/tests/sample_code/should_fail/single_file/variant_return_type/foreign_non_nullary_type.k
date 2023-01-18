@@ -3,9 +3,9 @@ type U {
 }
 
 type T(x: U) {
-    .T: T(U.u),
+    .t: T(U.u),
 }
 
 type Foo {
-    .F: T(U.u),
+    .t: T(U.u),
 }

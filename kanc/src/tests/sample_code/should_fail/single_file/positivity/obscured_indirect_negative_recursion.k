@@ -14,7 +14,7 @@ type Eq(T: Type, x: T, y: T) {
 }
 
 type Not(T: Type) {
-    .NotC(
+    .not_c(
         b: Bool,
         H: Eq(Bool, Bool.true, b),
         B: Type,
@@ -40,7 +40,7 @@ let not_bad = fun _(b: Bad): Empty {
     match b {
         .c(n) =>
             match n {
-                .NotC(bool, H, B, f) =>
+                .not_c(bool, H, B, f) =>
                     match H {
                         .refl(_Bool, _True) =>
                             check (

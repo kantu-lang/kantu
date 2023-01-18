@@ -36,12 +36,12 @@ let eq_comm = fun eq_comm_(T: Type, a: T, b: T, H: Eq(T, a, b)): Eq(T, b, a) {
 };
 
 type IsO(n: Nat) {
-    .Triv: IsO(Nat.o),
+    .triv: IsO(Nat.o),
 }
 
 let foo = fun foo_(a: Nat, H: IsO(a)): IsO(a) {
     match a {
-        .o => IsO.Triv,
+        .o => IsO.triv,
         .s(_a') => H,
     }
 };

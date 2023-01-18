@@ -3,5 +3,5 @@ type U {
 }
 
 type Foo {
-    .Bar(x: U.u): Foo,
+    .bar(x: U.u): Foo,
 }
