@@ -1,9 +1,9 @@
 type Empty {}
 
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 type Bad {
-    .C(f: fun this_should_not_be_here(_: Unit): Type { forall(b: Bad) { Empty } }): Bad,
+    .c(f: fun this_should_not_be_here(_: Unit): Type { forall(b: Bad) { Empty } }): Bad,
 }

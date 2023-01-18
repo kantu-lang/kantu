@@ -1,5 +1,5 @@
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 type Foo(T: Type) {
@@ -7,5 +7,5 @@ type Foo(T: Type) {
 }
 
 let unit = match Foo.Bar {
-    .Bar => Unit.C,
+    .Bar => Unit.c,
 };

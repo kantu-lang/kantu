@@ -26,23 +26,23 @@ fn expect_wrong_number_of_case_params_error(
 #[test]
 fn expected_0_actually_1() {
     let src = include_str!("../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_0_actually_1.k");
-    expect_wrong_number_of_case_params_error(src, ".O(n) => n,", 0);
+    expect_wrong_number_of_case_params_error(src, ".o(n) => n,", 0);
 }
 
 #[test]
 fn expected_1_actually_0() {
     let src = include_str!("../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_1_actually_0.k");
-    expect_wrong_number_of_case_params_error(src, ".S => Nat.O,", 1);
+    expect_wrong_number_of_case_params_error(src, ".s => Nat.o,", 1);
 }
 
 #[test]
 fn expected_1_actually_2() {
     let src = include_str!("../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_1_actually_2.k");
-    expect_wrong_number_of_case_params_error(src, ".S(n, m) => n,", 1);
+    expect_wrong_number_of_case_params_error(src, ".s(n, m) => n,", 1);
 }
 
 #[test]
 fn expected_2_actually_1() {
     let src = include_str!("../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_case_params/expected_2_actually_1.k");
-    expect_wrong_number_of_case_params_error(src, ".Refl(O) => O,", 2);
+    expect_wrong_number_of_case_params_error(src, ".refl(o) => o,", 2);
 }

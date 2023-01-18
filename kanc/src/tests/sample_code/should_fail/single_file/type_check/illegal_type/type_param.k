@@ -1,5 +1,5 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
-type Foo(x: U.U) {}
+type Foo(x: U.u) {}

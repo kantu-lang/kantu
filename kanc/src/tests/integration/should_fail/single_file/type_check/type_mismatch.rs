@@ -42,7 +42,7 @@ fn adt() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/adt.k"
     );
-    expect_type_mismatch_error(src, "U2.U2", "U1", "U2");
+    expect_type_mismatch_error(src, "U2.u2", "U1", "U2");
 }
 
 #[test]
@@ -60,8 +60,8 @@ fn ill_typed_param_type() {
     );
     expect_type_mismatch_error(
         src,
-        "Eq.Refl(Nat, x',)",
-        "Eq(Nat, x, Nat.S(x',),)",
+        "Eq.refl(Nat, x',)",
+        "Eq(Nat, x, Nat.s(x',),)",
         "Eq(Nat, x', x',)",
     );
 }
@@ -71,7 +71,7 @@ fn ill_typed_match_case_output_evaluates_to_well_typed_term() {
     let src = include_str!(
             "../../../../sample_code/should_fail/single_file/type_check/type_mismatch/ill_typed_match_case_output_evaluates_to_well_typed_term.k"
         );
-    expect_type_mismatch_error(src, "Nat.O", "Bool", "Nat");
+    expect_type_mismatch_error(src, "Nat.o", "Bool", "Nat");
 }
 
 #[test]
@@ -81,8 +81,8 @@ fn differing_generated_underscore_name_expressions() {
         );
     expect_type_mismatch_error(
         src,
-        "ColorEq.Refl(x,)",
-        "ColorEq(x, match x { .C(:b, :r, :g) => Color.C(r: g, :g, :b,), },)",
+        "ColorEq.refl(x,)",
+        "ColorEq(x, match x { .c(:b, :r, :g) => Color.c(r: g, :g, :b,), },)",
         "ColorEq(x, x,)",
     );
 }

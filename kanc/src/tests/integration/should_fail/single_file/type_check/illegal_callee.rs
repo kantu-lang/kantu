@@ -30,7 +30,7 @@ fn non_nullary_adt_instance() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/non_nullary_adt_instance.k"
     );
-    expect_illegal_callee_error(src, "Bar.B(U.U,)");
+    expect_illegal_callee_error(src, "Bar.b(U.u,)");
 }
 
 #[test]
@@ -38,7 +38,7 @@ fn nullary_adt_instance() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/illegal_callee/nullary_adt_instance.k"
     );
-    expect_illegal_callee_error(src, "U.U");
+    expect_illegal_callee_error(src, "U.u");
 }
 
 #[test]

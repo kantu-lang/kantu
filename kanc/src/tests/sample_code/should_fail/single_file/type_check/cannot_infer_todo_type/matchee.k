@@ -1,7 +1,7 @@
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 let foo = match todo {
-    .C => Unit.C,
+    .c => Unit.c,
 };

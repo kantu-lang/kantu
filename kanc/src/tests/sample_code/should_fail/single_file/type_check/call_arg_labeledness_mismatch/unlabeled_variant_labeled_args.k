@@ -1,9 +1,9 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
-let O = Nat.O;
+let o = Nat.o;
 
-let right = Nat.S(O);
-let wrong = Nat.S(pred: O);
+let right = Nat.s(o);
+let wrong = Nat.s(pred: o);

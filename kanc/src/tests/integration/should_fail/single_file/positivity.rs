@@ -202,5 +202,5 @@ fn expected_2_type_args_got_1() {
     let src = include_str!(
         "../../../sample_code/should_fail/single_file/positivity/expected_2_type_args_got_1.k"
     );
-    expect_variant_return_type_type_arg_arity_mismatch_error(src, 2, "Not(Unit.C,)");
+    expect_variant_return_type_type_arg_arity_mismatch_error(src, 2, "Not(Unit.c,)");
 }

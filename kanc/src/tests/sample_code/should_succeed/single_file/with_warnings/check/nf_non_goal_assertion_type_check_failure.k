@@ -1,24 +1,24 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 let symbolically_invalid = fun _(n: Nat): Nat {
     match n {
         // WARNING
-        .O => check (n = this_symbol_doesnt_exist) {
-            Nat.O
+        .o => check (n = this_symbol_doesnt_exist) {
+            Nat.o
         },
         // WARNING
-        .S(n') => check (n = fun _(/* name clash with n */ n: Nat): Nat { Nat.O }(n)) {
-            Nat.O
+        .s(n') => check (n = fun _(/* name clash with n */ n: Nat): Nat { Nat.o }(n)) {
+            Nat.o
         },
     }
 };
 
 let illegal_fun_rec = fun _(n: Nat): Nat {
     match n {
-        .O =>
+        .o =>
         check (
             // WARNING
             n =
@@ -26,9 +26,9 @@ let illegal_fun_rec = fun _(n: Nat): Nat {
                     infinite_loop(decreasing)
                 }(n)
         ) {
-            Nat.O
+            Nat.o
         },
-        .S(n') =>
+        .s(n') =>
         check (
             // WARNING
             n =
@@ -36,7 +36,7 @@ let illegal_fun_rec = fun _(n: Nat): Nat {
                     infinite_loop(not_decreasing)
                 }(n)
         ) {
-            Nat.O
+            Nat.o
         },
     }
 };
@@ -44,26 +44,26 @@ let illegal_fun_rec = fun _(n: Nat): Nat {
 let type_check_error = fun _(n: Nat): Nat {
     match n {
         // WARNING
-        .O => check (n = Nat.S(Nat)) {
-            Nat.O
+        .o => check (n = Nat.s(Nat)) {
+            Nat.o
         },
         // WARNING
-        .S(n') => check (Nat.S(Nat) = n) {
-            Nat.O
+        .s(n') => check (Nat.s(Nat) = n) {
+            Nat.o
         },
     }
 };
 
 let type_check_error2 = fun _(n: Nat): Nat {
     match n {
-        .O => check (
+        .o => check (
             // WARNING
-            Nat.S(Nat) =
+            Nat.s(Nat) =
                 // WARNING
-                Nat.S(Nat)
+                Nat.s(Nat)
         ) {
-            Nat.O
+            Nat.o
         },
-        .S(n') => Nat.O,
+        .s(n') => Nat.o,
     }
 };

@@ -1,1 +1,1 @@
-.Some(T: Type, t: T): Option(T)
+.some(T: Type, t: T): Option(T)

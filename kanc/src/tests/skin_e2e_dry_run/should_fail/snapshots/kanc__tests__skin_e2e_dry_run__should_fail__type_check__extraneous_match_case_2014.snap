@@ -2,4 +2,4 @@
 source: src/tests/skin_e2e_dry_run/should_fail/type_check.rs
 expression: output
 ---
-"Error: [E2014] Extraneous match case for non-existent variant `Maybe` at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/extraneous_match_case.k:14:4"
+"Error: [E2014] Extraneous match case for non-existent variant `maybe` at <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/type_check/extraneous_match_case.k:14:4"

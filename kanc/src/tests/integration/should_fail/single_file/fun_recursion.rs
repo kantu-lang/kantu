@@ -80,7 +80,7 @@ fn rec_fun_non_ident() {
                 "Unexpected param name"
             );
             assert!(
-                matches!(arg, ExpressionRef::Name(name) if component_identifier_names(registry, name.id) == vec![IdentifierName::new("Nat".to_string()), IdentifierName::new("O".to_string())]),
+                matches!(arg, ExpressionRef::Name(name) if component_identifier_names(registry, name.id) == vec![IdentifierName::new("Nat".to_string()), IdentifierName::new("o".to_string())]),
                 "Unexpected arg: {:#?}",
                 arg
             );

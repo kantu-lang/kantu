@@ -1,5 +1,5 @@
 pub type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 pub use Unit as Foo;

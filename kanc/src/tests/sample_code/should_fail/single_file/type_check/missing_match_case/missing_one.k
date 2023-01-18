@@ -1,8 +1,8 @@
 type Bool {
-    .True: Bool,
-    .False: Bool,
+    .true: Bool,
+    .false: Bool,
 }
 
-let foo = match Bool.True {
-    .True => Bool.False,
+let foo = match Bool.true {
+    .true => Bool.false,
 };

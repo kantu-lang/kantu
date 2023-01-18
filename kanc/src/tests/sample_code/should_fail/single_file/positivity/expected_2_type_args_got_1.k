@@ -1,31 +1,31 @@
 type Empty {}
 
 type Unit {
-    .C: Unit,
+    .c: Unit,
 }
 
 type Not(_Dummy: Unit, T: Type) {
-    .C(
+    .c(
         T: Type,
         f: forall(t: T) { Empty },
-    ): Not(Unit.C),
+    ): Not(Unit.c),
 }
 
 type Bad {
-    .C(n: Not(Unit.C, Bad)): Bad,
+    .c(n: Not(Unit.c, Bad)): Bad,
 }
 
 let not_Bad = fun _(b: Bad): Empty {
     match b {
-        .C(n) =>
+        .c(n) =>
             match n {
-                .C(_Bad, f) => f(b),
+                .c(_Bad, f) => f(b),
             },
     }
 };
 
-let Not_Bad = Not.C(Bad, Bad, not_Bad);
+let Not_Bad = Not.c(Bad, Bad, not_Bad);
 
-let bad = Bad.C(Not_Bad);
+let bad = Bad.c(Not_Bad);
 
 let empty = not_Bad(bad);

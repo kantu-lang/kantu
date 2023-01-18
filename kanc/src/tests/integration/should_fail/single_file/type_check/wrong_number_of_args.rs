@@ -28,7 +28,7 @@ fn forall() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_arguments/fun.k"
     );
-    expect_wrong_number_of_arguments_error(src, "bar_(U.U, U.U,)", 1);
+    expect_wrong_number_of_arguments_error(src, "bar_(U.u, U.u,)", 1);
 }
 
 #[test]
@@ -36,7 +36,7 @@ fn type_() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/wrong_number_of_arguments/type.k"
     );
-    expect_wrong_number_of_arguments_error(src, "V(U.U, U.U,)", 1);
+    expect_wrong_number_of_arguments_error(src, "V(U.u, U.u,)", 1);
 }
 
 #[test]

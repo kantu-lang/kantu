@@ -1,7 +1,7 @@
 type Nat {
-    .O: Nat,
-    .S(pred~n: Nat): Nat,
+    .o: Nat,
+    .s(pred~n: Nat): Nat,
 }
 
-let right = Nat.S(pred: Nat.O);
-let wrong = Nat.S(Nat.O);
+let right = Nat.s(pred: Nat.o);
+let wrong = Nat.s(Nat.o);

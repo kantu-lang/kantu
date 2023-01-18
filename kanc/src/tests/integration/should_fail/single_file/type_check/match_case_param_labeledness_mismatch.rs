@@ -26,7 +26,7 @@ fn labeled_variant_unlabeled_case() {
     );
     expect_match_case_param_labeledness_mismatch_error(
         src,
-        ".S(a') => Nat.S(pred: plus(a', b,),),",
+        ".s(a') => Nat.s(pred: plus(a', b,),),",
     );
 }
 
@@ -35,5 +35,5 @@ fn unlabeled_variant_labeled_case() {
     let src = include_str!(
         "../../../../sample_code/should_fail/single_file/type_check/match_case_param_labeledness_mismatch/unlabeled_variant_labeled_case.k"
     );
-    expect_match_case_param_labeledness_mismatch_error(src, ".S(:pred) => Nat.S(plus(pred, b,),),");
+    expect_match_case_param_labeledness_mismatch_error(src, ".s(:pred) => Nat.s(plus(pred, b,),),");
 }

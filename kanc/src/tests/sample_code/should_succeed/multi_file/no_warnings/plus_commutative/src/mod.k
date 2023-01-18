@@ -6,8 +6,8 @@ pub use eq.*;
 
 pub let(*) plus = fun plus(-a: Nat, b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => Nat.S(plus(a', b)),
+        .o => b,
+        .s(a') => Nat.s(plus(a', b)),
     }
 };
 
@@ -16,27 +16,27 @@ pub use lemmas.*;
 
 pub let plus_comm = fun plus_comm(-a: Nat, b: Nat): Eq(Nat, plus(a, b), plus(b, a)) {
     match a {
-        .O =>
+        .o =>
             match b {
-                .O => Eq.Refl(Nat, Nat.O),
-                .S(b') =>
+                .o => Eq.refl(Nat, Nat.o),
+                .s(b') =>
                     match plus_O(b') {
-                        .Refl(_Nat, _b) => Eq.Refl(Nat, Nat.S(plus(b', Nat.O))),
+                        .refl(_Nat, _b) => Eq.refl(Nat, Nat.s(plus(b', Nat.o))),
                     },
             },
-        .S(a') =>
+        .s(a') =>
             match b {
-                .O =>
+                .o =>
                     match plus_O(a') {
-                        .Refl(_Nat, _a) => Eq.Refl(Nat, Nat.S(plus(a', Nat.O))),
+                        .refl(_Nat, _a) => Eq.refl(Nat, Nat.s(plus(a', Nat.o))),
                     },
-                .S(b') =>
+                .s(b') =>
                     match plus_S(a', b') {
-                        .Refl(_NatSab, _Sab) =>
+                        .refl(_NatSab, _Sab) =>
                             match plus_S(b', a') {
-                                .Refl(_NatSba, _Sba) =>
+                                .refl(_NatSba, _Sba) =>
                                     match plus_comm(a', b') {
-                                        .Refl(_NatRec, _Rec) => Eq.Refl(Nat, Nat.S(Nat.S(plus(a', b')))),
+                                        .refl(_NatRec, _Rec) => Eq.refl(Nat, Nat.s(Nat.s(plus(a', b')))),
                                     },
                             },
                     },

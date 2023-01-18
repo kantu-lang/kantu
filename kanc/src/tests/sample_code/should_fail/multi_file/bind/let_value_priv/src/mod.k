@@ -1,2 +1,2 @@
 mod nat;
-let _1 = nat.Nat.S(nat.Nat.O);
+let _1 = nat.Nat.s(nat.Nat.o);

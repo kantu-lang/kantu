@@ -8,7 +8,7 @@ use ops.*;
 
 pub let(*) factorial = fun factorial(-n: Nat): nat.Nat {
     match n {
-        .O => pack.nat.Nat.S(O),
-        .S(n') => mult(n, factorial(n')),
+        .o => pack.nat.Nat.s(o),
+        .s(n') => mult(n, factorial(n')),
     }
 };

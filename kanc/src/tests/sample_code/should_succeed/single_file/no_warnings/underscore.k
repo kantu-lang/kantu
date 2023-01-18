@@ -1,10 +1,10 @@
 type Unit {
-    .U: Unit,
+    .u: Unit,
 }
 
 type List(_: Type) {
-    .Nil(T: Type): List(T),
-    .Cons(T: Type, car: T, cdr: List(T)): List(T),
+    .nil(T: Type): List(T),
+    .cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
 type TypeParamMultiple(_: Type, _: Unit) {}
@@ -14,7 +14,7 @@ type Foo {
 }
 
 let fun_param_multiple = fun fun_param_multiple_(_: Type, _: Foo): Unit {
-    Unit.U
+    Unit.u
 };
 
 let variant_param_underscore_doesnt_perform_use_in_match_case =
@@ -24,8 +24,8 @@ let variant_param_underscore_doesnt_perform_use_in_match_case =
         }
     };
 
-let match_case_param_multiple = match Foo.VariantParamMultiple(Foo, Unit.U) {
-    .VariantParamMultiple(_, _) => List.Nil(Unit),
+let match_case_param_multiple = match Foo.VariantParamMultiple(Foo, Unit.u) {
+    .VariantParamMultiple(_, _) => List.nil(Unit),
 };
 
 let fun_underscore = fun _(u: Unit): Unit {

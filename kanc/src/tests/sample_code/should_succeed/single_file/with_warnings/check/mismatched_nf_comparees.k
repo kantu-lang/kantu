@@ -1,21 +1,21 @@
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Eq(T: Type, a: T, b: T) {
-    .Refl(T: Type, c: T): Eq(T, c, c),
+    .refl(T: Type, c: T): Eq(T, c, c),
 }
 
 let mismatched_comparees_non_question = fun _(n: Nat): Nat {
     match n {
         // WARNING
-        .O => check (goal = Eq(Nat, Nat.O, Nat.O)) {
-            Nat.O
+        .o => check (goal = Eq(Nat, Nat.o, Nat.o)) {
+            Nat.o
         },
         // WARNING
-        .S(n') => check (n = Nat.S(n)) {
-            Nat.O
+        .s(n') => check (n = Nat.s(n)) {
+            Nat.o
         },
     }
 };
@@ -23,12 +23,12 @@ let mismatched_comparees_non_question = fun _(n: Nat): Nat {
 let mismatched_comparees_question = fun _(m: Nat): Nat {
     match m {
         // WARNING
-        .O => check (m = ?) {
-            Nat.O
+        .o => check (m = ?) {
+            Nat.o
         },
         // WARNING
-        .S(m') => check (m = ?) {
-            Nat.O
+        .s(m') => check (m = ?) {
+            Nat.o
         },
     }
 };

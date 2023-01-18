@@ -1,7 +1,7 @@
 match x {
     .A => b,
     .B(x') => c,
-    .C(:x') => x',
+    .c(:x') => x',
     .D(:x', :y') => y',
     .E(foo: x') => x',
     .F(foo: x', bar: y') => y',
@@ -13,5 +13,5 @@ match x {
     .L(foo: _, :z) => z,
     .M(...) => x,
     .N(:z, ...) => z,
-    .O(foo: q, :bar, ...) => q,
+    .o(foo: q, :bar, ...) => q,
 }

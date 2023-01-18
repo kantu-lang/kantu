@@ -1,1 +1,1 @@
-let x = super.mod.Nat.O;
+let x = super.mod.Nat.o;

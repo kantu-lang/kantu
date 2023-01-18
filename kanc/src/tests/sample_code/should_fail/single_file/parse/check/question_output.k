@@ -1,7 +1,7 @@
 type Unit {
-    .U: Unit,
+    .u: Unit,
 }
 
-let foo = check (Unit.U: U) {
+let foo = check (Unit.u: U) {
     ?
 };

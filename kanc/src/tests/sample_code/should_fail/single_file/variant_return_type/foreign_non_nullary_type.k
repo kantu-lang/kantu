@@ -1,11 +1,11 @@
 type U {
-    .U: U,
+    .u: U,
 }
 
 type T(x: U) {
-    .T: T(U.U),
+    .T: T(U.u),
 }
 
 type Foo {
-    .F: T(U.U),
+    .F: T(U.u),
 }
