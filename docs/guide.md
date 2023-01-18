@@ -89,9 +89,9 @@ let foo = fun foo(n: Nat): Nat {
     // and this code is legal.
 
     check (foo: forall(x: Nat) { Nat }) {
-        Nat.S(n)
+        Nat.s(n)
     }
-}(Nat.O);
+}(Nat.o);
 
 // Now the `let foo` statement in complete,
 // so that `foo` is now in scope.
@@ -100,7 +100,7 @@ let foo = fun foo(n: Nat): Nat {
 // so it is not in scope here.
 // Thus, there are no conflicting names,
 // and this code is legal.
-let y = check (foo = Nat.S(Nat.O)) {
+let y = check (foo = Nat.s(Nat.o)) {
     foo
 };
 ```
@@ -114,10 +114,10 @@ So the below code is legal (although strongly discouraged, since it's not very r
 type Foo(a: forall(a: Nat) { Nat }) {}
 
 type Bar {
-    .BarVariant(a: forall(a: Nat) { Nat }): Bar,
+    .bar(a: forall(a: Nat) { Nat }): Bar,
 }
 
-let x1 = fun _(f: fun _(f: Nat): Type { Nat }(Nat.O)): Nat {
+let x1 = fun _(f: fun _(f: Nat): Type { Nat }(Nat.o)): Nat {
     f
 };
 
@@ -129,7 +129,7 @@ Also, keep in mind that type parameters are not in scope within the type variant
 ```kantu
 type List(T: Type /* The `T` defined here...*/) {
     // ...and is NOT in scope here.
-    .Nil(
+    .nil(
         // Thus, we are free to name another
         // parameter `T`, since this does NOT
         // cause any name conflict:
@@ -137,7 +137,7 @@ type List(T: Type /* The `T` defined here...*/) {
     ): List(T),
 
     // Same thing here
-    .Cons(T: Type, car: T, cdr: List(T)): List(T),
+    .cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 ```
 
@@ -151,7 +151,7 @@ type TypeName(
     TypeParam1: TypeParamType1,
     // ...
 ) {
-    .Variant0(
+    .variant0(
         VariantParam0: VariantParamType0,
         VariantParam1: VariantParamType1,
         // ...
@@ -162,7 +162,7 @@ type TypeName(
         // ...
     ),
 
-    .Variant1(
+    .variant1(
         VariantParam0: VariantParamType0,
         VariantParam1: VariantParamType1,
         // ...
@@ -181,51 +181,51 @@ Examples:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Bool {
-    .True: Bool,
-    .False: Bool,
+    .true: Bool,
+    .false: Bool,
 }
 
 type Rgb {
     // Use `~` to create labeled parameters (more on this later):
-    .C(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
+    .c(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
 }
 
 type Empty {}
 
 type List(T: Type) {
-    .Nil(T: Type): List(T),
-    .Cons(T: Type, car: T, cdr: List(T)): List(T),
+    .nil(T: Type): List(T),
+    .cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
 // Dependent types are supported 🎉
 type Equal(T: Type, x: T, y: T) {
-    .Refl(T: Type, x: T): Equal(T, x, x),
+    .refl(T: Type, x: T): Equal(T, x, x),
 }
 
 type Or(L: Type, R: Type) {
-    .Inl(L: Type, R: Type, l: L): Or(L, R),
-    .Inr(L: Type, R: Type, r: R): Or(L, R),
+    .inl(L: Type, R: Type, l: L): Or(L, R),
+    .inr(L: Type, R: Type, r: R): Or(L, R),
 }
 
 let In = fun In(T: Type, item: T, list: List(T)): Type {
     match list {
-        List.Nil(_T) => Empty,
-        List.Cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
+        List.nil(_T) => Empty,
+        List.cons(_T, car, cdr) => Or(Equal(T, item, car), In(T, item, cdr)),
     }
 };
 
 type LessThanOrEqualTo(L: Nat, R: Nat) {
-    .Equal(n: Nat): LessThanOrEqualTo(n, n),
-    .Step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.S(b)),
+    .equal(n: Nat): LessThanOrEqualTo(n, n),
+    .step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.s(b)),
 }
 
 type ListOfEvenNats {
-    .C(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) { Even(n) }): ListOfEvenNats,
+    .c(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) { Even(n) }): ListOfEvenNats,
 }
 ```
 
@@ -258,15 +258,15 @@ allow us to prove false. For example:
 type False {}
 
 type Broken {
-    .C(f: forall(b: Broken) { False }): Broken,
+    .c(f: forall(b: Broken) { False }): Broken,
 }
 
 let f = fun _(b: Broken): False {
     match b {
-        .C(g) => g(b),
+        .c(g) => g(b),
     }
 };
-let broken = Broken.C(f);
+let broken = Broken.c(f);
 let false = f(broken);
 // We just proved False! 😨
 ```
@@ -278,7 +278,7 @@ the positivity checker because...
 
 ```kantu
 type Broken {
-    .C(
+    .c(
         f:
             // ...`Broken` appears in the parameter type
             // of the forall parameter `b`.
@@ -295,26 +295,26 @@ such as in the code below
 type False {}
 
 type Not(T: Type) {
-    .C(f: forall(_: T) { False }): Not(T),
+    .c(f: forall(_: T) { False }): Not(T),
 }
 
 type Broken {
     // Look! `Broken` does not appear in a
     // a forall parameter type!
     // So this code is safe, right?...
-    .C(n: Not(Broken)): Broken,
+    .c(n: Not(Broken)): Broken,
 }
 
 let f = fun _(b: Broken): False {
     match b {
-        .C(n) =>
+        .c(n) =>
             match n {
-                .C(g) => g(b),
+                .c(g) => g(b),
             },
     }
 };
-let not_broken = Not.C(f);
-let broken = Broken.B(not_broken);
+let not_broken = Not.c(f);
+let broken = Broken.b(not_broken);
 let false = f(broken);
 // Once again, we proved False! 😨
 ```
@@ -379,9 +379,9 @@ about it--you'll probably never need it.
 
 ```kantu
 let N = Nat;
-let O = Nat.O;
-let S = Nat.S;
-let _3 = S(S(S(O)));
+let o = Nat.o;
+let s = Nat.s;
+let _3 = s(s(s(o)));
 ```
 
 Note that `let` aliases can't be used in `.` expressions.
@@ -390,7 +390,7 @@ For example, the following code will not compile:
 ```kantu
 let N = Nat;
 // Error: Invalid Dot expression LHS
-let S = N.S;
+let s = N.s;
 ```
 
 ## `match` expressions
@@ -399,8 +399,8 @@ The syntax is
 
 ```kantu
 match matchee {
-    .Variant0(param0_0, param0_1, param0_2, /* ... */) => case0_output,
-    .Variant1(param1_0, param1_1, param1_2, /* ... */) => case1_output,
+    .variant0(param0_0, param0_1, param0_2, /* ... */) => case0_output,
+    .variant1(param1_0, param1_1, param1_2, /* ... */) => case1_output,
     // ...
 }
 ```
@@ -409,13 +409,13 @@ Example:
 
 ```kantu
 type Bool {
-    .False: Bool,
-    .True: Bool,
+    .false: Bool,
+    .true: Bool,
 }
 
-let false = match Bool.True {
-    .False => Bool.True,
-    .True => Bool.False,
+let false = match Bool.true {
+    .false => Bool.true,
+    .true => Bool.false,
 };
 ```
 
@@ -425,22 +425,22 @@ For example:
 
 ```kantu
 type TypeEq(A: Type, B: Type) {
-    .Refl(C: Type): TypeEq,
+    .refl(c: Type): TypeEq,
 }
 
 type UnitX {
-    .C: UnitX,
+    .c: UnitX,
 }
 
 type UnitY {
-    .C: UnitY,
+    .c: UnitY,
 }
 
 type False {}
 
 let f = fun _(H: TypeEq(UnitX, UnitY)): False {
     match H {
-        .Refl(_) =>
+        .refl(_) =>
         // This case is impossible, so rather than
         // write an output expression, we must write
         // `impossible`.
@@ -465,19 +465,19 @@ Example:
 
 ```kantu
 type Bool {
-    .False: Bool,
-    .True: Bool,
+    .false: Bool,
+    .true: Bool,
 }
 
 let not = fun not(b: Bool): Bool {
     match b {
-        .False => Bool.True,
-        .True => Bool.False,
+        .false => Bool.true,
+        .true => Bool.false,
     }
 };
 // We can now call the Function through the
 // `let` binding. For example:
-let true = not(Bool.False);
+let true = not(Bool.false);
 ```
 
 You can make functions anonymous by writing `_`
@@ -486,14 +486,14 @@ instead of a name.
 ```kantu
 let not = fun _(b: Bool): Bool {
     match b {
-        .False => Bool.True,
-        .True => Bool.False,
+        .false => Bool.true,
+        .true => Bool.false,
     }
 };
 // We can still call the Function through the
 // `let` binding--the function's name (or lack thereof)
 // has no influence on the name of the binding.
-let true = not(Bool.False);
+let true = not(Bool.false);
 ```
 
 It is strongly encouraged to make non-recursive functions anonymous.
@@ -516,8 +516,8 @@ For example:
 ```kantu
 let esoteric_identity_implementation = fun f(-n: Nat): Nat {
     match n {
-        .O => Nat.O,
-        .S(n') => Nat.S(f(n')),
+        .o => Nat.o,
+        .s(n') => Nat.s(f(n')),
     }
 };
 ```
@@ -535,11 +535,11 @@ For example, in
 ```kantu
 let foo = fun _(n: Nat, m: Nat) {
     match n {
-        .O => Nat.O,
-        .S(n') =>
+        .o => Nat.o,
+        .s(n') =>
             match n' {
-                .O => Nat.O,
-                .S(n'') => Nat.O,
+                .o => Nat.o,
+                .s(n'') => Nat.o,
             }
     }
 }
@@ -547,7 +547,7 @@ let foo = fun _(n: Nat, m: Nat) {
 
 ...the syntactic substructures of `n` are `n'` and `n''`.
 By rule (1), `n'` is a syntactic substructure of `n` because
-it is defined by an arm (specically, the `.S(n')` arm) of the `match n` expression.
+it is defined by an arm (specically, the `.s(n')` arm) of the `match n` expression.
 Similarly, `n''` is a syntactic substructure of `n'` because it is
 defined by an arm of the `match n'` expression.
 Since `n'` is a syntactic substructure of `n`, and `n''` is a syntactic substructure
@@ -566,8 +566,8 @@ abstract, so here are some concrete examples:
 ```kantu
 let always_returns_zero = fun zero_(-n: Nat): Nat {
     match n {
-        .O => Nat.O,
-        .S(n') => zero_(n'),
+        .o => Nat.o,
+        .s(n') => zero_(n'),
     }
 };
 ```
@@ -589,12 +589,12 @@ let infinite_recursion = fun f(-n: Nat): Nat {
 ```kantu
 let no_decreasing_param = fun f(n: Nat): Nat {
     match n {
-        .O => Nat.O,
+        .o => Nat.o,
         // Cannot recursively call `f` because
         // it does not have a decreasing parameter
         // defined (i.e., none of the parameters are
         // marked with `-`).
-        .S(n') => f(n'),
+        .s(n') => f(n'),
     }
 };
 ```
@@ -616,7 +616,7 @@ Example:
 let total_fruit = fun _(apples~a: Nat, bananas~ban: Nat, cherries~cher): Nat {
     plus(plus(a, ban), cher)
 };
-let x = total_fruit(apples: Nat.O, bananas: Nat.S(Nat.O), cherries: Nat.O);
+let x = total_fruit(apples: Nat.o, bananas: Nat.s(Nat.o), cherries: Nat.o);
 ```
 
 If a label is the same as the parameter name, you can omit the label. For example,
@@ -652,28 +652,28 @@ For example:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(_: Nat): Nat,
+    .o: Nat,
+    .s(_: Nat): Nat,
 }
 
 type Color {
     // Observe that the param label order is
     // "r,g,b".
-    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
-let O = Nat.O;
+let o = Nat.o;
 
 // In this call expression, the argument label
 // order matches the param label order (i.e.,
 // both are "r,g,b")
-let good = Color.C(r: O, g: O, b: O);
+let good = Color.c(r: o, g: o, b: o);
 
 // In this call expression, the argument label
 // order does NOT match the param label order (i.e.,
 // param order is "r,g,b" but the arg order is
 // "b,g,r").
-let still_legal_but_frowned_upon = Color.C(b: O, g: O, r: O);
+let still_legal_but_frowned_upon = Color.c(b: o, g: o, r: o);
 ```
 
 Calling a labeled function with correctly labeled but misordered arguments (e.g., like `still_legal_but_frowned_upon` in the above example) will **always be legal**.
@@ -707,7 +707,7 @@ Example:
 ```kantu
 let f = fun _(~a: Nat): Nat { a }
 let F = forall(~a: Nat) { Nat };
-let expect_F = fun _(_: F): Unit { Unit.C };
+let expect_F = fun _(_: F): Unit { Unit.c };
 
 // Okay: Labels of `f` match the labels of the required type (`F`).
 let okay = expect_F(f);
@@ -738,19 +738,19 @@ a member of type _F_.
 Example:
 
 ```kantu
-let f = fun _(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah): Unit { Unit.C };
+let f = fun _(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah): Unit { Unit.c };
 let F = forall(~Texas: Type, ~Utah: Type, ~texas: Texas, ~utah: Utah) { Unit };
-let expect_F = fun _(_: F): Unit { Unit.C };
+let expect_F = fun _(_: F): Unit { Unit.c };
 
 // Okay: Both labels and order match.
 let okay = expect_F(f);
 
-let f' = fun(Texas~T: Type, Utah~U: Type, texas~t: T, utah~u: U): Unit { Unit.C };
+let f' = fun(Texas~T: Type, Utah~U: Type, texas~t: T, utah~u: U): Unit { Unit.c };
 // Okay: The parameter names are different, but once again,
 // both the labels and order match.
 let also_okay = expect_F(f);
 
-let wrong_order = fun _(~Texas: Type, ~texas: Texas, ~Utah: Type, ~utah: Utah): Unit { Unit.C };
+let wrong_order = fun _(~Texas: Type, ~texas: Texas, ~Utah: Type, ~utah: Utah): Unit { Unit.c };
 // Error: The labels are in the wrong order.
 let wrong = expect_F(wrong_order);
 ```
@@ -763,7 +763,7 @@ If you try writing the following code, you will get an error
 
 ```kantu
 type Color {
-    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let redness_WRONG = fun _(c: Color): Nat {
@@ -771,7 +771,7 @@ let redness_WRONG = fun _(c: Color): Nat {
         // Error:
         // Variant has labeled parameters
         // but match case has unlabeled parameters.
-        .C(red, _, _) => red,
+        .c(red, _, _) => red,
     }
 };
 ```
@@ -783,7 +783,7 @@ To fix this code, one could write
 ```kantu
 let redness = fun _(c: Color): Nat {
     match c {
-        .C(r: red, g: _, b: _) => red,
+        .c(r: red, g: _, b: _) => red,
     }
 };
 ```
@@ -797,12 +797,12 @@ you can alternatively write
 ```kantu
 let redness2 = fun _(c: Color): Nat {
     match c {
-        .C(r: red, ...) => red,
+        .c(r: red, ...) => red,
     }
 };
 ```
 
-The `...` must go at the end of the parameter list (e.g., `.C(..., r: red)` is illegal).
+The `...` must go at the end of the parameter list (e.g., `.c(..., r: red)` is illegal).
 
 ##### Implicit label syntax
 
@@ -816,7 +816,7 @@ would could be shortened to `:r`:
 ```kantu
 let redness3 = fun _(c: Color): Nat {
     match c {
-        .C(:r, ...) => r,
+        .c(:r, ...) => r,
     }
 };
 ```
@@ -825,24 +825,24 @@ let redness3 = fun _(c: Color): Nat {
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(_: Nat): Nat,
+    .o: Nat,
+    .s(_: Nat): Nat,
 }
 
 type Color {
     // Observe that the param label order is
     // "r,g,b".
-    .C(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
-let O = Nat.O;
+let o = Nat.o;
 
 let good = fun _(c: Color): Nat {
     match c {
         // In this match case, the match case param label
         // order matches the type variant param label order (i.e.,
         // both are "r,g,b")
-        .C(:r, :g, :b): r,
+        .c(:r, :g, :b): r,
     }
 };
 
@@ -852,7 +852,7 @@ let still_legal_but_frowned_upon = fun _(c: Color): Nat {
         // order does NOT match the type variant param label order
         // (i.e., the variant's order "r,g,b", but the case's
         // order is "b,g,r").
-        .C(:b, :g, :r): r,
+        .c(:b, :g, :r): r,
     }
 };
 ```
@@ -879,14 +879,14 @@ Example:
 
 ```kantu
 type Option(T: Type) {
-    .None(T: Type): Option(T),
-    .Some(T: Type, t: T): Option(T),
+    .none(T: Type): Option(T),
+    .some(T: Type, t: T): Option(T),
 }
 
 let map = fun _(T: Type, U: Type, o: Option(T), f: forall(t: T) { U }): Option(U) {
     match o {
-        .None(_) => Option.None(U),
-        .Some(_, t) => Option.Some(f(t)),
+        .none(_) => Option.none(U),
+        .some(_, t) => Option.some(f(t)),
     }
 };
 ```
@@ -911,35 +911,35 @@ You can call type constructors, type variant constructors, and `fun`s. Example:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Option(T: Type) {
-    .None(T: Type): Option(T),
-    .Some(T: Type, t: T): Option(T),
+    .none(T: Type): Option(T),
+    .some(T: Type, t: T): Option(T),
 }
 
 // Calling type constructor `Option` with arguments `(Nat)`:
 let OptNat = Option(Nat);
 
-// Calling type variant constructor `Nat.S` with arguments `(Nat.O)`:
-let _1 = Nat.S(Nat.O);
+// Calling type variant constructor `Nat.s` with arguments `(Nat.o)`:
+let _1 = Nat.s(Nat.o);
 
-let _2 = Nat.S(Nat.S(Nat.O));
+let _2 = Nat.s(Nat.s(Nat.o));
 
 /// Calling the `plus` function with arguments `(_1, _2)`:
 let _3 = fun plus(-a: Nat, b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => Nat.S(plus(a', b)),
+        .o => b,
+        .s(a') => Nat.s(plus(a', b)),
     }
 }(_1, _2);
 
 let labeled_call_example = fun plus(~-a: Nat, bar~b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => Nat.S(plus(a', b)),
+        .o => b,
+        .s(a') => Nat.s(plus(a', b)),
     }
 }(a: _1, bar: _2);
 ```
@@ -977,22 +977,22 @@ Example:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type EqNat(x: Nat, y: Nat) {
-    .Refl(z: Nat): EqNat(z, z),
+    .refl(z: Nat): EqNat(z, z),
 }
 
 let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
     match H {
-        .Refl(c) =>
+        .refl(c) =>
             check (
                 EqNat(b, a) = EqNat(c, c),
-                EqNat.Refl(c): EqNat(c, c),
+                EqNat.refl(c): EqNat(c, c),
             ) {
-                EqNat.Refl(c)
+                EqNat.refl(c)
             },
     }
 }
@@ -1013,25 +1013,25 @@ the left-hand side:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type EqNat(x: Nat, y: Nat) {
-    .Refl(z: Nat): EqNat(z, z),
+    .refl(z: Nat): EqNat(z, z),
 }
 
 let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
     match H {
-        .Refl(c) =>
+        .refl(c) =>
             check (
                 // Observe that the LHS uses the `goal` keyword
                 // instead of an expression
                 goal = EqNat(c, c),
 
-                EqNat.Refl(c): EqNat(c, c),
+                EqNat.refl(c): EqNat(c, c),
             ) {
-                EqNat.Refl(c)
+                EqNat.refl(c)
             },
     }
 }
@@ -1046,24 +1046,24 @@ you can write `?` in place of the right-hand side:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type EqNat(x: Nat, y: Nat) {
-    .Refl(z: Nat): EqNat(z, z),
+    .refl(z: Nat): EqNat(z, z),
 }
 
 let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
     match H {
-        .Refl(c) =>
+        .refl(c) =>
             check (
                 // Observe that the RHS uses the `?` operator
                 // instead of an expression
                 goal = ?,
-                EqNat.Refl(c): ?,
+                EqNat.refl(c): ?,
             ) {
-                EqNat.Refl(c)
+                EqNat.refl(c)
             },
     }
 }
@@ -1092,8 +1092,8 @@ but no errors:
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 let foo = fun _(n: Nat): Nat {
@@ -1101,19 +1101,19 @@ let foo = fun _(n: Nat): Nat {
         // Undefined names (`b` and `c`)
         b = c,
         // Ill typed RHS
-        goal: Nat.S(Nat),
+        goal: Nat.s(Nat),
         g = fun infinite_loop(a: Nat): Nat {
             infinite_loop(a)
         },
     ) {
-        Nat.O
+        Nat.o
     }
 };
 ```
 
 As you can see, there were numerous problems in the
 above code, such as references to undefined names
-(e.g., `b`, `c`), ill-typed terms `Nat.S(Nat)`, and illegal recursion.
+(e.g., `b`, `c`), ill-typed terms `Nat.s(Nat)`, and illegal recursion.
 All these problems would normally result in errors.
 However, check assertions are meant to serve as
 compiler-checked documentation--like comments, they don't have any
@@ -1229,13 +1229,13 @@ mod foo;
 pub mod bar;
 
 pub use foo.Nat;
-use Nat.O;
-use Nat.S;
+use Nat.o;
+use Nat.s;
 
 pub let factorial = fun f(-a: Nat): Nat {
     match a {
-        .O => S(O),
-        .S(a') => bar.mult(a, f(a')),
+        .o => s(o),
+        .s(a') => bar.mult(a, f(a')),
     }
 };
 ```
@@ -1253,13 +1253,13 @@ More details on this will be covered in the **Module item visibility** section.
 
 If an item does not have a `pub` prefix, its visibility defaults to
 `pub(mod)`.
-In this example, `foo`, `O`, `S`, and `mult`
+In this example, `foo`, `o`, `s`, and `mult`
 all implictly have `pub(mod)` visibility.
 
 To use an item that doesn't directly belong to this module, you must use fully qualified syntax (e.g., like `bar.mult`, in the above example).
 
 However, you can create aliases using the `use` keyword, like the
-above example does with `foo.Nat`, `Nat.O`, and `Nat.S`.
+above example does with `foo.Nat`, `Nat.o`, and `Nat.s`.
 Creating an alias will make the aliased item available from the
 current module's namespace.
 As with all file items, the visibility defaults to `pub(mod)`,
@@ -1270,8 +1270,8 @@ change it.
 
 ```kantu
 pub type Nat {
-    .O: Nat,
-    .S(_: Nat): Nat,
+    .o: Nat,
+    .s(_: Nat): Nat,
 }
 ```
 
@@ -1282,41 +1282,41 @@ use super.Nat;
 
 pub let mult = fun f(-a: Nat, b: Nat): Nat {
     match a {
-        .O => super.O,
-        .S(a') => plus(b, f(a', b)),
+        .o => super.o,
+        .s(a') => plus(b, f(a', b)),
     }
 };
 ```
 
-Note that since we created the aliases `Nat` and `O`
+Note that since we created the aliases `Nat` and `o`
 back in `mod.k`, and `pack` is this module's supermodule,
 we can now access those aliases here
-by writing `super.Nat` and `super.O`.
+by writing `super.Nat` and `super.o`.
 However, if we find that that's still too long to write,
 we can create an _alias to that alias_ by writing
 `use super.Nat;`.
-Note that we decline to alias `super.O`, so when we reference
-it (i.e., in the output of the match expression's `.O` case),
+Note that we decline to alias `super.o`, so when we reference
+it (i.e., in the output of the match expression's `.o` case),
 we use fully qualified syntax.
 
 #### `src/bar/baz.k` (corresponds to the `pack.bar.baz` module):
 
 ```kantu
 use super.Nat;
-use super2.S;
+use super2.s;
 
 pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
     match a {
-        .O => b,
-        .S(a') => S(f(a', b)),
+        .o => b,
+        .s(a') => s(f(a', b)),
     }
 };
 ```
 
-Note that we have to write `use super2.S;` instead of simply
-`use super.S;`.
+Note that we have to write `use super2.s;` instead of simply
+`use super.s;`.
 This is because the supermodule (i.e., `pack.bar`) does _not_ export
-an item named `S`, but the supermodule's supermodule (i.e., `pack`)
+an item named `s`, but the supermodule's supermodule (i.e., `pack`)
 does indeed export such an item.
 
 #### End of the example
@@ -1403,8 +1403,8 @@ pub mod factorial;
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(_: Nat): Nat,
+    .o: Nat,
+    .s(_: Nat): Nat,
 }
 ```
 
@@ -1417,8 +1417,8 @@ mod plus;
 // so we must use `.` syntax (specifically, `super.nat.Nat`).
 let mult = fun mult(-a: super.nat.Nat, b: super.nat.Nat): super.nat.Nat {
     match a {
-        .O => super.nat.Nat.S(super.nat.Nat.O),
-        .S(a') =>
+        .o => super.nat.Nat.s(super.nat.Nat.o),
+        .s(a') =>
             // `plus` was declared by a module other than the current module,
             // so we must use `.` syntax (specifically, `plus.plus`).
             plus.plus(b, mult(a', b)),
@@ -1427,10 +1427,10 @@ let mult = fun mult(-a: super.nat.Nat, b: super.nat.Nat): super.nat.Nat {
 
 pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
     match a {
-        .O => super.nat.Nat.S(super.nat.Nat.O),
+        .o => super.nat.Nat.s(super.nat.Nat.o),
         // `mult` is declared by the current module, so we don't
         // need `.` syntax.
-        .S(a') => mult(a, factorial(a')),
+        .s(a') => mult(a, factorial(a')),
     }
 };
 ```
@@ -1442,8 +1442,8 @@ pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
 // so we must use `.` syntax (specifically, `super2.nat.Nat`).
 pub let plus = fun plus(-a: super2.nat.Nat, b: super2.nat.Nat): super2.nat.Nat {
     match a {
-        .O => b,
-        .S(a') => super2.nat.Nat.S(plus(a', b)),
+        .o => b,
+        .s(a') => super2.nat.Nat.s(plus(a', b)),
     }
 };
 ```
@@ -1473,7 +1473,7 @@ Before:
 ```kantu
 mod math;
 
-let x = math.nat.Nat.S(math.nat.Nat.O);
+let x = math.nat.Nat.s(math.nat.Nat.o);
 ```
 
 After:
@@ -1482,10 +1482,10 @@ After:
 mod math;
 
 use math.nat.Nat;
-use Nat.O;
-use Nat.S;
+use Nat.o;
+use Nat.s;
 
-let x = S(O);
+let x = s(o);
 ```
 
 #### `use` basic syntax
@@ -1504,8 +1504,8 @@ use math.nat.Nat as Foo;
 
 let plus = fun plus(-a: Foo, b: Foo): Foo {
     match a {
-        .O => Foo.O,
-        .S(a') => Foo.S(plus(a', b)),
+        .o => Foo.o,
+        .s(a') => Foo.s(plus(a', b)),
     }
 };
 ```
@@ -1557,13 +1557,13 @@ problem when we have something like
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type Bool {
-    .True: Bool,
-    .False: Bool,
+    .true: Bool,
+    .false: Bool,
 }
 
 mod arithmetic;
@@ -1647,8 +1647,8 @@ pub mod plus;
 
 ```kantu
 pub type NaturalNumber {
-    .O: NaturalNumber,
-    .S(_: NaturalNumber): NaturalNumber,
+    .o: NaturalNumber,
+    .s(_: NaturalNumber): NaturalNumber,
 }
 ```
 
@@ -1659,8 +1659,8 @@ use super.Nat;
 
 pub let plus = fun plus(-a: Nat, b: Nat): Nat {
     match a {
-        .O => Nat.O,
-        .S(a') => Nat.S(plus(a', b)),
+        .o => Nat.o,
+        .s(a') => Nat.s(plus(a', b)),
     }
 };
 ```
@@ -1694,12 +1694,12 @@ For example, is the following code is valid.
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type EqNat(a: Nat, b: Nat) {
-    .Refl(c: Nat): EqNat(c, c),
+    .refl(c: Nat): EqNat(c, c),
 }
 
 let identity = fun _(T: Type, t: T): T {
@@ -1707,19 +1707,19 @@ let identity = fun _(T: Type, t: T): T {
 };
 let ascribe = identity;
 
-let my_number = Nat.O;
+let my_number = Nat.o;
 
 let my_number_equals_zero = identity(
-    EqNat(my_number, Nat.O),
-    EqNat.Refl(Nat.O),
+    EqNat(my_number, Nat.o),
+    EqNat.refl(Nat.o),
 );
 ```
 
 The above code is valid because `my_number` is replaced
-its value (i.e., `Nat.O`) during evaluation, therefore
-`EqNat(my_number, Nat.O)` evaluates to the normal form
-`EqNat(Nat.O, Nat.O)`, which is inhabited by the term
-`Eqnat.Refl(Nat.O)`.
+its value (i.e., `Nat.o`) during evaluation, therefore
+`EqNat(my_number, Nat.o)` evaluates to the normal form
+`EqNat(Nat.o, Nat.o)`, which is inhabited by the term
+`Eqnat.refl(Nat.o)`.
 
 However, the following code is *in*valid.
 
@@ -1727,12 +1727,12 @@ However, the following code is *in*valid.
 
 ```kantu
 type Nat {
-    .O: Nat,
-    .S(n: Nat): Nat,
+    .o: Nat,
+    .s(n: Nat): Nat,
 }
 
 type EqNat(a: Nat, b: Nat) {
-    .Refl(c: Nat): EqNat(c, c),
+    .refl(c: Nat): EqNat(c, c),
 }
 
 let identity = fun _(T: Type, t: T): T {
@@ -1744,8 +1744,8 @@ mod my_constants;
 use my_constants.my_number;
 
 let my_number_equals_zero = identity(
-    EqNat(my_number, Nat.O),
-    EqNat.Refl(Nat.O),
+    EqNat(my_number, Nat.o),
+    EqNat.refl(Nat.o),
 );
 ```
 
@@ -1753,15 +1753,15 @@ let my_number_equals_zero = identity(
 
 ```kantu
 use super.*;
-pub let my_number = Nat.O;
+pub let my_number = Nat.o;
 ```
 
 This is because in this example, `my_number`'s transparency level
 is `pack.my_constants`, so when evaluating the term
-`EqNat(my_number, Nat.O)` in `pack`,
-`my_number` is NOT replaced with `Nat.O`.
-As a result, the `EqNat(my_number, Nat.O)` is its own normal form,
-and `EqNat.Refl(Nat.O)` cannot be judged to inhabit it.
+`EqNat(my_number, Nat.o)` in `pack`,
+`my_number` is NOT replaced with `Nat.o`.
+As a result, the `EqNat(my_number, Nat.o)` is its own normal form,
+and `EqNat.refl(Nat.o)` cannot be judged to inhabit it.
 
 #### Modifying constant transparency
 
@@ -1769,14 +1769,14 @@ Write a module after the let. Here are some examples:
 
 ```kantu
 // Global transparency
-pub let(*) my_number_2 = Nat.O;
+pub let(*) my_number_2 = Nat.o;
 
 // Transparent in supermodule (and its descendants)
-pub let(super) my_number_3 = Nat.O;
+pub let(super) my_number_3 = Nat.o;
 
 // Transparent in `pack.some.arbitrary.ancestor`
 // (and its descendants)
-pub let(pack.some.arbitrary.ancestor) my_number_4 = Nat.O;
+pub let(pack.some.arbitrary.ancestor) my_number_4 = Nat.o;
 ```
 
 You can write the same things inside the `()` used for specifying
