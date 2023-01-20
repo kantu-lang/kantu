@@ -185,7 +185,7 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
                 Ok(())
             } else if c.is_ascii_digit() {
                 Err(LexError::UnexpectedCharacter(c, i))
-            } else if does_character_category_permit_it_to_be_used_in_identifier_name(c) {
+            } else if is_valid_initial_identifier_character(c) {
                 state.pending_token = Some(PendingToken {
                     start_index: i,
                     content: c.into(),
@@ -371,12 +371,12 @@ fn handle_char(state: &mut LexState, c: char, i: ByteIndex) -> Result<(), LexErr
     }
 }
 
-// TODO: Make left_delimiter_count: NonZeroUsize
+fn is_valid_initial_identifier_character(c: char) -> bool {
+    c.is_ascii_alphabetic() || c == '_'
+}
 
 fn is_valid_non_initial_identifier_character(c: char) -> bool {
-    !c.is_whitespace()
-        && get_token_kind_of_special_non_underscore_character(c).is_none()
-        && does_character_category_permit_it_to_be_used_in_identifier_name(c)
+    c.is_ascii_alphanumeric() || c == '_' || c == '\''
 }
 
 /// If this character is a special character that is not an underscore, returns `Some`.
@@ -451,32 +451,6 @@ fn get_token_kind_of_non_underscore_keyword(s: &str) -> Option<TokenKind> {
 
         _ => None,
     }
-}
-
-fn does_character_category_permit_it_to_be_used_in_identifier_name(c: char) -> bool {
-    use unicode_general_category::{get_general_category, GeneralCategory};
-    matches!(
-        get_general_category(c),
-        GeneralCategory::ClosePunctuation
-            | GeneralCategory::ConnectorPunctuation
-            | GeneralCategory::CurrencySymbol
-            | GeneralCategory::DashPunctuation
-            | GeneralCategory::DecimalNumber
-            | GeneralCategory::FinalPunctuation
-            | GeneralCategory::InitialPunctuation
-            | GeneralCategory::LetterNumber
-            | GeneralCategory::LowercaseLetter
-            | GeneralCategory::MathSymbol
-            | GeneralCategory::ModifierLetter
-            | GeneralCategory::ModifierSymbol
-            | GeneralCategory::OpenPunctuation
-            | GeneralCategory::OtherLetter
-            | GeneralCategory::OtherNumber
-            | GeneralCategory::OtherPunctuation
-            | GeneralCategory::OtherSymbol
-            | GeneralCategory::TitlecaseLetter
-            | GeneralCategory::UppercaseLetter
-    )
 }
 
 fn set_last_char_changed_delimiter_count_or_panic(token: &mut PendingToken, value: bool) {

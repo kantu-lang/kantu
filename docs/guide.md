@@ -6,22 +6,20 @@ This document is still under construction.
 It may not be 100% up-to-date (though it should be at least 90% accurate).
 It also needs to be simplified, since it's really verbose (and probably a bit intimidating to newcomers) right now.
 
-## Identifiers
+## Identifier names
 
-Identifier names can contain the following characters:
+The first character must be either an ASCII letter (i.e., a-z or A-Z)
+or an underscore ("\_").
 
-- Unicode letters
-- Unicode numbers
-- Unicode punctuation
-- Unicode symbols
+The subsequent characters (if there are any) may be:
 
-...with the exception of:
+- An ASCII letter (i.e., a-z or A-Z)
+- An underscore ("\_")
+- An ASCII digit (i.e., 0-9)
+- A single quote ("'")
 
-- The characters `;:,.@=-?~/*()[]{}<>` cannot appear anywhere.
-- The characters `0123456789` cannot appear as the first character, but may appear everywhere else.
-- Whitespace cannot appear anywhere.
-
-Additionally, the following strings are reserved words, and cannot be used as identifiers:
+Additionally, the following strings are reserved, and may
+**not** be used as identifier names:
 
 ```
 _ (the underscore)
@@ -68,9 +66,6 @@ async
 
 notation
 exists
-
-∀ (Unicode universal quantifier symbol)
-∃ (Unicode existential quantifier symbol)
 ```
 
 ### Name shadowing

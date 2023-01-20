@@ -1,1 +1,1 @@
-type 0Foo {}
+type 9Foo {}
