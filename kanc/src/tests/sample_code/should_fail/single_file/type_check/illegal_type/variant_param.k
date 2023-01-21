@@ -1,7 +1,7 @@
 type U {
-    .u: U,
+    u: U,
 }
 
 type Foo {
-    .bar(x: U.u): Foo,
+    bar(x: U.u): Foo,
 }

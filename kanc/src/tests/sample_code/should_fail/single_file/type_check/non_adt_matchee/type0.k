@@ -1,5 +1,5 @@
 type U {
-    .u: U,
+    u: U,
 }
 
 let foo = fun foo_(x: U): U {

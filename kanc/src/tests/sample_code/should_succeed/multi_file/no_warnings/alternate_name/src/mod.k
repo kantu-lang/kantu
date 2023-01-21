@@ -9,7 +9,7 @@ use o as z;
 
 pub let mult = fun mult(-a: Blat, b: Blat): Blat {
     match a {
-        .o => z,
-        .s(a') => blops.plus(b, mult(a', b)),
+        o => z,
+        s(a') => blops.plus(b, mult(a', b)),
     }
 };

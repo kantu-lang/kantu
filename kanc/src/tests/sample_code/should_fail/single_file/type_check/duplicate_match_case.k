@@ -1,13 +1,13 @@
 type U {
-    .u: U,
+    u: U,
 }
 
 type Bool {
-    .true: Bool,
-    .false: Bool,
+    true: Bool,
+    false: Bool,
 }
 
 let foo = match U.u {
-    .u => Bool.true,
-    .u => Bool.false,
+    u => Bool.true,
+    u => Bool.false,
 };

@@ -1,12 +1,12 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 let plus = fun plus_(-a: Nat, b: Nat): Nat {
     match a {
-        .o => b,
-        .s(a') => Nat.s(plus_(a', b)),
+        o => b,
+        s(a') => Nat.s(plus_(a', b)),
     }
 };
 

@@ -1,3 +1,3 @@
 pub type Foo {
-    .c: Foo,
+    c: Foo,
 }

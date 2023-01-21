@@ -1,16 +1,16 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 let symbolically_invalid = fun _(n: Nat): Nat {
     match n {
         // WARNING
-        .o => check (n: this_symbol_doesnt_exist) {
+        o => check (n: this_symbol_doesnt_exist) {
             Nat.o
         },
         // WARNING
-        .s(n') => check (n: fun _(/* name clash with n */ n: Nat): Type { Nat }(n)) {
+        s(n') => check (n: fun _(/* name clash with n */ n: Nat): Type { Nat }(n)) {
             Nat.o
         },
     }
@@ -18,7 +18,7 @@ let symbolically_invalid = fun _(n: Nat): Nat {
 
 let illegal_fun_rec = fun _(n: Nat): Nat {
     match n {
-        .o =>
+        o =>
         check (
             // WARNING
             n:
@@ -28,7 +28,7 @@ let illegal_fun_rec = fun _(n: Nat): Nat {
         ) {
             Nat.o
         },
-        .s(n') =>
+        s(n') =>
         check (
             // WARNING
             n:
@@ -44,11 +44,11 @@ let illegal_fun_rec = fun _(n: Nat): Nat {
 let type_check_error = fun _(n: Nat): Nat {
     match n {
         // WARNING
-        .o => check (n: Nat.s(Nat)) {
+        o => check (n: Nat.s(Nat)) {
             Nat.o
         },
         // WARNING
-        .s(n') => check (Nat.s(Nat): n) {
+        s(n') => check (Nat.s(Nat): n) {
             Nat.o
         },
     }
@@ -56,7 +56,7 @@ let type_check_error = fun _(n: Nat): Nat {
 
 let type_check_error2 = fun _(n: Nat): Nat {
     match n {
-        .o => check (
+        o => check (
             // WARNING
             Nat.s(Nat):
                 // WARNING
@@ -64,6 +64,6 @@ let type_check_error2 = fun _(n: Nat): Nat {
         ) {
             Nat.o
         },
-        .s(n') => Nat.o,
+        s(n') => Nat.o,
     }
 };

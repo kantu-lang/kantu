@@ -1,0 +1,6 @@
+---
+source: src/tests/skin_e2e_dry_run/should_fail/simplify_ast.rs
+assertion_line: 13
+expression: output
+---
+"Error: [E0305] Could not parse file: Unexpected token `.` on <CARGO_MANIFEST_DIR>/src/tests/sample_code/should_fail/single_file/ast_simplification/dot/illegal_dot_lhs.k:6:26."

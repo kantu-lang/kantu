@@ -1,5 +1,5 @@
 type U {
-    .u: U,
+    u: U,
 }
 
 type V(t: U) {}

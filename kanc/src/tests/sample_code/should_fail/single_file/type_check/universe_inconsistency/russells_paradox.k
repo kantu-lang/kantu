@@ -8,11 +8,11 @@ let ascribe = fun _(T: Type, t: T): T {
 };
 
 type Equal(T: Type, l: T, r: T) {
-    .refl(T: Type, t: T): Equal(T, t, t),
+    refl(T: Type, t: T): Equal(T, t, t),
 }
 
 type Exists(T: Type, P: forall(_: T) { Type }) {
-    .c(T: Type, P: forall(_: T) { Type }, witness: T, H: P(witness)): Exists(T, P),
+    c(T: Type, P: forall(_: T) { Type }, witness: T, H: P(witness)): Exists(T, P),
 }
 
 type False {}
@@ -22,11 +22,11 @@ let Not = fun _(T: Type): Type {
 };
 
 type Set {
-    .c(T: Type, mapper: forall(_: T) { Set }): Set,
+    c(T: Type, mapper: forall(_: T) { Set }): Set,
 }
 
 type In(l: Set, R: Set) {
-    .c(
+    c(
         l: Set,
         RT: Type,
         r_mapper: forall(_: RT) { Set },
@@ -43,7 +43,7 @@ let NonSelfContainingSet = Exists(
 );
 let extract_nsc = fun _(s: NonSelfContainingSet): Set {
     match s {
-        .c(_, _, witness, _) => witness,
+        c(_, _, witness, _) => witness,
     }
 };
 
@@ -56,13 +56,13 @@ let delta = Set.c(
 /*let delta_members_are_nsc = fun _(s: Set, H: In(s, delta)): NonSelfContaining(s) {
     fun _(H_self_containing: In(s, s)): False {
         match H_self_containing {
-            .c(
+            c(
                 _s,
                 _s_RT,
                 _s_r_mapper,
                 H_exists,
             ) => match H_exists {
-                .c(
+                c(
                     _s_RT_2,
                     _,
                     s_r_elem,
@@ -76,13 +76,13 @@ let delta = Set.c(
 let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfContaining(s) {
     fun _(H_self_containing: In(s, s)): False {
         match H_s_in_delta {
-            .c(
+            c(
                 _s,
                 _NonSelfContainingSet,
                 _extract_nsc,
                 H_exists_r_such_that_extracting_r_yields_s,
             ) => match H_exists_r_such_that_extracting_r_yields_s {
-                .c(
+                c(
                     _NonSelfContainingSet_2,
                     _ExtractingArgYieldsSPredicate,
                     r,
@@ -98,7 +98,7 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                     // Thus, we must use type ascription before performing the
                     // match.
                     match ascribe(NonSelfContainingSet, r) {
-                        .c(
+                        c(
                             _Set,
                             _NonSelfContaining,
                             r',
@@ -121,7 +121,7 @@ let delta_members_are_nsc = fun _(s: Set, H_s_in_delta: In(s, delta)): NonSelfCo
                                 // Once again, `r'_not_in_r'`'s "main type" is
                                 // `_NonSelfContaining(r')`.
                                 // So once again, we ascribe before matching.
-                                .refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
+                                refl(_, _) => ascribe(NonSelfContaining(r'), r'_not_in_r')(
                                     H_self_containing
                                 ),
                             }

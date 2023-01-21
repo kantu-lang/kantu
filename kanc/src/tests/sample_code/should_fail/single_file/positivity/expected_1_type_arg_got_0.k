@@ -1,21 +1,21 @@
 type Empty {}
 
 type Not(T: Type) {
-    .c(
+    c(
         T: Type,
         f: forall(t: T) { Empty },
     ): Not,
 }
 
 type Bad {
-    .c(n: Not(Bad)): Bad,
+    c(n: Not(Bad)): Bad,
 }
 
 let not_Bad = fun _(b: Bad): Empty {
     match b {
-        .c(n) =>
+        c(n) =>
             match n {
-                .c(_Bad, f) => f(b),
+                c(_Bad, f) => f(b),
             },
     }
 };

@@ -1,11 +1,11 @@
 type Nat {
-    .o: Nat,
-    .s(pred~n: Nat): Nat,
+    o: Nat,
+    s(pred~n: Nat): Nat,
 }
 
 let pred = fun _(x: Nat): Nat {
     match x {
-        .o => Nat.o,
-        .s(pred: x, pred: y) => x,
+        o => Nat.o,
+        s(pred: x, pred: y) => x,
     }
 };

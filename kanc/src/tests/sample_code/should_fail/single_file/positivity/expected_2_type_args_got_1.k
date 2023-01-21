@@ -1,25 +1,25 @@
 type Empty {}
 
 type Unit {
-    .c: Unit,
+    c: Unit,
 }
 
 type Not(_Dummy: Unit, T: Type) {
-    .c(
+    c(
         T: Type,
         f: forall(t: T) { Empty },
     ): Not(Unit.c),
 }
 
 type Bad {
-    .c(n: Not(Unit.c, Bad)): Bad,
+    c(n: Not(Unit.c, Bad)): Bad,
 }
 
 let not_Bad = fun _(b: Bad): Empty {
     match b {
-        .c(n) =>
+        c(n) =>
             match n {
-                .c(_Bad, f) => f(b),
+                c(_Bad, f) => f(b),
             },
     }
 };

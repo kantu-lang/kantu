@@ -1,5 +1,5 @@
 type Unit {
-    .u: Unit,
+    u: Unit,
 }
 
 let foo = check (Unit.u: U) {

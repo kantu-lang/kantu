@@ -1,10 +1,10 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Eq(T: Type, x: T, y: T) {
-    .refl(T: Type, z: T): Eq(T, z, z),
+    refl(T: Type, z: T): Eq(T, z, z),
 }
 
 let nat_s_injective = fun _(
@@ -13,6 +13,6 @@ let nat_s_injective = fun _(
     H: Eq(Nat, Nat.s(a), Nat.s(b)),
 ): Eq(Nat, a, b) {
     match H {
-        .refl(_Nat, _c) => Eq.refl(Nat, a),
+        refl(_Nat, _c) => Eq.refl(Nat, a),
     }
 };

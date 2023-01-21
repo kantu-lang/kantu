@@ -2,12 +2,12 @@
 //! directory, after we implement misordered arg warnings.
 
 type Nat {
-    .o: Nat,
-    .s(_: Nat): Nat,
+    o: Nat,
+    s(_: Nat): Nat,
 }
 
 type Eq(T: Type, a: T, b: T) {
-    .refl(T: Type, t: T): Eq(T, t, t),
+    refl(T: Type, t: T): Eq(T, t, t),
 }
 
 let _0 = Nat.o;

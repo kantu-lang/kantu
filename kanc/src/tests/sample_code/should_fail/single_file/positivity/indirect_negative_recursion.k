@@ -1,7 +1,7 @@
 type Empty {}
 
 type Not(T: Type) {
-    .c(
+    c(
         T: Type,
         _dummy_so_we_can_test_db_indices: Type,
         f: forall(
@@ -13,14 +13,14 @@ type Not(T: Type) {
 }
 
 type Bad {
-    .c(n: Not(Bad)): Bad,
+    c(n: Not(Bad)): Bad,
 }
 
 let not_Bad = fun _(b: Bad): Empty {
     match b {
-        .c(n) =>
+        c(n) =>
             match n {
-                .c(_Bad, f) => f(b),
+                c(_Bad, f) => f(b),
             },
     }
 };

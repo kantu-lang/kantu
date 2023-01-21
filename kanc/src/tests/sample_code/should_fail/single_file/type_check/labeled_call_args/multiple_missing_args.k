@@ -1,10 +1,10 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Rgb {
-    .c(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
+    c(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
 }
 
 let O = Nat.o;

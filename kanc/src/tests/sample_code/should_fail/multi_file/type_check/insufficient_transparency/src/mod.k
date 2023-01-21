@@ -1,5 +1,5 @@
 pub type Eq(T: Type, _: T, _: T) {
-    .refl(T: Type, t: T): Eq(T, t, t),
+    refl(T: Type, t: T): Eq(T, t, t),
 }
 
 pub let identity = fun _(T: Type, t: T): T {

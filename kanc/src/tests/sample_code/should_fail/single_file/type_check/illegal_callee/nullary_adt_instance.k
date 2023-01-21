@@ -1,5 +1,5 @@
 type U {
-    .u: U,
+    u: U,
 }
 
 let foo = U.u(U.u);
