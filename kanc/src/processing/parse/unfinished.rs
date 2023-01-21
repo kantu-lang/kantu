@@ -214,9 +214,8 @@ pub enum UnfinishedParam {
 #[derive(Clone, Debug)]
 pub enum UnfinishedVariant {
     Empty,
-    Dot(Token),
-    Name(Token, Identifier),
-    Params(Token, Identifier, Option<NonEmptyVec<Param>>),
+    Name(Identifier),
+    Params(Identifier, Option<NonEmptyVec<Param>>),
 }
 
 #[derive(Clone, Debug)]
@@ -304,11 +303,9 @@ pub struct UnfinishedCall {
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedMatchCase {
-    Dot(Token),
-    VariantName(Token, Identifier),
-    ParamsInProgress(Token, Identifier, Vec<MatchCaseParam>),
+    VariantName(Identifier),
+    ParamsInProgress(Identifier, Vec<MatchCaseParam>),
     AwaitingOutput {
-        dot_token: Token,
         variant_name: Identifier,
         params: Option<NonEmptyVec<MatchCaseParam>>,
         triple_dot: Option<TextSpan>,

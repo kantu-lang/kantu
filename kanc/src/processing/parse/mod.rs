@@ -167,6 +167,20 @@ fn get_n_from_super_n_token(token: &Token) -> Option<NonZeroUsize> {
     }
 }
 
+/// Panics if the name is not `IdentifierName::Standard(_)`.
+fn token_from_standard_identifier(identifier: &Identifier) -> Token {
+    Token {
+        start_index: identifier.span.start,
+        kind: match identifier.name {
+            IdentifierName::Standard(_) => TokenKind::StandardIdentifier,
+            IdentifierName::Reserved(_) => {
+                panic!("Variant names are only allowed to be standard identifiers.")
+            }
+        },
+        content: identifier.name.src_str().to_string(),
+    }
+}
+
 use unfinished::*;
 mod unfinished;
 
