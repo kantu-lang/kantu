@@ -3,5 +3,5 @@ type U {
 }
 
 type Foo {
-    bar(a: U): match U.u { .u => Foo },
+    bar(a: U): match U.u { u => Foo },
 }

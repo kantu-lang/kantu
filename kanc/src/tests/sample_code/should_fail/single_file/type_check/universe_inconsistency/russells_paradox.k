@@ -146,7 +146,7 @@ let wrapped_delta = Exists.c(
     delta_not_in_delta,
 );
 
-type Unit { .trivial: Unit }
+type Unit { trivial: Unit }
 let _check = check (wrapped_delta: NonSelfContainingSet) { Unit.trivial };
 
 let delta_in_delta = In.c(

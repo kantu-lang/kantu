@@ -19,7 +19,7 @@ type Not(T: Type) {
         H: Eq(Bool, Bool.true, b),
         B: Type,
         f: forall(_: B) { Empty }
-    ): Not(match b { .true => B, .false => Dummy }),
+    ): Not(match b { true => B, false => Dummy }),
 }
 
 type Bad {

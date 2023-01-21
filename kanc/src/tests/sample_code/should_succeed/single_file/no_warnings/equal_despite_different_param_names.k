@@ -10,7 +10,7 @@ type Eq(T: Type, a: T, b: T) {
     refl(T: Type, c: T): Eq(T, c, c),
 }
 
-type Unit { .c: Unit }
+type Unit { c: Unit }
 
 let ident1_equals_ident2 = fun _(_: Unit): Eq(
     forall(z: Nat) { Nat },

@@ -72,7 +72,7 @@ let redness3 = fun _(~c: Color): Nat {
 
 let redness4 = fun _(~c: Color): Nat {
     match c {
-        c(...) => match c { .c(:r, ...) => r },
+        c(...) => match c { c(:r, ...) => r },
     }
 };
 
