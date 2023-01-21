@@ -1,11 +1,11 @@
 type Unit {
-    .c: Unit,
+    c: Unit,
 }
 
 type Foo(T: Type) {
-    .bar: Foo(Unit),
+    bar: Foo(Unit),
 }
 
 let unit = match Foo.bar {
-    .bar => Unit.c,
+    bar => Unit.c,
 };

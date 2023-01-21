@@ -32,7 +32,7 @@ pub(pack.some) type I {}
 pub(pack.some.module) type J {}
 
 type Unit {
-    .c: Unit,
+    c: Unit,
 }
 
 let a = Unit.c;

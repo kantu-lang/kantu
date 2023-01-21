@@ -1,11 +1,11 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 let foo = fun _(-a: Nat, b: Nat): Nat { a };
 
-type Unit { .c: Unit }
+type Unit { c: Unit }
 
 let ok = fun _(_: Unit):
     forall(x: Nat, y: Nat) { Nat }

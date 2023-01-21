@@ -1,9 +1,9 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 let foo = match Nat.o {
-    .o => Nat.o,
-    .s(n, m) => n,
+    o => Nat.o,
+    s(n, m) => n,
 };

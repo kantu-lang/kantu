@@ -19,9 +19,14 @@ impl Accept for UnfinishedMatch {
             },
             UnfinishedMatch::Cases(match_kw, matchee, cases) => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::MatchCase(
-                        UnfinishedMatchCase::Dot(token),
-                    )),
+                    TokenKind::StandardIdentifier => {
+                        AcceptResult::Push(UnfinishedStackItem::MatchCase(
+                            UnfinishedMatchCase::VariantName(Identifier {
+                                span: span_single(file_id, &token),
+                                name: IdentifierName::new(token.content),
+                            }),
+                        ))
+                    }
                     TokenKind::RCurly => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::UndelimitedExpression(
                             match_kw.clone(),

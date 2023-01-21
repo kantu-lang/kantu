@@ -1,6 +1,6 @@
 type Nat {
-    .o: Nat,
-    .s(pred~n: Nat): Nat,
+    o: Nat,
+    s(pred~n: Nat): Nat,
 }
 
 let right = Nat.s(pred: Nat.o);

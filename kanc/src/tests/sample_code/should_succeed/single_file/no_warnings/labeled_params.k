@@ -1,33 +1,33 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Color {
-    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let redness = fun _(~c: Color): Nat {
     match c {
-        .c(:r, g: _, b: _) => r,
+        c(:r, g: _, b: _) => r,
     }
 };
 
 let redness2 = fun _(~c: Color): Nat {
     match c {
-        .c(:r, ...) => r,
+        c(:r, ...) => r,
     }
 };
 
 let redness3 = fun _(~c: Color): Nat {
     match c {
-        .c(:r, g: _, ...) => r,
+        c(:r, g: _, ...) => r,
     }
 };
 
 let redness4 = fun _(~c: Color): Nat {
     match c {
-        .c(...) => match c { .c(:r, ...) => r },
+        c(...) => match c { c(:r, ...) => r },
     }
 };
 
@@ -47,8 +47,8 @@ let apply2 = fun _(c: Color, f: forall(c~_: Color) { Nat }): Nat {
 };
 
 type List(~T: Type) {
-    .nil(U: Type): List(T: U),
-    .cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
+    nil(U: Type): List(T: U),
+    cons(U: Type, car: U, cdr: List(T: U)): List(T: U),
 }
 
 let foo = fun foo_(xylophone~x: Nat, yodeler~-y: Nat): Nat {

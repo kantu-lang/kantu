@@ -1,3 +1,3 @@
 type Foo {
-    .f(): Foo,
+    f(): Foo,
 }

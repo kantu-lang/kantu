@@ -1,12 +1,12 @@
 type Empty {}
 
 type Bad {
-    .c(f: forall(b: Bad) { Empty }): Bad,
+    c(f: forall(b: Bad) { Empty }): Bad,
 }
 
 let not_bad = fun _(b: Bad): Empty {
     match b {
-        .c(f) => f(b),
+        c(f) => f(b),
     }
 };
 

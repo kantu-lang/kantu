@@ -1,1 +1,1 @@
-.s(n: Nat): Nat
+s(n: Nat): Nat

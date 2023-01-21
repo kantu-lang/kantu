@@ -1,16 +1,16 @@
 type Empty {}
 
 type Wrap(T: Type) {
-    .c(T: Type): Wrap(T),
+    c(T: Type): Wrap(T),
 }
 
 type Bad {
-    .c(f: match Wrap.c(Bad) { .c(T) => forall(b: T) { Empty } }): Bad,
+    c(f: match Wrap.c(Bad) { c(T) => forall(b: T) { Empty } }): Bad,
 }
 
 let not_bad = fun _(b: Bad): Empty {
     match b {
-        .c(f) => f(b),
+        c(f) => f(b),
     }
 };
 

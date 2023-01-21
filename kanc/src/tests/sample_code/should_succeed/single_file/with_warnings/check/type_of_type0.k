@@ -1,5 +1,5 @@
 type Unit {
-    .c: Unit,
+    c: Unit,
 }
 
 let x = check (Type: ?) {

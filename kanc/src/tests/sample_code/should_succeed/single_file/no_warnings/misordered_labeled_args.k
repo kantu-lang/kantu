@@ -2,19 +2,19 @@
 //! directory after we implement warnings for misordered labeled args.
 
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Bool {
-    .true: Bool,
-    .false: Bool,
+    true: Bool,
+    false: Bool,
 }
 
 let select = fun _(cond~c: Bool, true~t: Nat, ~false: Nat): Nat {
     match c {
-        .true => t,
-        .false => false,
+        true => t,
+        false => false,
     }
 };
 

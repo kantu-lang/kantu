@@ -1,6 +1,6 @@
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 let no_goal_exists = check (goal = Nat) {

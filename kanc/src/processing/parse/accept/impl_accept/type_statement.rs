@@ -163,9 +163,12 @@ impl Accept for UnfinishedTypeStatement {
                 variants,
             } => match item {
                 FinishedStackItem::Token(token) => match token.kind {
-                    TokenKind::Dot => AcceptResult::Push(UnfinishedStackItem::Variant(
-                        UnfinishedVariant::Dot(token),
-                    )),
+                    TokenKind::StandardIdentifier => AcceptResult::Push(
+                        UnfinishedStackItem::Variant(UnfinishedVariant::Name(Identifier {
+                            span: span_single(file_id, &token),
+                            name: IdentifierName::new(token.content),
+                        })),
+                    ),
                     TokenKind::RCurly => {
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::Type(
                             first_token.clone(),

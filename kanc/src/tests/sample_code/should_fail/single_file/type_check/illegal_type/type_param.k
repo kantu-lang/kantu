@@ -1,5 +1,5 @@
 type U {
-    .u: U,
+    u: U,
 }
 
 type Foo(x: U.u) {}

@@ -1,7 +1,7 @@
 type Private {
-    .c: Private,
+    c: Private,
 }
 
 pub type Foo {
-    .c(_: Private): Foo,
+    c(_: Private): Foo,
 }

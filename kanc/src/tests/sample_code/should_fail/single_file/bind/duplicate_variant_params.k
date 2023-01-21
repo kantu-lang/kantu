@@ -1,3 +1,3 @@
 type U {
-    .f(R: Type, R: Type): U,
+    f(R: Type, R: Type): U,
 }
