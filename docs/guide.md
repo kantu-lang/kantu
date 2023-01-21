@@ -109,7 +109,7 @@ So the below code is legal (although strongly discouraged, since it's not very r
 type Foo(a: forall(a: Nat) { Nat }) {}
 
 type Bar {
-    .bar(a: forall(a: Nat) { Nat }): Bar,
+    bar(a: forall(a: Nat) { Nat }): Bar,
 }
 
 let x1 = fun _(f: fun _(f: Nat): Type { Nat }(Nat.o)): Nat {
@@ -124,7 +124,7 @@ Also, keep in mind that type parameters are not in scope within the type variant
 ```kantu
 type List(T: Type /* The `T` defined here...*/) {
     // ...and is NOT in scope here.
-    .nil(
+    nil(
         // Thus, we are free to name another
         // parameter `T`, since this does NOT
         // cause any name conflict:
@@ -132,7 +132,7 @@ type List(T: Type /* The `T` defined here...*/) {
     ): List(T),
 
     // Same thing here
-    .cons(T: Type, car: T, cdr: List(T)): List(T),
+    cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 ```
 
@@ -146,7 +146,7 @@ type TypeName(
     TypeParam1: TypeParamType1,
     // ...
 ) {
-    .variant0(
+    variant0(
         VariantParam0: VariantParamType0,
         VariantParam1: VariantParamType1,
         // ...
@@ -157,7 +157,7 @@ type TypeName(
         // ...
     ),
 
-    .variant1(
+    variant1(
         VariantParam0: VariantParamType0,
         VariantParam1: VariantParamType1,
         // ...
@@ -176,35 +176,35 @@ Examples:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Bool {
-    .true: Bool,
-    .false: Bool,
+    true: Bool,
+    false: Bool,
 }
 
 type Rgb {
     // Use `~` to create labeled parameters (more on this later):
-    .c(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
+    c(~r: Nat, ~g: Nat, ~b: Nat): Rgb,
 }
 
 type Empty {}
 
 type List(T: Type) {
-    .nil(T: Type): List(T),
-    .cons(T: Type, car: T, cdr: List(T)): List(T),
+    nil(T: Type): List(T),
+    cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
 // Dependent types are supported 🎉
 type Equal(T: Type, x: T, y: T) {
-    .refl(T: Type, x: T): Equal(T, x, x),
+    refl(T: Type, x: T): Equal(T, x, x),
 }
 
 type Or(L: Type, R: Type) {
-    .inl(L: Type, R: Type, l: L): Or(L, R),
-    .inr(L: Type, R: Type, r: R): Or(L, R),
+    inl(L: Type, R: Type, l: L): Or(L, R),
+    inr(L: Type, R: Type, r: R): Or(L, R),
 }
 
 let In = fun In(T: Type, item: T, list: List(T)): Type {
@@ -215,12 +215,12 @@ let In = fun In(T: Type, item: T, list: List(T)): Type {
 };
 
 type LessThanOrEqualTo(L: Nat, R: Nat) {
-    .equal(n: Nat): LessThanOrEqualTo(n, n),
-    .step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.s(b)),
+    equal(n: Nat): LessThanOrEqualTo(n, n),
+    step(a: Nat, b: Nat, H: LessThanOrEqualTo(a, b)): LessThanOrEqualTo(a, Nat.s(b)),
 }
 
 type ListOfEvenNats {
-    .c(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) { Even(n) }): ListOfEvenNats,
+    c(l: List(Nat), H_all_even: forall(n: Nat, H_in: In(Nat, n, l)) { Even(n) }): ListOfEvenNats,
 }
 ```
 
@@ -253,12 +253,12 @@ allow us to prove false. For example:
 type False {}
 
 type Broken {
-    .c(f: forall(b: Broken) { False }): Broken,
+    c(f: forall(b: Broken) { False }): Broken,
 }
 
 let f = fun _(b: Broken): False {
     match b {
-        .c(g) => g(b),
+        c(g) => g(b),
     }
 };
 let broken = Broken.c(f);
@@ -273,7 +273,7 @@ the positivity checker because...
 
 ```kantu
 type Broken {
-    .c(
+    c(
         f:
             // ...`Broken` appears in the parameter type
             // of the forall parameter `b`.
@@ -290,21 +290,21 @@ such as in the code below
 type False {}
 
 type Not(T: Type) {
-    .c(f: forall(_: T) { False }): Not(T),
+    c(f: forall(_: T) { False }): Not(T),
 }
 
 type Broken {
     // Look! `Broken` does not appear in a
     // a forall parameter type!
     // So this code is safe, right?...
-    .c(n: Not(Broken)): Broken,
+    c(n: Not(Broken)): Broken,
 }
 
 let f = fun _(b: Broken): False {
     match b {
-        .c(n) =>
+        c(n) =>
             match n {
-                .c(g) => g(b),
+                c(g) => g(b),
             },
     }
 };
@@ -394,8 +394,8 @@ The syntax is
 
 ```kantu
 match matchee {
-    .variant0(param0_0, param0_1, param0_2, /* ... */) => case0_output,
-    .variant1(param1_0, param1_1, param1_2, /* ... */) => case1_output,
+    variant0(param0_0, param0_1, param0_2, /* ... */) => case0_output,
+    variant1(param1_0, param1_1, param1_2, /* ... */) => case1_output,
     // ...
 }
 ```
@@ -404,13 +404,13 @@ Example:
 
 ```kantu
 type Bool {
-    .false: Bool,
-    .true: Bool,
+    false: Bool,
+    true: Bool,
 }
 
 let false = match Bool.true {
-    .false => Bool.true,
-    .true => Bool.false,
+    false => Bool.true,
+    true => Bool.false,
 };
 ```
 
@@ -420,22 +420,22 @@ For example:
 
 ```kantu
 type TypeEq(A: Type, B: Type) {
-    .refl(c: Type): TypeEq,
+    refl(c: Type): TypeEq,
 }
 
 type UnitX {
-    .c: UnitX,
+    c: UnitX,
 }
 
 type UnitY {
-    .c: UnitY,
+    c: UnitY,
 }
 
 type False {}
 
 let f = fun _(H: TypeEq(UnitX, UnitY)): False {
     match H {
-        .refl(_) =>
+        refl(_) =>
         // This case is impossible, so rather than
         // write an output expression, we must write
         // `impossible`.
@@ -460,14 +460,14 @@ Example:
 
 ```kantu
 type Bool {
-    .false: Bool,
-    .true: Bool,
+    false: Bool,
+    true: Bool,
 }
 
 let not = fun not(b: Bool): Bool {
     match b {
-        .false => Bool.true,
-        .true => Bool.false,
+        false => Bool.true,
+        true => Bool.false,
     }
 };
 // We can now call the Function through the
@@ -481,8 +481,8 @@ instead of a name.
 ```kantu
 let not = fun _(b: Bool): Bool {
     match b {
-        .false => Bool.true,
-        .true => Bool.false,
+        false => Bool.true,
+        true => Bool.false,
     }
 };
 // We can still call the Function through the
@@ -511,8 +511,8 @@ For example:
 ```kantu
 let esoteric_identity_implementation = fun f(-n: Nat): Nat {
     match n {
-        .o => Nat.o,
-        .s(n') => Nat.s(f(n')),
+        o => Nat.o,
+        s(n') => Nat.s(f(n')),
     }
 };
 ```
@@ -530,11 +530,11 @@ For example, in
 ```kantu
 let foo = fun _(n: Nat, m: Nat) {
     match n {
-        .o => Nat.o,
-        .s(n') =>
+        o => Nat.o,
+        s(n') =>
             match n' {
-                .o => Nat.o,
-                .s(n'') => Nat.o,
+                o => Nat.o,
+                s(n'') => Nat.o,
             }
     }
 }
@@ -561,8 +561,8 @@ abstract, so here are some concrete examples:
 ```kantu
 let always_returns_zero = fun zero_(-n: Nat): Nat {
     match n {
-        .o => Nat.o,
-        .s(n') => zero_(n'),
+        o => Nat.o,
+        s(n') => zero_(n'),
     }
 };
 ```
@@ -584,12 +584,12 @@ let infinite_recursion = fun f(-n: Nat): Nat {
 ```kantu
 let no_decreasing_param = fun f(n: Nat): Nat {
     match n {
-        .o => Nat.o,
+        o => Nat.o,
         // Cannot recursively call `f` because
         // it does not have a decreasing parameter
         // defined (i.e., none of the parameters are
         // marked with `-`).
-        .s(n') => f(n'),
+        s(n') => f(n'),
     }
 };
 ```
@@ -647,14 +647,14 @@ For example:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(_: Nat): Nat,
+    o: Nat,
+    s(_: Nat): Nat,
 }
 
 type Color {
     // Observe that the param label order is
     // "r,g,b".
-    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let o = Nat.o;
@@ -758,7 +758,7 @@ If you try writing the following code, you will get an error
 
 ```kantu
 type Color {
-    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let redness_WRONG = fun _(c: Color): Nat {
@@ -766,7 +766,7 @@ let redness_WRONG = fun _(c: Color): Nat {
         // Error:
         // Variant has labeled parameters
         // but match case has unlabeled parameters.
-        .c(red, _, _) => red,
+        c(red, _, _) => red,
     }
 };
 ```
@@ -778,7 +778,7 @@ To fix this code, one could write
 ```kantu
 let redness = fun _(c: Color): Nat {
     match c {
-        .c(r: red, g: _, b: _) => red,
+        c(r: red, g: _, b: _) => red,
     }
 };
 ```
@@ -792,7 +792,7 @@ you can alternatively write
 ```kantu
 let redness2 = fun _(c: Color): Nat {
     match c {
-        .c(r: red, ...) => red,
+        c(r: red, ...) => red,
     }
 };
 ```
@@ -811,7 +811,7 @@ would could be shortened to `:r`:
 ```kantu
 let redness3 = fun _(c: Color): Nat {
     match c {
-        .c(:r, ...) => r,
+        c(:r, ...) => r,
     }
 };
 ```
@@ -820,14 +820,14 @@ let redness3 = fun _(c: Color): Nat {
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(_: Nat): Nat,
+    o: Nat,
+    s(_: Nat): Nat,
 }
 
 type Color {
     // Observe that the param label order is
     // "r,g,b".
-    .c(~r: Nat, ~g: Nat, ~b: Nat): Color,
+    c(~r: Nat, ~g: Nat, ~b: Nat): Color,
 }
 
 let o = Nat.o;
@@ -837,7 +837,7 @@ let good = fun _(c: Color): Nat {
         // In this match case, the match case param label
         // order matches the type variant param label order (i.e.,
         // both are "r,g,b")
-        .c(:r, :g, :b): r,
+        c(:r, :g, :b): r,
     }
 };
 
@@ -847,7 +847,7 @@ let still_legal_but_frowned_upon = fun _(c: Color): Nat {
         // order does NOT match the type variant param label order
         // (i.e., the variant's order "r,g,b", but the case's
         // order is "b,g,r").
-        .c(:b, :g, :r): r,
+        c(:b, :g, :r): r,
     }
 };
 ```
@@ -874,14 +874,14 @@ Example:
 
 ```kantu
 type Option(T: Type) {
-    .none(T: Type): Option(T),
-    .some(T: Type, t: T): Option(T),
+    none(T: Type): Option(T),
+    some(T: Type, t: T): Option(T),
 }
 
 let map = fun _(T: Type, U: Type, o: Option(T), f: forall(t: T) { U }): Option(U) {
     match o {
-        .none(_) => Option.none(U),
-        .some(_, t) => Option.some(f(t)),
+        none(_) => Option.none(U),
+        some(_, t) => Option.some(f(t)),
     }
 };
 ```
@@ -906,13 +906,13 @@ You can call type constructors, type variant constructors, and `fun`s. Example:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Option(T: Type) {
-    .none(T: Type): Option(T),
-    .some(T: Type, t: T): Option(T),
+    none(T: Type): Option(T),
+    some(T: Type, t: T): Option(T),
 }
 
 // Calling type constructor `Option` with arguments `(Nat)`:
@@ -926,15 +926,15 @@ let _2 = Nat.s(Nat.s(Nat.o));
 /// Calling the `plus` function with arguments `(_1, _2)`:
 let _3 = fun plus(-a: Nat, b: Nat): Nat {
     match a {
-        .o => b,
-        .s(a') => Nat.s(plus(a', b)),
+        o => b,
+        s(a') => Nat.s(plus(a', b)),
     }
 }(_1, _2);
 
 let labeled_call_example = fun plus(~-a: Nat, bar~b: Nat): Nat {
     match a {
-        .o => b,
-        .s(a') => Nat.s(plus(a', b)),
+        o => b,
+        s(a') => Nat.s(plus(a', b)),
     }
 }(a: _1, bar: _2);
 ```
@@ -972,17 +972,17 @@ Example:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type EqNat(x: Nat, y: Nat) {
-    .refl(z: Nat): EqNat(z, z),
+    refl(z: Nat): EqNat(z, z),
 }
 
 let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
     match H {
-        .refl(c) =>
+        refl(c) =>
             check (
                 EqNat(b, a) = EqNat(c, c),
                 EqNat.refl(c): EqNat(c, c),
@@ -1008,17 +1008,17 @@ the left-hand side:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type EqNat(x: Nat, y: Nat) {
-    .refl(z: Nat): EqNat(z, z),
+    refl(z: Nat): EqNat(z, z),
 }
 
 let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
     match H {
-        .refl(c) =>
+        refl(c) =>
             check (
                 // Observe that the LHS uses the `goal` keyword
                 // instead of an expression
@@ -1041,17 +1041,17 @@ you can write `?` in place of the right-hand side:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type EqNat(x: Nat, y: Nat) {
-    .refl(z: Nat): EqNat(z, z),
+    refl(z: Nat): EqNat(z, z),
 }
 
 let eq_comm = fun _(a: Nat, b: Nat, H: EqNat(a, b)): EqNat(b, a) {
     match H {
-        .refl(c) =>
+        refl(c) =>
             check (
                 // Observe that the RHS uses the `?` operator
                 // instead of an expression
@@ -1087,8 +1087,8 @@ but no errors:
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 let foo = fun _(n: Nat): Nat {
@@ -1229,8 +1229,8 @@ use Nat.s;
 
 pub let factorial = fun f(-a: Nat): Nat {
     match a {
-        .o => s(o),
-        .s(a') => bar.mult(a, f(a')),
+        o => s(o),
+        s(a') => bar.mult(a, f(a')),
     }
 };
 ```
@@ -1265,8 +1265,8 @@ change it.
 
 ```kantu
 pub type Nat {
-    .o: Nat,
-    .s(_: Nat): Nat,
+    o: Nat,
+    s(_: Nat): Nat,
 }
 ```
 
@@ -1277,8 +1277,8 @@ use super.Nat;
 
 pub let mult = fun f(-a: Nat, b: Nat): Nat {
     match a {
-        .o => super.o,
-        .s(a') => plus(b, f(a', b)),
+        o => super.o,
+        s(a') => plus(b, f(a', b)),
     }
 };
 ```
@@ -1302,8 +1302,8 @@ use super2.s;
 
 pub(super) let plus = fun f(-a: Nat, b: Nat): Nat {
     match a {
-        .o => b,
-        .s(a') => s(f(a', b)),
+        o => b,
+        s(a') => s(f(a', b)),
     }
 };
 ```
@@ -1398,8 +1398,8 @@ pub mod factorial;
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(_: Nat): Nat,
+    o: Nat,
+    s(_: Nat): Nat,
 }
 ```
 
@@ -1412,8 +1412,8 @@ mod plus;
 // so we must use `.` syntax (specifically, `super.nat.Nat`).
 let mult = fun mult(-a: super.nat.Nat, b: super.nat.Nat): super.nat.Nat {
     match a {
-        .o => super.nat.Nat.s(super.nat.Nat.o),
-        .s(a') =>
+        o => super.nat.Nat.s(super.nat.Nat.o),
+        s(a') =>
             // `plus` was declared by a module other than the current module,
             // so we must use `.` syntax (specifically, `plus.plus`).
             plus.plus(b, mult(a', b)),
@@ -1422,10 +1422,10 @@ let mult = fun mult(-a: super.nat.Nat, b: super.nat.Nat): super.nat.Nat {
 
 pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
     match a {
-        .o => super.nat.Nat.s(super.nat.Nat.o),
+        o => super.nat.Nat.s(super.nat.Nat.o),
         // `mult` is declared by the current module, so we don't
         // need `.` syntax.
-        .s(a') => mult(a, factorial(a')),
+        s(a') => mult(a, factorial(a')),
     }
 };
 ```
@@ -1437,8 +1437,8 @@ pub let factorial = fun factorial(-a: super.nat.Nat): super.nat.Nat {
 // so we must use `.` syntax (specifically, `super2.nat.Nat`).
 pub let plus = fun plus(-a: super2.nat.Nat, b: super2.nat.Nat): super2.nat.Nat {
     match a {
-        .o => b,
-        .s(a') => super2.nat.Nat.s(plus(a', b)),
+        o => b,
+        s(a') => super2.nat.Nat.s(plus(a', b)),
     }
 };
 ```
@@ -1499,8 +1499,8 @@ use math.nat.Nat as Foo;
 
 let plus = fun plus(-a: Foo, b: Foo): Foo {
     match a {
-        .o => Foo.o,
-        .s(a') => Foo.s(plus(a', b)),
+        o => Foo.o,
+        s(a') => Foo.s(plus(a', b)),
     }
 };
 ```
@@ -1552,13 +1552,13 @@ problem when we have something like
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type Bool {
-    .true: Bool,
-    .false: Bool,
+    true: Bool,
+    false: Bool,
 }
 
 mod arithmetic;
@@ -1642,8 +1642,8 @@ pub mod plus;
 
 ```kantu
 pub type NaturalNumber {
-    .o: NaturalNumber,
-    .s(_: NaturalNumber): NaturalNumber,
+    o: NaturalNumber,
+    s(_: NaturalNumber): NaturalNumber,
 }
 ```
 
@@ -1654,8 +1654,8 @@ use super.Nat;
 
 pub let plus = fun plus(-a: Nat, b: Nat): Nat {
     match a {
-        .o => Nat.o,
-        .s(a') => Nat.s(plus(a', b)),
+        o => Nat.o,
+        s(a') => Nat.s(plus(a', b)),
     }
 };
 ```
@@ -1689,12 +1689,12 @@ For example, is the following code is valid.
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type EqNat(a: Nat, b: Nat) {
-    .refl(c: Nat): EqNat(c, c),
+    refl(c: Nat): EqNat(c, c),
 }
 
 let identity = fun _(T: Type, t: T): T {
@@ -1722,12 +1722,12 @@ However, the following code is *in*valid.
 
 ```kantu
 type Nat {
-    .o: Nat,
-    .s(n: Nat): Nat,
+    o: Nat,
+    s(n: Nat): Nat,
 }
 
 type EqNat(a: Nat, b: Nat) {
-    .refl(c: Nat): EqNat(c, c),
+    refl(c: Nat): EqNat(c, c),
 }
 
 let identity = fun _(T: Type, t: T): T {
