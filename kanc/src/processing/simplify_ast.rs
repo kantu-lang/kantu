@@ -1,5 +1,5 @@
 use crate::data::{
-    non_empty_vec::NonEmptyVec,
+    non_empty_veclike::NonEmptyVec,
     simplified_ast::*,
     text_span::*,
     // `ust` stands for "unsimplified syntax tree".

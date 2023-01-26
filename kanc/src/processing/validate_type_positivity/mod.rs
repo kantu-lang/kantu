@@ -2,7 +2,7 @@ use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
     type_positivity_validation_result::*,
 };
 

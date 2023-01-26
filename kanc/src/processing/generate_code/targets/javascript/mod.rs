@@ -4,7 +4,7 @@ use crate::data::{
         ExpressionRef, FileItemNodeId, LabeledCallArgId, MatchCaseOutputId, NodeId, NodeRegistry,
         NonEmptyCallArgListId, NonEmptyListId, NonEmptyMatchCaseParamListId, NonEmptyParamListId,
     },
-    non_empty_vec::OptionalNonEmptyVecLen,
+    non_empty_veclike::OptionalNonEmptyVecLen,
     text_span::*,
 };
 use crate::processing::generate_code::CompileTarget;

@@ -3,7 +3,7 @@ use crate::data::{
     bound_ast::*,
     file_id::*,
     file_tree::FileTree,
-    non_empty_vec::*,
+    non_empty_veclike::*,
     // `ub` stands for "unbound".
     simplified_ast::{self as ub, ParenthesizedModScopeModifier},
     text_span::*,

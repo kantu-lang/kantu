@@ -373,10 +373,11 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
     }
 
     let param_type_ids = get_unlabeled_param_type_ids(state, variant_type_param_list_id)
+        .into_iter()
         // This is safe because every param type of a normal form Forall
         // is also a normal form itself.
-        .into_mapped(NormalFormId::unchecked_new);
-    for &param_type_id in &param_type_ids {
+        .map(NormalFormId::unchecked_new);
+    for param_type_id in param_type_ids {
         state.context.push(ContextEntry {
             type_id: param_type_id,
             definition: ContextEntryDefinition::Uninterpreted,
@@ -542,7 +543,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
             shifted_variant_dbi,
         ));
 
-        let arg_name_ids = {
+        let arg_name_ids: NonEmptyVec<_> = {
             let underscore_id = state.registry.add_and_overwrite_id(Identifier {
                 id: dummy_id(),
                 span: None,

@@ -1,4 +1,4 @@
-use crate::data::{non_empty_vec::*, unsimplified_ast::*};
+use crate::data::{non_empty_veclike::*, unsimplified_ast::*};
 
 fn indent(indent_level: usize, options: &FormatOptions) -> String {
     " ".repeat(indent_level * options.ident_size_in_spaces)

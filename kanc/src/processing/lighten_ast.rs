@@ -2,7 +2,7 @@ use crate::data::{
     bound_ast as heavy,
     light_ast::*,
     node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::NonEmptyVec,
+    non_empty_veclike::NonEmptyVec,
     text_span::*,
 };
 

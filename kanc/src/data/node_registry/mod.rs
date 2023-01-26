@@ -1,6 +1,6 @@
 use crate::data::{
     light_ast::*,
-    non_empty_vec::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_veclike::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
     text_span::*,
 };
 

@@ -1,6 +1,6 @@
 use crate::data::{
     file_id::*,
-    non_empty_vec::{NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
     text_span::*,
 };
 

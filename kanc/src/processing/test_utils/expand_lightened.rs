@@ -7,7 +7,7 @@ use crate::data::{
         NonEmptyMatchCaseParamListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
         QuestionMarkOrPossiblyInvalidExpressionId,
     },
-    non_empty_vec::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
+    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
 
 pub fn expand_file_item_list(

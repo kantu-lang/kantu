@@ -1,7 +1,7 @@
 use crate::data::{
     light_ast::*,
     node_registry::{FileItemNodeId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_vec::OptionalNonEmptyVecLen,
+    non_empty_veclike::OptionalNonEmptyVecLen,
     variant_return_type_validation_result::*,
 };
 
