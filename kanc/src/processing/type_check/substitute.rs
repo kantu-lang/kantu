@@ -393,7 +393,7 @@ impl SubstituteWithoutRemovingSpans for NodeId<LabeledParam> {
         state.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
-            label_clause: param.label_clause,
+            label_id: param.label_id,
             is_dashed: param.is_dashed,
             name_id: param.name_id,
             type_id: substituted_type_id,

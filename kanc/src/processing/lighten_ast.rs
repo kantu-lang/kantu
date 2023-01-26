@@ -120,7 +120,7 @@ pub fn register_labeled_param(
     registry.add_and_overwrite_id(LabeledParam {
         id: dummy_id(),
         span: unregistered.span,
-        label_clause: label_id,
+        label_id,
         is_dashed: unregistered.is_dashed,
         name_id,
         type_id,

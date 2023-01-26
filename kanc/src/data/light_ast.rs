@@ -1,19 +1,24 @@
 use crate::data::{
     bind_error::BindError,
     fun_recursion_validation_result::IllegalFunRecursionError,
-    non_empty_vec::{NonEmptySlice, NonEmptyVec},
+    node_registry::{NodeId, NonEmptyListId},
     simplified_ast as unbound,
     text_span::*,
 };
 
+pub use crate::data::node_registry::FileItemNodeId;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TypeStatement<'a> {
+pub struct TypeStatement {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub visibility: Visibility,
-    pub name_id: &'a Identifier,
-    pub param_list_id: Option<&'a NonEmptyParamVec<'a>>,
-    pub variant_list_id: &'a [Variant<'a>],
+    pub name_id: NodeId<Identifier>,
+    pub param_list_id: Option<NonEmptyParamListId>,
+    pub variant_list_id: Option<NonEmptyListId<NodeId<Variant>>>,
 }
+
+pub use crate::data::node_registry::NonEmptyParamListId;
 
 pub use crate::data::bound_ast::ModScope;
 
@@ -22,75 +27,61 @@ pub use crate::data::bound_ast::Visibility;
 pub use crate::data::bound_ast::Transparency;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum NonEmptyParamVec<'a> {
-    Unlabeled(NonEmptyVec<UnlabeledParam<'a>>),
-    UniquelyLabeled(NonEmptyVec<LabeledParam<'a>>),
+pub struct UnlabeledParam {
+    pub id: NodeId<Self>,
+    pub span: Option<TextSpan>,
+    pub is_dashed: bool,
+    pub name_id: NodeId<Identifier>,
+    pub type_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UnlabeledParam<'a> {
+pub struct LabeledParam {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
+    pub label_id: ParamLabelId,
     pub is_dashed: bool,
-    pub name_id: &'a Identifier,
-    pub type_id: ExpressionRef<'a>,
+    pub name_id: NodeId<Identifier>,
+    pub type_id: ExpressionId,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LabeledParam<'a> {
-    pub span: Option<TextSpan>,
-    pub label_clause: &'a ParamLabelClause<'a>,
-    pub is_dashed: bool,
-    pub name_id: &'a Identifier,
-    pub type_id: ExpressionRef<'a>,
-}
+pub use crate::data::node_registry::ParamLabelId;
 
-impl LabeledParam<'_> {
-    pub fn label(&self) -> &Identifier {
-        match self.label_clause {
-            ParamLabelClause::Implicit => self.name_id,
-            ParamLabelClause::Explicit(label) => label,
+impl LabeledParam {
+    pub fn label_identifier_id(&self) -> NodeId<Identifier> {
+        match self.label_id {
+            ParamLabelId::Implicit => self.name_id,
+            ParamLabelId::Explicit(label_id) => label_id,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ParamLabelClause<'a> {
-    Implicit,
-    Explicit(&'a Identifier),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Variant<'a> {
+pub struct Variant {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub name_id: &'a Identifier,
-    pub param_list_id: Option<&'a NonEmptyParamVec<'a>>,
-    pub return_type_id: ExpressionRef<'a>,
+    pub name_id: NodeId<Identifier>,
+    pub param_list_id: Option<NonEmptyParamListId>,
+    pub return_type_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LetStatement<'a> {
+pub struct LetStatement {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub visibility: Visibility,
     pub transparency: Transparency,
-    pub name_id: &'a Identifier,
-    pub value_id: ExpressionRef<'a>,
+    pub name_id: NodeId<Identifier>,
+    pub value_id: ExpressionId,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ExpressionRef<'a> {
-    Name(&'a NameExpression<'a>),
-    Todo(&'a TodoExpression),
-    Call(&'a Call<'a>),
-    Fun(&'a Fun),
-    Match(&'a Match),
-    Forall(&'a Forall),
-    Check(&'a Check),
-}
+pub use crate::data::node_registry::ExpressionId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NameExpression<'a> {
+pub struct NameExpression {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub component_list_id: NonEmptySlice<'a, Identifier>,
+    pub component_list_id: NonEmptyListId<NodeId<Identifier>>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
 }
@@ -99,6 +90,7 @@ pub use crate::data::bound_ast::{DbIndex, DbLevel};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub name: IdentifierName,
 }
@@ -111,37 +103,35 @@ pub use crate::data::simplified_ast::ReservedIdentifierName;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TodoExpression {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Call<'a> {
+pub struct Call {
+    pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub callee_id: ExpressionRef<'a>,
-    pub arg_list_id: &'a NonEmptyCallArgVec<'a>,
+    pub callee_id: ExpressionId,
+    pub arg_list_id: NonEmptyCallArgListId,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum NonEmptyCallArgVec<'a> {
-    Unlabeled(NonEmptyVec<ExpressionRef<'a>>),
-    UniquelyLabeled(NonEmptyVec<LabeledCallArg>),
-}
+pub use crate::data::node_registry::NonEmptyCallArgListId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Fun {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub name_id: &'a Identifier,
+    pub name_id: NodeId<Identifier>,
     pub param_list_id: NonEmptyParamListId,
-    pub return_type_id: ExpressionRef<'a>,
-    pub body_id: ExpressionRef<'a>,
+    pub return_type_id: ExpressionId,
+    pub body_id: ExpressionId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Match {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub matchee_id: ExpressionRef<'a>,
+    pub matchee_id: ExpressionId,
     pub case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
 }
 
@@ -149,21 +139,25 @@ pub struct Match {
 pub struct MatchCase {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
-    pub variant_name_id: &'a Identifier,
+    pub variant_name_id: NodeId<Identifier>,
     pub param_list_id: Option<NonEmptyMatchCaseParamListId>,
     pub output_id: MatchCaseOutputId,
 }
+
+pub use crate::data::node_registry::NonEmptyMatchCaseParamListId;
+
+pub use crate::data::node_registry::MatchCaseOutputId;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledMatchCaseParam {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub label_id: ParamLabelId,
-    pub name_id: &'a Identifier,
+    pub name_id: NodeId<Identifier>,
 }
 
 impl LabeledMatchCaseParam {
-    pub fn label_identifier_id(&self) -> &'a Identifier {
+    pub fn label_identifier_id(&self) -> NodeId<Identifier> {
         match self.label_id {
             ParamLabelId::Implicit => self.name_id,
             ParamLabelId::Explicit(label_id) => label_id,
@@ -176,18 +170,18 @@ pub struct Forall {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub param_list_id: NonEmptyParamListId,
-    pub output_id: ExpressionRef<'a>,
+    pub output_id: ExpressionId,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct Check {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
     pub assertion_list_id: NonEmptyListId<NodeId<CheckAssertion>>,
-    pub output_id: ExpressionRef<'a>,
+    pub output_id: ExpressionId,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct CheckAssertion {
     pub id: NodeId<Self>,
     pub span: Option<TextSpan>,
@@ -198,7 +192,13 @@ pub struct CheckAssertion {
 
 pub use crate::data::bound_ast::CheckAssertionKind;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+pub use crate::data::node_registry::GoalKwOrPossiblyInvalidExpressionId;
+
+pub use crate::data::node_registry::{
+    InvalidExpressionId, PossiblyInvalidExpressionId, QuestionMarkOrPossiblyInvalidExpressionId,
+};
+
+#[derive(Clone, Debug)]
 pub struct SymbolicallyInvalidExpression {
     pub id: NodeId<Self>,
     pub expression: unbound::Expression,
@@ -206,10 +206,10 @@ pub struct SymbolicallyInvalidExpression {
     pub span_invalidated: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 pub struct IllegalFunRecursionExpression {
     pub id: NodeId<Self>,
-    pub expression_id: ExpressionRef<'a>,
+    pub expression_id: ExpressionId,
     pub error: IllegalFunRecursionError,
     pub span_invalidated: bool,
 }

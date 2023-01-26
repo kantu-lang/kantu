@@ -363,7 +363,7 @@ impl GetIndexInSubregistry for NodeId<LabeledParam> {
     fn strip(self, registry: &NodeRegistry, sreg: &mut StrippedRegistry) -> Self::Stripped {
         let param = registry.get(self);
         stripped::LabeledParam {
-            label_name_id: param.label().into_semantic_id(registry, sreg),
+            label_name_id: param.label_identifier_id().into_semantic_id(registry, sreg),
             type_id: param.type_id.into_semantic_id(registry, sreg),
         }
     }

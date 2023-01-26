@@ -195,7 +195,7 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
 
     let mut are_any_args_out_of_place = false;
     let mut reordered_arg_ids = {
-        let first_param_label_id = state.registry.get(first_param_id).label();
+        let first_param_label_id = state.registry.get(first_param_id).label_identifier_id();
         let (arg_index, arg_id) = get_arg_corresponding_to_label(state, first_param_label_id, arg_ids.as_ref())
             .expect("Impossible: There is no corresponding arg even though we successfully verified that every param has a corresponding arg.");
         if arg_index != 0 {
@@ -207,7 +207,7 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
         remaining_param_ids.iter().copied().enumerate()
     {
         let param_index = 1 + param_index_in_remaining_params;
-        let param_label_id = state.registry.get(param_id).label();
+        let param_label_id = state.registry.get(param_id).label_identifier_id();
         let (arg_index, arg_id) = get_arg_corresponding_to_label(state, param_label_id, arg_ids.as_ref())
             .expect("Impossible: There is no corresponding arg even though we successfully verified that every param has a corresponding arg.");
         if arg_index != param_index {
@@ -246,7 +246,7 @@ fn verify_every_param_has_a_corresponding_arg(
         .iter()
         .copied()
         .filter_map(|param_id| {
-            let param_label_name_id = state.registry.get(param_id).label();
+            let param_label_name_id = state.registry.get(param_id).label_identifier_id();
             let param_label_name: &IdentifierName = &state.registry.get(param_label_name_id).name;
 
             let has_corresponding_arg = arg_ids.iter().copied().any(|arg_id| {
@@ -285,7 +285,7 @@ fn verify_every_arg_has_a_corresponding_param(
         let arg_label_id = arg_id.label_id();
         let arg_label_name: &IdentifierName = &state.registry.get(arg_label_id).name;
         let has_corresponding_param = param_ids.iter().copied().any(|param_id| {
-            let param_label_id = state.registry.get(param_id).label();
+            let param_label_id = state.registry.get(param_id).label_identifier_id();
             let param_label_name: &IdentifierName = &state.registry.get(param_label_id).name;
             arg_label_name == param_label_name
         });

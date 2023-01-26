@@ -60,13 +60,13 @@ impl WithoutSpans for NonEmptyListId<NodeId<LabeledParam>> {
 impl WithoutSpans for NodeId<LabeledParam> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
-        let label_id = original.label_clause.without_spans(registry);
+        let label_id = original.label_id.without_spans(registry);
         let name_id = original.name_id.without_spans(registry);
         let type_id = original.type_id.without_spans(registry);
         registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
-            label_clause: label_id,
+            label_id,
             is_dashed: original.is_dashed,
             name_id,
             type_id,

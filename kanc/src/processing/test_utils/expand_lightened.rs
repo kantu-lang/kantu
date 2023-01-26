@@ -110,7 +110,7 @@ pub fn expand_labeled_param(
     id: NodeId<light::LabeledParam>,
 ) -> LabeledParam {
     let light = registry.get(id);
-    let label = expand_param_label(registry, light.label_clause);
+    let label = expand_param_label(registry, light.label_id);
     let name = expand_identifier(registry, light.name_id);
     let type_ = expand_expression(registry, light.type_id);
     LabeledParam {

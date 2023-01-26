@@ -10,7 +10,6 @@ unicode-general-category = "0.5.1"
 rustc-hash = "1.1.0"
 path-clean = "0.1.0"
 yscl = "1.2.0"
-typed-arena = "2.0.2"
 
 [dev-dependencies]
 insta = "1.26.0"

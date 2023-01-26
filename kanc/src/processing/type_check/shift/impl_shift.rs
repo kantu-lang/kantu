@@ -410,7 +410,7 @@ impl ShiftDbIndices for NodeId<LabeledParam> {
         Ok(registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: param.span,
-            label_clause: param.label_clause,
+            label_id: param.label_id,
             is_dashed: param.is_dashed,
             name_id: param.name_id,
             type_id: shifted_type_id,
