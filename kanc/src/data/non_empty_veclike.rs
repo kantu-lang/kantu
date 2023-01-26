@@ -6,7 +6,11 @@ use std::{
     ops::{Deref, DerefMut, Index, IndexMut, Range},
 };
 
+use bumpalo::collections::Vec as BumpVec;
+
 pub type NonEmptyVec<T> = NonEmptyVeclike<T, Vec<T>>;
+
+pub type NonEmptyBumpVec<'bump, T> = NonEmptyVeclike<T, BumpVec<'bump, T>>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub struct NonEmptyVeclike<T, V: Veclike<T>> {

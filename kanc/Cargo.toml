@@ -10,6 +10,7 @@ unicode-general-category = "0.5.1"
 rustc-hash = "1.1.0"
 path-clean = "0.1.0"
 yscl = "1.2.0"
+bumpalo = { version = "3.12.0", features = ["collections"] }
 
 [dev-dependencies]
 insta = "1.26.0"
