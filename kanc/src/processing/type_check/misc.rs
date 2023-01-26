@@ -241,7 +241,7 @@ pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
             let normalized_param_with_dummy_id = LabeledParam {
                 id: dummy_id(),
                 span: None,
-                label_id: old_param.label_id,
+                label_clause: old_param.label_clause,
                 is_dashed: old_param.is_dashed,
                 name_id: old_param.name_id,
                 type_id,

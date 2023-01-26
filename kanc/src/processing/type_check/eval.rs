@@ -387,7 +387,7 @@ fn get_decreasing_param_label_id(
         .find_map(|param_id| {
             let param = state.raw.registry.get(param_id);
             if param.is_dashed {
-                Some(param.label_identifier_id())
+                Some(param.label())
             } else {
                 None
             }
@@ -575,7 +575,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
         state.raw.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
-            label_id: first_param.label_id,
+            label_clause: first_param.label_clause,
             is_dashed: first_param.is_dashed,
             name_id: first_param.name_id,
             type_id: normalized_param_type_id.raw(),
@@ -589,7 +589,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
         normalized_param_ids.push(state.raw.registry.add_and_overwrite_id(LabeledParam {
             id: dummy_id(),
             span: None,
-            label_id: param.label_id,
+            label_clause: param.label_clause,
             is_dashed: param.is_dashed,
             name_id: param.name_id,
             type_id: normalized_param_type_id.raw(),

@@ -267,7 +267,7 @@ fn generate_code_for_params_and_leave_params_in_context(
                     context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
 
-                    let param_label_name = &registry.get(param.label_identifier_id()).name;
+                    let param_label_name = &registry.get(param.label()).name;
                     let param_label_js_name = param_label_name.preferred_js_name();
                     ObjectDestructureEntry {
                         in_name: param_label_js_name,
