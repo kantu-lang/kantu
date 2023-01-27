@@ -896,12 +896,10 @@ fn bind_possibly_invalid_expression(
     let bind_result = bind_expression(context, expression.clone());
     match bind_result {
         Ok(bound) => PossiblyInvalidExpression::Valid(bound),
-        Err(error) => PossiblyInvalidExpression::Invalid(InvalidExpression::SymbolicallyInvalid(
-            SymbolicallyInvalidExpression {
-                expression,
-                error,
-                span_invalidated: false,
-            },
-        )),
+        Err(error) => PossiblyInvalidExpression::Invalid(SymbolicallyInvalidExpression {
+            expression,
+            error,
+            span_invalidated: false,
+        }),
     }
 }
