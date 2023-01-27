@@ -4,7 +4,6 @@ pub mod file_id;
 pub mod file_tree;
 pub mod fun_recursion_validation_result;
 pub mod light_ast;
-pub mod node_equality_checker;
 pub mod non_empty_veclike;
 pub mod simplified_ast;
 pub mod text_span;
