@@ -1,13 +1,7 @@
 pub use crate::data::{
-    bind_error::*,
-    file_id::*,
-    file_tree::FileTree,
-    fun_recursion_validation_result::IllegalFunRecursionError,
-    light_ast::*,
-    node_registry::{ExpressionRef, NodeId, NodeRegistry},
-    simplified_ast,
-    token::TokenKind,
-    type_positivity_validation_result::TypePositivityError,
+    bind_error::*, file_id::*, file_tree::FileTree,
+    fun_recursion_validation_result::IllegalFunRecursionError, light_ast::*, simplified_ast,
+    token::TokenKind, type_positivity_validation_result::TypePositivityError,
 };
 pub use crate::processing::{
     bind_type_independent::bind_files,

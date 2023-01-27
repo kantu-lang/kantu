@@ -1,7 +1,6 @@
 use crate::data::{
     fun_recursion_validation_result::*,
     light_ast::*,
-    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
@@ -200,24 +199,22 @@ fn validate_fun_recursion_in_expression_dirty(
     expression_id: ExpressionRef<'a>,
 ) -> Result<ExpressionRef<'a>, TaintedIllegalFunRecursionError> {
     Ok(match expression_id {
-        ExpressionRef<'a>::Name(id) => {
-            validate_fun_recursion_in_name_dirty(context, registry, id).map(ExpressionRef<'a>::Name)?
+        ExpressionRef::Name(id) => {
+            validate_fun_recursion_in_name_dirty(context, registry, id).map(ExpressionRef::Name)?
         }
-        ExpressionRef<'a>::Todo(id) => ExpressionRef<'a>::Todo(id),
-        ExpressionRef<'a>::Call(id) => {
-            validate_fun_recursion_in_call_dirty(context, registry, id).map(ExpressionRef<'a>::Call)?
+        ExpressionRef::Todo(id) => ExpressionRef::Todo(id),
+        ExpressionRef::Call(id) => {
+            validate_fun_recursion_in_call_dirty(context, registry, id).map(ExpressionRef::Call)?
         }
-        ExpressionRef<'a>::Fun(id) => {
-            validate_fun_recursion_in_fun_dirty(context, registry, id).map(ExpressionRef<'a>::Fun)?
+        ExpressionRef::Fun(id) => {
+            validate_fun_recursion_in_fun_dirty(context, registry, id).map(ExpressionRef::Fun)?
         }
-        ExpressionRef<'a>::Match(id) => {
-            validate_fun_recursion_in_match_dirty(context, registry, id).map(ExpressionRef<'a>::Match)?
-        }
-        ExpressionRef<'a>::Forall(id) => validate_fun_recursion_in_forall_dirty(context, registry, id)
-            .map(ExpressionRef<'a>::Forall)?,
-        ExpressionRef<'a>::Check(id) => {
-            validate_fun_recursion_in_check_dirty(context, registry, id).map(ExpressionRef<'a>::Check)?
-        }
+        ExpressionRef::Match(id) => validate_fun_recursion_in_match_dirty(context, registry, id)
+            .map(ExpressionRef::Match)?,
+        ExpressionRef::Forall(id) => validate_fun_recursion_in_forall_dirty(context, registry, id)
+            .map(ExpressionRef::Forall)?,
+        ExpressionRef::Check(id) => validate_fun_recursion_in_check_dirty(context, registry, id)
+            .map(ExpressionRef::Check)?,
     })
 }
 
@@ -277,7 +274,7 @@ fn is_call_restricted(
 ) -> Result<bool, TaintedIllegalFunRecursionError> {
     let call = registry.get(call_id).clone();
     match call.callee_id {
-        ExpressionRef<'a>::Name(callee_name_id) => {
+        ExpressionRef::Name(callee_name_id) => {
             let callee_name = registry.get(callee_name_id);
             if let Some(restriction) = context.reference_restriction(callee_name.db_index) {
                 match restriction {
@@ -301,7 +298,7 @@ fn is_call_restricted(
                                     },
                                 ));
                                 match expected_substruct_id {
-                                    ExpressionRef<'a>::Name(expected_substruct_name_id) => {
+                                    ExpressionRef::Name(expected_substruct_name_id) => {
                                         let expected_substruct =
                                             registry.get(expected_substruct_name_id);
                                         let expected_substruct_db_level =
@@ -377,7 +374,7 @@ fn is_call_restricted(
                                             },
                                         ));
                                         match value_id {
-                                            ExpressionRef<'a>::Name(expected_substruct_name_id) => {
+                                            ExpressionRef::Name(expected_substruct_name_id) => {
                                                 let expected_substruct =
                                                     registry.get(expected_substruct_name_id);
                                                 let expected_substruct_db_level = context
@@ -676,7 +673,7 @@ fn validate_fun_recursion_in_match_dirty(
     let matchee_id =
         validate_fun_recursion_in_expression_dirty(context, registry, match_.matchee_id)?;
     let matchee_db_index = match match_.matchee_id {
-        ExpressionRef<'a>::Name(matchee_name_id) => {
+        ExpressionRef::Name(matchee_name_id) => {
             let matchee_name = registry.get(matchee_name_id);
             Some(matchee_name.db_index)
         }

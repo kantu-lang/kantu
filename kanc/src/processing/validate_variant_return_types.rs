@@ -1,7 +1,5 @@
 use crate::data::{
-    light_ast::*,
-    node_registry::{FileItemNodeId, NodeId, NodeRegistry, NonEmptyListId},
-    non_empty_veclike::OptionalNonEmptyVecLen,
+    light_ast::*, non_empty_veclike::OptionalNonEmptyVecLen,
     variant_return_type_validation_result::*,
 };
 
@@ -91,14 +89,14 @@ fn validate_return_type_of_variant(
 
     let return_type_id = variant.return_type_id;
     match return_type_id {
-        ExpressionRef<'a>::Name(name_id) => validate_return_type_name_db_index(
+        ExpressionRef::Name(name_id) => validate_return_type_name_db_index(
             name_id,
             (registry, return_type_id, variant, variant_index),
         ),
-        ExpressionRef<'a>::Call(call_id) => {
+        ExpressionRef::Call(call_id) => {
             let call = registry.get(call_id);
             match call.callee_id {
-                ExpressionRef<'a>::Name(name_id) => validate_return_type_name_db_index(
+                ExpressionRef::Name(name_id) => validate_return_type_name_db_index(
                     name_id,
                     (registry, return_type_id, variant, variant_index),
                 ),

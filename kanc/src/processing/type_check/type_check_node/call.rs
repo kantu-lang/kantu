@@ -11,7 +11,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
 
     let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
-    let callee_type_id = if let ExpressionRef<'a>::Forall(id) = callee_type_id.raw() {
+    let callee_type_id = if let ExpressionRef::Forall(id) = callee_type_id.raw() {
         id
     } else {
         return tainted_err(TypeCheckError::IllegalCallee {
@@ -63,7 +63,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
                     let db_index = DbIndex(i - j - 1);
                     let param_name_id = callee_type_param_name_ids[j];
                     Substitution {
-                        from: ExpressionRef<'a>::Name(add_name_expression(
+                        from: ExpressionRef::Name(add_name_expression(
                             state.registry,
                             NonEmptyVec::singleton(param_name_id),
                             db_index,
@@ -111,7 +111,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
                 let db_index = DbIndex(arity - j - 1);
                 let param_name_id = callee_type_param_name_ids[j];
                 Substitution {
-                    from: ExpressionRef<'a>::Name(add_name_expression(
+                    from: ExpressionRef::Name(add_name_expression(
                         state.registry,
                         NonEmptyVec::singleton(param_name_id),
                         db_index,
@@ -141,7 +141,7 @@ fn correct_call_arg_order_dirty(
 ) -> Result<Option<&'a Call<'a>>, Tainted<TypeCheckError>> {
     let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
-    let ExpressionRef<'a>::Forall(callee_type_id) = callee_type_id.raw() else {
+    let ExpressionRef::Forall(callee_type_id) = callee_type_id.raw() else {
         return tainted_err(TypeCheckError::IllegalCallee {
             callee_id:call.callee_id,
             callee_type_id,

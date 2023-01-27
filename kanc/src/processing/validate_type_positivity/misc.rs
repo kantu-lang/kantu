@@ -87,19 +87,19 @@ pub fn verify_that_target_does_not_appear_in_expression(
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     match id {
-        ExpressionRef<'a>::Name(id) => {
+        ExpressionRef::Name(id) => {
             verify_that_target_does_not_appear_in_name_expression(registry, id, target)
         }
-        ExpressionRef<'a>::Todo(_) => Ok(()),
-        ExpressionRef<'a>::Call(id) => verify_that_target_does_not_appear_in_call(registry, id, target),
-        ExpressionRef<'a>::Fun(id) => verify_that_target_does_not_appear_in_fun(registry, id, target),
-        ExpressionRef<'a>::Match(id) => {
+        ExpressionRef::Todo(_) => Ok(()),
+        ExpressionRef::Call(id) => verify_that_target_does_not_appear_in_call(registry, id, target),
+        ExpressionRef::Fun(id) => verify_that_target_does_not_appear_in_fun(registry, id, target),
+        ExpressionRef::Match(id) => {
             verify_that_target_does_not_appear_in_match(registry, id, target)
         }
-        ExpressionRef<'a>::Forall(id) => {
+        ExpressionRef::Forall(id) => {
             verify_that_target_does_not_appear_in_forall(registry, id, target)
         }
-        ExpressionRef<'a>::Check(id) => {
+        ExpressionRef::Check(id) => {
             verify_that_target_does_not_appear_in_check_expression(registry, id, target)
         }
     }

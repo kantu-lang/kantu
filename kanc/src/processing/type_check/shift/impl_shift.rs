@@ -121,26 +121,26 @@ impl ShiftDbIndices for ExpressionRef<'a> {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            ExpressionRef<'a>::Name(name_id) => {
-                ExpressionRef<'a>::Name(name_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Name(name_id) => {
+                ExpressionRef::Name(name_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionRef<'a>::Todo(todo_id) => {
-                ExpressionRef<'a>::Todo(todo_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Todo(todo_id) => {
+                ExpressionRef::Todo(todo_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionRef<'a>::Call(call_id) => {
-                ExpressionRef<'a>::Call(call_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Call(call_id) => {
+                ExpressionRef::Call(call_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionRef<'a>::Fun(fun_id) => {
-                ExpressionRef<'a>::Fun(fun_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Fun(fun_id) => {
+                ExpressionRef::Fun(fun_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionRef<'a>::Match(match_id) => {
-                ExpressionRef<'a>::Match(match_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Match(match_id) => {
+                ExpressionRef::Match(match_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionRef<'a>::Forall(forall_id) => {
-                ExpressionRef<'a>::Forall(forall_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Forall(forall_id) => {
+                ExpressionRef::Forall(forall_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionRef<'a>::Check(check_id) => {
-                ExpressionRef<'a>::Check(check_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef::Check(check_id) => {
+                ExpressionRef::Check(check_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
         })
     }

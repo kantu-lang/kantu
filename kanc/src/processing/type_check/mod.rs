@@ -1,8 +1,6 @@
 use crate::data::{
     file_tree::FileTree,
     light_ast::*,
-    node_equality_checker::NodeEqualityChecker,
-    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_veclike::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
     text_span::*,
     type_positivity_validation_result::TypePositivityValidated,

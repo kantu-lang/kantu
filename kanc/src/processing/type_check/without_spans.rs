@@ -103,13 +103,13 @@ impl WithoutSpans for NormalFormId {
 impl WithoutSpans for ExpressionRef<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         match self {
-            ExpressionRef<'a>::Name(id) => ExpressionRef<'a>::Name(id.without_spans(registry)),
-            ExpressionRef<'a>::Todo(id) => ExpressionRef<'a>::Todo(id.without_spans(registry)),
-            ExpressionRef<'a>::Call(id) => ExpressionRef<'a>::Call(id.without_spans(registry)),
-            ExpressionRef<'a>::Fun(id) => ExpressionRef<'a>::Fun(id.without_spans(registry)),
-            ExpressionRef<'a>::Match(id) => ExpressionRef<'a>::Match(id.without_spans(registry)),
-            ExpressionRef<'a>::Forall(id) => ExpressionRef<'a>::Forall(id.without_spans(registry)),
-            ExpressionRef<'a>::Check(id) => ExpressionRef<'a>::Check(id.without_spans(registry)),
+            ExpressionRef::Name(id) => ExpressionRef::Name(id.without_spans(registry)),
+            ExpressionRef::Todo(id) => ExpressionRef::Todo(id.without_spans(registry)),
+            ExpressionRef::Call(id) => ExpressionRef::Call(id.without_spans(registry)),
+            ExpressionRef::Fun(id) => ExpressionRef::Fun(id.without_spans(registry)),
+            ExpressionRef::Match(id) => ExpressionRef::Match(id.without_spans(registry)),
+            ExpressionRef::Forall(id) => ExpressionRef::Forall(id.without_spans(registry)),
+            ExpressionRef::Check(id) => ExpressionRef::Check(id.without_spans(registry)),
         }
     }
 }

@@ -25,7 +25,7 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     }
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
 
-    let fun_type_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Forall(
+    let fun_type_id = NormalFormId::unchecked_new(ExpressionRef::Forall(
         state
             .registry
             .add_and_overwrite_id(Forall {

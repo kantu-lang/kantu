@@ -1,19 +1,16 @@
-use crate::{
-    data::node_registry::NodeRegistry,
-    processing::{
-        bind_type_independent::bind_files,
-        generate_code::{targets::javascript::JavaScript, CompileTarget},
-        lighten_ast::register_file_items,
-        simplify_ast::simplify_file,
-        skin::processing::{
-            format::FormatErrorForCli, parse_cli_args::parse_args,
-            read_compiler_options::read_compiler_options, read_kantu_files::read_kantu_files,
-        },
-        type_check::type_check_file_items,
-        validate_fun_recursion::validate_fun_recursion_in_file_items,
-        validate_type_positivity::validate_type_positivity_in_file_items,
-        validate_variant_return_types::validate_variant_return_types_in_file_items,
+use crate::processing::{
+    bind_type_independent::bind_files,
+    generate_code::{targets::javascript::JavaScript, CompileTarget},
+    lighten_ast::register_file_items,
+    simplify_ast::simplify_file,
+    skin::processing::{
+        format::FormatErrorForCli, parse_cli_args::parse_args,
+        read_compiler_options::read_compiler_options, read_kantu_files::read_kantu_files,
     },
+    type_check::type_check_file_items,
+    validate_fun_recursion::validate_fun_recursion_in_file_items,
+    validate_type_positivity::validate_type_positivity_in_file_items,
+    validate_variant_return_types::validate_variant_return_types_in_file_items,
 };
 
 pub fn run_pipeline_without_writing_files(args: &[String]) -> Result<String, String> {

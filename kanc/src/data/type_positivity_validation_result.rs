@@ -1,4 +1,4 @@
-use crate::data::{light_ast::*, node_registry::NodeId};
+use crate::data::light_ast::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct TypePositivityValidated<T>(T);

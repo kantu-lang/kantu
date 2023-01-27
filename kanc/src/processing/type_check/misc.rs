@@ -25,7 +25,7 @@ pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
         }),
         state.context.type0_dbi(),
     );
-    NormalFormId::unchecked_new(ExpressionRef<'a>::Name(name_id))
+    NormalFormId::unchecked_new(ExpressionRef::Name(name_id))
 }
 
 pub fn add_name_expression_and_overwrite_component_ids(
@@ -87,7 +87,7 @@ impl PossiblyNullaryForall {
                 param_list_id,
                 output_id: self.output_id,
             });
-            ExpressionRef<'a>::Forall(forall_id)
+            ExpressionRef::Forall(forall_id)
         } else {
             self.output_id
         }
@@ -95,7 +95,7 @@ impl PossiblyNullaryForall {
 }
 
 pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId) -> bool {
-    if let ExpressionRef<'a>::Name(name_id) = term.raw() {
+    if let ExpressionRef::Name(name_id) = term.raw() {
         let name = state.registry.get(name_id);
         let i = name.db_index;
         i == state.context.type0_dbi() || i == state.context.type1_dbi()
@@ -105,7 +105,7 @@ pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId)
 }
 
 pub(super) fn is_term_equal_to_type1(state: &State, term: NormalFormId) -> bool {
-    if let ExpressionRef<'a>::Name(name_id) = term.raw() {
+    if let ExpressionRef::Name(name_id) = term.raw() {
         let name = state.registry.get(name_id);
         let i = name.db_index;
         i == state.context.type1_dbi()
@@ -398,15 +398,15 @@ fn is_left_inclusive_subterm_of_right(
     }
 
     match right {
-        ExpressionRef<'a>::Name(_) => {
+        ExpressionRef::Name(_) => {
             // This must be false because we already checked for equality.
             false
         }
-        ExpressionRef<'a>::Todo(_) => {
+        ExpressionRef::Todo(_) => {
             // This must be false because we already checked for equality.
             false
         }
-        ExpressionRef<'a>::Call(right_id) => {
+        ExpressionRef::Call(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_right(state, left, right.callee_id) {
@@ -419,7 +419,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionRef<'a>::Fun(right_id) => {
+        ExpressionRef::Fun(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
@@ -444,7 +444,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionRef<'a>::Match(right_id) => {
+        ExpressionRef::Match(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_right(state, left, right.matchee_id) {
@@ -475,7 +475,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionRef<'a>::Forall(right_id) => {
+        ExpressionRef::Forall(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
@@ -493,7 +493,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionRef<'a>::Check(right_id) => {
+        ExpressionRef::Check(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_any_right_assertion(state, left, right_id) {
@@ -607,7 +607,7 @@ pub(super) fn try_as_normal_form_adt_expression(
     expression_id: NormalFormId,
 ) -> Option<NormalFormAdtExpression> {
     match expression_id.raw() {
-        ExpressionRef<'a>::Name(name_id) => {
+        ExpressionRef::Name(name_id) => {
             let db_index = state.registry.get(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
             match definition {
@@ -622,10 +622,10 @@ pub(super) fn try_as_normal_form_adt_expression(
                 _ => None,
             }
         }
-        ExpressionRef<'a>::Call(call_id) => {
+        ExpressionRef::Call(call_id) => {
             let call = state.registry.get(call_id).clone();
             match call.callee_id {
-                ExpressionRef<'a>::Name(name_id) => {
+                ExpressionRef::Name(name_id) => {
                     let db_index = state.registry.get(name_id).db_index;
                     let definition = state.context.get_definition(db_index, state.registry);
                     match definition {
@@ -681,7 +681,7 @@ pub(super) fn try_as_variant_expression_with_node_registry_and_definition_getter
     expression_id: ExpressionRef<'a>,
 ) -> Option<(&'a Identifier<'a>, Option<NonEmptyCallArgListId>)> {
     match expression_id {
-        ExpressionRef<'a>::Name(name_id) => {
+        ExpressionRef::Name(name_id) => {
             let db_index = registry.get(name_id).db_index;
             let definition = get_definition(db_index, registry);
             match definition {
@@ -689,10 +689,10 @@ pub(super) fn try_as_variant_expression_with_node_registry_and_definition_getter
                 _ => None,
             }
         }
-        ExpressionRef<'a>::Call(call_id) => {
+        ExpressionRef::Call(call_id) => {
             let call = registry.get(call_id).clone();
             match call.callee_id {
-                ExpressionRef<'a>::Name(name_id) => {
+                ExpressionRef::Name(name_id) => {
                     let db_index = registry.get(name_id).db_index;
                     let definition = get_definition(db_index, registry);
                     match definition {
@@ -1377,7 +1377,10 @@ pub(super) fn get_unlabeled_param_type_ids(
 pub(super) fn get_names_and_types_of_params(
     state: &State,
     param_list_id: NonEmptyParamListId,
-) -> (NonEmptyVec<&'a Identifier<'a>>, NonEmptyVec<ExpressionRef<'a>>) {
+) -> (
+    NonEmptyVec<&'a Identifier<'a>>,
+    NonEmptyVec<ExpressionRef<'a>>,
+) {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(id) => get_names_and_types_of_unlabeled_params(state, id),
         NonEmptyParamListId::UniquelyLabeled(id) => {
@@ -1389,7 +1392,10 @@ pub(super) fn get_names_and_types_of_params(
 pub(super) fn get_names_and_types_of_unlabeled_params(
     state: &State,
     param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
-) -> (NonEmptyVec<&'a Identifier<'a>>, NonEmptyVec<ExpressionRef<'a>>) {
+) -> (
+    NonEmptyVec<&'a Identifier<'a>>,
+    NonEmptyVec<ExpressionRef<'a>>,
+) {
     let param_ids = state.registry.get_list(param_list_id);
     param_ids.map_to_unzipped(|param_id| {
         let param = state.registry.get(*param_id);
@@ -1400,7 +1406,10 @@ pub(super) fn get_names_and_types_of_unlabeled_params(
 pub(super) fn get_names_and_types_of_labeled_params(
     state: &State,
     param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
-) -> (NonEmptyVec<&'a Identifier<'a>>, NonEmptyVec<ExpressionRef<'a>>) {
+) -> (
+    NonEmptyVec<&'a Identifier<'a>>,
+    NonEmptyVec<ExpressionRef<'a>>,
+) {
     let param_ids = state.registry.get_list(param_list_id);
     param_ids.map_to_unzipped(|param_id| {
         let param = state.registry.get(*param_id);

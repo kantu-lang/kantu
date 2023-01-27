@@ -68,23 +68,23 @@ impl SubstituteWithoutRemovingSpans for ExpressionRef<'a> {
         state: &mut ContextlessState,
     ) -> Self {
         match self {
-            ExpressionRef<'a>::Name(name_id) => {
+            ExpressionRef::Name(name_id) => {
                 name_id.subst_without_removing_spans(substitution, state)
             }
-            ExpressionRef<'a>::Todo(todo_id) => {
+            ExpressionRef::Todo(todo_id) => {
                 todo_id.subst_without_removing_spans(substitution, state)
             }
-            ExpressionRef<'a>::Call(call_id) => {
+            ExpressionRef::Call(call_id) => {
                 call_id.subst_without_removing_spans(substitution, state)
             }
-            ExpressionRef<'a>::Fun(fun_id) => fun_id.subst_without_removing_spans(substitution, state),
-            ExpressionRef<'a>::Match(match_id) => {
+            ExpressionRef::Fun(fun_id) => fun_id.subst_without_removing_spans(substitution, state),
+            ExpressionRef::Match(match_id) => {
                 match_id.subst_without_removing_spans(substitution, state)
             }
-            ExpressionRef<'a>::Forall(forall_id) => {
+            ExpressionRef::Forall(forall_id) => {
                 forall_id.subst_without_removing_spans(substitution, state)
             }
-            ExpressionRef<'a>::Check(check_id) => {
+            ExpressionRef::Check(check_id) => {
                 check_id.subst_without_removing_spans(substitution, state)
             }
         }
@@ -99,7 +99,7 @@ impl SubstituteWithoutRemovingSpans for &'a NameExpression<'a> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        subst_if_equal_and_get_status(ExpressionRef<'a>::Name(self), substitution, state).0
+        subst_if_equal_and_get_status(ExpressionRef::Name(self), substitution, state).0
     }
 }
 
@@ -111,7 +111,7 @@ impl SubstituteWithoutRemovingSpans for &'a TodoExpression<'a> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        subst_if_equal_and_get_status(ExpressionRef<'a>::Todo(self), substitution, state).0
+        subst_if_equal_and_get_status(ExpressionRef::Todo(self), substitution, state).0
     }
 }
 
@@ -142,7 +142,7 @@ impl SubstituteWithoutRemovingSpans for &'a Call<'a> {
         state: &mut ContextlessState,
     ) -> Self::Output {
         let top_level =
-            subst_if_equal_and_get_status(ExpressionRef<'a>::Call(self), substitution, state);
+            subst_if_equal_and_get_status(ExpressionRef::Call(self), substitution, state);
         if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
@@ -154,7 +154,7 @@ impl SubstituteWithoutRemovingSpans for &'a Call<'a> {
         let substituted_arg_list_id = call
             .arg_list_id
             .subst_without_removing_spans(substitution, state);
-        ExpressionRef<'a>::Call(state.registry.add_and_overwrite_id(Call {
+        ExpressionRef::Call(state.registry.add_and_overwrite_id(Call {
             id: dummy_id(),
             span: None,
             callee_id: substituted_callee_id,
@@ -230,7 +230,7 @@ impl SubstituteWithoutRemovingSpans for LabeledCallArgId {
                 db_index,
                 value_id,
             } => match substitution.from {
-                ExpressionRef<'a>::Name(from_id) => {
+                ExpressionRef::Name(from_id) => {
                     let from_db_index = state.registry.get(from_id).db_index;
                     if from_db_index == db_index {
                         LabeledCallArgId::Explicit {
@@ -271,7 +271,8 @@ impl SubstituteWithoutRemovingSpans for &'a Fun<'a> {
         substitution: Substitution,
         state: &mut ContextlessState,
     ) -> Self::Output {
-        let top_level = subst_if_equal_and_get_status(ExpressionRef<'a>::Fun(self), substitution, state);
+        let top_level =
+            subst_if_equal_and_get_status(ExpressionRef::Fun(self), substitution, state);
         if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
@@ -288,7 +289,7 @@ impl SubstituteWithoutRemovingSpans for &'a Fun<'a> {
             substitution.upshift(fun.param_list_id.len() + 1, state.registry),
             state,
         );
-        ExpressionRef<'a>::Fun(state.registry.add_and_overwrite_id(Fun {
+        ExpressionRef::Fun(state.registry.add_and_overwrite_id(Fun {
             id: dummy_id(),
             span: None,
             name_id: fun.name_id,
@@ -410,7 +411,7 @@ impl SubstituteWithoutRemovingSpans for &'a Match<'a> {
         state: &mut ContextlessState,
     ) -> Self::Output {
         let top_level =
-            subst_if_equal_and_get_status(ExpressionRef<'a>::Match(self), substitution, state);
+            subst_if_equal_and_get_status(ExpressionRef::Match(self), substitution, state);
         if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
@@ -423,7 +424,7 @@ impl SubstituteWithoutRemovingSpans for &'a Match<'a> {
             .case_list_id
             .subst_without_removing_spans(substitution, state);
 
-        ExpressionRef<'a>::Match(state.registry.add_and_overwrite_id(Match {
+        ExpressionRef::Match(state.registry.add_and_overwrite_id(Match {
             id: dummy_id(),
             span: None,
             matchee_id: substituted_matchee_id,
@@ -501,7 +502,7 @@ impl SubstituteWithoutRemovingSpans for &'a Forall<'a> {
         state: &mut ContextlessState,
     ) -> Self::Output {
         let top_level =
-            subst_if_equal_and_get_status(ExpressionRef<'a>::Forall(self), substitution, state);
+            subst_if_equal_and_get_status(ExpressionRef::Forall(self), substitution, state);
         if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
@@ -515,7 +516,7 @@ impl SubstituteWithoutRemovingSpans for &'a Forall<'a> {
             state,
         );
 
-        ExpressionRef<'a>::Forall(state.registry.add_and_overwrite_id(Forall {
+        ExpressionRef::Forall(state.registry.add_and_overwrite_id(Forall {
             id: dummy_id(),
             span: None,
             param_list_id: substituted_param_list_id,
@@ -533,7 +534,7 @@ impl SubstituteWithoutRemovingSpans for &'a Check<'a> {
         state: &mut ContextlessState,
     ) -> Self::Output {
         let top_level =
-            subst_if_equal_and_get_status(ExpressionRef<'a>::Check(self), substitution, state);
+            subst_if_equal_and_get_status(ExpressionRef::Check(self), substitution, state);
         if let WasSyntacticNoOp(false) = top_level.1 {
             return top_level.0;
         }
@@ -546,7 +547,7 @@ impl SubstituteWithoutRemovingSpans for &'a Check<'a> {
             .output_id
             .subst_without_removing_spans(substitution, state);
 
-        ExpressionRef<'a>::Check(state.registry.add_and_overwrite_id(Check {
+        ExpressionRef::Check(state.registry.add_and_overwrite_id(Check {
             id: dummy_id(),
             span: None,
             assertion_list_id: substituted_assertion_list_id,

@@ -1,12 +1,6 @@
 use crate::data::{
     bound_ast::*,
-    light_ast::{self as light, ParamLabelId},
-    node_registry::{
-        FileItemNodeId, GoalKwOrPossiblyInvalidExpressionId, InvalidExpressionId, LabeledCallArgId,
-        MatchCaseOutputId, NodeId, NodeRegistry, NonEmptyCallArgListId, NonEmptyListId,
-        NonEmptyMatchCaseParamListId, NonEmptyParamListId, PossiblyInvalidExpressionId,
-        QuestionMarkOrPossiblyInvalidExpressionId,
-    },
+    light_ast::{self as light},
     non_empty_veclike::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
 };
 
@@ -176,15 +170,15 @@ pub fn expand_let_statement(
 
 pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionRef<'a>) -> Expression {
     match id {
-        light::ExpressionRef<'a>::Name(id) => Expression::Name(expand_name_expression(registry, id)),
-        light::ExpressionRef<'a>::Todo(id) => Expression::Todo(registry.get(id).span),
-        light::ExpressionRef<'a>::Call(id) => Expression::Call(Box::new(expand_call(registry, id))),
-        light::ExpressionRef<'a>::Fun(id) => Expression::Fun(Box::new(expand_fun(registry, id))),
-        light::ExpressionRef<'a>::Match(id) => Expression::Match(Box::new(expand_match(registry, id))),
-        light::ExpressionRef<'a>::Forall(id) => {
+        light::ExpressionRef::Name(id) => Expression::Name(expand_name_expression(registry, id)),
+        light::ExpressionRef::Todo(id) => Expression::Todo(registry.get(id).span),
+        light::ExpressionRef::Call(id) => Expression::Call(Box::new(expand_call(registry, id))),
+        light::ExpressionRef::Fun(id) => Expression::Fun(Box::new(expand_fun(registry, id))),
+        light::ExpressionRef::Match(id) => Expression::Match(Box::new(expand_match(registry, id))),
+        light::ExpressionRef::Forall(id) => {
             Expression::Forall(Box::new(expand_forall(registry, id)))
         }
-        light::ExpressionRef<'a>::Check(id) => Expression::Check(Box::new(expand_check(registry, id))),
+        light::ExpressionRef::Check(id) => Expression::Check(Box::new(expand_check(registry, id))),
     }
 }
 

@@ -55,13 +55,13 @@ fn verify_expression(
     perspective: Visibility,
 ) -> Result<(), (&'a NameExpression<'a>, Visibility)> {
     match expression_id {
-        ExpressionRef<'a>::Name(id) => verify_name_expression(state, id, perspective),
-        ExpressionRef<'a>::Todo(_) => Ok(()),
-        ExpressionRef<'a>::Call(id) => verify_call(state, id, perspective),
-        ExpressionRef<'a>::Fun(id) => verify_fun(state, id, perspective),
-        ExpressionRef<'a>::Match(id) => verify_match(state, id, perspective),
-        ExpressionRef<'a>::Forall(id) => verify_forall(state, id, perspective),
-        ExpressionRef<'a>::Check(id) => verify_check_expression(state, id, perspective),
+        ExpressionRef::Name(id) => verify_name_expression(state, id, perspective),
+        ExpressionRef::Todo(_) => Ok(()),
+        ExpressionRef::Call(id) => verify_call(state, id, perspective),
+        ExpressionRef::Fun(id) => verify_fun(state, id, perspective),
+        ExpressionRef::Match(id) => verify_match(state, id, perspective),
+        ExpressionRef::Forall(id) => verify_forall(state, id, perspective),
+        ExpressionRef::Check(id) => verify_check_expression(state, id, perspective),
     }
 }
 

@@ -1,7 +1,6 @@
 use crate::data::{
     fun_recursion_validation_result::FunRecursionValidated,
     light_ast::*,
-    node_registry::{LabeledCallArgId, NodeId, NodeRegistry, NonEmptyListId},
     non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
     type_positivity_validation_result::*,
 };
@@ -111,20 +110,20 @@ fn validate_type_positivity_in_expression(
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     match id {
-        ExpressionRef<'a>::Name(_) => Ok(()),
-        ExpressionRef<'a>::Todo(_) => Ok(()),
-        ExpressionRef<'a>::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
+        ExpressionRef::Name(_) => Ok(()),
+        ExpressionRef::Todo(_) => Ok(()),
+        ExpressionRef::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
 
-        ExpressionRef<'a>::Call(call_id) => {
+        ExpressionRef::Call(call_id) => {
             validate_type_positivity_in_call(context, cache, registry, call_id, target)
         }
-        ExpressionRef<'a>::Match(match_id) => {
+        ExpressionRef::Match(match_id) => {
             validate_type_positivity_in_match(context, cache, registry, match_id, target)
         }
-        ExpressionRef<'a>::Forall(forall_id) => {
+        ExpressionRef::Forall(forall_id) => {
             validate_type_positivity_in_forall(context, cache, registry, forall_id, target)
         }
-        ExpressionRef<'a>::Check(check_id) => {
+        ExpressionRef::Check(check_id) => {
             validate_type_positivity_in_check_expression(context, cache, registry, check_id, target)
         }
     }
@@ -137,13 +136,13 @@ fn validate_type_positivity_in_call(
     call_id: &'a Call<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    if !does_target_appear_in_expression(registry, ExpressionRef<'a>::Call(call_id), target) {
+    if !does_target_appear_in_expression(registry, ExpressionRef::Call(call_id), target) {
         return Ok(());
     }
 
     let call = registry.get(call_id);
 
-    let ExpressionRef<'a>::Name(callee_id) = call.callee_id else {
+    let ExpressionRef::Name(callee_id) = call.callee_id else {
         return Err(TypePositivityError::NonAdtCallee{
             call_id,
             callee_id: call.callee_id,
@@ -374,14 +373,14 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
     let variant_arity = variant.param_list_id.len();
 
     let variant_return_type_id = match variant.return_type_id {
-        ExpressionRef<'a>::Name(_) => {
+        ExpressionRef::Name(_) => {
             return Err(TypePositivityError::VariantReturnTypeTypeArgArityMismatch {
                 actual: 0,
                 expected: type_param_arity,
                 return_type_id: variant.return_type_id,
             });
         }
-        ExpressionRef<'a>::Call(variant_return_type_id) => {
+        ExpressionRef::Call(variant_return_type_id) => {
             variant_return_type_id
         }
         _ => panic!("Impossible: The variant return type validator should have thrown an error on any return type that was neither a Name nor Call.")
@@ -405,7 +404,7 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
         return Ok(());
     }
 
-    let ExpressionRef<'a>::Name(type_arg_id) = type_arg_id else {
+    let ExpressionRef::Name(type_arg_id) = type_arg_id else {
         // TODO: Enable "stack trace" (e.g., so we can see the original
         // type that required the variant return type to have a positive
         // type arg).
