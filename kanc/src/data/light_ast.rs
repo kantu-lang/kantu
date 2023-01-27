@@ -3,6 +3,12 @@ use crate::data::{fun_recursion_validation_result::IllegalFunRecursionError, tex
 use bumpalo::collections::Vec as BumpVec;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FileItemRef<'a> {
+    Type(&'a TypeStatement<'a>),
+    Let(&'a LetStatement<'a>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeStatement<'a> {
     pub span: Option<TextSpan>,
     pub visibility: Visibility,
