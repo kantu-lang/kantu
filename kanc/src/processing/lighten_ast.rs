@@ -213,14 +213,14 @@ pub fn register_call_args(
                 .into_iter()
                 .map(|unregistered| register_expression(bump, unregistered))
                 .collect_in(bump);
-            NonEmptyCallArgVec::Unlabeled(values)
+            NonEmptyCallArgVec::Unlabeled(&values)
         }
         heavy::NonEmptyCallArgVec::UniquelyLabeled(unregistered) => {
             let values = unregistered
                 .into_iter()
                 .map(|unregistered| register_labeled_call_arg(bump, unregistered))
                 .collect_in(bump);
-            NonEmptyCallArgVec::UniquelyLabeled(values)
+            NonEmptyCallArgVec::UniquelyLabeled(&values)
         }
     }
 }
@@ -313,14 +313,15 @@ pub fn register_match_case_params(
 pub fn register_identifiers(bump: &Bump, unregistered: Vec<heavy::Identifier>) -> &[Identifier] {
     let identifiers = unregistered
         .into_iter()
-        .map(|unregistered| register_identifier(bump, unregistered));
-    registry.add_list(identifiers)
+        .map(|unregistered| register_identifier(bump, unregistered))
+        .collect_in(bump);
+    &identifiers
 }
 
 pub fn register_optional_labeled_match_case_params(
     bump: &Bump,
     unregistered: Option<Vec<heavy::LabeledMatchCaseParam>>,
-) -> Option<NonEmptyListId<&'a LabeledMatchCaseParam<'a>>> {
+) -> Option<NonEmptyMatchCaseParamVec> {
     unregistered.map(|unregistered| register_labeled_match_case_params(bump, unregistered))
 }
 
