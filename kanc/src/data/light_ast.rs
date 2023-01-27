@@ -1,4 +1,4 @@
-use crate::data::text_span::*;
+use crate::data::{fun_recursion_validation_result::IllegalFunRecursionError, text_span::*};
 
 use bumpalo::collections::Vec as BumpVec;
 
@@ -261,16 +261,48 @@ impl QuestionMarkOrPossiblyInvalidExpression<'_> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PossiblyInvalidExpressionRef<'a> {
     Valid(ExpressionRef<'a>),
-    Invalid(&'a InvalidExpression),
+    Invalid(&'a InvalidExpression<'a>),
 }
-
-pub use crate::data::bound_ast::InvalidExpression;
 
 impl PossiblyInvalidExpressionRef<'_> {
     pub fn span(&self) -> Option<TextSpan> {
         match self {
             PossiblyInvalidExpressionRef::Valid(expression) => expression.span(),
             PossiblyInvalidExpressionRef::Invalid(expression) => expression.span(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum InvalidExpression<'a> {
+    SymbolicallyInvalid(SymbolicallyInvalidExpression),
+    IllegalFunRecursion(IllegalFunRecursionExpression<'a>),
+}
+
+pub use crate::data::bound_ast::SymbolicallyInvalidExpression;
+
+impl InvalidExpression<'_> {
+    pub fn span(&self) -> Option<TextSpan> {
+        match self {
+            InvalidExpression::SymbolicallyInvalid(expression) => expression.span(),
+            InvalidExpression::IllegalFunRecursion(expression) => expression.span(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IllegalFunRecursionExpression<'a> {
+    pub expression: ExpressionRef<'a>,
+    pub error: IllegalFunRecursionError<'a>,
+    pub span_invalidated: bool,
+}
+
+impl IllegalFunRecursionExpression<'_> {
+    pub fn span(&self) -> Option<TextSpan> {
+        if self.span_invalidated {
+            None
+        } else {
+            self.expression.span()
         }
     }
 }

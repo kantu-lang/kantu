@@ -1,4 +1,4 @@
-use crate::data::{light_ast::*, node_registry::NodeId};
+use crate::data::light_ast::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct FunRecursionValidated<T>(T);
@@ -15,17 +15,17 @@ impl<T> FunRecursionValidated<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IllegalFunRecursionError {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum IllegalFunRecursionError<'a> {
     RecursiveReferenceWasNotDirectCall {
-        reference_id: NodeId<NameExpression>,
+        reference_id: &'a NameExpression<'a>,
     },
     NonSubstructPassedToDecreasingParam {
-        callee_id: NodeId<NameExpression>,
-        arg_id: ExpressionId,
+        callee_id: &'a NameExpression<'a>,
+        arg_id: &'a ExpressionRef<'a>,
     },
     RecursivelyCalledFunctionWithoutDecreasingParam {
-        callee_id: NodeId<NameExpression>,
+        callee_id: &'a NameExpression<'a>,
     },
-    LabelednessMismatch(NodeId<Call>),
+    LabelednessMismatch(&'a Call<'a>),
 }

@@ -1,7 +1,6 @@
 use crate::data::{
     bind_error::BindError,
     file_id::*,
-    fun_recursion_validation_result::IllegalFunRecursionError,
     non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
     simplified_ast as unbound,
     text_span::*,
@@ -324,7 +323,7 @@ impl QuestionMarkOrPossiblyInvalidExpression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PossiblyInvalidExpression {
     Valid(Expression),
-    Invalid(InvalidExpression),
+    Invalid(SymbolicallyInvalidExpression),
 }
 
 impl PossiblyInvalidExpression {
@@ -337,32 +336,18 @@ impl PossiblyInvalidExpression {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum InvalidExpression {
-    SymbolicallyInvalid(SymbolicallyInvalidExpression),
-    IllegalFunRecursion(IllegalFunRecursionExpression),
-}
-
-impl InvalidExpression {
-    pub fn span(&self) -> Option<TextSpan> {
-        match self {
-            InvalidExpression::SymbolicallyInvalid(expression) => {
-                Some(expression.expression.span())
-            }
-            InvalidExpression::IllegalFunRecursion(expression) => expression.expression.span(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SymbolicallyInvalidExpression {
     pub expression: unbound::Expression,
     pub error: BindError,
     pub span_invalidated: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct IllegalFunRecursionExpression {
-    pub expression: Expression,
-    pub error: IllegalFunRecursionError,
-    pub span_invalidated: bool,
+impl SymbolicallyInvalidExpression {
+    pub fn span(&self) -> Option<TextSpan> {
+        if self.span_invalidated {
+            None
+        } else {
+            Some(self.expression.span())
+        }
+    }
 }
