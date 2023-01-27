@@ -174,7 +174,7 @@ pub struct MatchCase<'a> {
     pub span: Option<TextSpan>,
     pub variant_name: &'a Identifier,
     pub params: Option<&'a NonEmptyMatchCaseParamVec<'a>>,
-    pub output: MatchCaseOutput<'a>,
+    pub output: MatchCaseOutputRef<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -203,7 +203,7 @@ impl<'a> LabeledMatchCaseParam<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum MatchCaseOutput<'a> {
+pub enum MatchCaseOutputRef<'a> {
     Some(ExpressionRef<'a>),
     ImpossibilityClaim(Option<TextSpan>),
 }
@@ -226,38 +226,38 @@ pub struct Check<'a> {
 pub struct CheckAssertion<'a> {
     pub span: Option<TextSpan>,
     pub kind: CheckAssertionKind,
-    pub left: GoalKwOrPossiblyInvalidExpression<'a>,
-    pub right: QuestionMarkOrPossiblyInvalidExpression<'a>,
+    pub left: GoalKwOrPossiblyInvalidExpressionRef<'a>,
+    pub right: QuestionMarkOrPossiblyInvalidExpressionRef<'a>,
 }
 
 pub use crate::data::bound_ast::CheckAssertionKind;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum GoalKwOrPossiblyInvalidExpression<'a> {
+pub enum GoalKwOrPossiblyInvalidExpressionRef<'a> {
     GoalKw { span: Option<TextSpan> },
     Expression(PossiblyInvalidExpressionRef<'a>),
 }
 
-impl GoalKwOrPossiblyInvalidExpression<'_> {
+impl GoalKwOrPossiblyInvalidExpressionRef<'_> {
     pub fn span(&self) -> Option<TextSpan> {
         match self {
-            GoalKwOrPossiblyInvalidExpression::GoalKw { span } => *span,
-            GoalKwOrPossiblyInvalidExpression::Expression(expression) => expression.span(),
+            GoalKwOrPossiblyInvalidExpressionRef::GoalKw { span } => *span,
+            GoalKwOrPossiblyInvalidExpressionRef::Expression(expression) => expression.span(),
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum QuestionMarkOrPossiblyInvalidExpression<'a> {
+pub enum QuestionMarkOrPossiblyInvalidExpressionRef<'a> {
     QuestionMark { span: Option<TextSpan> },
     Expression(PossiblyInvalidExpressionRef<'a>),
 }
 
-impl QuestionMarkOrPossiblyInvalidExpression<'_> {
+impl QuestionMarkOrPossiblyInvalidExpressionRef<'_> {
     pub fn span(&self) -> Option<TextSpan> {
         match self {
-            QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span } => *span,
-            QuestionMarkOrPossiblyInvalidExpression::Expression(expression) => expression.span(),
+            QuestionMarkOrPossiblyInvalidExpressionRef::QuestionMark { span } => *span,
+            QuestionMarkOrPossiblyInvalidExpressionRef::Expression(expression) => expression.span(),
         }
     }
 }

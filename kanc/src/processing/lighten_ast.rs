@@ -88,7 +88,7 @@ pub fn register_unlabeled_param(
 }
 
 pub fn register_labeled_param(bump: &Bump, unregistered: heavy::LabeledParam) -> &LabeledParam {
-    let label_clause = register_param_label(bump, unregistered.label_clause);
+    let label_clause = register_param_label_clause(bump, unregistered.label_clause);
     let name = register_identifier(bump, unregistered.name);
     let type_ = register_expression(bump, unregistered.type_);
     bump.alloc(LabeledParam {
@@ -100,7 +100,7 @@ pub fn register_labeled_param(bump: &Bump, unregistered: heavy::LabeledParam) ->
     })
 }
 
-pub fn register_param_label(
+pub fn register_param_label_clause(
     bump: &Bump,
     unregistered: heavy::ParamLabelClause,
 ) -> ParamLabelClauseRef {
@@ -325,22 +325,23 @@ pub fn register_optional_labeled_match_case_params(
 pub fn register_labeled_match_case_params(
     bump: &Bump,
     unregistered: Vec<heavy::LabeledMatchCaseParam>,
-) -> NonEmptyListId<&'a LabeledMatchCaseParam<'a>> {
+) -> &[LabeledMatchCaseParam] {
     let params = unregistered
         .into_iter()
-        .map(|unregistered| register_labeled_match_case_param(bump, unregistered));
-    registry.add_list(params)
+        .map(|unregistered| register_labeled_match_case_param(bump, unregistered))
+        .collect_in(bump);
+    &params
 }
 
 pub fn register_labeled_match_case_param(
     bump: &Bump,
     unregistered: heavy::LabeledMatchCaseParam,
-) -> &'a LabeledMatchCaseParam<'a> {
-    let label = register_param_label(bump, unregistered.label_clause);
+) -> &LabeledMatchCaseParam {
+    let label_clause = register_param_label_clause(bump, unregistered.label_clause);
     let name = register_identifier(bump, unregistered.name);
     bump.alloc(LabeledMatchCaseParam {
         span: unregistered.span,
-        label,
+        label_clause,
         name,
     })
 }
@@ -348,19 +349,19 @@ pub fn register_labeled_match_case_param(
 pub fn register_match_case_output(
     bump: &Bump,
     unregistered: heavy::MatchCaseOutput,
-) -> MatchCaseOutputId {
+) -> MatchCaseOutputRef {
     match unregistered {
         heavy::MatchCaseOutput::Some(unregistered) => {
             let light = register_expression(bump, unregistered);
-            MatchCaseOutputId::Some(light)
+            MatchCaseOutputRef::Some(light)
         }
         heavy::MatchCaseOutput::ImpossibilityClaim(kw_span) => {
-            MatchCaseOutputId::ImpossibilityClaim(kw_span)
+            MatchCaseOutputRef::ImpossibilityClaim(kw_span)
         }
     }
 }
 
-pub fn register_forall(bump: &Bump, unregistered: heavy::Forall) -> &'a Forall<'a> {
+pub fn register_forall(bump: &Bump, unregistered: heavy::Forall) -> &Forall {
     let params = register_params(bump, unregistered.params);
     let output = register_expression(bump, unregistered.output);
     bump.alloc(Forall {
@@ -370,16 +371,16 @@ pub fn register_forall(bump: &Bump, unregistered: heavy::Forall) -> &'a Forall<'
     })
 }
 
-pub fn register_check(bump: &Bump, unregistered: heavy::Check) -> &'a Check<'a> {
+pub fn register_check(bump: &Bump, unregistered: heavy::Check) -> &Check {
     let assertions = unregistered
         .assertions
         .into_iter()
-        .map(|unregistered| register_check_assertion(bump, unregistered));
-    let assertion_list = registry.add_list(assertions);
+        .map(|unregistered| register_check_assertion(bump, unregistered))
+        .collect_in(bump);
     let output = register_expression(bump, unregistered.output);
     bump.alloc(Check {
         span: unregistered.span,
-        assertion_list,
+        assertions,
         output,
     })
 }
@@ -387,7 +388,7 @@ pub fn register_check(bump: &Bump, unregistered: heavy::Check) -> &'a Check<'a> 
 pub fn register_check_assertion(
     bump: &Bump,
     unregistered: heavy::CheckAssertion,
-) -> &'a CheckAssertion<'a> {
+) -> &CheckAssertion {
     let left = register_goal_kw_or_expression(bump, unregistered.left);
     let right = register_question_mark_or_possibly_invalid_expression(bump, unregistered.right);
     bump.alloc(CheckAssertion {
@@ -401,14 +402,14 @@ pub fn register_check_assertion(
 pub fn register_goal_kw_or_expression(
     bump: &Bump,
     unregistered: heavy::GoalKwOrPossiblyInvalidExpression,
-) -> GoalKwOrPossiblyInvalidExpressionId {
+) -> GoalKwOrPossiblyInvalidExpressionRef {
     match unregistered {
         heavy::GoalKwOrPossiblyInvalidExpression::GoalKw { span: start } => {
-            GoalKwOrPossiblyInvalidExpressionId::GoalKw { span: start }
+            GoalKwOrPossiblyInvalidExpressionRef::GoalKw { span: start }
         }
         heavy::GoalKwOrPossiblyInvalidExpression::Expression(unregistered) => {
             let id = register_possibly_invalid_expression(bump, unregistered);
-            GoalKwOrPossiblyInvalidExpressionId::Expression(id)
+            GoalKwOrPossiblyInvalidExpressionRef::Expression(id)
         }
     }
 }
@@ -416,14 +417,14 @@ pub fn register_goal_kw_or_expression(
 pub fn register_question_mark_or_possibly_invalid_expression(
     bump: &Bump,
     unregistered: heavy::QuestionMarkOrPossiblyInvalidExpression,
-) -> QuestionMarkOrPossiblyInvalidExpressionId {
+) -> QuestionMarkOrPossiblyInvalidExpressionRef {
     match unregistered {
         heavy::QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: start } => {
-            QuestionMarkOrPossiblyInvalidExpressionId::QuestionMark { span: start }
+            QuestionMarkOrPossiblyInvalidExpressionRef::QuestionMark { span: start }
         }
         heavy::QuestionMarkOrPossiblyInvalidExpression::Expression(unregistered) => {
             let id = register_possibly_invalid_expression(bump, unregistered);
-            QuestionMarkOrPossiblyInvalidExpressionId::Expression(id)
+            QuestionMarkOrPossiblyInvalidExpressionRef::Expression(id)
         }
     }
 }
@@ -431,56 +432,17 @@ pub fn register_question_mark_or_possibly_invalid_expression(
 pub fn register_possibly_invalid_expression(
     bump: &Bump,
     unregistered: heavy::PossiblyInvalidExpression,
-) -> PossiblyInvalidExpressionId {
+) -> PossiblyInvalidExpressionRef {
     match unregistered {
         heavy::PossiblyInvalidExpression::Valid(unregistered) => {
-            let id = register_expression(bump, unregistered);
-            PossiblyInvalidExpressionId::Valid(id)
+            let light = register_expression(bump, unregistered);
+            PossiblyInvalidExpressionRef::Valid(light)
         }
         heavy::PossiblyInvalidExpression::Invalid(invalid) => {
-            let id = register_invalid_expression(bump, invalid);
-            PossiblyInvalidExpressionId::Invalid(id)
+            let invalid = bump.alloc(invalid);
+            PossiblyInvalidExpressionRef::Invalid(invalid)
         }
     }
-}
-
-pub fn register_invalid_expression(
-    bump: &Bump,
-    unregistered: heavy::InvalidExpression,
-) -> InvalidExpressionId {
-    match unregistered {
-        heavy::InvalidExpression::SymbolicallyInvalid(id) => {
-            let id = register_symbolically_invalid_expression(bump, id);
-            InvalidExpressionId::SymbolicallyInvalid(id)
-        }
-        heavy::InvalidExpression::IllegalFunRecursion(id) => {
-            let id = register_illegal_fun_recursion_expression(bump, id);
-            InvalidExpressionId::IllegalFunRecursion(id)
-        }
-    }
-}
-
-pub fn register_symbolically_invalid_expression(
-    bump: &Bump,
-    unregistered: heavy::SymbolicallyInvalidExpression,
-) -> &'a SymbolicallyInvalidExpression<'a> {
-    bump.alloc(SymbolicallyInvalidExpression {
-        expression: unregistered.expression,
-        error: unregistered.error,
-        span_invalidated: unregistered.span_invalidated,
-    })
-}
-
-pub fn register_illegal_fun_recursion_expression(
-    bump: &Bump,
-    unregistered: heavy::IllegalFunRecursionExpression,
-) -> &'a IllegalFunRecursionExpression<'a> {
-    let expression = register_expression(bump, unregistered.expression);
-    bump.alloc(IllegalFunRecursionExpression {
-        expression,
-        error: unregistered.error,
-        span_invalidated: unregistered.span_invalidated,
-    })
 }
 
 trait CollectInBump<T> {
