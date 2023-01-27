@@ -2,99 +2,89 @@ use crate::data::{bound_ast as heavy, light_ast::*, text_span::*};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
-pub fn register_file_items(
-    bump: &Bump,
-    unregistered: Vec<heavy::FileItem>,
-) -> BumpVec<'_, FileItemRef> {
-    unregistered
+pub fn register_file_items(bump: &Bump, heavy: Vec<heavy::FileItem>) -> BumpVec<'_, FileItemRef> {
+    heavy
         .into_iter()
-        .map(|unregistered| register_file_item(bump, unregistered))
+        .map(|heavy| register_file_item(bump, heavy))
         .collect_in(bump)
 }
 
-pub fn register_file_item(bump: &Bump, unregistered: heavy::FileItem) -> FileItemRef {
-    match unregistered {
-        heavy::FileItem::Type(unregistered) => {
-            FileItemRef::Type(register_type_statement(bump, unregistered))
-        }
-        heavy::FileItem::Let(unregistered) => {
-            FileItemRef::Let(register_let_statement(bump, unregistered))
-        }
+pub fn register_file_item(bump: &Bump, heavy: heavy::FileItem) -> FileItemRef {
+    match heavy {
+        heavy::FileItem::Type(heavy) => FileItemRef::Type(register_type_statement(bump, heavy)),
+        heavy::FileItem::Let(heavy) => FileItemRef::Let(register_let_statement(bump, heavy)),
     }
 }
 
-pub fn register_type_statement(bump: &Bump, unregistered: heavy::TypeStatement) -> &TypeStatement {
-    let name = register_identifier(bump, unregistered.name);
-    let params = register_optional_params(bump, unregistered.params);
-    let variants = unregistered
+pub fn register_type_statement(bump: &Bump, heavy: heavy::TypeStatement) -> &TypeStatement {
+    let name = register_identifier(bump, heavy.name);
+    let params = register_optional_params(bump, heavy.params);
+    let variants = heavy
         .variants
         .into_iter()
         .map(|unregistered_variant| register_variant(bump, unregistered_variant))
         .collect_in(bump);
     bump.alloc(TypeStatement {
-        span: unregistered.span,
-        visibility: unregistered.visibility,
+        span: heavy.span,
+        visibility: heavy.visibility,
         name,
         params,
         variants,
     })
 }
 
-pub fn register_identifier(bump: &Bump, unregistered: heavy::Identifier) -> &Identifier {
+pub fn register_identifier(bump: &Bump, heavy: heavy::Identifier) -> &Identifier {
     bump.alloc(Identifier {
-        span: unregistered.span,
-        name: unregistered.name,
+        span: heavy.span,
+        name: heavy.name,
     })
 }
 
 pub fn register_optional_params(
     bump: &Bump,
-    unregistered: Option<heavy::NonEmptyParamVec>,
+    heavy: Option<heavy::NonEmptyParamVec>,
 ) -> Option<&NonEmptyParamVec> {
-    unregistered.map(|unregistered| register_params(bump, unregistered))
+    heavy.map(|heavy| register_params(bump, heavy))
 }
 
-pub fn register_params(bump: &Bump, unregistered: heavy::NonEmptyParamVec) -> &NonEmptyParamVec {
-    match unregistered {
-        heavy::NonEmptyParamVec::Unlabeled(unregistered) => {
-            let params = unregistered
+pub fn register_params(bump: &Bump, heavy: heavy::NonEmptyParamVec) -> &NonEmptyParamVec {
+    match heavy {
+        heavy::NonEmptyParamVec::Unlabeled(heavy) => {
+            let params = heavy
                 .into_iter()
-                .map(|unregistered| register_unlabeled_param(bump, unregistered))
+                .map(|heavy| register_unlabeled_param(bump, heavy))
                 .collect_in(bump);
             &NonEmptyParamVec::Unlabeled(params)
         }
-        heavy::NonEmptyParamVec::UniquelyLabeled(unregistered) => {
-            let params = unregistered
+        heavy::NonEmptyParamVec::UniquelyLabeled(heavy) => {
+            let params = heavy
                 .into_iter()
-                .map(|unregistered| register_labeled_param(bump, unregistered))
+                .map(|heavy| register_labeled_param(bump, heavy))
                 .collect_in(bump);
             &NonEmptyParamVec::UniquelyLabeled(params)
         }
     }
 }
 
-pub fn register_unlabeled_param(
-    bump: &Bump,
-    unregistered: heavy::UnlabeledParam,
-) -> &UnlabeledParam {
-    let name = register_identifier(bump, unregistered.name);
-    let type_ = register_expression(bump, unregistered.type_);
+pub fn register_unlabeled_param(bump: &Bump, heavy: heavy::UnlabeledParam) -> &UnlabeledParam {
+    let name = register_identifier(bump, heavy.name);
+    let type_ = register_expression(bump, heavy.type_);
     bump.alloc(UnlabeledParam {
-        span: unregistered.span,
-        is_dashed: unregistered.is_dashed,
+        span: heavy.span,
+        is_dashed: heavy.is_dashed,
         name,
         type_,
     })
 }
 
-pub fn register_labeled_param(bump: &Bump, unregistered: heavy::LabeledParam) -> &LabeledParam {
-    let label_clause = register_param_label_clause(bump, unregistered.label_clause);
-    let name = register_identifier(bump, unregistered.name);
-    let type_ = register_expression(bump, unregistered.type_);
+pub fn register_labeled_param(bump: &Bump, heavy: heavy::LabeledParam) -> &LabeledParam {
+    let label_clause = register_param_label_clause(bump, heavy.label_clause);
+    let name = register_identifier(bump, heavy.name);
+    let type_ = register_expression(bump, heavy.type_);
     bump.alloc(LabeledParam {
-        span: unregistered.span,
+        span: heavy.span,
         label_clause,
-        is_dashed: unregistered.is_dashed,
+        is_dashed: heavy.is_dashed,
         name,
         type_,
     })
@@ -102,86 +92,83 @@ pub fn register_labeled_param(bump: &Bump, unregistered: heavy::LabeledParam) ->
 
 pub fn register_param_label_clause(
     bump: &Bump,
-    unregistered: heavy::ParamLabelClause,
+    heavy: heavy::ParamLabelClause,
 ) -> ParamLabelClauseRef {
-    match unregistered {
+    match heavy {
         heavy::ParamLabelClause::Implicit => ParamLabelClauseRef::Implicit,
-        heavy::ParamLabelClause::Explicit(unregistered) => {
-            ParamLabelClauseRef::Explicit(register_identifier(bump, unregistered))
+        heavy::ParamLabelClause::Explicit(heavy) => {
+            ParamLabelClauseRef::Explicit(register_identifier(bump, heavy))
         }
     }
 }
 
-pub fn register_variant(bump: &Bump, unregistered: heavy::Variant) -> &Variant {
-    let name = register_identifier(bump, unregistered.name);
-    let params = register_optional_params(bump, unregistered.params);
-    let return_type = register_expression(bump, unregistered.return_type);
+pub fn register_variant(bump: &Bump, heavy: heavy::Variant) -> &Variant {
+    let name = register_identifier(bump, heavy.name);
+    let params = register_optional_params(bump, heavy.params);
+    let return_type = register_expression(bump, heavy.return_type);
     bump.alloc(Variant {
-        span: unregistered.span,
+        span: heavy.span,
         name,
         params,
         return_type,
     })
 }
 
-pub fn register_let_statement(bump: &Bump, unregistered: heavy::LetStatement) -> &LetStatement {
-    let name = register_identifier(bump, unregistered.name);
-    let value = register_expression(bump, unregistered.value);
+pub fn register_let_statement(bump: &Bump, heavy: heavy::LetStatement) -> &LetStatement {
+    let name = register_identifier(bump, heavy.name);
+    let value = register_expression(bump, heavy.value);
     bump.alloc(LetStatement {
-        span: unregistered.span,
-        visibility: unregistered.visibility,
-        transparency: unregistered.transparency,
+        span: heavy.span,
+        visibility: heavy.visibility,
+        transparency: heavy.transparency,
         name,
         value,
     })
 }
 
-pub fn register_expression(bump: &Bump, unregistered: heavy::Expression) -> ExpressionRef {
-    match unregistered {
-        heavy::Expression::Name(unregistered) => {
-            let light = register_name_expression(bump, unregistered);
+pub fn register_expression(bump: &Bump, heavy: heavy::Expression) -> ExpressionRef {
+    match heavy {
+        heavy::Expression::Name(heavy) => {
+            let light = register_name_expression(bump, heavy);
             ExpressionRef::Name(light)
         }
         heavy::Expression::Todo(span) => {
             let light = register_todo_expression(bump, span);
             ExpressionRef::Todo(light)
         }
-        heavy::Expression::Call(unregistered) => {
-            let light = register_call(bump, *unregistered);
+        heavy::Expression::Call(heavy) => {
+            let light = register_call(bump, *heavy);
             ExpressionRef::Call(light)
         }
-        heavy::Expression::Fun(unregistered) => {
-            let light = register_fun(bump, *unregistered);
+        heavy::Expression::Fun(heavy) => {
+            let light = register_fun(bump, *heavy);
             ExpressionRef::Fun(light)
         }
-        heavy::Expression::Match(unregistered) => {
-            let light = register_match(bump, *unregistered);
+        heavy::Expression::Match(heavy) => {
+            let light = register_match(bump, *heavy);
             ExpressionRef::Match(light)
         }
-        heavy::Expression::Forall(unregistered) => {
-            let light = register_forall(bump, *unregistered);
+        heavy::Expression::Forall(heavy) => {
+            let light = register_forall(bump, *heavy);
             ExpressionRef::Forall(light)
         }
-        heavy::Expression::Check(unregistered) => {
-            let light = register_check(bump, *unregistered);
+        heavy::Expression::Check(heavy) => {
+            let light = register_check(bump, *heavy);
             ExpressionRef::Check(light)
         }
     }
 }
 
-pub fn register_name_expression(
-    bump: &Bump,
-    unregistered: heavy::NameExpression,
-) -> &NameExpression {
-    let components = unregistered
+pub fn register_name_expression(bump: &Bump, heavy: heavy::NameExpression) -> &NameExpression {
+    let components = heavy
         .components
         .into_iter()
-        .map(|unregistered| register_identifier(bump, unregistered))
+        .map(|heavy| register_identifier(bump, heavy))
         .collect_in(bump);
     bump.alloc(NameExpression {
-        span: unregistered.span,
+        span: heavy.span,
         components,
-        db_index: unregistered.db_index,
+        db_index: heavy.db_index,
     })
 }
 
@@ -189,44 +176,38 @@ pub fn register_todo_expression(bump: &Bump, span: Option<TextSpan>) -> &TodoExp
     bump.alloc(TodoExpression { span })
 }
 
-pub fn register_call(bump: &Bump, unregistered: heavy::Call) -> &Call {
-    let callee = register_expression(bump, unregistered.callee);
-    let args = register_call_args(bump, unregistered.args);
+pub fn register_call(bump: &Bump, heavy: heavy::Call) -> &Call {
+    let callee = register_expression(bump, heavy.callee);
+    let args = register_call_args(bump, heavy.args);
     let args = bump.alloc(args);
     bump.alloc(Call {
-        span: unregistered.span,
+        span: heavy.span,
         callee,
         args,
     })
 }
 
-pub fn register_call_args(
-    bump: &Bump,
-    unregistered: heavy::NonEmptyCallArgVec,
-) -> NonEmptyCallArgVec {
-    match unregistered {
-        heavy::NonEmptyCallArgVec::Unlabeled(unregistered) => {
-            let values = unregistered
+pub fn register_call_args(bump: &Bump, heavy: heavy::NonEmptyCallArgVec) -> NonEmptyCallArgVec {
+    match heavy {
+        heavy::NonEmptyCallArgVec::Unlabeled(heavy) => {
+            let values = heavy
                 .into_iter()
-                .map(|unregistered| register_expression(bump, unregistered))
+                .map(|heavy| register_expression(bump, heavy))
                 .collect_in(bump);
             NonEmptyCallArgVec::Unlabeled(&values)
         }
-        heavy::NonEmptyCallArgVec::UniquelyLabeled(unregistered) => {
-            let values = unregistered
+        heavy::NonEmptyCallArgVec::UniquelyLabeled(heavy) => {
+            let values = heavy
                 .into_iter()
-                .map(|unregistered| register_labeled_call_arg(bump, unregistered))
+                .map(|heavy| register_labeled_call_arg(bump, heavy))
                 .collect_in(bump);
             NonEmptyCallArgVec::UniquelyLabeled(&values)
         }
     }
 }
 
-pub fn register_labeled_call_arg(
-    bump: &Bump,
-    unregistered: heavy::LabeledCallArg,
-) -> LabeledCallArg {
-    match unregistered {
+pub fn register_labeled_call_arg(bump: &Bump, heavy: heavy::LabeledCallArg) -> LabeledCallArg {
+    match heavy {
         heavy::LabeledCallArg::Implicit {
             label: value,
             db_index,
@@ -241,13 +222,13 @@ pub fn register_labeled_call_arg(
     }
 }
 
-pub fn register_fun(bump: &Bump, unregistered: heavy::Fun) -> &Fun {
-    let name = register_identifier(bump, unregistered.name);
-    let params = register_params(bump, unregistered.params);
-    let return_type = register_expression(bump, unregistered.return_type);
-    let body = register_expression(bump, unregistered.body);
+pub fn register_fun(bump: &Bump, heavy: heavy::Fun) -> &Fun {
+    let name = register_identifier(bump, heavy.name);
+    let params = register_params(bump, heavy.params);
+    let return_type = register_expression(bump, heavy.return_type);
+    let body = register_expression(bump, heavy.body);
     bump.alloc(Fun {
-        span: unregistered.span,
+        span: heavy.span,
         name,
         params,
         return_type,
@@ -255,26 +236,26 @@ pub fn register_fun(bump: &Bump, unregistered: heavy::Fun) -> &Fun {
     })
 }
 
-pub fn register_match(bump: &Bump, unregistered: heavy::Match) -> &Match {
-    let matchee = register_expression(bump, unregistered.matchee);
-    let cases = unregistered
+pub fn register_match(bump: &Bump, heavy: heavy::Match) -> &Match {
+    let matchee = register_expression(bump, heavy.matchee);
+    let cases = heavy
         .cases
         .into_iter()
-        .map(|unregistered| register_match_case(bump, unregistered))
+        .map(|heavy| register_match_case(bump, heavy))
         .collect_in(bump);
     bump.alloc(Match {
-        span: unregistered.span,
+        span: heavy.span,
         matchee,
         cases,
     })
 }
 
-pub fn register_match_case(bump: &Bump, unregistered: heavy::MatchCase) -> &MatchCase {
-    let variant_name = register_identifier(bump, unregistered.variant_name);
-    let params = register_optional_match_case_params(bump, unregistered.params);
-    let output = register_match_case_output(bump, unregistered.output);
+pub fn register_match_case(bump: &Bump, heavy: heavy::MatchCase) -> &MatchCase {
+    let variant_name = register_identifier(bump, heavy.variant_name);
+    let params = register_optional_match_case_params(bump, heavy.params);
+    let output = register_match_case_output(bump, heavy.output);
     bump.alloc(MatchCase {
-        span: unregistered.span,
+        span: heavy.span,
         variant_name,
         params,
         output,
@@ -283,21 +264,21 @@ pub fn register_match_case(bump: &Bump, unregistered: heavy::MatchCase) -> &Matc
 
 pub fn register_optional_match_case_params(
     bump: &Bump,
-    unregistered: Option<heavy::NonEmptyMatchCaseParamVec>,
+    heavy: Option<heavy::NonEmptyMatchCaseParamVec>,
 ) -> Option<NonEmptyMatchCaseParamVec> {
-    unregistered.map(|unregistered| {
-        let params = register_match_case_params(bump, unregistered);
+    heavy.map(|heavy| {
+        let params = register_match_case_params(bump, heavy);
         bump.alloc(params)
     })
 }
 
 pub fn register_match_case_params(
     bump: &Bump,
-    unregistered: heavy::NonEmptyMatchCaseParamVec,
+    heavy: heavy::NonEmptyMatchCaseParamVec,
 ) -> NonEmptyMatchCaseParamVec {
-    match unregistered {
-        heavy::NonEmptyMatchCaseParamVec::Unlabeled(unregistered) => {
-            let light = register_identifiers(bump, unregistered);
+    match heavy {
+        heavy::NonEmptyMatchCaseParamVec::Unlabeled(heavy) => {
+            let light = register_identifiers(bump, heavy);
             NonEmptyMatchCaseParamVec::Unlabeled(light)
         }
         heavy::NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
@@ -307,40 +288,40 @@ pub fn register_match_case_params(
     }
 }
 
-pub fn register_identifiers(bump: &Bump, unregistered: Vec<heavy::Identifier>) -> &[Identifier] {
-    let identifiers = unregistered
+pub fn register_identifiers(bump: &Bump, heavy: Vec<heavy::Identifier>) -> &[Identifier] {
+    let identifiers = heavy
         .into_iter()
-        .map(|unregistered| register_identifier(bump, unregistered))
+        .map(|heavy| register_identifier(bump, heavy))
         .collect_in(bump);
     &identifiers
 }
 
 pub fn register_optional_labeled_match_case_params(
     bump: &Bump,
-    unregistered: Option<Vec<heavy::LabeledMatchCaseParam>>,
+    heavy: Option<Vec<heavy::LabeledMatchCaseParam>>,
 ) -> Option<NonEmptyMatchCaseParamVec> {
-    unregistered.map(|unregistered| register_labeled_match_case_params(bump, unregistered))
+    heavy.map(|heavy| register_labeled_match_case_params(bump, heavy))
 }
 
 pub fn register_labeled_match_case_params(
     bump: &Bump,
-    unregistered: Vec<heavy::LabeledMatchCaseParam>,
+    heavy: Vec<heavy::LabeledMatchCaseParam>,
 ) -> &[LabeledMatchCaseParam] {
-    let params = unregistered
+    let params = heavy
         .into_iter()
-        .map(|unregistered| register_labeled_match_case_param(bump, unregistered))
+        .map(|heavy| register_labeled_match_case_param(bump, heavy))
         .collect_in(bump);
     &params
 }
 
 pub fn register_labeled_match_case_param(
     bump: &Bump,
-    unregistered: heavy::LabeledMatchCaseParam,
+    heavy: heavy::LabeledMatchCaseParam,
 ) -> &LabeledMatchCaseParam {
-    let label_clause = register_param_label_clause(bump, unregistered.label_clause);
-    let name = register_identifier(bump, unregistered.name);
+    let label_clause = register_param_label_clause(bump, heavy.label_clause);
+    let name = register_identifier(bump, heavy.name);
     bump.alloc(LabeledMatchCaseParam {
-        span: unregistered.span,
+        span: heavy.span,
         label_clause,
         name,
     })
@@ -348,11 +329,11 @@ pub fn register_labeled_match_case_param(
 
 pub fn register_match_case_output(
     bump: &Bump,
-    unregistered: heavy::MatchCaseOutput,
+    heavy: heavy::MatchCaseOutput,
 ) -> MatchCaseOutputRef {
-    match unregistered {
-        heavy::MatchCaseOutput::Some(unregistered) => {
-            let light = register_expression(bump, unregistered);
+    match heavy {
+        heavy::MatchCaseOutput::Some(heavy) => {
+            let light = register_expression(bump, heavy);
             MatchCaseOutputRef::Some(light)
         }
         heavy::MatchCaseOutput::ImpossibilityClaim(kw_span) => {
@@ -361,39 +342,36 @@ pub fn register_match_case_output(
     }
 }
 
-pub fn register_forall(bump: &Bump, unregistered: heavy::Forall) -> &Forall {
-    let params = register_params(bump, unregistered.params);
-    let output = register_expression(bump, unregistered.output);
+pub fn register_forall(bump: &Bump, heavy: heavy::Forall) -> &Forall {
+    let params = register_params(bump, heavy.params);
+    let output = register_expression(bump, heavy.output);
     bump.alloc(Forall {
-        span: unregistered.span,
+        span: heavy.span,
         params,
         output,
     })
 }
 
-pub fn register_check(bump: &Bump, unregistered: heavy::Check) -> &Check {
-    let assertions = unregistered
+pub fn register_check(bump: &Bump, heavy: heavy::Check) -> &Check {
+    let assertions = heavy
         .assertions
         .into_iter()
-        .map(|unregistered| register_check_assertion(bump, unregistered))
+        .map(|heavy| register_check_assertion(bump, heavy))
         .collect_in(bump);
-    let output = register_expression(bump, unregistered.output);
+    let output = register_expression(bump, heavy.output);
     bump.alloc(Check {
-        span: unregistered.span,
+        span: heavy.span,
         assertions,
         output,
     })
 }
 
-pub fn register_check_assertion(
-    bump: &Bump,
-    unregistered: heavy::CheckAssertion,
-) -> &CheckAssertion {
-    let left = register_goal_kw_or_expression(bump, unregistered.left);
-    let right = register_question_mark_or_possibly_invalid_expression(bump, unregistered.right);
+pub fn register_check_assertion(bump: &Bump, heavy: heavy::CheckAssertion) -> &CheckAssertion {
+    let left = register_goal_kw_or_expression(bump, heavy.left);
+    let right = register_question_mark_or_possibly_invalid_expression(bump, heavy.right);
     bump.alloc(CheckAssertion {
-        span: unregistered.span,
-        kind: unregistered.kind,
+        span: heavy.span,
+        kind: heavy.kind,
         left,
         right,
     })
@@ -401,14 +379,14 @@ pub fn register_check_assertion(
 
 pub fn register_goal_kw_or_expression(
     bump: &Bump,
-    unregistered: heavy::GoalKwOrPossiblyInvalidExpression,
+    heavy: heavy::GoalKwOrPossiblyInvalidExpression,
 ) -> GoalKwOrPossiblyInvalidExpressionRef {
-    match unregistered {
+    match heavy {
         heavy::GoalKwOrPossiblyInvalidExpression::GoalKw { span: start } => {
             GoalKwOrPossiblyInvalidExpressionRef::GoalKw { span: start }
         }
-        heavy::GoalKwOrPossiblyInvalidExpression::Expression(unregistered) => {
-            let light = register_possibly_invalid_expression(bump, unregistered);
+        heavy::GoalKwOrPossiblyInvalidExpression::Expression(heavy) => {
+            let light = register_possibly_invalid_expression(bump, heavy);
             GoalKwOrPossiblyInvalidExpressionRef::Expression(light)
         }
     }
@@ -416,14 +394,14 @@ pub fn register_goal_kw_or_expression(
 
 pub fn register_question_mark_or_possibly_invalid_expression(
     bump: &Bump,
-    unregistered: heavy::QuestionMarkOrPossiblyInvalidExpression,
+    heavy: heavy::QuestionMarkOrPossiblyInvalidExpression,
 ) -> QuestionMarkOrPossiblyInvalidExpressionRef {
-    match unregistered {
+    match heavy {
         heavy::QuestionMarkOrPossiblyInvalidExpression::QuestionMark { span: start } => {
             QuestionMarkOrPossiblyInvalidExpressionRef::QuestionMark { span: start }
         }
-        heavy::QuestionMarkOrPossiblyInvalidExpression::Expression(unregistered) => {
-            let light = register_possibly_invalid_expression(bump, unregistered);
+        heavy::QuestionMarkOrPossiblyInvalidExpression::Expression(heavy) => {
+            let light = register_possibly_invalid_expression(bump, heavy);
             QuestionMarkOrPossiblyInvalidExpressionRef::Expression(light)
         }
     }
@@ -431,11 +409,11 @@ pub fn register_question_mark_or_possibly_invalid_expression(
 
 pub fn register_possibly_invalid_expression(
     bump: &Bump,
-    unregistered: heavy::PossiblyInvalidExpression,
+    heavy: heavy::PossiblyInvalidExpression,
 ) -> PossiblyInvalidExpressionRef {
-    match unregistered {
-        heavy::PossiblyInvalidExpression::Valid(unregistered) => {
-            let light = register_expression(bump, unregistered);
+    match heavy {
+        heavy::PossiblyInvalidExpression::Valid(heavy) => {
+            let light = register_expression(bump, heavy);
             PossiblyInvalidExpressionRef::Valid(light)
         }
         heavy::PossiblyInvalidExpression::Invalid(invalid) => {
