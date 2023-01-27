@@ -7,8 +7,8 @@ pub struct TypeStatement<'a> {
     pub span: Option<TextSpan>,
     pub visibility: Visibility,
     pub name: &'a Identifier,
-    pub param_list: Option<&'a NonEmptyParamVec<'a>>,
-    pub variant_list: &'a [Variant<'a>],
+    pub params: Option<&'a NonEmptyParamVec<'a>>,
+    pub variants: &'a [Variant<'a>],
 }
 
 pub use crate::data::bound_ast::ModScope;
@@ -59,7 +59,7 @@ pub enum ParamLabelClause<'a> {
 pub struct Variant<'a> {
     pub span: Option<TextSpan>,
     pub name: &'a Identifier,
-    pub param_list: Option<&'a NonEmptyParamVec<'a>>,
+    pub params: Option<&'a NonEmptyParamVec<'a>>,
     pub return_type: ExpressionRef<'a>,
 }
 
@@ -100,7 +100,7 @@ impl ExpressionRef<'_> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NameExpression<'a> {
     pub span: Option<TextSpan>,
-    pub component_list: &'a [Identifier],
+    pub components: &'a [Identifier],
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
 }
@@ -128,7 +128,7 @@ pub struct TodoExpression {
 pub struct Call<'a> {
     pub span: Option<TextSpan>,
     pub callee: ExpressionRef<'a>,
-    pub arg_list: &'a NonEmptyCallArgVec<'a>,
+    pub args: &'a NonEmptyCallArgVec<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -153,7 +153,7 @@ pub enum LabeledCallArg<'a> {
 pub struct Fun<'a> {
     pub span: Option<TextSpan>,
     pub name: &'a Identifier,
-    pub param_list: &'a NonEmptyParamVec<'a>,
+    pub params: &'a NonEmptyParamVec<'a>,
     pub return_type: ExpressionRef<'a>,
     pub body: ExpressionRef<'a>,
 }
@@ -162,14 +162,14 @@ pub struct Fun<'a> {
 pub struct Match<'a> {
     pub span: Option<TextSpan>,
     pub matchee: ExpressionRef<'a>,
-    pub case_list: &'a [MatchCase<'a>],
+    pub cases: &'a [MatchCase<'a>],
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MatchCase<'a> {
     pub span: Option<TextSpan>,
     pub variant_name: &'a Identifier,
-    pub param_list: Option<&'a NonEmptyMatchCaseParamVec<'a>>,
+    pub params: Option<&'a NonEmptyMatchCaseParamVec<'a>>,
     pub output: MatchCaseOutput<'a>,
 }
 
@@ -207,14 +207,14 @@ pub enum MatchCaseOutput<'a> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Forall<'a> {
     pub span: Option<TextSpan>,
-    pub param_list: NonEmptyParamVec<'a>,
+    pub params: NonEmptyParamVec<'a>,
     pub output: ExpressionRef<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Check<'a> {
     pub span: Option<TextSpan>,
-    pub assertion_list: &'a [CheckAssertion<'a>],
+    pub assertions: &'a [CheckAssertion<'a>],
     pub output: ExpressionRef<'a>,
 }
 
