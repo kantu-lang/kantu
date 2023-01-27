@@ -139,32 +139,32 @@ pub fn register_let_statement(bump: &Bump, unregistered: heavy::LetStatement) ->
 pub fn register_expression(bump: &Bump, unregistered: heavy::Expression) -> ExpressionRef {
     match unregistered {
         heavy::Expression::Name(unregistered) => {
-            let id = register_name_expression(bump, unregistered);
-            ExpressionRef::Name(id)
+            let light = register_name_expression(bump, unregistered);
+            ExpressionRef::Name(light)
         }
         heavy::Expression::Todo(span) => {
-            let id = register_todo_expression(bump, span);
-            ExpressionRef::Todo(id)
+            let light = register_todo_expression(bump, span);
+            ExpressionRef::Todo(light)
         }
         heavy::Expression::Call(unregistered) => {
-            let id = register_call(bump, *unregistered);
-            ExpressionRef::Call(id)
+            let light = register_call(bump, *unregistered);
+            ExpressionRef::Call(light)
         }
         heavy::Expression::Fun(unregistered) => {
-            let id = register_fun(bump, *unregistered);
-            ExpressionRef::Fun(id)
+            let light = register_fun(bump, *unregistered);
+            ExpressionRef::Fun(light)
         }
         heavy::Expression::Match(unregistered) => {
-            let id = register_match(bump, *unregistered);
-            ExpressionRef::Match(id)
+            let light = register_match(bump, *unregistered);
+            ExpressionRef::Match(light)
         }
         heavy::Expression::Forall(unregistered) => {
-            let id = register_forall(bump, *unregistered);
-            ExpressionRef::Forall(id)
+            let light = register_forall(bump, *unregistered);
+            ExpressionRef::Forall(light)
         }
         heavy::Expression::Check(unregistered) => {
-            let id = register_check(bump, *unregistered);
-            ExpressionRef::Check(id)
+            let light = register_check(bump, *unregistered);
+            ExpressionRef::Check(light)
         }
     }
 }
@@ -297,8 +297,8 @@ pub fn register_match_case_params(
 ) -> NonEmptyMatchCaseParamVec {
     match unregistered {
         heavy::NonEmptyMatchCaseParamVec::Unlabeled(unregistered) => {
-            let id = register_identifiers(bump, unregistered);
-            NonEmptyMatchCaseParamVec::Unlabeled(id)
+            let light = register_identifiers(bump, unregistered);
+            NonEmptyMatchCaseParamVec::Unlabeled(light)
         }
         heavy::NonEmptyMatchCaseParamVec::UniquelyLabeled { params, triple_dot } => {
             let params = register_optional_labeled_match_case_params(bump, params);
@@ -408,8 +408,8 @@ pub fn register_goal_kw_or_expression(
             GoalKwOrPossiblyInvalidExpressionRef::GoalKw { span: start }
         }
         heavy::GoalKwOrPossiblyInvalidExpression::Expression(unregistered) => {
-            let id = register_possibly_invalid_expression(bump, unregistered);
-            GoalKwOrPossiblyInvalidExpressionRef::Expression(id)
+            let light = register_possibly_invalid_expression(bump, unregistered);
+            GoalKwOrPossiblyInvalidExpressionRef::Expression(light)
         }
     }
 }
@@ -423,8 +423,8 @@ pub fn register_question_mark_or_possibly_invalid_expression(
             QuestionMarkOrPossiblyInvalidExpressionRef::QuestionMark { span: start }
         }
         heavy::QuestionMarkOrPossiblyInvalidExpression::Expression(unregistered) => {
-            let id = register_possibly_invalid_expression(bump, unregistered);
-            QuestionMarkOrPossiblyInvalidExpressionRef::Expression(id)
+            let light = register_possibly_invalid_expression(bump, unregistered);
+            QuestionMarkOrPossiblyInvalidExpressionRef::Expression(light)
         }
     }
 }
