@@ -57,23 +57,29 @@ pub fn register_identifier(bump: &Bump, unregistered: heavy::Identifier) -> &Ide
 pub fn register_optional_params(
     bump: &Bump,
     unregistered: Option<heavy::NonEmptyParamVec>,
-) -> Option<NonEmptyParamListId> {
+) -> Option<&NonEmptyParamVec> {
     unregistered.map(|unregistered| register_params(bump, unregistered))
 }
 
-pub fn register_params(bump: &Bump, unregistered: heavy::NonEmptyParamVec) -> NonEmptyParamListId {
+pub fn register_params(bump: &Bump, unregistered: heavy::NonEmptyParamVec) -> &NonEmptyParamVec {
     match unregistered {
         heavy::NonEmptyParamVec::Unlabeled(unregistered) => {
-            let param_ids = unregistered
-                .into_mapped(|unregistered| register_unlabeled_param(bump, unregistered));
-            let params = registry.add_list(param_ids);
-            NonEmptyParamListId::Unlabeled(params)
+            let params = BumpVec::from_iter_in(
+                unregistered
+                    .into_iter()
+                    .map(|unregistered| register_unlabeled_param(bump, unregistered)),
+                bump,
+            );
+            &NonEmptyParamVec::Unlabeled(params)
         }
         heavy::NonEmptyParamVec::UniquelyLabeled(unregistered) => {
-            let param_ids =
-                unregistered.into_mapped(|unregistered| register_labeled_param(bump, unregistered));
-            let params = registry.add_list(param_ids);
-            NonEmptyParamListId::UniquelyLabeled(params)
+            let params = BumpVec::from_iter_in(
+                unregistered
+                    .into_iter()
+                    .map(|unregistered| register_labeled_param(bump, unregistered)),
+                bump,
+            );
+            &NonEmptyParamVec::UniquelyLabeled(params)
         }
     }
 }
@@ -183,7 +189,8 @@ pub fn register_name_expression(
 ) -> &'a NameExpression<'a> {
     let component_ids = unregistered
         .components
-        .into_mapped(|unregistered| register_identifier(bump, unregistered));
+        .into_iter()
+        .map(|unregistered| register_identifier(bump, unregistered));
     let components = registry.add_list(component_ids);
     bump.alloc(NameExpression {
         span: unregistered.span,
@@ -212,13 +219,15 @@ pub fn register_call_args(
 ) -> NonEmptyCallArgListId {
     match unregistered {
         heavy::NonEmptyCallArgVec::Unlabeled(unregistered) => {
-            let value_ids =
-                unregistered.into_mapped(|unregistered| register_expression(bump, unregistered));
+            let value_ids = unregistered
+                .into_iter()
+                .map(|unregistered| register_expression(bump, unregistered));
             NonEmptyCallArgListId::Unlabeled(registry.add_list(value_ids))
         }
         heavy::NonEmptyCallArgVec::UniquelyLabeled(unregistered) => {
             let value_ids = unregistered
-                .into_mapped(|unregistered| register_labeled_call_arg(bump, unregistered));
+                .into_iter()
+                .map(|unregistered| register_labeled_call_arg(bump, unregistered));
             NonEmptyCallArgListId::UniquelyLabeled(registry.add_list(value_ids))
         }
     }
@@ -311,7 +320,9 @@ pub fn register_identifiers(
     bump: &Bump,
     unregistered: Vec<heavy::Identifier>,
 ) -> NonEmptyListId<&'a Identifier<'a>> {
-    let ids = unregistered.into_mapped(|unregistered| register_identifier(bump, unregistered));
+    let ids = unregistered
+        .into_iter()
+        .map(|unregistered| register_identifier(bump, unregistered));
     registry.add_list(ids)
 }
 
@@ -327,7 +338,8 @@ pub fn register_labeled_match_case_params(
     unregistered: Vec<heavy::LabeledMatchCaseParam>,
 ) -> NonEmptyListId<&'a LabeledMatchCaseParam<'a>> {
     let ids = unregistered
-        .into_mapped(|unregistered| register_labeled_match_case_param(bump, unregistered));
+        .into_iter()
+        .map(|unregistered| register_labeled_match_case_param(bump, unregistered));
     registry.add_list(ids)
 }
 
@@ -372,7 +384,8 @@ pub fn register_forall(bump: &Bump, unregistered: heavy::Forall) -> &'a Forall<'
 pub fn register_check(bump: &Bump, unregistered: heavy::Check) -> &'a Check<'a> {
     let assertion_ids = unregistered
         .assertions
-        .into_mapped(|unregistered| register_check_assertion(bump, unregistered));
+        .into_iter()
+        .map(|unregistered| register_check_assertion(bump, unregistered));
     let assertion_list = registry.add_list(assertion_ids);
     let output = register_expression(bump, unregistered.output);
     bump.alloc(Check {
