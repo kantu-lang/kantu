@@ -1,7 +1,5 @@
 use crate::data::{fun_recursion_validation_result::IllegalFunRecursionError, text_span::*};
 
-use bumpalo::collections::Vec as BumpVec;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FileItemRef<'a> {
     Type(&'a TypeStatement<'a>),
@@ -25,8 +23,8 @@ pub use crate::data::bound_ast::Transparency;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NonEmptyParamVec<'a> {
-    Unlabeled(BumpVec<'a, UnlabeledParam<'a>>),
-    UniquelyLabeled(BumpVec<'a, LabeledParam<'a>>),
+    Unlabeled(&'a [UnlabeledParam<'a>]),
+    UniquelyLabeled(&'a [LabeledParam<'a>]),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -139,8 +137,8 @@ pub struct Call<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NonEmptyCallArgVec<'a> {
-    Unlabeled(BumpVec<'a, ExpressionRef<'a>>),
-    UniquelyLabeled(BumpVec<'a, LabeledCallArg<'a>>),
+    Unlabeled(&'a [ExpressionRef<'a>]),
+    UniquelyLabeled(&'a [LabeledCallArg<'a>]),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -181,9 +179,9 @@ pub struct MatchCase<'a> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NonEmptyMatchCaseParamVec<'a> {
-    Unlabeled(BumpVec<'a, Identifier>),
+    Unlabeled(&'a [Identifier]),
     UniquelyLabeled {
-        params: BumpVec<'a, LabeledMatchCaseParam<'a>>,
+        params: &'a [LabeledMatchCaseParam<'a>],
         triple_dot: Option<TextSpan>,
     },
 }
