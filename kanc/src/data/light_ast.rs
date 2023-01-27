@@ -40,7 +40,7 @@ pub struct UnlabeledParam<'a> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LabeledParam<'a> {
     pub span: Option<TextSpan>,
-    pub label_clause: &'a ParamLabelClause<'a>,
+    pub label_clause: ParamLabelClauseRef<'a>,
     pub is_dashed: bool,
     pub name: &'a Identifier,
     pub type_: ExpressionRef<'a>,
@@ -49,14 +49,14 @@ pub struct LabeledParam<'a> {
 impl LabeledParam<'_> {
     pub fn label(&self) -> &Identifier {
         match self.label_clause {
-            ParamLabelClause::Implicit => self.name,
-            ParamLabelClause::Explicit(label) => label,
+            ParamLabelClauseRef::Implicit => self.name,
+            ParamLabelClauseRef::Explicit(label) => label,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ParamLabelClause<'a> {
+pub enum ParamLabelClauseRef<'a> {
     Implicit,
     Explicit(&'a Identifier),
 }
@@ -191,15 +191,15 @@ pub enum NonEmptyMatchCaseParamVec<'a> {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LabeledMatchCaseParam<'a> {
     pub span: Option<TextSpan>,
-    pub label_clause: ParamLabelClause<'a>,
+    pub label_clause: ParamLabelClauseRef<'a>,
     pub name: &'a Identifier,
 }
 
 impl<'a> LabeledMatchCaseParam<'a> {
     pub fn label(&self) -> &'a Identifier {
         match self.label_clause {
-            ParamLabelClause::Implicit => self.name,
-            ParamLabelClause::Explicit(label) => label,
+            ParamLabelClauseRef::Implicit => self.name,
+            ParamLabelClauseRef::Explicit(label) => label,
         }
     }
 }
