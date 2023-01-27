@@ -18,7 +18,7 @@ impl NormalFormId {
 pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
     let name_id = add_name_expression_and_overwrite_component_ids(
         state.registry,
-        NonEmptyVec::singleton(Identifier {
+        Vec::singleton(Identifier {
             id: dummy_id(),
             name: IdentifierName::Reserved(ReservedIdentifierName::TypeTitleCase),
             span: None,
@@ -30,7 +30,7 @@ pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
 
 pub fn add_name_expression_and_overwrite_component_ids(
     registry: &mut NodeRegistry,
-    components: NonEmptyVec<Identifier>,
+    components: Vec<Identifier>,
     db_index: DbIndex,
 ) -> &'a NameExpression<'a> {
     let first_span = components.first().span;
@@ -50,7 +50,7 @@ pub fn add_name_expression_and_overwrite_component_ids(
 
 pub fn add_name_expression(
     registry: &mut NodeRegistry,
-    component_ids: NonEmptyVec<&'a Identifier<'a>>,
+    component_ids: Vec<&'a Identifier<'a>>,
     db_index: DbIndex,
 ) -> &'a NameExpression<'a> {
     let first_span = registry.get(*component_ids.first()).span;
@@ -327,7 +327,7 @@ fn verify_that_every_variant_has_a_case(
         })
         .collect();
 
-    if let Ok(missing_variant_name_ids) = NonEmptyVec::try_from(missing_variant_name_ids) {
+    if let Ok(missing_variant_name_ids) = Vec::try_from(missing_variant_name_ids) {
         let missing_variant_name_list_id = registry.add_list(missing_variant_name_ids);
         return Err(TypeCheckError::MissingMatchCases {
             missing_variant_name_list_id,
@@ -1364,7 +1364,7 @@ where
 pub(super) fn get_unlabeled_param_type_ids(
     state: &State,
     param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     state
         .registry
         .get_list(param_list_id)
@@ -1377,10 +1377,7 @@ pub(super) fn get_unlabeled_param_type_ids(
 pub(super) fn get_names_and_types_of_params(
     state: &State,
     param_list_id: NonEmptyParamListId,
-) -> (
-    NonEmptyVec<&'a Identifier<'a>>,
-    NonEmptyVec<ExpressionRef<'a>>,
-) {
+) -> (Vec<&'a Identifier<'a>>, Vec<ExpressionRef<'a>>) {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(id) => get_names_and_types_of_unlabeled_params(state, id),
         NonEmptyParamListId::UniquelyLabeled(id) => {
@@ -1392,10 +1389,7 @@ pub(super) fn get_names_and_types_of_params(
 pub(super) fn get_names_and_types_of_unlabeled_params(
     state: &State,
     param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
-) -> (
-    NonEmptyVec<&'a Identifier<'a>>,
-    NonEmptyVec<ExpressionRef<'a>>,
-) {
+) -> (Vec<&'a Identifier<'a>>, Vec<ExpressionRef<'a>>) {
     let param_ids = state.registry.get_list(param_list_id);
     param_ids.map_to_unzipped(|param_id| {
         let param = state.registry.get(*param_id);
@@ -1406,10 +1400,7 @@ pub(super) fn get_names_and_types_of_unlabeled_params(
 pub(super) fn get_names_and_types_of_labeled_params(
     state: &State,
     param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
-) -> (
-    NonEmptyVec<&'a Identifier<'a>>,
-    NonEmptyVec<ExpressionRef<'a>>,
-) {
+) -> (Vec<&'a Identifier<'a>>, Vec<ExpressionRef<'a>>) {
     let param_ids = state.registry.get_list(param_list_id);
     param_ids.map_to_unzipped(|param_id| {
         let param = state.registry.get(*param_id);

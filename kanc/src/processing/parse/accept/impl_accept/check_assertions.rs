@@ -4,7 +4,7 @@ impl Accept for UnfinishedCheckAssertions {
     fn accept(&mut self, item: FinishedStackItem, _: FileId) -> AcceptResult {
         match item {
             FinishedStackItem::Token(token) => match token.kind {
-                TokenKind::RParen => match NonEmptyVec::try_from(self.assertions.clone()) {
+                TokenKind::RParen => match Vec::try_from(self.assertions.clone()) {
                     Ok(assertions) => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::CheckAssertions(self.first_token.clone(), assertions),
                     ),
@@ -45,8 +45,7 @@ impl Accept for UnfinishedCheckAssertions {
             FinishedStackItem::CheckAssertion(_, assertion, end_delimiter) => {
                 match end_delimiter.raw().kind {
                     TokenKind::RParen => {
-                        let assertions =
-                            NonEmptyVec::from_pushed(self.assertions.clone(), assertion);
+                        let assertions = Vec::from_pushed(self.assertions.clone(), assertion);
                         AcceptResult::PopAndContinueReducing(FinishedStackItem::CheckAssertions(
                             self.first_token.clone(),
                             assertions,

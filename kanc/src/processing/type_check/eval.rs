@@ -177,7 +177,7 @@ fn evaluate_call(state: &mut EvalState, call_id: &'a Call<'a>) -> NormalFormId {
                         vec![Substitution {
                             from: ExpressionRef::Name(add_name_expression(
                                 state.raw.registry,
-                                NonEmptyVec::singleton(fun.name_id),
+                                Vec::singleton(fun.name_id),
                                 FUN_DB_INDEX,
                             )),
                             to: shifted_fun_id.raw(),
@@ -195,7 +195,7 @@ fn evaluate_call(state: &mut EvalState, call_id: &'a Call<'a>) -> NormalFormId {
                                 let name = NormalFormId::unchecked_new(ExpressionRef::Name(
                                     add_name_expression(
                                         state.raw.registry,
-                                        NonEmptyVec::singleton(param_name_id),
+                                        Vec::singleton(param_name_id),
                                         db_index,
                                     ),
                                 ));
@@ -217,7 +217,7 @@ fn evaluate_call(state: &mut EvalState, call_id: &'a Call<'a>) -> NormalFormId {
                         Substitution {
                             from: ExpressionRef::Name(add_name_expression(
                                 state.raw.registry,
-                                NonEmptyVec::singleton(fun.name_id),
+                                Vec::singleton(fun.name_id),
                                 FUN_DB_INDEX,
                             )),
                             to: shifted_fun_id.raw(),
@@ -254,7 +254,7 @@ fn evaluate_call(state: &mut EvalState, call_id: &'a Call<'a>) -> NormalFormId {
                         let name =
                             NormalFormId::unchecked_new(ExpressionRef::Name(add_name_expression(
                                 state.raw.registry,
-                                NonEmptyVec::singleton(param_name_id),
+                                Vec::singleton(param_name_id),
                                 db_index,
                             )));
                         subs.push(Substitution {
@@ -471,7 +471,7 @@ fn evaluate_labeled_call_arg(state: &mut EvalState, arg_id: LabeledCallArgId) ->
 fn get_param_name_ids(
     state: &EvalState,
     param_list_id: NonEmptyParamListId,
-) -> NonEmptyVec<&'a Identifier<'a>> {
+) -> Vec<&'a Identifier<'a>> {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(param_list_id) => state
             .raw
@@ -547,7 +547,7 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
             type_id: normalized_param_type_id.raw(),
         })
     };
-    let mut normalized_param_ids = NonEmptyVec::singleton(normalized_first_param_id);
+    let mut normalized_param_ids = Vec::singleton(normalized_first_param_id);
     let remaining_param_ids = remaining_param_ids.to_vec();
     for param_id in remaining_param_ids.iter().copied() {
         let param = state.raw.registry.get(param_id).clone();
@@ -584,7 +584,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
             type_id: normalized_param_type_id.raw(),
         })
     };
-    let mut normalized_param_ids = NonEmptyVec::singleton(normalized_first_param_id);
+    let mut normalized_param_ids = Vec::singleton(normalized_first_param_id);
     let remaining_param_ids = remaining_param_ids.to_vec();
     for param_id in remaining_param_ids.iter().copied() {
         let param = state.raw.registry.get(param_id).clone();
@@ -687,7 +687,7 @@ fn evaluate_match(state: &mut EvalState, match_id: &'a Match<'a>) -> NormalFormI
                     Substitution {
                         from: ExpressionRef::Name(add_name_expression(
                             state.raw.registry,
-                            NonEmptyVec::singleton(param_id),
+                            Vec::singleton(param_id),
                             db_index,
                         )),
                         to: shifted_arg_id.raw(),
@@ -734,7 +734,7 @@ fn evaluate_match(state: &mut EvalState, match_id: &'a Match<'a>) -> NormalFormI
                         state.raw.registry.get(explicit_param_id).name_id;
                     let param_value_id = ExpressionRef::Name(add_name_expression(
                         state.raw.registry,
-                        NonEmptyVec::singleton(explicit_param_name_id),
+                        Vec::singleton(explicit_param_name_id),
                         DbIndex(explicit_arity - explicit_param_index - 1),
                     ));
                     let arg_value_id = corresponding_arg_id

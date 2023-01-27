@@ -24,7 +24,7 @@ impl Accept for UnfinishedParams {
                     if self.pending_dash.is_some() {
                         AcceptResult::Error(ParseError::unexpected_token(token))
                     } else {
-                        match NonEmptyVec::try_from(self.params.clone()) {
+                        match Vec::try_from(self.params.clone()) {
                             Ok(params) => AcceptResult::PopAndContinueReducing(
                                 FinishedStackItem::Params(self.first_token.clone(), params),
                             ),
@@ -43,7 +43,7 @@ impl Accept for UnfinishedParams {
                     AcceptResult::ContinueToNextToken
                 }
                 TokenKind::RParen => {
-                    let params = NonEmptyVec::from_pushed(self.params.clone(), param);
+                    let params = Vec::from_pushed(self.params.clone(), param);
                     AcceptResult::PopAndContinueReducing(FinishedStackItem::Params(
                         self.first_token.clone(),
                         params,

@@ -1,7 +1,7 @@
 use crate::data::{
     bound_ast::*,
     light_ast::{self as light},
-    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyToPossiblyEmpty},
+    non_empty_veclike::{OptionalNonEmptyToPossiblyEmpty, Vec},
 };
 
 pub fn expand_file_item_list(
@@ -69,7 +69,7 @@ pub fn expand_param_list(registry: &NodeRegistry, id: NonEmptyParamListId) -> No
 pub fn expand_unlabeled_param_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<NodeId<light::UnlabeledParam>>,
-) -> NonEmptyVec<UnlabeledParam> {
+) -> Vec<UnlabeledParam> {
     registry
         .get_list(id)
         .to_mapped(|param_id| expand_unlabeled_param(registry, *param_id))
@@ -93,7 +93,7 @@ pub fn expand_unlabeled_param(
 pub fn expand_labeled_param_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<NodeId<light::LabeledParam>>,
-) -> NonEmptyVec<LabeledParam> {
+) -> Vec<LabeledParam> {
     registry
         .get_list(id)
         .to_mapped(|param_id| expand_labeled_param(registry, *param_id))
@@ -126,14 +126,14 @@ pub fn expand_param_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLab
 pub fn expand_optional_variant_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyListId<NodeId<light::Variant>>>,
-) -> Option<NonEmptyVec<Variant>> {
+) -> Option<Vec<Variant>> {
     id.map(|id| expand_variant_list(registry, id))
 }
 
 pub fn expand_variant_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<NodeId<light::Variant>>,
-) -> NonEmptyVec<Variant> {
+) -> Vec<Variant> {
     registry
         .get_list(id)
         .to_mapped(|variant_id| expand_variant(registry, *variant_id))
@@ -198,7 +198,7 @@ pub fn expand_name_expression(
 pub fn expand_identifier_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<NodeId<light::Identifier>>,
-) -> NonEmptyVec<Identifier> {
+) -> Vec<Identifier> {
     registry
         .get_list(id)
         .to_mapped(|id| expand_identifier(registry, *id))
@@ -232,7 +232,7 @@ pub fn expand_call_arg_list(
 pub fn expand_labeled_call_arg_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<LabeledCallArgId>,
-) -> NonEmptyVec<LabeledCallArg> {
+) -> Vec<LabeledCallArg> {
     registry
         .get_list(id)
         .to_mapped(|id| expand_labeled_call_arg(registry, *id))
@@ -258,7 +258,7 @@ pub fn expand_labeled_call_arg(registry: &NodeRegistry, id: LabeledCallArgId) ->
 pub fn expand_expression_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<light::ExpressionRef<'a>>,
-) -> NonEmptyVec<Expression> {
+) -> Vec<Expression> {
     registry
         .get_list(id)
         .to_mapped(|id| expand_expression(registry, *id))
@@ -293,14 +293,14 @@ pub fn expand_match(registry: &NodeRegistry, id: NodeId<light::Match>) -> Match 
 pub fn expand_optional_match_case_list(
     registry: &NodeRegistry,
     id: Option<NonEmptyListId<NodeId<light::MatchCase>>>,
-) -> Option<NonEmptyVec<MatchCase>> {
+) -> Option<Vec<MatchCase>> {
     id.map(|id| expand_match_case_list(registry, id))
 }
 
 pub fn expand_match_case_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<NodeId<light::MatchCase>>,
-) -> NonEmptyVec<MatchCase> {
+) -> Vec<MatchCase> {
     registry
         .get_list(id)
         .to_mapped(|case_id| expand_match_case(registry, *case_id))
@@ -347,14 +347,14 @@ pub fn expand_match_case_param_list(
 pub fn expand_optional_labeled_match_case_param_list(
     registry: &NodeRegistry,
     param_list_id: Option<NonEmptyListId<NodeId<light::LabeledMatchCaseParam>>>,
-) -> Option<NonEmptyVec<LabeledMatchCaseParam>> {
+) -> Option<Vec<LabeledMatchCaseParam>> {
     param_list_id.map(|id| expand_labeled_match_case_param_list(registry, id))
 }
 
 pub fn expand_labeled_match_case_param_list(
     registry: &NodeRegistry,
     param_list_id: NonEmptyListId<NodeId<light::LabeledMatchCaseParam>>,
-) -> NonEmptyVec<LabeledMatchCaseParam> {
+) -> Vec<LabeledMatchCaseParam> {
     registry
         .get_list(param_list_id)
         .to_mapped(|id| expand_labeled_match_case_param(registry, *id))
@@ -408,7 +408,7 @@ pub fn expand_check(registry: &NodeRegistry, id: NodeId<light::Check>) -> Check 
 pub fn expand_check_assertion_list(
     registry: &NodeRegistry,
     id: NonEmptyListId<NodeId<light::CheckAssertion>>,
-) -> NonEmptyVec<CheckAssertion> {
+) -> Vec<CheckAssertion> {
     registry
         .get_list(id)
         .to_mapped(|id| expand_check_assertion(registry, *id))

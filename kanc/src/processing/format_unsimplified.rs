@@ -108,11 +108,7 @@ pub fn format_fun(fun: &Fun, indent_level: usize, options: &FormatOptions) -> St
     )
 }
 
-pub fn format_params(
-    params: &NonEmptyVec<Param>,
-    indent_level: usize,
-    options: &FormatOptions,
-) -> String {
+pub fn format_params(params: &Vec<Param>, indent_level: usize, options: &FormatOptions) -> String {
     let i0 = indent(indent_level, options);
 
     params
@@ -189,7 +185,7 @@ pub fn format_match_case(case: &MatchCase, indent_level: usize, options: &Format
 }
 
 pub fn format_optional_match_case_params(
-    params: Option<&NonEmptyVec<MatchCaseParam>>,
+    params: Option<&Vec<MatchCaseParam>>,
     has_triple_dot: bool,
 ) -> String {
     match params {

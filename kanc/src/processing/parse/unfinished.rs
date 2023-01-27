@@ -139,13 +139,13 @@ pub enum UnfinishedTypeStatement {
         first_token: Token,
         visibility: Option<PubClause>,
         name: Identifier,
-        params: Option<NonEmptyVec<Param>>,
+        params: Option<Vec<Param>>,
     },
     Variants {
         first_token: Token,
         visibility: Option<PubClause>,
         name: Identifier,
-        params: Option<NonEmptyVec<Param>>,
+        params: Option<Vec<Param>>,
         variants: Vec<Variant>,
     },
 }
@@ -215,7 +215,7 @@ pub enum UnfinishedParam {
 pub enum UnfinishedVariant {
     Empty,
     Name(Identifier),
-    Params(Identifier, Option<NonEmptyVec<Param>>),
+    Params(Identifier, Option<Vec<Param>>),
 }
 
 #[derive(Clone, Debug)]
@@ -241,8 +241,8 @@ pub enum UnfinishedDelimitedCallArg {
 pub enum UnfinishedFun {
     Keyword(Token),
     Name(Token, Identifier),
-    Params(Token, Identifier, NonEmptyVec<Param>),
-    ReturnType(Token, Identifier, NonEmptyVec<Param>, Expression),
+    Params(Token, Identifier, Vec<Param>),
+    ReturnType(Token, Identifier, Vec<Param>, Expression),
 }
 
 #[derive(Clone, Debug)]
@@ -254,13 +254,13 @@ pub enum UnfinishedMatch {
 #[derive(Clone, Debug)]
 pub enum UnfinishedForall {
     Keyword(Token),
-    Params(Token, NonEmptyVec<Param>),
+    Params(Token, Vec<Param>),
 }
 
 #[derive(Clone, Debug)]
 pub enum UnfinishedCheck {
     Keyword(Token),
-    Assertions(Token, NonEmptyVec<CheckAssertion>),
+    Assertions(Token, Vec<CheckAssertion>),
 }
 
 #[derive(Clone, Debug)]
@@ -307,7 +307,7 @@ pub enum UnfinishedMatchCase {
     ParamsInProgress(Identifier, Vec<MatchCaseParam>),
     AwaitingOutput {
         variant_name: Identifier,
-        params: Option<NonEmptyVec<MatchCaseParam>>,
+        params: Option<Vec<MatchCaseParam>>,
         triple_dot: Option<TextSpan>,
     },
 }

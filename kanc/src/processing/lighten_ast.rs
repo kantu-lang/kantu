@@ -309,7 +309,7 @@ pub fn register_match_case_params(
 
 pub fn register_identifiers(
     bump: &Bump,
-    unregistered: NonEmptyVec<heavy::Identifier>,
+    unregistered: Vec<heavy::Identifier>,
 ) -> NonEmptyListId<&'a Identifier<'a>> {
     let ids = unregistered.into_mapped(|unregistered| register_identifier(bump, unregistered));
     registry.add_list(ids)
@@ -317,14 +317,14 @@ pub fn register_identifiers(
 
 pub fn register_optional_labeled_match_case_params(
     bump: &Bump,
-    unregistered: Option<NonEmptyVec<heavy::LabeledMatchCaseParam>>,
+    unregistered: Option<Vec<heavy::LabeledMatchCaseParam>>,
 ) -> Option<NonEmptyListId<&'a LabeledMatchCaseParam<'a>>> {
     unregistered.map(|unregistered| register_labeled_match_case_params(bump, unregistered))
 }
 
 pub fn register_labeled_match_case_params(
     bump: &Bump,
-    unregistered: NonEmptyVec<heavy::LabeledMatchCaseParam>,
+    unregistered: Vec<heavy::LabeledMatchCaseParam>,
 ) -> NonEmptyListId<&'a LabeledMatchCaseParam<'a>> {
     let ids = unregistered
         .into_mapped(|unregistered| register_labeled_match_case_param(bump, unregistered));

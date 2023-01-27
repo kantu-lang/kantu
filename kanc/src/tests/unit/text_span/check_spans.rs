@@ -209,12 +209,12 @@ impl DeepCheckChildSpans for TypeStatement {
     }
 }
 
-impl ShallowCheckOwnSpan for NonEmptyVec<Param> {
+impl ShallowCheckOwnSpan for Vec<Param> {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `NonEmptyVec<Param>` doesn't have its own span.
+        // Do nothing, since `Vec<Param>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for NonEmptyVec<Param> {
+impl DeepCheckChildSpans for Vec<Param> {
     fn deep_check_child_spans(&self, src: &str) {
         for param in self {
             param.deep_check_spans(src);
@@ -327,12 +327,12 @@ impl DeepCheckChildSpans for Call {
     }
 }
 
-impl ShallowCheckOwnSpan for NonEmptyVec<CallArg> {
+impl ShallowCheckOwnSpan for Vec<CallArg> {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `NonEmptyVec<Expression>` doesn't have its own span.
+        // Do nothing, since `Vec<Expression>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for NonEmptyVec<CallArg> {
+impl DeepCheckChildSpans for Vec<CallArg> {
     fn deep_check_child_spans(&self, src: &str) {
         for arg in self {
             arg.deep_check_spans(src);
@@ -398,12 +398,12 @@ impl DeepCheckChildSpans for MatchCase {
     }
 }
 
-impl ShallowCheckOwnSpan for NonEmptyVec<MatchCaseParam> {
+impl ShallowCheckOwnSpan for Vec<MatchCaseParam> {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `NonEmptyVec<MatchCaseParam>` doesn't have its own span.
+        // Do nothing, since `Vec<MatchCaseParam>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for NonEmptyVec<MatchCaseParam> {
+impl DeepCheckChildSpans for Vec<MatchCaseParam> {
     fn deep_check_child_spans(&self, src: &str) {
         for id in self {
             id.deep_check_spans(src);
@@ -453,12 +453,12 @@ impl DeepCheckChildSpans for Check {
     }
 }
 
-impl ShallowCheckOwnSpan for NonEmptyVec<CheckAssertion> {
+impl ShallowCheckOwnSpan for Vec<CheckAssertion> {
     fn shallow_check_own_span(&self, _src: &str) {
-        // Do nothing, since `NonEmptyVec<CheckAssertion>` doesn't have its own span.
+        // Do nothing, since `Vec<CheckAssertion>` doesn't have its own span.
     }
 }
-impl DeepCheckChildSpans for NonEmptyVec<CheckAssertion> {
+impl DeepCheckChildSpans for Vec<CheckAssertion> {
     fn deep_check_child_spans(&self, src: &str) {
         for assertion in self {
             assertion.deep_check_spans(src);

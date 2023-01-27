@@ -65,7 +65,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
                     Substitution {
                         from: ExpressionRef::Name(add_name_expression(
                             state.registry,
-                            NonEmptyVec::singleton(param_name_id),
+                            Vec::singleton(param_name_id),
                             db_index,
                         )),
                         to: normalized_arg_id.upshift(i, state.registry).raw(),
@@ -113,7 +113,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
                 Substitution {
                     from: ExpressionRef::Name(add_name_expression(
                         state.registry,
-                        NonEmptyVec::singleton(param_name_id),
+                        Vec::singleton(param_name_id),
                         db_index,
                     )),
                     to: normalized_arg_id.upshift(arity, state.registry).raw(),
@@ -201,7 +201,7 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
         if arg_index != 0 {
             are_any_args_out_of_place = true;
         }
-        NonEmptyVec::singleton(arg_id)
+        Vec::singleton(arg_id)
     };
     for (param_index_in_remaining_params, param_id) in
         remaining_param_ids.iter().copied().enumerate()
@@ -262,7 +262,7 @@ fn verify_every_param_has_a_corresponding_arg(
         })
         .collect();
 
-    if let Ok(missing_param_label_name_ids) = NonEmptyVec::try_from(missing_param_label_name_ids) {
+    if let Ok(missing_param_label_name_ids) = Vec::try_from(missing_param_label_name_ids) {
         let missing_label_list_id = state.registry.add_list(missing_param_label_name_ids);
         return tainted_err(TypeCheckError::MissingLabeledCallArgs {
             call_id,

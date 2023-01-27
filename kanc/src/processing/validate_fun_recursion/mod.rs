@@ -1,7 +1,7 @@
 use crate::data::{
     fun_recursion_validation_result::*,
     light_ast::*,
-    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_veclike::{OptionalNonEmptyVecLen, Vec},
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
 
@@ -467,7 +467,7 @@ fn validate_fun_recursion_in_labeled_call_arg_dirty(
         } => {
             if context.reference_restriction(db_index).is_some() {
                 let span = registry.get(label_id).span;
-                let component_list_id = registry.add_list(NonEmptyVec::singleton(label_id));
+                let component_list_id = registry.add_list(Vec::singleton(label_id));
                 let name_id = registry.add_and_overwrite_id(NameExpression {
                     id: dummy_id(),
                     span,

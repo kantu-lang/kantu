@@ -80,7 +80,7 @@ impl Context {
             let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionRef::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
-                    NonEmptyVec::singleton(Identifier {
+                    Vec::singleton(Identifier {
                         id: dummy_id(),
                         name: IdentifierName::Reserved(ReservedIdentifierName::Type2),
                         span: None,
@@ -97,7 +97,7 @@ impl Context {
             let type0_type_id = NormalFormId::unchecked_new(ExpressionRef::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
-                    NonEmptyVec::singleton(Identifier {
+                    Vec::singleton(Identifier {
                         id: dummy_id(),
                         name: IdentifierName::Reserved(ReservedIdentifierName::Type1),
                         span: None,

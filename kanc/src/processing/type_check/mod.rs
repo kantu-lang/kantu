@@ -1,7 +1,7 @@
 use crate::data::{
     file_tree::FileTree,
     light_ast::*,
-    non_empty_veclike::{NonEmptySlice, NonEmptyVec, OptionalNonEmptyVecLen},
+    non_empty_veclike::{NonEmptySlice, OptionalNonEmptyVecLen, Vec},
     text_span::*,
     type_positivity_validation_result::TypePositivityValidated,
 };

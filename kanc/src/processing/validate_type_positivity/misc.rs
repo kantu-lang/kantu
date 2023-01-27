@@ -11,7 +11,7 @@ pub fn get_possibly_empty_param_type_ids(
 pub fn get_param_type_ids(
     registry: &NodeRegistry,
     id: NonEmptyParamListId,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     match id {
         NonEmptyParamListId::Unlabeled(id) => get_unlabeled_param_ids(registry, id),
         NonEmptyParamListId::UniquelyLabeled(id) => get_labeled_param_ids(registry, id),
@@ -21,7 +21,7 @@ pub fn get_param_type_ids(
 pub fn get_unlabeled_param_ids(
     registry: &NodeRegistry,
     id: NonEmptyListId<&'a UnlabeledParam<'a>>,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     registry.get_list(id).to_mapped(|&param_id| {
         let param = registry.get(param_id);
         param.type_id
@@ -31,7 +31,7 @@ pub fn get_unlabeled_param_ids(
 pub fn get_labeled_param_ids(
     registry: &NodeRegistry,
     id: NonEmptyListId<&'a LabeledParam<'a>>,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     registry.get_list(id).to_mapped(|&param_id| {
         let param = registry.get(param_id);
         param.type_id
@@ -279,7 +279,7 @@ pub fn does_target_appear_in_expression(
 pub fn get_arg_values(
     registry: &NodeRegistry,
     arg_list_id: NonEmptyCallArgListId,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     match arg_list_id {
         NonEmptyCallArgListId::Unlabeled(id) => get_unlabeled_arg_values(registry, id),
         NonEmptyCallArgListId::UniquelyLabeled(id) => get_labeled_arg_values(registry, id),
@@ -289,14 +289,14 @@ pub fn get_arg_values(
 pub fn get_unlabeled_arg_values(
     registry: &NodeRegistry,
     id: NonEmptyListId<ExpressionRef<'a>>,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     registry.get_list(id).to_non_empty_vec()
 }
 
 pub fn get_labeled_arg_values(
     registry: &NodeRegistry,
     id: NonEmptyListId<LabeledCallArgId>,
-) -> NonEmptyVec<ExpressionRef<'a>> {
+) -> Vec<ExpressionRef<'a>> {
     registry.get_list(id).to_mapped(|&arg_id| arg_id.value_id())
 }
 

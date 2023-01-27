@@ -385,13 +385,13 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
     }
 
     let (parameterized_matchee_id, parameterized_matchee_type_id) = {
-        let fully_qualified_variant_name_component_ids: NonEmptyVec<&'a Identifier<'a>> = {
+        let fully_qualified_variant_name_component_ids: Vec<&'a Identifier<'a>> = {
             let matchee_type_name = state.registry.get(matchee_type.type_name_id);
             let matchee_type_name_component_ids = state
                 .registry
                 .get_list(matchee_type_name.component_list_id)
                 .to_vec();
-            NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+            Vec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
         };
         let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len());
         let callee_id = ExpressionRef::Name(add_name_expression(
@@ -409,7 +409,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
             .enumerate_to_mapped(|(index, &case_param_id)| {
                 ExpressionRef::Name(add_name_expression(
                     state.registry,
-                    NonEmptyVec::singleton(case_param_id),
+                    Vec::singleton(case_param_id),
                     DbIndex(case_param_arity - index - 1),
                 ))
             });
@@ -435,7 +435,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
                 let db_index = DbIndex(case_param_name_ids.len() - raw_index - 1);
                 let param_name_expression_id = ExpressionRef::Name(add_name_expression(
                     state.registry,
-                    NonEmptyVec::singleton(case_param_id),
+                    Vec::singleton(case_param_id),
                     db_index,
                 ));
                 Substitution {
@@ -475,7 +475,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
 ) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
     let Some(case_param_list_id) = case.param_list_id else {
-        let missing_label_ids: NonEmptyVec<&'a Identifier<'a>> = state
+        let missing_label_ids: Vec<&'a Identifier<'a>> = state
             .registry
             .get_list(variant_type_param_list_id)
             .to_mapped(|&param_id| state.registry.get(param_id).label());
@@ -528,13 +528,13 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
     }
 
     let (parameterized_matchee_id, parameterized_matchee_type_id) = {
-        let fully_qualified_variant_name_component_ids: NonEmptyVec<&'a Identifier<'a>> = {
+        let fully_qualified_variant_name_component_ids: Vec<&'a Identifier<'a>> = {
             let matchee_type_name = state.registry.get(matchee_type.type_name_id);
             let matchee_type_name_component_ids = state
                 .registry
                 .get_list(matchee_type_name.component_list_id)
                 .to_vec();
-            NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+            Vec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
         };
         let shifted_variant_dbi = DbIndex(variant_dbi.0 + variant_type_param_list_id.len.get());
         let callee_id = ExpressionRef::Name(add_name_expression(
@@ -543,7 +543,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
             shifted_variant_dbi,
         ));
 
-        let arg_name_ids: NonEmptyVec<_> = {
+        let arg_name_ids: Vec<_> = {
             let underscore_id = state.registry.add_and_overwrite_id(Identifier {
                 id: dummy_id(),
                 span: None,
@@ -598,7 +598,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 } else {
                     let value_id = ExpressionRef::Name(add_name_expression(
                         state.registry,
-                        NonEmptyVec::singleton(arg_name_id),
+                        Vec::singleton(arg_name_id),
                         db_index,
                     ));
                     LabeledCallArgId::Explicit {
@@ -629,7 +629,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
 
                 let to = ExpressionRef::Name(add_name_expression(
                     state.registry,
-                    NonEmptyVec::singleton(arg_name_id),
+                    Vec::singleton(arg_name_id),
                     db_index,
                 ));
                 // We don't care what the name of `from` is as long as the
@@ -718,13 +718,13 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
         });
     }
 
-    let fully_qualified_variant_name_component_ids: NonEmptyVec<&'a Identifier<'a>> = {
+    let fully_qualified_variant_name_component_ids: Vec<&'a Identifier<'a>> = {
         let matchee_type_name = state.registry.get(matchee_type.type_name_id);
         let matchee_type_name_component_ids = state
             .registry
             .get_list(matchee_type_name.component_list_id)
             .to_vec();
-        NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
+        Vec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
     };
 
     // Since the case is nullary, we shift by zero.
@@ -772,7 +772,7 @@ fn verify_every_case_param_has_a_corresponding_variant_param(
         })
         .collect();
 
-    if let Ok(missing_case_param_ids) = NonEmptyVec::try_from(missing_case_param_ids) {
+    if let Ok(missing_case_param_ids) = Vec::try_from(missing_case_param_ids) {
         let case_param_list_id = state.registry.add_list(missing_case_param_ids);
         return tainted_err(TypeCheckError::UndefinedLabeledMatchCaseParams {
             case_id,
@@ -810,7 +810,7 @@ fn verify_every_variant_param_has_a_corresponding_case_param(
         }
     }
 
-    if let Ok(missing_label_ids) = NonEmptyVec::try_from(missing_label_ids) {
+    if let Ok(missing_label_ids) = Vec::try_from(missing_label_ids) {
         let missing_label_list_id = state.registry.add_list(missing_label_ids);
         return tainted_err(TypeCheckError::MissingLabeledMatchCaseParams {
             case_id,
@@ -848,12 +848,12 @@ fn apply_case_output_substitutions(
                 state.registry,
                 // This will never get used in the comparison,
                 // so it doesn't matter what we put here.
-                NonEmptyVec::singleton(dummy),
+                Vec::singleton(dummy),
                 DbIndex(explicit_param_db_index.0 + subs.variant_arity),
             ));
             let to = ExpressionRef::Name(add_name_expression(
                 state.registry,
-                NonEmptyVec::singleton(sub.explicit_param_name_id),
+                Vec::singleton(sub.explicit_param_name_id),
                 variant_param_db_index,
             ));
             Substitution { from, to }

@@ -1,5 +1,5 @@
 use crate::data::{
-    non_empty_veclike::NonEmptyVec,
+    non_empty_veclike::Vec,
     simplified_ast::*,
     text_span::*,
     // `ust` stands for "unsimplified syntax tree".
@@ -10,15 +10,15 @@ use crate::data::{
 pub enum SimplifyAstError {
     IllegalDotLhs(ust::Expression),
 
-    HeterogeneousParams(NonEmptyVec<ust::Param>),
+    HeterogeneousParams(Vec<ust::Param>),
     UnderscoreParamLabel(ust::Param),
     DuplicateParamLabel(ust::Param, ust::Param),
 
-    HeterogeneousCallArgs(NonEmptyVec<ust::CallArg>),
+    HeterogeneousCallArgs(Vec<ust::CallArg>),
     UnderscoreCallArgLabel(ust::CallArg),
     DuplicateCallArgLabel(ust::CallArg, ust::CallArg),
 
-    HeterogeneousMatchCaseParams(NonEmptyVec<ust::MatchCaseParam>),
+    HeterogeneousMatchCaseParams(Vec<ust::MatchCaseParam>),
     UnderscoreMatchCaseParamLabel(ust::MatchCaseParam),
     DuplicateMatchCaseParamLabel(ust::MatchCaseParam, ust::MatchCaseParam),
 }
@@ -138,14 +138,12 @@ fn simplify_type_statement(
 }
 
 fn simplify_optional_params(
-    unsimplified: Option<NonEmptyVec<ust::Param>>,
+    unsimplified: Option<Vec<ust::Param>>,
 ) -> Result<Option<NonEmptyParamVec>, SimplifyAstError> {
     Ok(unsimplified.map(simplify_params).transpose()?)
 }
 
-fn simplify_params(
-    unsimplified: NonEmptyVec<ust::Param>,
-) -> Result<NonEmptyParamVec, SimplifyAstError> {
+fn simplify_params(unsimplified: Vec<ust::Param>) -> Result<NonEmptyParamVec, SimplifyAstError> {
     validate_there_are_no_duplicate_param_labels(&unsimplified)?;
 
     let hetero_err = SimplifyAstError::HeterogeneousParams(unsimplified.clone());
@@ -162,7 +160,7 @@ fn simplify_params(
             type_: simplify_expression(last.type_)?,
         };
         let remaining = simplify_params_but_require_labels(remaining, &hetero_err)?;
-        Ok(NonEmptyParamVec::UniquelyLabeled(NonEmptyVec::from_pushed(
+        Ok(NonEmptyParamVec::UniquelyLabeled(Vec::from_pushed(
             remaining, last,
         )))
     } else {
@@ -173,7 +171,7 @@ fn simplify_params(
             type_: simplify_expression(last.type_)?,
         };
         let remaining = simplify_params_but_forbid_labels(remaining, &hetero_err)?;
-        Ok(NonEmptyParamVec::Unlabeled(NonEmptyVec::from_pushed(
+        Ok(NonEmptyParamVec::Unlabeled(Vec::from_pushed(
             remaining, last,
         )))
     }
@@ -305,7 +303,7 @@ fn simplify_expression(unsimplified: ust::Expression) -> Result<Expression, Simp
 fn simplify_identifier(unsimplified: ust::Identifier) -> Expression {
     Expression::Name(NameExpression {
         span: unsimplified.span,
-        components: NonEmptyVec::singleton(unsimplified),
+        components: Vec::singleton(unsimplified),
     })
 }
 
@@ -315,9 +313,9 @@ fn simplify_dot(unsimplified: Box<ust::Dot>) -> Result<Expression, SimplifyAstEr
 
     fn get_components(
         expr: ust::Expression,
-    ) -> Result<NonEmptyVec<ust::Identifier>, NotANameExpressionError> {
+    ) -> Result<Vec<ust::Identifier>, NotANameExpressionError> {
         match expr {
-            ust::Expression::Identifier(identifier) => Ok(NonEmptyVec::singleton(identifier)),
+            ust::Expression::Identifier(identifier) => Ok(Vec::singleton(identifier)),
             ust::Expression::Dot(dot) => {
                 let mut components = get_components(dot.left)?;
                 components.push(dot.right);
@@ -343,7 +341,7 @@ fn simplify_call(unsimplified: ust::Call) -> Result<Expression, SimplifyAstError
 }
 
 fn simplify_call_args(
-    unsimplified: NonEmptyVec<ust::CallArg>,
+    unsimplified: Vec<ust::CallArg>,
 ) -> Result<NonEmptyCallArgVec, SimplifyAstError> {
     validate_there_are_no_duplicate_call_arg_labels(&unsimplified)?;
 
@@ -355,13 +353,13 @@ fn simplify_call_args(
     if last.label.is_some() {
         let last = simplify_call_arg_but_require_label(last, &hetero_err)?;
         let remaining = simplify_call_args_but_require_labels(remaining, &hetero_err)?;
-        Ok(NonEmptyCallArgVec::UniquelyLabeled(
-            NonEmptyVec::from_pushed(remaining, last),
-        ))
+        Ok(NonEmptyCallArgVec::UniquelyLabeled(Vec::from_pushed(
+            remaining, last,
+        )))
     } else {
         let last = simplify_call_arg_but_forbid_label(last, &hetero_err)?;
         let remaining = simplify_call_args_but_forbid_labels(remaining, &hetero_err)?;
-        Ok(NonEmptyCallArgVec::Unlabeled(NonEmptyVec::from_pushed(
+        Ok(NonEmptyCallArgVec::Unlabeled(Vec::from_pushed(
             remaining, last,
         )))
     }
@@ -483,7 +481,7 @@ fn simplify_match_case(unsimplified: ust::MatchCase) -> Result<MatchCase, Simpli
 }
 
 fn simplify_optional_match_case_params(
-    unsimplified: Option<NonEmptyVec<ust::MatchCaseParam>>,
+    unsimplified: Option<Vec<ust::MatchCaseParam>>,
     optional_triple_dot: Option<TextSpan>,
 ) -> Result<Option<NonEmptyMatchCaseParamVec>, SimplifyAstError> {
     Ok(match (unsimplified, optional_triple_dot) {
@@ -499,7 +497,7 @@ fn simplify_optional_match_case_params(
 }
 
 fn simplify_match_case_params(
-    unsimplified: NonEmptyVec<ust::MatchCaseParam>,
+    unsimplified: Vec<ust::MatchCaseParam>,
     triple_dot: Option<TextSpan>,
 ) -> Result<NonEmptyMatchCaseParamVec, SimplifyAstError> {
     validate_there_are_no_duplicate_match_case_param_labels(unsimplified.as_ref())?;
@@ -517,15 +515,15 @@ fn simplify_match_case_params(
         };
         let remaining = simplify_match_case_params_but_require_labels(remaining, &hetero_err)?;
         Ok(NonEmptyMatchCaseParamVec::UniquelyLabeled {
-            params: Some(NonEmptyVec::from_pushed(remaining, last)),
+            params: Some(Vec::from_pushed(remaining, last)),
             triple_dot,
         })
     } else {
         let last = last.name;
         let remaining = simplify_match_case_params_but_forbid_labels(remaining, &hetero_err)?;
-        Ok(NonEmptyMatchCaseParamVec::Unlabeled(
-            NonEmptyVec::from_pushed(remaining, last),
-        ))
+        Ok(NonEmptyMatchCaseParamVec::Unlabeled(Vec::from_pushed(
+            remaining, last,
+        )))
     }
 }
 

@@ -33,7 +33,7 @@ impl Accept for UnfinishedMatchCase {
                             AcceptResult::ContinueToNextToken
                         }
                         TokenKind::RParen => {
-                            let params = NonEmptyVec::from_pushed(params.clone(), param);
+                            let params = Vec::from_pushed(params.clone(), param);
                             *self = UnfinishedMatchCase::AwaitingOutput {
                                 variant_name: variant_name.clone(),
                                 params: Some(params),
@@ -50,7 +50,7 @@ impl Accept for UnfinishedMatchCase {
                 FinishedStackItem::DelimitedTripleDot(triple_dot, end_delimiter) => {
                     match end_delimiter.raw().kind {
                         TokenKind::RParen => {
-                            let params = NonEmptyVec::try_from(params.clone()).ok();
+                            let params = Vec::try_from(params.clone()).ok();
                             *self = UnfinishedMatchCase::AwaitingOutput {
                                 variant_name: variant_name.clone(),
                                 params,
@@ -65,7 +65,7 @@ impl Accept for UnfinishedMatchCase {
                 }
 
                 FinishedStackItem::Token(token) if token.kind == TokenKind::RParen => {
-                    let Ok(params) = NonEmptyVec::try_from(params.clone()) else {
+                    let Ok(params) = Vec::try_from(params.clone()) else {
                         return AcceptResult::Error(ParseError::unexpected_token(token));
                     };
                     *self = UnfinishedMatchCase::AwaitingOutput {

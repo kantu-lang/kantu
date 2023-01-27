@@ -10,7 +10,7 @@ impl Accept for UnfinishedCall {
                         AcceptResult::ContinueToNextToken
                     }
                     TokenKind::RParen => {
-                        let args = NonEmptyVec::from_pushed(self.args.clone(), arg);
+                        let args = Vec::from_pushed(self.args.clone(), arg);
                         AcceptResult::PopAndContinueReducing(
                             FinishedStackItem::UndelimitedExpression(
                                 self.first_token.clone(),
@@ -33,7 +33,7 @@ impl Accept for UnfinishedCall {
             }
 
             FinishedStackItem::Token(token) => match token.kind {
-                TokenKind::RParen => match NonEmptyVec::try_from(self.args.clone()) {
+                TokenKind::RParen => match Vec::try_from(self.args.clone()) {
                     Ok(args) => AcceptResult::PopAndContinueReducing(
                         FinishedStackItem::UndelimitedExpression(
                             self.first_token.clone(),

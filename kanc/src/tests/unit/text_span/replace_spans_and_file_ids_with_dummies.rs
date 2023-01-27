@@ -177,7 +177,7 @@ impl ReplaceSpansAndFileIdsWithDummies for ModScopeModifierKind {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<Param> {
+impl ReplaceSpansAndFileIdsWithDummies for Vec<Param> {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         self.into_mapped(Param::replace_spans_and_file_ids_with_dummies)
     }
@@ -301,7 +301,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Call {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<CallArg> {
+impl ReplaceSpansAndFileIdsWithDummies for Vec<CallArg> {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         self.into_mapped(CallArg::replace_spans_and_file_ids_with_dummies)
     }
@@ -363,7 +363,7 @@ impl ReplaceSpansAndFileIdsWithDummies for MatchCase {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<MatchCaseParam> {
+impl ReplaceSpansAndFileIdsWithDummies for Vec<MatchCaseParam> {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         self.into_mapped(MatchCaseParam::replace_spans_and_file_ids_with_dummies)
     }
@@ -418,7 +418,7 @@ impl ReplaceSpansAndFileIdsWithDummies for Check {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for NonEmptyVec<CheckAssertion> {
+impl ReplaceSpansAndFileIdsWithDummies for Vec<CheckAssertion> {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         self.into_mapped(CheckAssertion::replace_spans_and_file_ids_with_dummies)
     }
