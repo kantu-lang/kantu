@@ -478,7 +478,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
         let missing_label_ids: NonEmptyVec<NodeId<Identifier>> = state
             .registry
             .get_list(variant_type_param_list_id)
-            .to_mapped(|&param_id| state.registry.get(param_id).label_identifier_id());
+            .to_mapped(|&param_id| state.registry.get(param_id).label());
         let missing_label_list_id = state.registry.add_list(missing_label_ids);
          return tainted_err(TypeCheckError::MissingLabeledMatchCaseParams {
              case_id,
@@ -554,13 +554,13 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 .as_non_empty_slice()
                 .to_mapped(|&variant_param_id| {
                     let variant_param = state.registry.get(variant_param_id);
-                    let variant_param_label_name_id = variant_param.label_identifier_id();
+                    let variant_param_label_name_id = variant_param.label();
                     let variant_param_label_name: &IdentifierName =
                         &state.registry.get(variant_param_label_name_id).name;
                     let corresponding_case_param_name_id =
                         explicit_case_param_ids.iter().find_map(|&case_param_id| {
                             let case_param = state.registry.get(case_param_id);
-                            let case_param_label_name_id = case_param.label_identifier_id();
+                            let case_param_label_name_id = case_param.label();
                             let case_param_label_name: &IdentifierName =
                                 &state.registry.get(case_param_label_name_id).name;
                             if variant_param_label_name == case_param_label_name {
@@ -577,7 +577,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
             .as_non_empty_slice()
             .enumerate_to_mapped(|(variant_param_index, &variant_param_id)| {
                 let variant_param = state.registry.get(variant_param_id);
-                let variant_param_label_name_id = variant_param.label_identifier_id();
+                let variant_param_label_name_id = variant_param.label();
                 let variant_param_label_name: &IdentifierName =
                     &state.registry.get(variant_param_label_name_id).name;
 
@@ -657,7 +657,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
             |(case_param_index, case_param_id)| -> CaseOutputSubstitution {
                 let case_param = state.registry.get(case_param_id);
                 let case_param_name_id = case_param.name_id;
-                let case_param_label_name_id = case_param.label_identifier_id();
+                let case_param_label_name_id = case_param.label();
                 let case_param_label_name: &IdentifierName =
                     &state.registry.get(case_param_label_name_id).name;
                 let corresponding_variant_param_index = variant_type_param_ids
@@ -666,7 +666,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                     .position(|variant_type_param_id| {
                         let variant_type_param = state.registry.get(variant_type_param_id);
                         let variant_type_param_label_name_id =
-                            variant_type_param.label_identifier_id();
+                            variant_type_param.label();
                         let variant_type_param_label_name: &IdentifierName =
                             &state.registry.get(variant_type_param_label_name_id).name;
                         variant_type_param_label_name == case_param_label_name
@@ -754,7 +754,7 @@ fn verify_every_case_param_has_a_corresponding_variant_param(
         .copied()
         .filter(|&case_param_id| {
             let case_param = state.registry.get(case_param_id);
-            let case_param_label_name_id = case_param.label_identifier_id();
+            let case_param_label_name_id = case_param.label();
             let case_param_label_name: &IdentifierName =
                 &state.registry.get(case_param_label_name_id).name;
             let has_corresponding_variant_type_param =
@@ -763,8 +763,7 @@ fn verify_every_case_param_has_a_corresponding_variant_param(
                     .copied()
                     .any(|variant_type_param_id| {
                         let variant_type_param = state.registry.get(variant_type_param_id);
-                        let variant_type_param_label_name_id =
-                            variant_type_param.label_identifier_id();
+                        let variant_type_param_label_name_id = variant_type_param.label();
                         let variant_type_param_label_name: &IdentifierName =
                             &state.registry.get(variant_type_param_label_name_id).name;
                         variant_type_param_label_name == case_param_label_name
@@ -793,7 +792,7 @@ fn verify_every_variant_param_has_a_corresponding_case_param(
     let mut missing_label_ids: Vec<NodeId<Identifier>> = vec![];
     for &variant_type_param_id in variant_type_param_ids.iter() {
         let variant_type_param = state.registry.get(variant_type_param_id);
-        let variant_type_param_label_name_id = variant_type_param.label_identifier_id();
+        let variant_type_param_label_name_id = variant_type_param.label();
         let variant_type_param_label_name: &IdentifierName =
             &state.registry.get(variant_type_param_label_name_id).name;
         if !explicit_case_param_ids
@@ -801,7 +800,7 @@ fn verify_every_variant_param_has_a_corresponding_case_param(
             .copied()
             .any(|case_param_id| {
                 let case_param = state.registry.get(case_param_id);
-                let case_param_label_name_id = case_param.label_identifier_id();
+                let case_param_label_name_id = case_param.label();
                 let case_param_label_name: &IdentifierName =
                     &state.registry.get(case_param_label_name_id).name;
                 case_param_label_name == variant_type_param_label_name

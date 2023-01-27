@@ -657,7 +657,7 @@ fn validate_fun_recursion_in_labeled_params_and_leave_in_context_dirty(
             Ok(registry.add_and_overwrite_id(LabeledParam {
                 id: dummy_id(),
                 span: param.span,
-                label_id: param.label_id,
+                label_clause: param.label_clause,
                 name_id: param.name_id,
                 type_id,
                 is_dashed: param.is_dashed,

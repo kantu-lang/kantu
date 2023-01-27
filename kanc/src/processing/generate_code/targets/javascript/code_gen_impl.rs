@@ -267,7 +267,7 @@ fn generate_code_for_params_and_leave_params_in_context(
                     context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
 
-                    let param_label_name = &registry.get(param.label_identifier_id()).name;
+                    let param_label_name = &registry.get(param.label()).name;
                     let param_label_js_name = param_label_name.preferred_js_name();
                     ObjectDestructureEntry {
                         in_name: param_label_js_name,
@@ -575,7 +575,7 @@ fn generate_code_for_match_case(
                     let param_name = &registry.get(param_name_id).name;
                     context.try_push_name(param_name.preferred_js_name());
                     let param_js_name = context.js_name(DbIndex(0));
-                    let param_label_id = registry.get(param_id).label_identifier_id();
+                    let param_label_id = registry.get(param_id).label();
                     let param_label_name = &registry.get(param_label_id).name;
                     let param_value = Expression::Dot(Box::new(Dot {
                         left: args_obj.clone(),

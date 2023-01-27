@@ -112,7 +112,7 @@ impl RemoveId for with_id::LabeledParam {
     fn remove_id(&self) -> Self::Output {
         LabeledParam {
             span: self.span,
-            label_id: self.label_id,
+            label_id: self.label_clause,
             is_dashed: self.is_dashed,
             name_id: self.name_id,
             type_id: self.type_id,
@@ -125,7 +125,7 @@ impl AddId for LabeledParam {
         with_id::LabeledParam {
             id,
             span: self.span,
-            label_id: self.label_id,
+            label_clause: self.label_id,
             is_dashed: self.is_dashed,
             name_id: self.name_id,
             type_id: self.type_id,

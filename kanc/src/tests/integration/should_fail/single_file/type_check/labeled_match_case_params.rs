@@ -16,7 +16,7 @@ fn expect_undefined_match_case_params_type_error<const N: usize>(
                 .copied()
                 .zip(case_param_ids.iter().copied())
             {
-                let case_param_label_id = registry.get(case_param_id).label_identifier_id();
+                let case_param_label_id = registry.get(case_param_id).label();
                 let case_param_label_name = &registry.get(case_param_label_id).name;
                 assert_eq!(
                     IdentifierName::new(expected_name.to_string()),

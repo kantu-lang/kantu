@@ -747,7 +747,7 @@ impl<'a>
                         missing
                             .iter()
                             .map(|label_id| {
-                                let label_id = registry.get(*label_id).label_identifier_id();
+                                let label_id = registry.get(*label_id).label();
                                 format!("`{}`", registry.get(label_id).name.src_str())
                             })
                             .collect::<Vec<_>>()
