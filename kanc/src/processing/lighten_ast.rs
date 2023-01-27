@@ -6,12 +6,10 @@ pub fn register_file_items(
     bump: &Bump,
     unregistered: Vec<heavy::FileItem>,
 ) -> BumpVec<'_, FileItemRef<'_>> {
-    BumpVec::from_iter_in(
-        unregistered
-            .into_iter()
-            .map(|unregistered| register_file_item(bump, unregistered)),
-        bump,
-    )
+    unregistered
+        .into_iter()
+        .map(|unregistered| register_file_item(bump, unregistered))
+        .collect_in(bump)
 }
 
 pub fn register_file_item(bump: &Bump, unregistered: heavy::FileItem) -> FileItemRef {
@@ -31,13 +29,11 @@ pub fn register_type_statement(
 ) -> &TypeStatement<'_> {
     let name = register_identifier(bump, unregistered.name);
     let params = register_optional_params(bump, unregistered.params);
-    let variants = BumpVec::from_iter_in(
-        unregistered
-            .variants
-            .into_iter()
-            .map(|unregistered_variant| register_variant(bump, unregistered_variant)),
-        bump,
-    );
+    let variants = unregistered
+        .variants
+        .into_iter()
+        .map(|unregistered_variant| register_variant(bump, unregistered_variant))
+        .collect_in(bump);
     bump.alloc(TypeStatement {
         span: unregistered.span,
         visibility: unregistered.visibility,
@@ -64,21 +60,17 @@ pub fn register_optional_params(
 pub fn register_params(bump: &Bump, unregistered: heavy::NonEmptyParamVec) -> &NonEmptyParamVec {
     match unregistered {
         heavy::NonEmptyParamVec::Unlabeled(unregistered) => {
-            let params = BumpVec::from_iter_in(
-                unregistered
-                    .into_iter()
-                    .map(|unregistered| register_unlabeled_param(bump, unregistered)),
-                bump,
-            );
+            let params = unregistered
+                .into_iter()
+                .map(|unregistered| register_unlabeled_param(bump, unregistered))
+                .collect_in(bump);
             &NonEmptyParamVec::Unlabeled(params)
         }
         heavy::NonEmptyParamVec::UniquelyLabeled(unregistered) => {
-            let params = BumpVec::from_iter_in(
-                unregistered
-                    .into_iter()
-                    .map(|unregistered| register_labeled_param(bump, unregistered)),
-                bump,
-            );
+            let params = unregistered
+                .into_iter()
+                .map(|unregistered| register_labeled_param(bump, unregistered))
+                .collect_in(bump);
             &NonEmptyParamVec::UniquelyLabeled(params)
         }
     }
@@ -492,4 +484,17 @@ pub fn register_illegal_fun_recursion_expression(
         error: unregistered.error,
         span_invalidated: unregistered.span_invalidated,
     })
+}
+
+trait CollectInBump<T> {
+    fn collect_in(self, bump: &Bump) -> BumpVec<'_, T>;
+}
+
+impl<T, I> CollectInBump<T> for I
+where
+    I: IntoIterator<Item = T>,
+{
+    fn collect_in(self, bump: &Bump) -> BumpVec<'_, T> {
+        BumpVec::from_iter_in(self, bump)
+    }
 }
