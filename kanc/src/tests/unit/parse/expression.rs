@@ -1,11 +1,7 @@
 use std::ops::Deref;
 
 use crate::{
-    data::{
-        file_id::*,
-        non_empty_veclike::{OptionalNonEmptyToPossiblyEmpty, OptionalNonEmptyVecLen},
-        unsimplified_ast::*,
-    },
+    data::{file_id::*, unsimplified_ast::*},
     processing::{lex::lex, parse::parse},
 };
 

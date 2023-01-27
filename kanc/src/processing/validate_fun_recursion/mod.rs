@@ -1,7 +1,5 @@
 use crate::data::{
-    fun_recursion_validation_result::*,
-    light_ast::*,
-    non_empty_veclike::{OptionalNonEmptyVecLen, Vec},
+    fun_recursion_validation_result::*, light_ast::*,
     variant_return_type_validation_result::VariantReturnTypesValidated,
 };
 

@@ -1,5 +1,5 @@
 use crate::{
-    data::{file_id::*, non_empty_veclike::Vec, unsimplified_ast::*},
+    data::{file_id::*, unsimplified_ast::*},
     processing::{
         lex::lex,
         parse::{parse, Parse, ParseError},

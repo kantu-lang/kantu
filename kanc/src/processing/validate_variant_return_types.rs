@@ -1,7 +1,4 @@
-use crate::data::{
-    light_ast::*, non_empty_veclike::OptionalNonEmptyVecLen,
-    variant_return_type_validation_result::*,
-};
+use crate::data::{light_ast::*, variant_return_type_validation_result::*};
 
 /// For a given type `T` with type parameters `A_1, ..., A_n`,
 /// every one of its variant's return type must be `T(x_1, ..., x_n)` for

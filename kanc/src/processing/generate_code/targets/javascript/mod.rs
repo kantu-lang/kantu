@@ -1,4 +1,4 @@
-use crate::data::{light_ast as light, non_empty_veclike::OptionalNonEmptyVecLen, text_span::*};
+use crate::data::{light_ast as light, text_span::*};
 use crate::processing::generate_code::CompileTarget;
 
 use js_ast::*;

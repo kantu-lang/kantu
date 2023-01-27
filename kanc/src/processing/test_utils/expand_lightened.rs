@@ -1,7 +1,6 @@
 use crate::data::{
     bound_ast::*,
     light_ast::{self as light},
-    non_empty_veclike::{OptionalNonEmptyToPossiblyEmpty, Vec},
 };
 
 pub fn expand_file_item_list(
