@@ -1,8 +1,4 @@
-use crate::data::{
-    file_id::*,
-    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
-    text_span::*,
-};
+use crate::data::{file_id::*, text_span::*};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct File {
@@ -69,14 +65,8 @@ pub struct TypeStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamVec {
-    Unlabeled(NonEmptyVec<UnlabeledParam>),
-    UniquelyLabeled(NonEmptyVec<LabeledParam>),
-}
-
-impl OptionalNonEmptyVecLen for Option<NonEmptyParamVec> {
-    fn len(&self) -> usize {
-        self.as_ref().map(|v| v.len()).unwrap_or(0)
-    }
+    Unlabeled(Vec<UnlabeledParam>),
+    UniquelyLabeled(Vec<LabeledParam>),
 }
 
 impl NonEmptyParamVec {
@@ -156,7 +146,7 @@ impl Expression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     pub span: TextSpan,
-    pub components: NonEmptyVec<Identifier>,
+    pub components: Vec<Identifier>,
 }
 
 pub use crate::data::unsimplified_ast::Identifier;
@@ -176,8 +166,8 @@ pub struct Call {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyCallArgVec {
-    Unlabeled(NonEmptyVec<Expression>),
-    UniquelyLabeled(NonEmptyVec<LabeledCallArg>),
+    Unlabeled(Vec<Expression>),
+    UniquelyLabeled(Vec<LabeledCallArg>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -212,17 +202,11 @@ pub struct MatchCase {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyMatchCaseParamVec {
-    Unlabeled(NonEmptyVec<Identifier>),
+    Unlabeled(Vec<Identifier>),
     UniquelyLabeled {
-        params: Option<NonEmptyVec<LabeledMatchCaseParam>>,
+        params: Option<Vec<LabeledMatchCaseParam>>,
         triple_dot: Option<TextSpan>,
     },
-}
-
-impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamVec> {
-    fn len(&self) -> usize {
-        self.as_ref().map(|v| v.len()).unwrap_or(0)
-    }
 }
 
 impl NonEmptyMatchCaseParamVec {
@@ -260,7 +244,7 @@ pub struct Forall {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: TextSpan,
-    pub assertions: NonEmptyVec<CheckAssertion>,
+    pub assertions: Vec<CheckAssertion>,
     pub output: Expression,
 }
 

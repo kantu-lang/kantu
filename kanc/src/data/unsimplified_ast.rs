@@ -1,4 +1,4 @@
-use crate::data::{file_id::*, non_empty_veclike::NonEmptyVec, text_span::*};
+use crate::data::{file_id::*, text_span::*};
 
 use std::num::NonZeroUsize;
 
@@ -75,7 +75,7 @@ pub struct TypeStatement {
     pub span: TextSpan,
     pub visibility: Option<PubClause>,
     pub name: Identifier,
-    pub params: Option<NonEmptyVec<Param>>,
+    pub params: Option<Vec<Param>>,
     pub variants: Vec<Variant>,
 }
 
@@ -127,7 +127,7 @@ pub enum ParamLabel {
 pub struct Variant {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: Option<NonEmptyVec<Param>>,
+    pub params: Option<Vec<Param>>,
     pub return_type: Expression,
 }
 
@@ -310,7 +310,7 @@ pub struct Dot {
 pub struct Call {
     pub span: TextSpan,
     pub callee: Expression,
-    pub args: NonEmptyVec<CallArg>,
+    pub args: Vec<CallArg>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -336,7 +336,7 @@ impl CallArg {
 pub struct Fun {
     pub span: TextSpan,
     pub name: Identifier,
-    pub params: NonEmptyVec<Param>,
+    pub params: Vec<Param>,
     pub return_type: Expression,
     pub body: Expression,
 }
@@ -352,7 +352,7 @@ pub struct Match {
 pub struct MatchCase {
     pub span: TextSpan,
     pub variant_name: Identifier,
-    pub params: Option<NonEmptyVec<MatchCaseParam>>,
+    pub params: Option<Vec<MatchCaseParam>>,
     pub triple_dot: Option<TextSpan>,
     pub output: MatchCaseOutput,
 }
@@ -382,14 +382,14 @@ pub enum MatchCaseOutput {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Forall {
     pub span: TextSpan,
-    pub params: NonEmptyVec<Param>,
+    pub params: Vec<Param>,
     pub output: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: TextSpan,
-    pub assertions: NonEmptyVec<CheckAssertion>,
+    pub assertions: Vec<CheckAssertion>,
     pub output: Expression,
 }
 

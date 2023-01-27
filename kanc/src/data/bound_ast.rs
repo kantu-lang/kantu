@@ -1,10 +1,4 @@
-use crate::data::{
-    bind_error::BindError,
-    file_id::*,
-    non_empty_veclike::{NonEmptyVec, OptionalNonEmptyVecLen},
-    simplified_ast as unbound,
-    text_span::*,
-};
+use crate::data::{bind_error::BindError, file_id::*, simplified_ast as unbound, text_span::*};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum FileItem {
@@ -44,8 +38,8 @@ pub struct Transparency(pub ModScope);
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyParamVec {
-    Unlabeled(NonEmptyVec<UnlabeledParam>),
-    UniquelyLabeled(NonEmptyVec<LabeledParam>),
+    Unlabeled(Vec<UnlabeledParam>),
+    UniquelyLabeled(Vec<LabeledParam>),
 }
 
 impl NonEmptyParamVec {
@@ -134,7 +128,7 @@ impl Expression {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameExpression {
     pub span: Option<TextSpan>,
-    pub components: NonEmptyVec<Identifier>,
+    pub components: Vec<Identifier>,
     /// De Bruijn index (zero-based).
     pub db_index: DbIndex,
 }
@@ -177,8 +171,8 @@ pub struct Call {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyCallArgVec {
-    Unlabeled(NonEmptyVec<Expression>),
-    UniquelyLabeled(NonEmptyVec<LabeledCallArg>),
+    Unlabeled(Vec<Expression>),
+    UniquelyLabeled(Vec<LabeledCallArg>),
 }
 
 impl NonEmptyCallArgVec {
@@ -228,17 +222,11 @@ pub struct MatchCase {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum NonEmptyMatchCaseParamVec {
-    Unlabeled(NonEmptyVec<Identifier>),
+    Unlabeled(Vec<Identifier>),
     UniquelyLabeled {
-        params: Option<NonEmptyVec<LabeledMatchCaseParam>>,
+        params: Option<Vec<LabeledMatchCaseParam>>,
         triple_dot: Option<TextSpan>,
     },
-}
-
-impl OptionalNonEmptyVecLen for Option<NonEmptyMatchCaseParamVec> {
-    fn len(&self) -> usize {
-        self.as_ref().map(|v| v.len()).unwrap_or(0)
-    }
 }
 
 impl NonEmptyMatchCaseParamVec {
@@ -276,7 +264,7 @@ pub struct Forall {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Check {
     pub span: Option<TextSpan>,
-    pub assertions: NonEmptyVec<CheckAssertion>,
+    pub assertions: Vec<CheckAssertion>,
     pub output: Expression,
 }
 
