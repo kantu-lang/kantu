@@ -150,10 +150,10 @@ fn simplify_params(unsimplified: Vec<ust::Param>) -> Result<NonEmptyParamVec, Si
 
     validate_param_label_is_not_underscore(&last)?;
 
-    if let Some(label) = last.label {
+    if let Some(label) = last.label_clause {
         let last = LabeledParam {
             span: last.span,
-            label,
+            label_clause: label,
             is_dashed: last.is_dashed,
             name: last.name,
             type_: simplify_expression(last.type_)?,
@@ -222,10 +222,10 @@ fn simplify_param_but_require_label(
 ) -> Result<LabeledParam, SimplifyAstError> {
     validate_param_label_is_not_underscore(&unsimplified)?;
 
-    if let Some(label) = unsimplified.label {
+    if let Some(label) = unsimplified.label_clause {
         Ok(LabeledParam {
             span: unsimplified.span,
-            label,
+            label_clause: label,
             is_dashed: unsimplified.is_dashed,
             name: unsimplified.name,
             type_: simplify_expression(unsimplified.type_)?,
@@ -241,7 +241,7 @@ fn simplify_param_but_forbid_label(
 ) -> Result<UnlabeledParam, SimplifyAstError> {
     validate_param_label_is_not_underscore(&unsimplified)?;
 
-    if let Some(_) = unsimplified.label {
+    if let Some(_) = unsimplified.label_clause {
         Err(hetero_err.clone())
     } else {
         Ok(UnlabeledParam {
@@ -349,7 +349,7 @@ fn simplify_call_args(
 
     validate_call_arg_label_is_not_underscore(&last)?;
 
-    if last.label.is_some() {
+    if last.label_clause.is_some() {
         let last = simplify_call_arg_but_require_label(last, &hetero_err)?;
         let remaining = simplify_call_args_but_require_labels(remaining, &hetero_err)?;
         Ok(NonEmptyCallArgVec::UniquelyLabeled(Vec::from_pushed(
@@ -410,15 +410,15 @@ fn simplify_call_arg_but_require_label(
 ) -> Result<LabeledCallArg, SimplifyAstError> {
     validate_call_arg_label_is_not_underscore(&unsimplified)?;
 
-    if let Some(label) = unsimplified.label {
+    if let Some(label) = unsimplified.label_clause {
         Ok(match label {
-            ParamLabel::Implicit => {
+            ParamLabelClause::Implicit => {
                 let ust::Expression::Identifier(label) = unsimplified.value else {
                     panic!("Impossible: Implicitly labeled call arg value must be an identifier.");
                 };
                 LabeledCallArg::Implicit(label)
             }
-            ParamLabel::Explicit(label) => {
+            ParamLabelClause::Explicit(label) => {
                 LabeledCallArg::Explicit(label, simplify_expression(unsimplified.value)?)
             }
         })
@@ -433,7 +433,7 @@ fn simplify_call_arg_but_forbid_label(
 ) -> Result<Expression, SimplifyAstError> {
     validate_call_arg_label_is_not_underscore(&unsimplified)?;
 
-    if let Some(_) = unsimplified.label {
+    if let Some(_) = unsimplified.label_clause {
         Err(hetero_err.clone())
     } else {
         simplify_expression(unsimplified.value)
@@ -506,10 +506,10 @@ fn simplify_match_case_params(
 
     validate_match_case_param_label_is_not_underscore(&last)?;
 
-    if let Some(label) = last.label {
+    if let Some(label) = last.label_clause {
         let last = LabeledMatchCaseParam {
             span: last.span,
-            label,
+            label_clause: label,
             name: last.name,
         };
         let remaining = simplify_match_case_params_but_require_labels(remaining, &hetero_err)?;
@@ -586,10 +586,10 @@ fn simplify_match_case_param_but_require_label(
 ) -> Result<LabeledMatchCaseParam, SimplifyAstError> {
     validate_match_case_param_label_is_not_underscore(&unsimplified)?;
 
-    if let Some(label) = unsimplified.label {
+    if let Some(label) = unsimplified.label_clause {
         Ok(LabeledMatchCaseParam {
             span: unsimplified.span,
-            label,
+            label_clause: label,
             name: unsimplified.name,
         })
     } else {
@@ -603,7 +603,7 @@ fn simplify_match_case_param_but_forbid_label(
 ) -> Result<Identifier, SimplifyAstError> {
     validate_match_case_param_label_is_not_underscore(&unsimplified)?;
 
-    if let Some(_) = unsimplified.label {
+    if let Some(_) = unsimplified.label_clause {
         Err(hetero_err.clone())
     } else {
         Ok(unsimplified.name)

@@ -70,7 +70,10 @@ fn call() {
         match &expression {
             Expression::Call(call) => {
                 assert_eq!(3, call.args.len());
-                assert_eq!(None, call.args.iter().find(|arg| arg.label.is_some()));
+                assert_eq!(
+                    None,
+                    call.args.iter().find(|arg| arg.label_clause.is_some())
+                );
 
                 match (
                     &call.callee,
@@ -118,25 +121,31 @@ fn labeled_call() {
                     Expression::Dot(callee) => {
                         assert_eq!(IdentifierName::new("b".to_string()), callee.right.name);
 
-                        assert_eq!(Some(ParamLabel::Implicit), arg0.label);
+                        assert_eq!(Some(ParamLabelClause::Implicit), arg0.label_clause);
                         assert_eq!(
                             Some(&IdentifierName::new("c".to_string())),
                             arg0.label_name()
                         );
 
-                        assert!(matches!(arg1.label, Some(ParamLabel::Explicit(_))));
+                        assert!(matches!(
+                            arg1.label_clause,
+                            Some(ParamLabelClause::Explicit(_))
+                        ));
                         assert_eq!(
                             Some(&IdentifierName::new("e".to_string())),
                             arg1.label_name()
                         );
 
-                        assert_eq!(Some(ParamLabel::Implicit), arg0.label);
+                        assert_eq!(Some(ParamLabelClause::Implicit), arg0.label_clause);
                         assert_eq!(
                             Some(&IdentifierName::new("f".to_string())),
                             arg2.label_name()
                         );
 
-                        assert!(matches!(arg3.label, Some(ParamLabel::Explicit(_))));
+                        assert!(matches!(
+                            arg3.label_clause,
+                            Some(ParamLabelClause::Explicit(_))
+                        ));
                         assert_eq!(
                             Some(&IdentifierName::new("g".to_string())),
                             arg3.label_name()
@@ -168,14 +177,14 @@ fn fun() {
                 fun.params[0].name.name
             );
             assert!(fun.params[0].is_dashed);
-            assert_eq!(None, fun.params[0].label);
+            assert_eq!(None, fun.params[0].label_clause);
 
             assert_eq!(
                 IdentifierName::new("b".to_string()),
                 fun.params[1].name.name
             );
             assert!(!fun.params[1].is_dashed);
-            assert_eq!(None, fun.params[1].label);
+            assert_eq!(None, fun.params[1].label_clause);
         }
         other => panic!("Unexpected expression {:?}", other),
     });
@@ -196,7 +205,7 @@ fn labeled_fun() {
                 fun.params[0].name.name
             );
             assert!(fun.params[0].is_dashed);
-            assert_eq!(Some(ParamLabel::Implicit), fun.params[0].label);
+            assert_eq!(Some(ParamLabelClause::Implicit), fun.params[0].label_clause);
 
             assert_eq!(
                 IdentifierName::new("b".to_string()),
@@ -205,10 +214,13 @@ fn labeled_fun() {
             assert!(!fun.params[1].is_dashed);
             assert_eq!(
                 Some(&IdentifierName::new("bar".to_string())),
-                fun.params[1].label.as_ref().and_then(|label| match label {
-                    ParamLabel::Explicit(name) => Some(&name.name),
-                    ParamLabel::Implicit => None,
-                })
+                fun.params[1]
+                    .label_clause
+                    .as_ref()
+                    .and_then(|label| match label {
+                        ParamLabelClause::Explicit(name) => Some(&name.name),
+                        ParamLabelClause::Implicit => None,
+                    })
             );
         }
         other => panic!("Unexpected expression {:?}", other),
@@ -248,7 +260,7 @@ fn labeled_match() {
             assert_eq!(2, case_d.params.len());
             assert!(matches!(
                 case_d.params.to_possibly_empty()[0].label,
-                Some(ParamLabel::Implicit)
+                Some(ParamLabelClause::Implicit)
             ));
             assert_eq!(
                 Some(&IdentifierName::new("x'".to_string())),
@@ -260,7 +272,7 @@ fn labeled_match() {
             );
             assert!(matches!(
                 case_d.params.to_possibly_empty()[1].label,
-                Some(ParamLabel::Implicit)
+                Some(ParamLabelClause::Implicit)
             ));
             assert_eq!(
                 Some(&IdentifierName::new("y'".to_string())),
@@ -280,7 +292,7 @@ fn labeled_match() {
             assert_eq!(2, case_f.params.len());
             assert!(matches!(
                 case_f.params.to_possibly_empty()[0].label,
-                Some(ParamLabel::Explicit(_))
+                Some(ParamLabelClause::Explicit(_))
             ));
             assert_eq!(
                 Some(&IdentifierName::new("foo".to_string())),
@@ -292,7 +304,7 @@ fn labeled_match() {
             );
             assert!(matches!(
                 case_f.params.to_possibly_empty()[1].label,
-                Some(ParamLabel::Explicit(_))
+                Some(ParamLabelClause::Explicit(_))
             ));
             assert_eq!(
                 Some(&IdentifierName::new("bar".to_string())),
@@ -328,7 +340,7 @@ fn labeled_match() {
             assert_eq!(2, case_l.params.len());
             assert!(matches!(
                 case_l.params.to_possibly_empty()[0].label,
-                Some(ParamLabel::Explicit(_))
+                Some(ParamLabelClause::Explicit(_))
             ));
             assert_eq!(
                 Some(&IdentifierName::new("foo".to_string())),
@@ -340,7 +352,7 @@ fn labeled_match() {
             );
             assert!(matches!(
                 case_l.params.to_possibly_empty()[1].label,
-                Some(ParamLabel::Implicit)
+                Some(ParamLabelClause::Implicit)
             ));
             assert_eq!(
                 Some(&IdentifierName::new("z".to_string())),

@@ -490,7 +490,7 @@ fn bind_labeled_param_dirty(
     let name = create_local_name_and_add_to_scope(context, param.name)?;
     Ok(LabeledParam {
         span: Some(param.span),
-        label: param.label.into(),
+        label_clause: param.label_clause.into(),
         is_dashed: param.is_dashed,
         name,
         type_,
@@ -785,7 +785,7 @@ fn bind_match_case_params(
                                 let name = create_local_name_and_add_to_scope(context, param.name)?;
                                 Ok(LabeledMatchCaseParam {
                                     span: Some(param.span),
-                                    label: param.label.into(),
+                                    label_clause: param.label.into(),
                                     name,
                                 })
                             },

@@ -108,17 +108,17 @@ pub fn expand_labeled_param(
     let type_ = expand_expression(registry, light.type_id);
     LabeledParam {
         span: light.span,
-        label,
+        label_clause: label,
         is_dashed: light.is_dashed,
         name,
         type_,
     }
 }
 
-pub fn expand_param_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLabel {
+pub fn expand_param_label(registry: &NodeRegistry, id: ParamLabelId) -> ParamLabelClause {
     match id {
-        ParamLabelId::Implicit => ParamLabel::Implicit,
-        ParamLabelId::Explicit(id) => ParamLabel::Explicit(expand_identifier(registry, id)),
+        ParamLabelId::Implicit => ParamLabelClause::Implicit,
+        ParamLabelId::Explicit(id) => ParamLabelClause::Explicit(expand_identifier(registry, id)),
     }
 }
 
@@ -368,7 +368,7 @@ pub fn expand_labeled_match_case_param(
     let name = expand_identifier(registry, light.name_id);
     LabeledMatchCaseParam {
         span: light.span,
-        label,
+        label_clause: label,
         name,
     }
 }

@@ -43,7 +43,7 @@ pub fn register_type_statement(
     })
 }
 
-pub fn register_identifier(bump: &Bump, unregistered: heavy::Identifier) -> &Identifier<'_> {
+pub fn register_identifier(bump: &Bump, unregistered: heavy::Identifier) -> &Identifier {
     bump.alloc(Identifier {
         span: unregistered.span,
         name: unregistered.name,
@@ -79,7 +79,7 @@ pub fn register_params(bump: &Bump, unregistered: heavy::NonEmptyParamVec) -> &N
 pub fn register_unlabeled_param(
     bump: &Bump,
     unregistered: heavy::UnlabeledParam,
-) -> &'a UnlabeledParam<'a> {
+) -> &UnlabeledParam<'_> {
     let name = register_identifier(bump, unregistered.name);
     let type_ = register_expression(bump, unregistered.type_);
     bump.alloc(UnlabeledParam {
@@ -90,11 +90,8 @@ pub fn register_unlabeled_param(
     })
 }
 
-pub fn register_labeled_param(
-    bump: &Bump,
-    unregistered: heavy::LabeledParam,
-) -> &'a LabeledParam<'a> {
-    let label = register_param_label(bump, unregistered.label);
+pub fn register_labeled_param(bump: &Bump, unregistered: heavy::LabeledParam) -> &LabeledParam<'_> {
+    let label = register_param_label(bump, unregistered.label_clause);
     let name = register_identifier(bump, unregistered.name);
     let type_ = register_expression(bump, unregistered.type_);
     bump.alloc(LabeledParam {
@@ -106,10 +103,13 @@ pub fn register_labeled_param(
     })
 }
 
-pub fn register_param_label(bump: &Bump, unregistered: heavy::ParamLabel) -> ParamLabelId {
+pub fn register_param_label(
+    bump: &Bump,
+    unregistered: heavy::ParamLabelClause,
+) -> ParamLabelClause {
     match unregistered {
-        heavy::ParamLabel::Implicit => ParamLabelId::Implicit,
-        heavy::ParamLabel::Explicit(unregistered) => {
+        heavy::ParamLabelClause::Implicit => ParamLabelId::Implicit,
+        heavy::ParamLabelClause::Explicit(unregistered) => {
             ParamLabelId::Explicit(register_identifier(bump, unregistered))
         }
     }
@@ -339,7 +339,7 @@ pub fn register_labeled_match_case_param(
     bump: &Bump,
     unregistered: heavy::LabeledMatchCaseParam,
 ) -> &'a LabeledMatchCaseParam<'a> {
-    let label = register_param_label(bump, unregistered.label);
+    let label = register_param_label(bump, unregistered.label_clause);
     let name = register_identifier(bump, unregistered.name);
     bump.alloc(LabeledMatchCaseParam {
         span: unregistered.span,

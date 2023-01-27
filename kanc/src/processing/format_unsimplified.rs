@@ -75,12 +75,12 @@ pub fn format_call(call: &Call, indent_level: usize, options: &FormatOptions) ->
 }
 
 pub fn format_call_arg(arg: &CallArg, indent_level: usize, options: &FormatOptions) -> String {
-    match &arg.label {
+    match &arg.label_clause {
         None => format_expression(&arg.value, indent_level, options),
-        Some(ParamLabel::Implicit) => {
+        Some(ParamLabelClause::Implicit) => {
             format!(":{}", format_expression(&arg.value, indent_level, options))
         }
-        Some(ParamLabel::Explicit(label)) => {
+        Some(ParamLabelClause::Explicit(label)) => {
             format!(
                 "{}: {}",
                 label.name.src_str(),
@@ -119,9 +119,9 @@ pub fn format_params(params: &Vec<Param>, indent_level: usize, options: &FormatO
 }
 
 pub fn format_param(param: &Param, indent_level: usize, options: &FormatOptions) -> String {
-    let label = match &param.label {
-        Some(ParamLabel::Explicit(ident)) => format!("{}~", format_identifier(ident)),
-        Some(ParamLabel::Implicit) => "~".to_string(),
+    let label = match &param.label_clause {
+        Some(ParamLabelClause::Explicit(ident)) => format!("{}~", format_identifier(ident)),
+        Some(ParamLabelClause::Implicit) => "~".to_string(),
         None => "".to_string(),
     };
     let is_dashed = if param.is_dashed { "-" } else { "" };
@@ -209,10 +209,10 @@ pub fn format_optional_match_case_params(
 }
 
 pub fn format_match_case_param(param: &MatchCaseParam) -> String {
-    match &param.label {
+    match &param.label_clause {
         None => format_identifier(&param.name),
-        Some(ParamLabel::Implicit) => format!(":{}", format_identifier(&param.name)),
-        Some(ParamLabel::Explicit(label)) => {
+        Some(ParamLabelClause::Implicit) => format!(":{}", format_identifier(&param.name)),
+        Some(ParamLabelClause::Explicit(label)) => {
             format!(
                 "{}: {}",
                 label.name.src_str(),

@@ -102,7 +102,7 @@ pub enum ModScopeModifierKind {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Param {
     pub span: TextSpan,
-    pub label: Option<ParamLabel>,
+    pub label_clause: Option<ParamLabelClause>,
     pub is_dashed: bool,
     pub name: Identifier,
     pub type_: Expression,
@@ -110,15 +110,15 @@ pub struct Param {
 
 impl Param {
     pub fn label_name(&self) -> Option<&IdentifierName> {
-        self.label.as_ref().map(|label| match label {
-            ParamLabel::Implicit => &self.name.name,
-            ParamLabel::Explicit(name) => &name.name,
+        self.label_clause.as_ref().map(|label| match label {
+            ParamLabelClause::Implicit => &self.name.name,
+            ParamLabelClause::Explicit(name) => &name.name,
         })
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ParamLabel {
+pub enum ParamLabelClause {
     Implicit,
     Explicit(Identifier),
 }
@@ -316,18 +316,18 @@ pub struct Call {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallArg {
     pub span: TextSpan,
-    pub label: Option<ParamLabel>,
+    pub label_clause: Option<ParamLabelClause>,
     pub value: Expression,
 }
 
 impl CallArg {
     pub fn label_name(&self) -> Option<&IdentifierName> {
-        self.label.as_ref().map(|label| match label {
-            ParamLabel::Implicit => match &self.value {
+        self.label_clause.as_ref().map(|label| match label {
+            ParamLabelClause::Implicit => match &self.value {
                 Expression::Identifier(identifier) => &identifier.name,
                 _ => panic!("Implicit argument label must be an identifier"),
             },
-            ParamLabel::Explicit(name) => &name.name,
+            ParamLabelClause::Explicit(name) => &name.name,
         })
     }
 }
@@ -360,15 +360,15 @@ pub struct MatchCase {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MatchCaseParam {
     pub span: TextSpan,
-    pub label: Option<ParamLabel>,
+    pub label_clause: Option<ParamLabelClause>,
     pub name: Identifier,
 }
 
 impl MatchCaseParam {
     pub fn label_name(&self) -> Option<&IdentifierName> {
-        self.label.as_ref().map(|label| match label {
-            ParamLabel::Implicit => &self.name.name,
-            ParamLabel::Explicit(name) => &name.name,
+        self.label_clause.as_ref().map(|label| match label {
+            ParamLabelClause::Implicit => &self.name.name,
+            ParamLabelClause::Explicit(name) => &name.name,
         })
     }
 }

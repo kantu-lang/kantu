@@ -89,13 +89,13 @@ pub struct UnlabeledParam {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledParam {
     pub span: TextSpan,
-    pub label: ParamLabel,
+    pub label_clause: ParamLabelClause,
     pub is_dashed: bool,
     pub name: Identifier,
     pub type_: Expression,
 }
 
-pub use crate::data::unsimplified_ast::ParamLabel;
+pub use crate::data::unsimplified_ast::ParamLabelClause;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant {
@@ -230,7 +230,7 @@ pub enum MatchCaseOutput {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledMatchCaseParam {
     pub span: TextSpan,
-    pub label: ParamLabel,
+    pub label_clause: ParamLabelClause,
     pub name: Identifier,
 }
 

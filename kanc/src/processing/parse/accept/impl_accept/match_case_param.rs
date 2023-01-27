@@ -61,7 +61,7 @@ impl Accept for UnfinishedMatchCaseParam {
                                 MatchCaseParam {
                                     span: span_single(file_id, colon)
                                         .inclusive_merge(label_and_value.span),
-                                    label: Some(ParamLabel::Implicit),
+                                    label_clause: Some(ParamLabelClause::Implicit),
                                     name: label_and_value.clone(),
                                 },
                                 end_delimiter,
@@ -96,7 +96,7 @@ impl Accept for UnfinishedMatchCaseParam {
                                     first_token.clone(),
                                     MatchCaseParam {
                                         span: identifier.span,
-                                        label: None,
+                                        label_clause: None,
                                         name: identifier.clone(),
                                     },
                                     end_delimiter,
@@ -145,7 +145,7 @@ impl Accept for UnfinishedMatchCaseParam {
                                 first_token.clone(),
                                 MatchCaseParam {
                                     span: label.span.inclusive_merge(name.span),
-                                    label: Some(ParamLabel::Explicit(label.clone())),
+                                    label_clause: Some(ParamLabelClause::Explicit(label.clone())),
                                     name: name.clone(),
                                 },
                                 end_delimiter,

@@ -299,7 +299,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
             }
 
             SimplifyAstError::HeterogeneousParams(params) => {
-                let is_first_labeled = params[0].label.is_some();
+                let is_first_labeled = params[0].label_clause.is_some();
                 let (first_display_with_capitalized_article, second_display_with_lowercase_article) =
                     if is_first_labeled {
                         ("A labeled parameter", "an unlabeled parameter")
@@ -309,7 +309,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
                 let first_loc = format_span_start(params[0].span, file_path_map);
                 let second_param = params
                     .iter()
-                    .find(|param| param.label.is_some() != is_first_labeled)
+                    .find(|param| param.label_clause.is_some() != is_first_labeled)
                     .expect("There should be at least one labeled and one unlabeled parameter.");
                 let second_loc = format_span_start(second_param.span, file_path_map);
                 format!("[E0401] A parameter list must be either all unlabeled or all labeled. {first_display_with_capitalized_article} is declared at {first_loc} but a {second_display_with_lowercase_article} is declarated at {second_loc}.")
@@ -329,7 +329,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
             }
 
             SimplifyAstError::HeterogeneousCallArgs(args) => {
-                let is_first_labeled = args[0].label.is_some();
+                let is_first_labeled = args[0].label_clause.is_some();
                 let (first_display_with_capitalized_article, second_display_with_lowercase_article) =
                     if is_first_labeled {
                         ("A labeled argument", "an unlabeled argument")
@@ -339,7 +339,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
                 let first_loc = format_span_start(args[0].span, file_path_map);
                 let second_arg = args
                     .iter()
-                    .find(|arg| arg.label.is_some() != is_first_labeled)
+                    .find(|arg| arg.label_clause.is_some() != is_first_labeled)
                     .expect("There should be at least one labeled and one unlabeled argument.");
                 let second_loc = format_span_start(second_arg.span, file_path_map);
                 format!("[E0404] A call argument list must be either all unlabeled or all labeled. {first_display_with_capitalized_article} is declared at {first_loc} but {second_display_with_lowercase_article} is declarated at {second_loc}.")
@@ -359,7 +359,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
             }
 
             SimplifyAstError::HeterogeneousMatchCaseParams(params) => {
-                let is_first_labeled = params[0].label.is_some();
+                let is_first_labeled = params[0].label_clause.is_some();
                 let (first_display_with_capitalized_article, second_display_with_lowercase_article) =
                     if is_first_labeled {
                         ("A labeled parameter", "an unlabeled parameter")
@@ -369,7 +369,7 @@ impl<'a> FormatErrorForCli<&'a FilePathMap> for SimplifyAstError {
                 let first_loc = format_span_start(params[0].span, file_path_map);
                 let second_param = params
                     .iter()
-                    .find(|param| param.label.is_some() != is_first_labeled)
+                    .find(|param| param.label_clause.is_some() != is_first_labeled)
                     .expect("There should be at least one labeled and one unlabeled parameter.");
                 let second_loc = format_span_start(second_param.span, file_path_map);
                 format!("[E0407] A match case parameter list must be either all unlabeled or all labeled. {first_display_with_capitalized_article} is declared at {first_loc} but a {second_display_with_lowercase_article} is declarated at {second_loc}.")

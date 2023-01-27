@@ -62,23 +62,23 @@ pub struct UnlabeledParam {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledParam {
     pub span: Option<TextSpan>,
-    pub label: ParamLabel,
+    pub label_clause: ParamLabelClause,
     pub is_dashed: bool,
     pub name: Identifier,
     pub type_: Expression,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ParamLabel {
+pub enum ParamLabelClause {
     Implicit,
     Explicit(Identifier),
 }
 
-impl From<unbound::ParamLabel> for ParamLabel {
-    fn from(label: unbound::ParamLabel) -> Self {
-        match label {
-            unbound::ParamLabel::Implicit => ParamLabel::Implicit,
-            unbound::ParamLabel::Explicit(name) => ParamLabel::Explicit(name.into()),
+impl From<unbound::ParamLabelClause> for ParamLabelClause {
+    fn from(label_clause: unbound::ParamLabelClause) -> Self {
+        match label_clause {
+            unbound::ParamLabelClause::Implicit => ParamLabelClause::Implicit,
+            unbound::ParamLabelClause::Explicit(name) => ParamLabelClause::Explicit(name.into()),
         }
     }
 }
@@ -244,7 +244,7 @@ impl NonEmptyMatchCaseParamVec {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LabeledMatchCaseParam {
     pub span: Option<TextSpan>,
-    pub label: ParamLabel,
+    pub label_clause: ParamLabelClause,
     pub name: Identifier,
 }
 

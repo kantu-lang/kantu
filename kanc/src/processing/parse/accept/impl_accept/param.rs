@@ -93,8 +93,8 @@ impl Accept for UnfinishedParam {
                                 &first_token,
                                 end_delimiter.raw(),
                             ),
-                            label: if *is_tilded {
-                                Some(ParamLabel::Implicit)
+                            label_clause: if *is_tilded {
+                                Some(ParamLabelClause::Implicit)
                             } else {
                                 None
                             },
@@ -165,7 +165,7 @@ impl Accept for UnfinishedParam {
                                 &first_token,
                                 end_delimiter.raw(),
                             ),
-                            label: Some(ParamLabel::Explicit(label.clone())),
+                            label_clause: Some(ParamLabelClause::Explicit(label.clone())),
                             is_dashed: *is_dashed,
                             name: name.clone(),
                             type_: expression,

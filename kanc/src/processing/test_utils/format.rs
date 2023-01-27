@@ -175,9 +175,9 @@ pub fn format_labeled_param(
     indent_level: usize,
     options: &FormatOptions,
 ) -> String {
-    let explicit_label = match &param.label {
-        ParamLabel::Explicit(ident) => format_ident(ident),
-        ParamLabel::Implicit => "",
+    let explicit_label = match &param.label_clause {
+        ParamLabelClause::Explicit(ident) => format_ident(ident),
+        ParamLabelClause::Implicit => "",
     };
     let is_dashed = if param.is_dashed { "-" } else { "" };
     format!(
@@ -281,9 +281,9 @@ pub fn format_match_case_params(params: &NonEmptyMatchCaseParamVec) -> String {
 }
 
 pub fn format_labeled_match_case_param(param: &LabeledMatchCaseParam) -> String {
-    match &param.label {
-        ParamLabel::Implicit => format!(":{}", format_ident(&param.name)),
-        ParamLabel::Explicit(label) => {
+    match &param.label_clause {
+        ParamLabelClause::Implicit => format!(":{}", format_ident(&param.name)),
+        ParamLabelClause::Explicit(label) => {
             format!("{}: {}", format_ident(label), format_ident(&param.name))
         }
     }

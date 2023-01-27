@@ -185,12 +185,12 @@ impl ReplaceSpansAndFileIdsWithDummies for Vec<Param> {
 
 impl ReplaceSpansAndFileIdsWithDummies for Param {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        let label = self.label.replace_spans_and_file_ids_with_dummies();
+        let label = self.label_clause.replace_spans_and_file_ids_with_dummies();
         let name = self.name.replace_spans_and_file_ids_with_dummies();
         let type_ = self.type_.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
-            label,
+            label_clause: label,
             is_dashed: self.is_dashed,
             name,
             type_,
@@ -198,12 +198,12 @@ impl ReplaceSpansAndFileIdsWithDummies for Param {
     }
 }
 
-impl ReplaceSpansAndFileIdsWithDummies for ParamLabel {
+impl ReplaceSpansAndFileIdsWithDummies for ParamLabelClause {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         match self {
-            ParamLabel::Implicit => ParamLabel::Implicit,
-            ParamLabel::Explicit(label) => {
-                ParamLabel::Explicit(label.replace_spans_and_file_ids_with_dummies())
+            ParamLabelClause::Implicit => ParamLabelClause::Implicit,
+            ParamLabelClause::Explicit(label) => {
+                ParamLabelClause::Explicit(label.replace_spans_and_file_ids_with_dummies())
             }
         }
     }
@@ -310,10 +310,10 @@ impl ReplaceSpansAndFileIdsWithDummies for Vec<CallArg> {
 impl ReplaceSpansAndFileIdsWithDummies for CallArg {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
         let value = self.value.replace_spans_and_file_ids_with_dummies();
-        let label = self.label.replace_spans_and_file_ids_with_dummies();
+        let label = self.label_clause.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
-            label,
+            label_clause: label,
             value,
         }
     }
@@ -371,11 +371,11 @@ impl ReplaceSpansAndFileIdsWithDummies for Vec<MatchCaseParam> {
 
 impl ReplaceSpansAndFileIdsWithDummies for MatchCaseParam {
     fn replace_spans_and_file_ids_with_dummies(self) -> Self {
-        let label = self.label.replace_spans_and_file_ids_with_dummies();
+        let label = self.label_clause.replace_spans_and_file_ids_with_dummies();
         let name = self.name.replace_spans_and_file_ids_with_dummies();
         Self {
             span: dummy_span(),
-            label,
+            label_clause: label,
             name,
         }
     }
