@@ -3,7 +3,7 @@ use super::*;
 pub(in crate::processing::type_check) fn get_type_of_match_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    match_id: NodeId<Match>,
+    match_id: &'a Match<'a>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let match_ = state.registry.get(match_id).clone();
     let matchee_type_id = get_type_of_expression_dirty(state, None, match_.matchee_id)?;
@@ -88,7 +88,7 @@ pub(in crate::processing::type_check) fn get_type_of_match_dirty(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum MatchCaseOutputTypeCheckSuccess {
     NotObviouslyImpossible {
-        output_id: ExpressionId,
+        output_id: ExpressionRef<'a>,
         output_type_id: NormalFormId,
     },
     ObviouslyImpossible,
@@ -97,7 +97,7 @@ enum MatchCaseOutputTypeCheckSuccess {
 fn get_type_of_match_case_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    case_id: NodeId<MatchCase>,
+    case_id: &'a MatchCase<'a>,
     normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
     matchee_type: NormalFormAdtExpression,
@@ -134,8 +134,8 @@ fn get_type_of_match_case_dirty(
 fn get_type_of_allegedly_non_impossible_match_case_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    case_id: NodeId<MatchCase>,
-    case_output_id: ExpressionId,
+    case_id: &'a MatchCase<'a>,
+    case_output_id: ExpressionRef<'a>,
     normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
     matchee_type: NormalFormAdtExpression,
@@ -210,7 +210,7 @@ fn get_type_of_allegedly_non_impossible_match_case_dirty(
 
 fn verify_allegedly_impossible_match_case_is_actually_impossible_dirty(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
+    case_id: &'a MatchCase<'a>,
     normalized_matchee_id: NormalFormId,
     matchee_type_id: NormalFormId,
     matchee_type: NormalFormAdtExpression,
@@ -273,13 +273,13 @@ impl CaseOutputSubstitutions {
 #[derive(Debug, Copy, Clone)]
 struct CaseOutputSubstitution {
     explicit_param_index: usize,
-    explicit_param_name_id: NodeId<Identifier>,
+    explicit_param_name_id: &'a Identifier<'a>,
     corresponding_variant_param_index: usize,
 }
 
 fn add_case_params_to_context_and_parameterize_terms_dirty(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
+    case_id: &'a MatchCase<'a>,
     matchee_type: NormalFormAdtExpression,
 ) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
@@ -288,7 +288,7 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
     let variant_type_id = state.context.get_type(variant_dbi, state.registry);
 
     match variant_type_id.raw() {
-        ExpressionId::Forall(normalized_forall_id) => {
+        ExpressionRef<'a>::Forall(normalized_forall_id) => {
             let normalized_forall = state.registry.get(normalized_forall_id).clone();
 
             match normalized_forall.param_list_id {
@@ -321,7 +321,7 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
                 }
             }
         }
-        ExpressionId::Name(_) | ExpressionId::Call(_) => {
+        ExpressionRef<'a>::Name(_) | ExpressionRef<'a>::Call(_) => {
             add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_dirty(
                 state,
                 case_id,
@@ -343,11 +343,11 @@ fn add_case_params_to_context_and_parameterize_terms_dirty(
 
 fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_dirty(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
+    case_id: &'a MatchCase<'a>,
     matchee_type: NormalFormAdtExpression,
     variant_dbi: DbIndex,
-    variant_type_id: NodeId<Forall>,
-    variant_type_param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+    variant_type_id: &'a Forall<'a>,
+    variant_type_param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
 ) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
     let expected_case_param_arity = variant_type_param_list_id.len;
@@ -385,7 +385,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
     }
 
     let (parameterized_matchee_id, parameterized_matchee_type_id) = {
-        let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+        let fully_qualified_variant_name_component_ids: NonEmptyVec<&'a Identifier<'a>> = {
             let matchee_type_name = state.registry.get(matchee_type.type_name_id);
             let matchee_type_name_component_ids = state
                 .registry
@@ -394,7 +394,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
             NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
         };
         let shifted_variant_dbi = DbIndex(variant_dbi.0 + case.param_list_id.len());
-        let callee_id = ExpressionId::Name(add_name_expression(
+        let callee_id = ExpressionRef<'a>::Name(add_name_expression(
             state.registry,
             fully_qualified_variant_name_component_ids,
             shifted_variant_dbi,
@@ -407,7 +407,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
         let arg_ids = case_param_name_ids
             .as_non_empty_slice()
             .enumerate_to_mapped(|(index, &case_param_id)| {
-                ExpressionId::Name(add_name_expression(
+                ExpressionRef<'a>::Name(add_name_expression(
                     state.registry,
                     NonEmptyVec::singleton(case_param_id),
                     DbIndex(case_param_arity - index - 1),
@@ -415,7 +415,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
             });
 
         let arg_list_id = NonEmptyCallArgListId::Unlabeled(state.registry.add_list(arg_ids));
-        let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
+        let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Call(
             state
                 .registry
                 .add_and_overwrite_id(Call {
@@ -433,7 +433,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
             .enumerate()
             .map(|(raw_index, case_param_id)| {
                 let db_index = DbIndex(case_param_name_ids.len() - raw_index - 1);
-                let param_name_expression_id = ExpressionId::Name(add_name_expression(
+                let param_name_expression_id = ExpressionRef<'a>::Name(add_name_expression(
                     state.registry,
                     NonEmptyVec::singleton(case_param_id),
                     db_index,
@@ -467,15 +467,15 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_unlabeled_
 
 fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_dirty(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
+    case_id: &'a MatchCase<'a>,
     matchee_type: NormalFormAdtExpression,
     variant_dbi: DbIndex,
-    variant_type_id: NodeId<Forall>,
-    variant_type_param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    variant_type_id: &'a Forall<'a>,
+    variant_type_param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
 ) -> Result<WithPushWarning<ParameterizedTerms>, Tainted<TypeCheckError>> {
     let case = state.registry.get(case_id).clone();
     let Some(case_param_list_id) = case.param_list_id else {
-        let missing_label_ids: NonEmptyVec<NodeId<Identifier>> = state
+        let missing_label_ids: NonEmptyVec<&'a Identifier<'a>> = state
             .registry
             .get_list(variant_type_param_list_id)
             .to_mapped(|&param_id| state.registry.get(param_id).label());
@@ -528,7 +528,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
     }
 
     let (parameterized_matchee_id, parameterized_matchee_type_id) = {
-        let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+        let fully_qualified_variant_name_component_ids: NonEmptyVec<&'a Identifier<'a>> = {
             let matchee_type_name = state.registry.get(matchee_type.type_name_id);
             let matchee_type_name_component_ids = state
                 .registry
@@ -537,7 +537,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
             NonEmptyVec::from_pushed(matchee_type_name_component_ids, case.variant_name_id)
         };
         let shifted_variant_dbi = DbIndex(variant_dbi.0 + variant_type_param_list_id.len.get());
-        let callee_id = ExpressionId::Name(add_name_expression(
+        let callee_id = ExpressionRef<'a>::Name(add_name_expression(
             state.registry,
             fully_qualified_variant_name_component_ids,
             shifted_variant_dbi,
@@ -596,7 +596,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                         state.registry,
                     )
                 } else {
-                    let value_id = ExpressionId::Name(add_name_expression(
+                    let value_id = ExpressionRef<'a>::Name(add_name_expression(
                         state.registry,
                         NonEmptyVec::singleton(arg_name_id),
                         db_index,
@@ -608,7 +608,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 }
             });
         let arg_list_id = NonEmptyCallArgListId::UniquelyLabeled(state.registry.add_list(arg_ids));
-        let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionId::Call(
+        let parameterized_matchee_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Call(
             state
                 .registry
                 .add_and_overwrite_id(Call {
@@ -627,7 +627,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
                 let db_index = DbIndex(variant_type_param_ids.len() - variant_param_index - 1);
                 let arg_name_id = arg_name_ids[variant_param_index];
 
-                let to = ExpressionId::Name(add_name_expression(
+                let to = ExpressionRef<'a>::Name(add_name_expression(
                     state.registry,
                     NonEmptyVec::singleton(arg_name_id),
                     db_index,
@@ -694,7 +694,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_labeled_di
 
 fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_dirty(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
+    case_id: &'a MatchCase<'a>,
     matchee_type: NormalFormAdtExpression,
     variant_dbi: DbIndex,
     variant_type_id: NormalFormId,
@@ -718,7 +718,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
         });
     }
 
-    let fully_qualified_variant_name_component_ids: NonEmptyVec<NodeId<Identifier>> = {
+    let fully_qualified_variant_name_component_ids: NonEmptyVec<&'a Identifier<'a>> = {
         let matchee_type_name = state.registry.get(matchee_type.type_name_id);
         let matchee_type_name_component_ids = state
             .registry
@@ -730,7 +730,7 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
     // Since the case is nullary, we shift by zero.
     let shifted_variant_dbi = variant_dbi;
     let parameterized_matchee_id =
-        NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+        NormalFormId::unchecked_new(ExpressionRef<'a>::Name(add_name_expression(
             state.registry,
             fully_qualified_variant_name_component_ids,
             shifted_variant_dbi,
@@ -745,11 +745,11 @@ fn add_case_params_to_context_and_parameterize_terms_given_variant_is_nullary_di
 
 fn verify_every_case_param_has_a_corresponding_variant_param(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
-    explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
-    variant_type_param_ids: NonEmptySlice<NodeId<LabeledParam>>,
+    case_id: &'a MatchCase<'a>,
+    explicit_case_param_ids: &[&'a LabeledMatchCaseParam<'a>],
+    variant_type_param_ids: NonEmptySlice<&'a LabeledParam<'a>>,
 ) -> Result<(), Tainted<TypeCheckError>> {
-    let missing_case_param_ids: Vec<NodeId<LabeledMatchCaseParam>> = explicit_case_param_ids
+    let missing_case_param_ids: Vec<&'a LabeledMatchCaseParam<'a>> = explicit_case_param_ids
         .iter()
         .copied()
         .filter(|&case_param_id| {
@@ -785,11 +785,11 @@ fn verify_every_case_param_has_a_corresponding_variant_param(
 
 fn verify_every_variant_param_has_a_corresponding_case_param(
     state: &mut State,
-    case_id: NodeId<MatchCase>,
-    explicit_case_param_ids: &[NodeId<LabeledMatchCaseParam>],
-    variant_type_param_ids: NonEmptySlice<NodeId<LabeledParam>>,
+    case_id: &'a MatchCase<'a>,
+    explicit_case_param_ids: &[&'a LabeledMatchCaseParam<'a>],
+    variant_type_param_ids: NonEmptySlice<&'a LabeledParam<'a>>,
 ) -> Result<(), Tainted<TypeCheckError>> {
-    let mut missing_label_ids: Vec<NodeId<Identifier>> = vec![];
+    let mut missing_label_ids: Vec<&'a Identifier<'a>> = vec![];
     for &variant_type_param_id in variant_type_param_ids.iter() {
         let variant_type_param = state.registry.get(variant_type_param_id);
         let variant_type_param_label_name_id = variant_type_param.label();
@@ -823,9 +823,9 @@ fn verify_every_variant_param_has_a_corresponding_case_param(
 
 fn apply_case_output_substitutions(
     state: &mut ContextlessState,
-    case_output_id: ExpressionId,
+    case_output_id: ExpressionRef<'a>,
     subs: &CaseOutputSubstitutions,
-) -> ExpressionId {
+) -> ExpressionRef<'a> {
     // This case does not need to be handled specially,
     // (i.e., we could delete the whole `if` statement)
     // and the code would still be correct.
@@ -844,14 +844,14 @@ fn apply_case_output_substitutions(
             let variant_param_db_index =
                 DbIndex(subs.variant_arity - sub.corresponding_variant_param_index - 1);
             let dummy = sub.explicit_param_name_id;
-            let from = ExpressionId::Name(add_name_expression(
+            let from = ExpressionRef<'a>::Name(add_name_expression(
                 state.registry,
                 // This will never get used in the comparison,
                 // so it doesn't matter what we put here.
                 NonEmptyVec::singleton(dummy),
                 DbIndex(explicit_param_db_index.0 + subs.variant_arity),
             ));
-            let to = ExpressionId::Name(add_name_expression(
+            let to = ExpressionRef<'a>::Name(add_name_expression(
                 state.registry,
                 NonEmptyVec::singleton(sub.explicit_param_name_id),
                 variant_param_db_index,

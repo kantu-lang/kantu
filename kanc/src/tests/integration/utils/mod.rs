@@ -49,7 +49,7 @@ pub const FORMAT_OPTIONS_FOR_COMPARISON: FormatOptions = FormatOptions {
 
 pub fn component_identifier_names(
     registry: &NodeRegistry,
-    name_id: NodeId<NameExpression>,
+    name_id: &'a NameExpression<'a>,
 ) -> Vec<IdentifierName> {
     let name = registry.get(name_id);
     registry

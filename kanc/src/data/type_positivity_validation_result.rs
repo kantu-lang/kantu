@@ -16,20 +16,20 @@ impl<T> TypePositivityValidated<T> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum TypePositivityError {
-    ExpectedTypeGotFun(NodeId<Fun>),
+pub enum TypePositivityError<'a> {
+    ExpectedTypeGotFun(&'a Fun<'a>),
     NonAdtCallee {
-        call_id: NodeId<Call>,
-        callee_id: ExpressionId,
+        call_id: &'a Call<'a>,
+        callee_id: ExpressionRef<'a>,
     },
-    IllegalVariableAppearance(NodeId<NameExpression>),
+    IllegalVariableAppearance(&'a NameExpression<'a>),
     VariantReturnTypeTypeArgArityMismatch {
-        return_type_id: ExpressionId,
+        return_type_id: ExpressionRef<'a>,
         actual: usize,
         expected: usize,
     },
     VariantReturnTypeHadNonNameTypeArg {
-        variant_id: NodeId<Variant>,
+        variant_id: &'a Variant<'a>,
         type_arg_index: usize,
     },
 }

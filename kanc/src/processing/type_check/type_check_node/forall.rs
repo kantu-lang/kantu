@@ -2,7 +2,7 @@ use super::*;
 
 pub(in crate::processing::type_check) fn get_type_of_forall_dirty(
     state: &mut State,
-    forall_id: NodeId<Forall>,
+    forall_id: &'a Forall<'a>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let forall = state.registry.get(forall_id).clone();
     let _param_list_id =

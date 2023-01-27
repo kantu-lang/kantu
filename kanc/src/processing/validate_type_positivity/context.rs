@@ -10,8 +10,8 @@ pub struct Context {
 #[derive(Clone, Debug)]
 pub enum ContextEntryDefinition {
     /// Algebraic data type
-    Adt(NodeId<TypeStatement>),
-    Variant(NodeId<Variant>),
+    Adt(&'a TypeStatement<'a>),
+    Variant(&'a Variant<'a>),
     Uninterpreted,
 }
 

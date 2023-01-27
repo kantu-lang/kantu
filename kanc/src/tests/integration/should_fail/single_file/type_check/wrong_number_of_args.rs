@@ -12,7 +12,7 @@ fn expect_wrong_number_of_arguments_error(
             ..
         } => {
             let actual_src = format_expression(
-                &expand_expression(registry, ExpressionId::Call(call_id)),
+                &expand_expression(registry, ExpressionRef<'a>::Call(call_id)),
                 0,
                 &FORMAT_OPTIONS_FOR_COMPARISON,
             );

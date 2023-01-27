@@ -111,7 +111,7 @@ impl ShiftDbIndices for NormalFormId {
     }
 }
 
-impl ShiftDbIndices for ExpressionId {
+impl ShiftDbIndices for ExpressionRef<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -121,32 +121,32 @@ impl ShiftDbIndices for ExpressionId {
         registry: &mut NodeRegistry,
     ) -> Result<Self, F::ShiftError> {
         Ok(match self {
-            ExpressionId::Name(name_id) => {
-                ExpressionId::Name(name_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Name(name_id) => {
+                ExpressionRef<'a>::Name(name_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionId::Todo(todo_id) => {
-                ExpressionId::Todo(todo_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Todo(todo_id) => {
+                ExpressionRef<'a>::Todo(todo_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionId::Call(call_id) => {
-                ExpressionId::Call(call_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Call(call_id) => {
+                ExpressionRef<'a>::Call(call_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionId::Fun(fun_id) => {
-                ExpressionId::Fun(fun_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Fun(fun_id) => {
+                ExpressionRef<'a>::Fun(fun_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionId::Match(match_id) => {
-                ExpressionId::Match(match_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Match(match_id) => {
+                ExpressionRef<'a>::Match(match_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionId::Forall(forall_id) => {
-                ExpressionId::Forall(forall_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Forall(forall_id) => {
+                ExpressionRef<'a>::Forall(forall_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
-            ExpressionId::Check(check_id) => {
-                ExpressionId::Check(check_id.try_shift_with_cutoff(f, cutoff, registry)?)
+            ExpressionRef<'a>::Check(check_id) => {
+                ExpressionRef<'a>::Check(check_id.try_shift_with_cutoff(f, cutoff, registry)?)
             }
         })
     }
 }
 
-impl ShiftDbIndices for NodeId<NameExpression> {
+impl ShiftDbIndices for &'a NameExpression<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -165,7 +165,7 @@ impl ShiftDbIndices for NodeId<NameExpression> {
     }
 }
 
-impl ShiftDbIndices for NodeId<TodoExpression> {
+impl ShiftDbIndices for &'a TodoExpression<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -178,7 +178,7 @@ impl ShiftDbIndices for NodeId<TodoExpression> {
     }
 }
 
-impl ShiftDbIndices for NodeId<Call> {
+impl ShiftDbIndices for &'a Call<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -223,7 +223,7 @@ impl ShiftDbIndices for NonEmptyCallArgListId {
     }
 }
 
-impl ShiftDbIndices for NonEmptyListId<ExpressionId> {
+impl ShiftDbIndices for NonEmptyListId<ExpressionRef<'a>> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -284,7 +284,7 @@ impl ShiftDbIndices for LabeledCallArgId {
     }
 }
 
-impl ShiftDbIndices for NodeId<Fun> {
+impl ShiftDbIndices for &'a Fun<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -337,7 +337,7 @@ impl ShiftDbIndices for NonEmptyParamListId {
     }
 }
 
-impl ShiftDbIndices for NonEmptyListId<NodeId<UnlabeledParam>> {
+impl ShiftDbIndices for NonEmptyListId<&'a UnlabeledParam<'a>> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -356,7 +356,7 @@ impl ShiftDbIndices for NonEmptyListId<NodeId<UnlabeledParam>> {
     }
 }
 
-impl ShiftDbIndices for NodeId<UnlabeledParam> {
+impl ShiftDbIndices for &'a UnlabeledParam<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -377,7 +377,7 @@ impl ShiftDbIndices for NodeId<UnlabeledParam> {
     }
 }
 
-impl ShiftDbIndices for NonEmptyListId<NodeId<LabeledParam>> {
+impl ShiftDbIndices for NonEmptyListId<&'a LabeledParam<'a>> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -396,7 +396,7 @@ impl ShiftDbIndices for NonEmptyListId<NodeId<LabeledParam>> {
     }
 }
 
-impl ShiftDbIndices for NodeId<LabeledParam> {
+impl ShiftDbIndices for &'a LabeledParam<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -418,7 +418,7 @@ impl ShiftDbIndices for NodeId<LabeledParam> {
     }
 }
 
-impl ShiftDbIndices for NodeId<Match> {
+impl ShiftDbIndices for &'a Match<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -443,7 +443,7 @@ impl ShiftDbIndices for NodeId<Match> {
     }
 }
 
-impl ShiftDbIndices for NonEmptyListId<NodeId<MatchCase>> {
+impl ShiftDbIndices for NonEmptyListId<&'a MatchCase<'a>> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -460,7 +460,7 @@ impl ShiftDbIndices for NonEmptyListId<NodeId<MatchCase>> {
     }
 }
 
-impl ShiftDbIndices for NodeId<MatchCase> {
+impl ShiftDbIndices for &'a MatchCase<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -505,7 +505,7 @@ impl ShiftDbIndices for MatchCaseOutputId {
     }
 }
 
-impl ShiftDbIndices for NodeId<Forall> {
+impl ShiftDbIndices for &'a Forall<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -532,7 +532,7 @@ impl ShiftDbIndices for NodeId<Forall> {
     }
 }
 
-impl ShiftDbIndices for NodeId<Check> {
+impl ShiftDbIndices for &'a Check<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -555,7 +555,7 @@ impl ShiftDbIndices for NodeId<Check> {
     }
 }
 
-impl ShiftDbIndices for NonEmptyListId<NodeId<CheckAssertion>> {
+impl ShiftDbIndices for NonEmptyListId<&'a CheckAssertion<'a>> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(
@@ -572,7 +572,7 @@ impl ShiftDbIndices for NonEmptyListId<NodeId<CheckAssertion>> {
     }
 }
 
-impl ShiftDbIndices for NodeId<CheckAssertion> {
+impl ShiftDbIndices for &'a CheckAssertion<'a> {
     type Output = Self;
 
     fn try_shift_with_cutoff<F: ShiftFn>(

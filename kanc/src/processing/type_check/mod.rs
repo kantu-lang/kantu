@@ -39,82 +39,82 @@ use without_spans::*;
 #[derive(Clone, Debug)]
 pub enum TypeCheckError {
     ExpectedTermOfTypeType0OrType1 {
-        expression_id: ExpressionId,
+        expression_id: ExpressionRef<'a>,
         non_type0_or_type1_type_id: NormalFormId,
     },
     IllegalCallee {
-        callee_id: ExpressionId,
+        callee_id: ExpressionRef<'a>,
         callee_type_id: NormalFormId,
     },
     WrongNumberOfArguments {
-        call_id: NodeId<Call>,
+        call_id: &'a Call<'a>,
         expected: usize,
         actual: usize,
     },
     CallLabelednessMismatch {
-        call_id: NodeId<Call>,
+        call_id: &'a Call<'a>,
     },
     MissingLabeledCallArgs {
-        call_id: NodeId<Call>,
-        missing_label_list_id: NonEmptyListId<NodeId<Identifier>>,
+        call_id: &'a Call<'a>,
+        missing_label_list_id: NonEmptyListId<&'a Identifier<'a>>,
     },
     ExtraneousLabeledCallArg {
-        call_id: NodeId<Call>,
+        call_id: &'a Call<'a>,
         // TODO: Make this a list
         arg_id: LabeledCallArgId,
     },
     WrongNumberOfMatchCaseParams {
-        case_id: NodeId<MatchCase>,
+        case_id: &'a MatchCase<'a>,
         expected: usize,
         actual: usize,
     },
     MatchCaseLabelednessMismatch {
-        case_id: NodeId<MatchCase>,
+        case_id: &'a MatchCase<'a>,
         param_list_id: NonEmptyMatchCaseParamListId,
     },
     MissingLabeledMatchCaseParams {
-        case_id: NodeId<MatchCase>,
-        missing_label_list_id: NonEmptyListId<NodeId<Identifier>>,
+        case_id: &'a MatchCase<'a>,
+        missing_label_list_id: NonEmptyListId<&'a Identifier<'a>>,
     },
     UndefinedLabeledMatchCaseParams {
-        case_id: NodeId<MatchCase>,
-        case_param_list_id: NonEmptyListId<NodeId<LabeledMatchCaseParam>>,
+        case_id: &'a MatchCase<'a>,
+        case_param_list_id: NonEmptyListId<&'a LabeledMatchCaseParam<'a>>,
     },
     TypeMismatch {
-        expression_id: ExpressionId,
+        expression_id: ExpressionRef<'a>,
         expected_type_id: NormalFormId,
         actual_type_id: NormalFormId,
     },
     NonAdtMatchee {
-        matchee_id: ExpressionId,
+        matchee_id: ExpressionRef<'a>,
         type_id: NormalFormId,
     },
     DuplicateMatchCase {
-        existing_match_case_id: NodeId<MatchCase>,
-        new_match_case_id: NodeId<MatchCase>,
+        existing_match_case_id: &'a MatchCase<'a>,
+        new_match_case_id: &'a MatchCase<'a>,
     },
     MissingMatchCases {
-        match_id: NodeId<Match>,
-        missing_variant_name_list_id: NonEmptyListId<NodeId<Identifier>>,
+        match_id: &'a Match<'a>,
+        missing_variant_name_list_id: NonEmptyListId<&'a Identifier<'a>>,
     },
     ExtraneousMatchCase {
         // TODO: Make this a list
-        case_id: NodeId<MatchCase>,
+        case_id: &'a MatchCase<'a>,
     },
     AllegedlyImpossibleMatchCaseWasNotObviouslyImpossible {
-        case_id: NodeId<MatchCase>,
+        case_id: &'a MatchCase<'a>,
     },
     CannotInferTypeOfEmptyMatch {
-        match_id: NodeId<Match>,
+        match_id: &'a Match<'a>,
     },
     AmbiguousMatchCaseOutputType {
-        case_id: NodeId<MatchCase>,
+        case_id: &'a MatchCase<'a>,
         non_shifted_output_type_id: NormalFormId,
     },
-    CannotInferTypeOfTodoExpression(NodeId<TodoExpression>),
+    CannotInferTypeOfTodoExpression(&'a TodoExpression<'a>),
     // TODO: Track explosion sources, so we can give the user a
     // specific line number to mark as `impossible`.
-    UnreachableExpression(ExpressionId),
+    UnreachableExpression(ExpressionRef<'a>),
     // TODO: Be more strict with this error, since I think it
     // only tracks the rightmost visibility (so a dot chain could
     // still have a middle component that is not visible from
@@ -122,9 +122,9 @@ pub enum TypeCheckError {
     // Actually, this might severely complicate things, so maybe
     // we let it slide.
     LetStatementTypeContainsPrivateName {
-        let_statement_id: NodeId<LetStatement>,
+        let_statement_id: &'a LetStatement<'a>,
         let_statement_type_id: NormalFormId,
-        name_id: NodeId<NameExpression>,
+        name_id: &'a NameExpression<'a>,
         name_visibility: Visibility,
     },
 }
@@ -133,18 +133,19 @@ pub enum TypeCheckError {
 pub enum TypeCheckWarning {
     TypeAssertion(TypeAssertionWarning),
     NormalFormAssertion(NormalFormAssertionWarning),
-    TodoExpression(NodeId<TodoExpression>),
+    TodoExpression(&'a TodoExpression<'a>),
 }
 
 #[derive(Clone, Debug)]
 pub enum TypeAssertionWarning {
-    GoalLhs(NodeId<CheckAssertion>),
-    LhsTypeIsType1(NodeId<CheckAssertion>),
+    GoalLhs(&'a CheckAssertion<'a>),
+    LhsTypeIsType1(&'a CheckAssertion<'a>),
     CompareeTypeCheckFailure(TypeCheckFailureReason),
     TypesDoNotMatch {
-        left_id: ExpressionId,
+        left_id: ExpressionRef<'a>,
         rewritten_left_type_id: NormalFormId,
-        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsIsQuestionMark>,
+        original_and_rewritten_right_ids:
+            Result<(ExpressionRef<'a>, NormalFormId), RhsIsQuestionMark>,
     },
 }
 
@@ -153,12 +154,13 @@ pub struct RhsIsQuestionMark;
 
 #[derive(Clone, Debug)]
 pub enum NormalFormAssertionWarning {
-    NoGoalExists(NodeId<CheckAssertion>),
+    NoGoalExists(&'a CheckAssertion<'a>),
     CompareeTypeCheckFailure(TypeCheckFailureReason),
     CompareesDoNotMatch {
-        left_id: Result<ExpressionId, LhsIsGoalKw>,
+        left_id: Result<ExpressionRef<'a>, LhsIsGoalKw>,
         rewritten_left_id: NormalFormId,
-        original_and_rewritten_right_ids: Result<(ExpressionId, NormalFormId), RhsIsQuestionMark>,
+        original_and_rewritten_right_ids:
+            Result<(ExpressionRef<'a>, NormalFormId), RhsIsQuestionMark>,
     },
 }
 
@@ -168,7 +170,7 @@ pub struct LhsIsGoalKw;
 #[derive(Clone, Debug)]
 pub enum TypeCheckFailureReason {
     CannotTypeCheck(InvalidExpressionId),
-    TypeCheckError(ExpressionId, TypeCheckError),
+    TypeCheckError(ExpressionRef<'a>, TypeCheckError),
 }
 
 #[derive(Debug)]

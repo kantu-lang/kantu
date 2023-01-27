@@ -72,10 +72,10 @@ fn validate_return_type_of_variant(
     variant_index: usize,
 ) -> Result<(), IllegalVariantReturnTypeError> {
     fn validate_return_type_name_db_index(
-        return_type_name_id: NodeId<NameExpression>,
+        return_type_name_id: &'a NameExpression<'a>,
         (registry, return_type_id, variant, variant_index): (
             &NodeRegistry,
-            ExpressionId,
+            ExpressionRef<'a>,
             &Variant,
             usize,
         ),
@@ -91,14 +91,14 @@ fn validate_return_type_of_variant(
 
     let return_type_id = variant.return_type_id;
     match return_type_id {
-        ExpressionId::Name(name_id) => validate_return_type_name_db_index(
+        ExpressionRef<'a>::Name(name_id) => validate_return_type_name_db_index(
             name_id,
             (registry, return_type_id, variant, variant_index),
         ),
-        ExpressionId::Call(call_id) => {
+        ExpressionRef<'a>::Call(call_id) => {
             let call = registry.get(call_id);
             match call.callee_id {
-                ExpressionId::Name(name_id) => validate_return_type_name_db_index(
+                ExpressionRef<'a>::Name(name_id) => validate_return_type_name_db_index(
                     name_id,
                     (registry, return_type_id, variant, variant_index),
                 ),

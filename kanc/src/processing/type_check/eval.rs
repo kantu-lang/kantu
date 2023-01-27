@@ -40,7 +40,7 @@ impl OffsetContext<'_> {
     }
 }
 
-pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId) -> NormalFormId {
+pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionRef<'a>) -> NormalFormId {
     let (context, mut contextless) = state.detach_context();
     let mut state = EvalState {
         raw: &mut contextless,
@@ -58,21 +58,21 @@ pub(super) fn evaluate_well_typed_expression(state: &mut State, id: ExpressionId
 // from private function names,
 // and leave it as implicit.
 
-fn evaluate_expression(state: &mut EvalState, id: ExpressionId) -> NormalFormId {
+fn evaluate_expression(state: &mut EvalState, id: ExpressionRef<'a>) -> NormalFormId {
     match id {
-        ExpressionId::Name(name_id) => evaluate_name_expression(state, name_id),
-        ExpressionId::Todo(todo_id) => evaluate_todo_expression(state, todo_id),
-        ExpressionId::Call(call_id) => evaluate_call(state, call_id),
-        ExpressionId::Fun(fun_id) => evaluate_fun(state, fun_id),
-        ExpressionId::Match(match_id) => evaluate_match(state, match_id),
-        ExpressionId::Forall(forall_id) => evaluate_forall(state, forall_id),
-        ExpressionId::Check(check_id) => evaluate_check(state, check_id),
+        ExpressionRef<'a>::Name(name_id) => evaluate_name_expression(state, name_id),
+        ExpressionRef<'a>::Todo(todo_id) => evaluate_todo_expression(state, todo_id),
+        ExpressionRef<'a>::Call(call_id) => evaluate_call(state, call_id),
+        ExpressionRef<'a>::Fun(fun_id) => evaluate_fun(state, fun_id),
+        ExpressionRef<'a>::Match(match_id) => evaluate_match(state, match_id),
+        ExpressionRef<'a>::Forall(forall_id) => evaluate_forall(state, forall_id),
+        ExpressionRef<'a>::Check(check_id) => evaluate_check(state, check_id),
     }
 }
 
 fn evaluate_name_expression(
     state: &mut EvalState,
-    name_id: NodeId<NameExpression>,
+    name_id: &'a NameExpression<'a>,
 ) -> NormalFormId {
     let name = state.raw.registry.get(name_id);
     let definition = state
@@ -98,7 +98,7 @@ fn evaluate_name_expression(
             if can_substitute {
                 alias_value_id
             } else {
-                NormalFormId::unchecked_new(ExpressionId::Name(name_id))
+                NormalFormId::unchecked_new(ExpressionRef<'a>::Name(name_id))
             }
         }
 
@@ -111,17 +111,17 @@ fn evaluate_name_expression(
             visibility: _,
         }
         | ContextEntryDefinition::Uninterpreted => {
-            NormalFormId::unchecked_new(ExpressionId::Name(name_id))
+            NormalFormId::unchecked_new(ExpressionRef<'a>::Name(name_id))
         }
     }
 }
 
-fn evaluate_todo_expression(_: &mut EvalState, todo_id: NodeId<TodoExpression>) -> NormalFormId {
+fn evaluate_todo_expression(_: &mut EvalState, todo_id: &'a TodoExpression<'a>) -> NormalFormId {
     // `todo` expressions are, by definition, normal forms.
-    NormalFormId::unchecked_new(ExpressionId::Todo(todo_id))
+    NormalFormId::unchecked_new(ExpressionRef<'a>::Todo(todo_id))
 }
 
-fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
+fn evaluate_call(state: &mut EvalState, call_id: &'a Call<'a>) -> NormalFormId {
     fn register_normalized_nonsubstituted_call(
         registry: &mut NodeRegistry,
         normalized_callee_id: NormalFormId,
@@ -135,7 +135,7 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
                 arg_list_id: normalized_arg_list_id,
             })
             .without_spans(registry);
-        NormalFormId::unchecked_new(ExpressionId::Call(normalized_call_id))
+        NormalFormId::unchecked_new(ExpressionRef<'a>::Call(normalized_call_id))
     }
 
     let call = state.raw.registry.get(call_id).clone();
@@ -145,7 +145,7 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
     let normalized_arg_list_id = evaluate_call_arg_list(state, call.arg_list_id);
 
     match normalized_callee_id.raw() {
-        ExpressionId::Fun(fun_id) => {
+        ExpressionRef<'a>::Fun(fun_id) => {
             if !can_fun_be_applied(state, fun_id, normalized_arg_list_id) {
                 return register_normalized_nonsubstituted_call(
                     state.raw.registry,
@@ -167,12 +167,12 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
                         .get_list(shifted_normalized_arg_list_id)
                         .to_non_empty_vec();
                     {
-                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
+                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Fun(
                             fun_id.upshift(param_arity + 1, state.raw.registry),
                         ));
                         const FUN_DB_INDEX: DbIndex = DbIndex(0);
                         vec![Substitution {
-                            from: ExpressionId::Name(add_name_expression(
+                            from: ExpressionRef<'a>::Name(add_name_expression(
                                 state.raw.registry,
                                 NonEmptyVec::singleton(fun.name_id),
                                 FUN_DB_INDEX,
@@ -189,7 +189,7 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
                             .enumerate()
                             .map(|(arg_index, (param_name_id, arg_id))| {
                                 let db_index = DbIndex(param_arity - arg_index);
-                                let name = NormalFormId::unchecked_new(ExpressionId::Name(
+                                let name = NormalFormId::unchecked_new(ExpressionRef<'a>::Name(
                                     add_name_expression(
                                         state.raw.registry,
                                         NonEmptyVec::singleton(param_name_id),
@@ -207,12 +207,12 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
 
                 NonEmptyCallArgListId::UniquelyLabeled(shifted_normalized_arg_list_id) => {
                     let recursive_fun_sub = {
-                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionId::Fun(
+                        let shifted_fun_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Fun(
                             fun_id.upshift(param_arity + 1, state.raw.registry),
                         ));
                         const FUN_DB_INDEX: DbIndex = DbIndex(0);
                         Substitution {
-                            from: ExpressionId::Name(add_name_expression(
+                            from: ExpressionRef<'a>::Name(add_name_expression(
                                 state.raw.registry,
                                 NonEmptyVec::singleton(fun.name_id),
                                 FUN_DB_INDEX,
@@ -249,7 +249,7 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
                         }).expect("A well-typed Call's callee should have a param for everyone one of the Call's args.");
                         let db_index = DbIndex(param_arity - param_index);
                         let name =
-                            NormalFormId::unchecked_new(ExpressionId::Name(add_name_expression(
+                            NormalFormId::unchecked_new(ExpressionRef<'a>::Name(add_name_expression(
                                 state.raw.registry,
                                 NonEmptyVec::singleton(param_name_id),
                                 db_index,
@@ -267,18 +267,18 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
             let shifted_body_id = body_id.downshift(param_arity + 1, state.raw.registry);
             evaluate_expression(state, shifted_body_id)
         }
-        ExpressionId::Name(_)
-        | ExpressionId::Call(_)
-        | ExpressionId::Match(_)
-        | ExpressionId::Todo(_) => register_normalized_nonsubstituted_call(
+        ExpressionRef<'a>::Name(_)
+        | ExpressionRef<'a>::Call(_)
+        | ExpressionRef<'a>::Match(_)
+        | ExpressionRef<'a>::Todo(_) => register_normalized_nonsubstituted_call(
             state.raw.registry,
             normalized_callee_id,
             normalized_arg_list_id,
         ),
-        ExpressionId::Forall(_) => {
+        ExpressionRef<'a>::Forall(_) => {
             panic!("A well-typed Call cannot have a Forall as its callee.")
         }
-        ExpressionId::Check(_) => {
+        ExpressionRef<'a>::Check(_) => {
             panic!("By definition, a check expression can never be a normal form.")
         }
     }
@@ -286,7 +286,7 @@ fn evaluate_call(state: &mut EvalState, call_id: NodeId<Call>) -> NormalFormId {
 
 fn can_fun_be_applied(
     state: &mut EvalState,
-    fun_id: NodeId<Fun>,
+    fun_id: &'a Fun<'a>,
     normalized_arg_ids: NonEmptyCallArgListId,
 ) -> bool {
     let param_list_id = state.raw.registry.get(fun_id).param_list_id;
@@ -299,8 +299,8 @@ fn can_fun_be_applied(
 
 fn can_unlabeled_fun_be_applied(
     state: &mut EvalState,
-    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
-    normalized_arg_list_id: NonEmptyListId<ExpressionId>,
+    param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
+    normalized_arg_list_id: NonEmptyListId<ExpressionRef<'a>>,
 ) -> bool {
     let Some(decreasing_param_index) = get_decreasing_param_index(state, param_list_id) else {
         // If there is no decreasing parameter, the function is non-recursive,
@@ -319,7 +319,7 @@ fn can_unlabeled_fun_be_applied(
 
 fn get_decreasing_param_index(
     state: &EvalState,
-    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+    param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
 ) -> Option<usize> {
     state
         .raw
@@ -335,7 +335,7 @@ fn get_decreasing_param_index(
 
 fn can_labeled_fun_be_applied(
     state: &mut EvalState,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
     normalized_arg_list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> bool {
     let Some(decreasing_param_label_id) = get_decreasing_param_label_id(state, param_list_id) else {
@@ -376,8 +376,8 @@ fn can_labeled_fun_be_applied(
 
 fn get_decreasing_param_label_id(
     state: &EvalState,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
-) -> Option<NodeId<Identifier>> {
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
+) -> Option<&'a Identifier<'a>> {
     state
         .raw
         .registry
@@ -468,7 +468,7 @@ fn evaluate_labeled_call_arg(state: &mut EvalState, arg_id: LabeledCallArgId) ->
 fn get_param_name_ids(
     state: &EvalState,
     param_list_id: NonEmptyParamListId,
-) -> NonEmptyVec<NodeId<Identifier>> {
+) -> NonEmptyVec<&'a Identifier<'a>> {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(param_list_id) => state
             .raw
@@ -483,7 +483,7 @@ fn get_param_name_ids(
     }
 }
 
-fn evaluate_fun(state: &mut EvalState, fun_id: NodeId<Fun>) -> NormalFormId {
+fn evaluate_fun(state: &mut EvalState, fun_id: &'a Fun<'a>) -> NormalFormId {
     let fun = state.raw.registry.get(fun_id).clone();
     let normalized_param_list_id =
         normalize_params_as_much_as_possible_and_leave_in_context(state, fun.param_list_id);
@@ -495,7 +495,7 @@ fn evaluate_fun(state: &mut EvalState, fun_id: NodeId<Fun>) -> NormalFormId {
 
     state.context.pop_n(fun.param_list_id.len() + 1);
 
-    NormalFormId::unchecked_new(ExpressionId::Fun(
+    NormalFormId::unchecked_new(ExpressionRef<'a>::Fun(
         state
             .raw
             .registry
@@ -527,7 +527,7 @@ fn normalize_params_as_much_as_possible_and_leave_in_context(
 
 fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
     state: &mut EvalState,
-    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+    param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
 ) -> NonEmptyParamListId {
     let param_ids = state.raw.registry.get_list(param_list_id);
     let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
@@ -563,7 +563,7 @@ fn normalize_unlabeled_params_as_much_as_possible_and_leave_in_context(
 
 fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     state: &mut EvalState,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
 ) -> NonEmptyParamListId {
     let param_ids = state.raw.registry.get_list(param_list_id);
     let (&first_param_id, remaining_param_ids) = param_ids.to_cons();
@@ -599,7 +599,7 @@ fn normalize_labeled_params_as_much_as_possible_and_leave_in_context(
     NonEmptyParamListId::UniquelyLabeled(state.raw.registry.add_list(normalized_param_ids))
 }
 
-fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormId {
+fn evaluate_match(state: &mut EvalState, match_id: &'a Match<'a>) -> NormalFormId {
     let match_ = state.raw.registry.get(match_id).clone();
     let normalized_matchee_id = evaluate_expression(state, match_.matchee_id);
 
@@ -615,7 +615,7 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
         } else {
             let normalized_case_list_id =
                 normalize_possibly_empty_match_case_list(state, match_.case_list_id);
-            return NormalFormId::unchecked_new(ExpressionId::Match(
+            return NormalFormId::unchecked_new(ExpressionRef<'a>::Match(
                 state
                     .raw
                     .registry
@@ -682,7 +682,7 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
                     let shifted_arg_id =
                         NormalFormId::unchecked_new(arg_id).upshift(case_arity, state.raw.registry);
                     Substitution {
-                        from: ExpressionId::Name(add_name_expression(
+                        from: ExpressionRef<'a>::Name(add_name_expression(
                             state.raw.registry,
                             NonEmptyVec::singleton(param_id),
                             db_index,
@@ -729,7 +729,7 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
 
                     let explicit_param_name_id =
                         state.raw.registry.get(explicit_param_id).name_id;
-                    let param_value_id = ExpressionId::Name(add_name_expression(
+                    let param_value_id = ExpressionRef<'a>::Name(add_name_expression(
                         state.raw.registry,
                         NonEmptyVec::singleton(explicit_param_name_id),
                         DbIndex(explicit_arity - explicit_param_index - 1),
@@ -768,15 +768,15 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
 
 fn normalize_possibly_empty_match_case_list(
     state: &mut EvalState,
-    list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
-) -> Option<NonEmptyListId<NodeId<MatchCase>>> {
+    list_id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
+) -> Option<NonEmptyListId<&'a MatchCase<'a>>> {
     list_id.map(|list_id| normalize_match_case_list(state, list_id))
 }
 
 fn normalize_match_case_list(
     state: &mut EvalState,
-    list_id: NonEmptyListId<NodeId<MatchCase>>,
-) -> NonEmptyListId<NodeId<MatchCase>> {
+    list_id: NonEmptyListId<&'a MatchCase<'a>>,
+) -> NonEmptyListId<&'a MatchCase<'a>> {
     let ids = state.raw.registry.get_list(list_id).to_non_empty_vec();
     let normalized_ids = ids.into_mapped(|id| normalize_match_case(state, id));
     state.raw.registry.add_list(normalized_ids)
@@ -784,8 +784,8 @@ fn normalize_match_case_list(
 
 fn normalize_match_case(
     state: &mut EvalState,
-    match_case_list_id: NodeId<MatchCase>,
-) -> NodeId<MatchCase> {
+    match_case_list_id: &'a MatchCase<'a>,
+) -> &'a MatchCase<'a> {
     let case = state.raw.registry.get(match_case_list_id).clone();
 
     let explicit_arity = case
@@ -814,14 +814,14 @@ fn normalize_match_case(
     })
 }
 
-fn evaluate_forall(state: &mut EvalState, forall_id: NodeId<Forall>) -> NormalFormId {
+fn evaluate_forall(state: &mut EvalState, forall_id: &'a Forall<'a>) -> NormalFormId {
     let forall = state.raw.registry.get(forall_id).clone();
     let normalized_param_list_id =
         normalize_params_as_much_as_possible_and_leave_in_context(state, forall.param_list_id);
     let normalized_output_id = evaluate_expression(state, forall.output_id);
     state.context.pop_n(forall.param_list_id.len());
 
-    NormalFormId::unchecked_new(ExpressionId::Forall(
+    NormalFormId::unchecked_new(ExpressionRef<'a>::Forall(
         state
             .raw
             .registry
@@ -835,7 +835,7 @@ fn evaluate_forall(state: &mut EvalState, forall_id: NodeId<Forall>) -> NormalFo
     ))
 }
 
-fn evaluate_check(state: &mut EvalState, check_id: NodeId<Check>) -> NormalFormId {
+fn evaluate_check(state: &mut EvalState, check_id: &'a Check<'a>) -> NormalFormId {
     let check = state.raw.registry.get(check_id);
     evaluate_expression(state, check.output_id)
 }

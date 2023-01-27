@@ -3,7 +3,7 @@ use super::*;
 pub fn get_possibly_empty_param_type_ids(
     registry: &NodeRegistry,
     id: Option<NonEmptyParamListId>,
-) -> Vec<ExpressionId> {
+) -> Vec<ExpressionRef<'a>> {
     id.map(|id| get_param_type_ids(registry, id).into())
         .unwrap_or_else(|| vec![])
 }
@@ -11,7 +11,7 @@ pub fn get_possibly_empty_param_type_ids(
 pub fn get_param_type_ids(
     registry: &NodeRegistry,
     id: NonEmptyParamListId,
-) -> NonEmptyVec<ExpressionId> {
+) -> NonEmptyVec<ExpressionRef<'a>> {
     match id {
         NonEmptyParamListId::Unlabeled(id) => get_unlabeled_param_ids(registry, id),
         NonEmptyParamListId::UniquelyLabeled(id) => get_labeled_param_ids(registry, id),
@@ -20,8 +20,8 @@ pub fn get_param_type_ids(
 
 pub fn get_unlabeled_param_ids(
     registry: &NodeRegistry,
-    id: NonEmptyListId<NodeId<UnlabeledParam>>,
-) -> NonEmptyVec<ExpressionId> {
+    id: NonEmptyListId<&'a UnlabeledParam<'a>>,
+) -> NonEmptyVec<ExpressionRef<'a>> {
     registry.get_list(id).to_mapped(|&param_id| {
         let param = registry.get(param_id);
         param.type_id
@@ -30,8 +30,8 @@ pub fn get_unlabeled_param_ids(
 
 pub fn get_labeled_param_ids(
     registry: &NodeRegistry,
-    id: NonEmptyListId<NodeId<LabeledParam>>,
-) -> NonEmptyVec<ExpressionId> {
+    id: NonEmptyListId<&'a LabeledParam<'a>>,
+) -> NonEmptyVec<ExpressionRef<'a>> {
     registry.get_list(id).to_mapped(|&param_id| {
         let param = registry.get(param_id);
         param.type_id
@@ -55,7 +55,7 @@ pub fn verify_that_target_does_not_appear_in_any_param_type(
 
 pub fn verify_that_target_does_not_appear_in_any_unlabeled_param_type(
     registry: &NodeRegistry,
-    list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
+    list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let param_ids = registry.get_list(list_id);
@@ -69,7 +69,7 @@ pub fn verify_that_target_does_not_appear_in_any_unlabeled_param_type(
 
 pub fn verify_that_target_does_not_appear_in_any_labeled_param_type(
     registry: &NodeRegistry,
-    list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    list_id: NonEmptyListId<&'a LabeledParam<'a>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let param_ids = registry.get_list(list_id);
@@ -83,23 +83,23 @@ pub fn verify_that_target_does_not_appear_in_any_labeled_param_type(
 
 pub fn verify_that_target_does_not_appear_in_expression(
     registry: &NodeRegistry,
-    id: ExpressionId,
+    id: ExpressionRef<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     match id {
-        ExpressionId::Name(id) => {
+        ExpressionRef<'a>::Name(id) => {
             verify_that_target_does_not_appear_in_name_expression(registry, id, target)
         }
-        ExpressionId::Todo(_) => Ok(()),
-        ExpressionId::Call(id) => verify_that_target_does_not_appear_in_call(registry, id, target),
-        ExpressionId::Fun(id) => verify_that_target_does_not_appear_in_fun(registry, id, target),
-        ExpressionId::Match(id) => {
+        ExpressionRef<'a>::Todo(_) => Ok(()),
+        ExpressionRef<'a>::Call(id) => verify_that_target_does_not_appear_in_call(registry, id, target),
+        ExpressionRef<'a>::Fun(id) => verify_that_target_does_not_appear_in_fun(registry, id, target),
+        ExpressionRef<'a>::Match(id) => {
             verify_that_target_does_not_appear_in_match(registry, id, target)
         }
-        ExpressionId::Forall(id) => {
+        ExpressionRef<'a>::Forall(id) => {
             verify_that_target_does_not_appear_in_forall(registry, id, target)
         }
-        ExpressionId::Check(id) => {
+        ExpressionRef<'a>::Check(id) => {
             verify_that_target_does_not_appear_in_check_expression(registry, id, target)
         }
     }
@@ -107,7 +107,7 @@ pub fn verify_that_target_does_not_appear_in_expression(
 
 pub fn verify_that_target_does_not_appear_in_name_expression(
     registry: &NodeRegistry,
-    id: NodeId<NameExpression>,
+    id: &'a NameExpression<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let name = registry.get(id);
@@ -120,7 +120,7 @@ pub fn verify_that_target_does_not_appear_in_name_expression(
 
 pub fn verify_that_target_does_not_appear_in_call(
     registry: &NodeRegistry,
-    id: NodeId<Call>,
+    id: &'a Call<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let call = registry.get(id);
@@ -146,7 +146,7 @@ pub fn verify_that_target_does_not_appear_in_any_call_arg(
 
 pub fn verify_that_target_does_not_appear_in_any_unlabeled_call_arg(
     registry: &NodeRegistry,
-    list_id: NonEmptyListId<ExpressionId>,
+    list_id: NonEmptyListId<ExpressionRef<'a>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let arg_ids = registry.get_list(list_id);
@@ -170,7 +170,7 @@ pub fn verify_that_target_does_not_appear_in_any_labeled_call_arg(
 
 pub fn verify_that_target_does_not_appear_in_fun(
     registry: &NodeRegistry,
-    id: NodeId<Fun>,
+    id: &'a Fun<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let fun = registry.get(id);
@@ -192,7 +192,7 @@ pub fn verify_that_target_does_not_appear_in_fun(
 
 pub fn verify_that_target_does_not_appear_in_match(
     registry: &NodeRegistry,
-    id: NodeId<Match>,
+    id: &'a Match<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let match_ = registry.get(id);
@@ -207,7 +207,7 @@ pub fn verify_that_target_does_not_appear_in_match(
 
 pub fn verify_that_target_does_not_appear_in_any_match_case_output(
     registry: &NodeRegistry,
-    id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let case_ids = registry.get_possibly_empty_list(id);
@@ -219,7 +219,7 @@ pub fn verify_that_target_does_not_appear_in_any_match_case_output(
 
 pub fn verify_that_target_does_not_appear_in_match_case(
     registry: &NodeRegistry,
-    id: NodeId<MatchCase>,
+    id: &'a MatchCase<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let case = registry.get(id);
@@ -246,7 +246,7 @@ pub fn verify_that_target_does_not_appear_in_match_case_output(
 
 pub fn verify_that_target_does_not_appear_in_forall(
     registry: &NodeRegistry,
-    id: NodeId<Forall>,
+    id: &'a Forall<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let forall = registry.get(id);
@@ -261,7 +261,7 @@ pub fn verify_that_target_does_not_appear_in_forall(
 
 pub fn verify_that_target_does_not_appear_in_check_expression(
     registry: &NodeRegistry,
-    id: NodeId<Check>,
+    id: &'a Check<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let check = registry.get(id);
@@ -270,7 +270,7 @@ pub fn verify_that_target_does_not_appear_in_check_expression(
 
 pub fn does_target_appear_in_expression(
     registry: &NodeRegistry,
-    id: ExpressionId,
+    id: ExpressionRef<'a>,
     target: DbIndex,
 ) -> bool {
     verify_that_target_does_not_appear_in_expression(registry, id, target).is_err()
@@ -279,7 +279,7 @@ pub fn does_target_appear_in_expression(
 pub fn get_arg_values(
     registry: &NodeRegistry,
     arg_list_id: NonEmptyCallArgListId,
-) -> NonEmptyVec<ExpressionId> {
+) -> NonEmptyVec<ExpressionRef<'a>> {
     match arg_list_id {
         NonEmptyCallArgListId::Unlabeled(id) => get_unlabeled_arg_values(registry, id),
         NonEmptyCallArgListId::UniquelyLabeled(id) => get_labeled_arg_values(registry, id),
@@ -288,15 +288,15 @@ pub fn get_arg_values(
 
 pub fn get_unlabeled_arg_values(
     registry: &NodeRegistry,
-    id: NonEmptyListId<ExpressionId>,
-) -> NonEmptyVec<ExpressionId> {
+    id: NonEmptyListId<ExpressionRef<'a>>,
+) -> NonEmptyVec<ExpressionRef<'a>> {
     registry.get_list(id).to_non_empty_vec()
 }
 
 pub fn get_labeled_arg_values(
     registry: &NodeRegistry,
     id: NonEmptyListId<LabeledCallArgId>,
-) -> NonEmptyVec<ExpressionId> {
+) -> NonEmptyVec<ExpressionRef<'a>> {
     registry.get_list(id).to_mapped(|&arg_id| arg_id.value_id())
 }
 
@@ -304,7 +304,7 @@ pub fn get_ith_call_arg_value(
     registry: &NodeRegistry,
     i: usize,
     id: NonEmptyCallArgListId,
-) -> Option<ExpressionId> {
+) -> Option<ExpressionRef<'a>> {
     match id {
         NonEmptyCallArgListId::Unlabeled(id) => get_ith_unlabeled_call_arg_value(registry, i, id),
         NonEmptyCallArgListId::UniquelyLabeled(id) => {
@@ -316,8 +316,8 @@ pub fn get_ith_call_arg_value(
 pub fn get_ith_unlabeled_call_arg_value(
     registry: &NodeRegistry,
     i: usize,
-    id: NonEmptyListId<ExpressionId>,
-) -> Option<ExpressionId> {
+    id: NonEmptyListId<ExpressionRef<'a>>,
+) -> Option<ExpressionRef<'a>> {
     let value_ids = registry.get_list(id);
     value_ids.get(i).copied()
 }
@@ -326,7 +326,7 @@ pub fn get_ith_labeled_call_arg_value(
     registry: &NodeRegistry,
     i: usize,
     id: NonEmptyListId<LabeledCallArgId>,
-) -> Option<ExpressionId> {
+) -> Option<ExpressionRef<'a>> {
     let value_ids = registry.get_list(id);
     value_ids.get(i).map(|arg_id| arg_id.value_id())
 }

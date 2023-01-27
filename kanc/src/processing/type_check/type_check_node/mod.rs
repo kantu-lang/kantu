@@ -30,7 +30,7 @@ mod check;
 fn type_check_expression_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    expression: ExpressionId,
+    expression: ExpressionRef<'a>,
 ) -> Result<(), Tainted<TypeCheckError>> {
     // In the future, we could implement a version of this that skips the
     // allocations required by `get_type_of_expression`, since we don't
@@ -43,11 +43,11 @@ fn type_check_expression_dirty(
 fn get_type_of_expression(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    id: ExpressionId,
+    id: ExpressionRef<'a>,
 ) -> Result<NormalFormId, TypeCheckError> {
     fn f(
         state: &mut State,
-        (coercion_target_id, id): (Option<NormalFormId>, ExpressionId),
+        (coercion_target_id, id): (Option<NormalFormId>, ExpressionRef<'a>),
     ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
         get_type_of_expression_dirty(state, coercion_target_id, id)
     }
@@ -58,16 +58,16 @@ fn get_type_of_expression(
 pub(in crate::processing::type_check) fn get_type_of_expression_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    id: ExpressionId,
+    id: ExpressionRef<'a>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     match id {
-        ExpressionId::Name(name) => Ok(get_type_of_name(state, name)),
-        ExpressionId::Todo(todo) => get_type_of_todo_dirty(state, coercion_target_id, todo),
-        ExpressionId::Call(call) => get_type_of_call_dirty(state, call),
-        ExpressionId::Fun(fun) => get_type_of_fun_dirty(state, fun),
-        ExpressionId::Match(match_) => get_type_of_match_dirty(state, coercion_target_id, match_),
-        ExpressionId::Forall(forall) => get_type_of_forall_dirty(state, forall),
-        ExpressionId::Check(check) => {
+        ExpressionRef<'a>::Name(name) => Ok(get_type_of_name(state, name)),
+        ExpressionRef<'a>::Todo(todo) => get_type_of_todo_dirty(state, coercion_target_id, todo),
+        ExpressionRef<'a>::Call(call) => get_type_of_call_dirty(state, call),
+        ExpressionRef<'a>::Fun(fun) => get_type_of_fun_dirty(state, fun),
+        ExpressionRef<'a>::Match(match_) => get_type_of_match_dirty(state, coercion_target_id, match_),
+        ExpressionRef<'a>::Forall(forall) => get_type_of_forall_dirty(state, forall),
+        ExpressionRef<'a>::Check(check) => {
             get_type_of_check_expression_dirty(state, coercion_target_id, check)
         }
     }

@@ -58,11 +58,11 @@ pub enum ContextEntryDefinition {
     },
     /// Algebraic data type
     Adt {
-        variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+        variant_name_list_id: Option<NonEmptyListId<&'a Identifier<'a>>>,
         visibility: Visibility,
     },
     Variant {
-        name_id: NodeId<Identifier>,
+        name_id: &'a Identifier<'a>,
         visibility: Visibility,
     },
     Uninterpreted,
@@ -77,7 +77,7 @@ impl Context {
         // However, we need to store _some_ object in the stack, so that the indices
         // of the other types are correct.
         let type1_entry = {
-            let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
+            let dummy_type1_type_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
                     NonEmptyVec::singleton(Identifier {
@@ -94,7 +94,7 @@ impl Context {
             }
         };
         let type0_entry = {
-            let type0_type_id = NormalFormId::unchecked_new(ExpressionId::Name(
+            let type0_type_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Name(
                 add_name_expression_and_overwrite_component_ids(
                     registry,
                     NonEmptyVec::singleton(Identifier {

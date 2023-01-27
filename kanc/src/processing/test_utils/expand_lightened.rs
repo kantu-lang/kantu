@@ -174,17 +174,17 @@ pub fn expand_let_statement(
     }
 }
 
-pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionId) -> Expression {
+pub fn expand_expression(registry: &NodeRegistry, id: light::ExpressionRef<'a>) -> Expression {
     match id {
-        light::ExpressionId::Name(id) => Expression::Name(expand_name_expression(registry, id)),
-        light::ExpressionId::Todo(id) => Expression::Todo(registry.get(id).span),
-        light::ExpressionId::Call(id) => Expression::Call(Box::new(expand_call(registry, id))),
-        light::ExpressionId::Fun(id) => Expression::Fun(Box::new(expand_fun(registry, id))),
-        light::ExpressionId::Match(id) => Expression::Match(Box::new(expand_match(registry, id))),
-        light::ExpressionId::Forall(id) => {
+        light::ExpressionRef<'a>::Name(id) => Expression::Name(expand_name_expression(registry, id)),
+        light::ExpressionRef<'a>::Todo(id) => Expression::Todo(registry.get(id).span),
+        light::ExpressionRef<'a>::Call(id) => Expression::Call(Box::new(expand_call(registry, id))),
+        light::ExpressionRef<'a>::Fun(id) => Expression::Fun(Box::new(expand_fun(registry, id))),
+        light::ExpressionRef<'a>::Match(id) => Expression::Match(Box::new(expand_match(registry, id))),
+        light::ExpressionRef<'a>::Forall(id) => {
             Expression::Forall(Box::new(expand_forall(registry, id)))
         }
-        light::ExpressionId::Check(id) => Expression::Check(Box::new(expand_check(registry, id))),
+        light::ExpressionRef<'a>::Check(id) => Expression::Check(Box::new(expand_check(registry, id))),
     }
 }
 
@@ -263,7 +263,7 @@ pub fn expand_labeled_call_arg(registry: &NodeRegistry, id: LabeledCallArgId) ->
 
 pub fn expand_expression_list(
     registry: &NodeRegistry,
-    id: NonEmptyListId<light::ExpressionId>,
+    id: NonEmptyListId<light::ExpressionRef<'a>>,
 ) -> NonEmptyVec<Expression> {
     registry
         .get_list(id)

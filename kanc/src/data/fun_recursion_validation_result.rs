@@ -22,7 +22,7 @@ pub enum IllegalFunRecursionError<'a> {
     },
     NonSubstructPassedToDecreasingParam {
         callee_id: &'a NameExpression<'a>,
-        arg_id: &'a ExpressionRef<'a>,
+        arg_id: ExpressionRef<'a>,
     },
     RecursivelyCalledFunctionWithoutDecreasingParam {
         callee_id: &'a NameExpression<'a>,

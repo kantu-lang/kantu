@@ -6,7 +6,7 @@ use crate::data::{
     text_span::*,
 };
 
-fn dummy_id<T>() -> NodeId<T> {
+fn dummy_id<T>() -> &'a T<'a> {
     NodeId::new(0)
 }
 
@@ -38,7 +38,7 @@ pub fn register_file_item(
 pub fn register_type_statement(
     registry: &mut NodeRegistry,
     unregistered: heavy::TypeStatement,
-) -> NodeId<TypeStatement> {
+) -> &'a TypeStatement<'a> {
     let name_id = register_identifier(registry, unregistered.name);
     let param_list_id = register_optional_params(registry, unregistered.params);
     let variant_ids: Vec<_> = unregistered
@@ -60,7 +60,7 @@ pub fn register_type_statement(
 pub fn register_identifier(
     registry: &mut NodeRegistry,
     unregistered: heavy::Identifier,
-) -> NodeId<Identifier> {
+) -> &'a Identifier<'a> {
     registry.add_and_overwrite_id(Identifier {
         id: dummy_id(),
         span: unregistered.span,
@@ -98,7 +98,7 @@ pub fn register_params(
 pub fn register_unlabeled_param(
     registry: &mut NodeRegistry,
     unregistered: heavy::UnlabeledParam,
-) -> NodeId<UnlabeledParam> {
+) -> &'a UnlabeledParam<'a> {
     let name_id = register_identifier(registry, unregistered.name);
     let type_id = register_expression(registry, unregistered.type_);
     registry.add_and_overwrite_id(UnlabeledParam {
@@ -113,7 +113,7 @@ pub fn register_unlabeled_param(
 pub fn register_labeled_param(
     registry: &mut NodeRegistry,
     unregistered: heavy::LabeledParam,
-) -> NodeId<LabeledParam> {
+) -> &'a LabeledParam<'a> {
     let label_id = register_param_label(registry, unregistered.label);
     let name_id = register_identifier(registry, unregistered.name);
     let type_id = register_expression(registry, unregistered.type_);
@@ -142,7 +142,7 @@ pub fn register_param_label(
 pub fn register_variant(
     registry: &mut NodeRegistry,
     unregistered: heavy::Variant,
-) -> NodeId<Variant> {
+) -> &'a Variant<'a> {
     let name_id = register_identifier(registry, unregistered.name);
     let param_list_id = register_optional_params(registry, unregistered.params);
     let return_type_id = register_expression(registry, unregistered.return_type);
@@ -158,7 +158,7 @@ pub fn register_variant(
 pub fn register_let_statement(
     registry: &mut NodeRegistry,
     unregistered: heavy::LetStatement,
-) -> NodeId<LetStatement> {
+) -> &'a LetStatement<'a> {
     let name_id = register_identifier(registry, unregistered.name);
     let value_id = register_expression(registry, unregistered.value);
     registry.add_and_overwrite_id(LetStatement {
@@ -174,35 +174,35 @@ pub fn register_let_statement(
 pub fn register_expression(
     registry: &mut NodeRegistry,
     unregistered: heavy::Expression,
-) -> ExpressionId {
+) -> ExpressionRef<'a> {
     match unregistered {
         heavy::Expression::Name(unregistered) => {
             let id = register_name_expression(registry, unregistered);
-            ExpressionId::Name(id)
+            ExpressionRef<'a>::Name(id)
         }
         heavy::Expression::Todo(span) => {
             let id = register_todo_expression(registry, span);
-            ExpressionId::Todo(id)
+            ExpressionRef<'a>::Todo(id)
         }
         heavy::Expression::Call(unregistered) => {
             let id = register_call(registry, *unregistered);
-            ExpressionId::Call(id)
+            ExpressionRef<'a>::Call(id)
         }
         heavy::Expression::Fun(unregistered) => {
             let id = register_fun(registry, *unregistered);
-            ExpressionId::Fun(id)
+            ExpressionRef<'a>::Fun(id)
         }
         heavy::Expression::Match(unregistered) => {
             let id = register_match(registry, *unregistered);
-            ExpressionId::Match(id)
+            ExpressionRef<'a>::Match(id)
         }
         heavy::Expression::Forall(unregistered) => {
             let id = register_forall(registry, *unregistered);
-            ExpressionId::Forall(id)
+            ExpressionRef<'a>::Forall(id)
         }
         heavy::Expression::Check(unregistered) => {
             let id = register_check(registry, *unregistered);
-            ExpressionId::Check(id)
+            ExpressionRef<'a>::Check(id)
         }
     }
 }
@@ -210,7 +210,7 @@ pub fn register_expression(
 pub fn register_name_expression(
     registry: &mut NodeRegistry,
     unregistered: heavy::NameExpression,
-) -> NodeId<NameExpression> {
+) -> &'a NameExpression<'a> {
     let component_ids = unregistered
         .components
         .into_mapped(|unregistered| register_identifier(registry, unregistered));
@@ -226,14 +226,14 @@ pub fn register_name_expression(
 pub fn register_todo_expression(
     registry: &mut NodeRegistry,
     span: Option<TextSpan>,
-) -> NodeId<TodoExpression> {
+) -> &'a TodoExpression<'a> {
     registry.add_and_overwrite_id(TodoExpression {
         id: dummy_id(),
         span,
     })
 }
 
-pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> NodeId<Call> {
+pub fn register_call(registry: &mut NodeRegistry, unregistered: heavy::Call) -> &'a Call<'a> {
     let callee_id = register_expression(registry, unregistered.callee);
     let arg_list_id = register_call_args(registry, unregistered.args);
     registry.add_and_overwrite_id(Call {
@@ -281,7 +281,7 @@ pub fn register_labeled_call_arg(
     }
 }
 
-pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> NodeId<Fun> {
+pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> &'a Fun<'a> {
     let name_id = register_identifier(registry, unregistered.name);
     let param_list_id = register_params(registry, unregistered.params);
     let return_type_id = register_expression(registry, unregistered.return_type);
@@ -296,7 +296,7 @@ pub fn register_fun(registry: &mut NodeRegistry, unregistered: heavy::Fun) -> No
     })
 }
 
-pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -> NodeId<Match> {
+pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -> &'a Match<'a> {
     let matchee_id = register_expression(registry, unregistered.matchee);
     let case_ids: Vec<_> = unregistered
         .cases
@@ -315,7 +315,7 @@ pub fn register_match(registry: &mut NodeRegistry, unregistered: heavy::Match) -
 pub fn register_match_case(
     registry: &mut NodeRegistry,
     unregistered: heavy::MatchCase,
-) -> NodeId<MatchCase> {
+) -> &'a MatchCase<'a> {
     let variant_name_id = register_identifier(registry, unregistered.variant_name);
     let param_list_id = register_optional_match_case_params(registry, unregistered.params);
     let output_id = register_match_case_output(registry, unregistered.output);
@@ -357,7 +357,7 @@ pub fn register_match_case_params(
 pub fn register_identifiers(
     registry: &mut NodeRegistry,
     unregistered: NonEmptyVec<heavy::Identifier>,
-) -> NonEmptyListId<NodeId<Identifier>> {
+) -> NonEmptyListId<&'a Identifier<'a>> {
     let ids = unregistered.into_mapped(|unregistered| register_identifier(registry, unregistered));
     registry.add_list(ids)
 }
@@ -365,14 +365,14 @@ pub fn register_identifiers(
 pub fn register_optional_labeled_match_case_params(
     registry: &mut NodeRegistry,
     unregistered: Option<NonEmptyVec<heavy::LabeledMatchCaseParam>>,
-) -> Option<NonEmptyListId<NodeId<LabeledMatchCaseParam>>> {
+) -> Option<NonEmptyListId<&'a LabeledMatchCaseParam<'a>>> {
     unregistered.map(|unregistered| register_labeled_match_case_params(registry, unregistered))
 }
 
 pub fn register_labeled_match_case_params(
     registry: &mut NodeRegistry,
     unregistered: NonEmptyVec<heavy::LabeledMatchCaseParam>,
-) -> NonEmptyListId<NodeId<LabeledMatchCaseParam>> {
+) -> NonEmptyListId<&'a LabeledMatchCaseParam<'a>> {
     let ids = unregistered
         .into_mapped(|unregistered| register_labeled_match_case_param(registry, unregistered));
     registry.add_list(ids)
@@ -381,7 +381,7 @@ pub fn register_labeled_match_case_params(
 pub fn register_labeled_match_case_param(
     registry: &mut NodeRegistry,
     unregistered: heavy::LabeledMatchCaseParam,
-) -> NodeId<LabeledMatchCaseParam> {
+) -> &'a LabeledMatchCaseParam<'a> {
     let label_id = register_param_label(registry, unregistered.label);
     let name_id = register_identifier(registry, unregistered.name);
     registry.add_and_overwrite_id(LabeledMatchCaseParam {
@@ -407,7 +407,7 @@ pub fn register_match_case_output(
     }
 }
 
-pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall) -> NodeId<Forall> {
+pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall) -> &'a Forall<'a> {
     let param_list_id = register_params(registry, unregistered.params);
     let output_id = register_expression(registry, unregistered.output);
     registry.add_and_overwrite_id(Forall {
@@ -418,7 +418,7 @@ pub fn register_forall(registry: &mut NodeRegistry, unregistered: heavy::Forall)
     })
 }
 
-pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -> NodeId<Check> {
+pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -> &'a Check<'a> {
     let assertion_ids = unregistered
         .assertions
         .into_mapped(|unregistered| register_check_assertion(registry, unregistered));
@@ -435,7 +435,7 @@ pub fn register_check(registry: &mut NodeRegistry, unregistered: heavy::Check) -
 pub fn register_check_assertion(
     registry: &mut NodeRegistry,
     unregistered: heavy::CheckAssertion,
-) -> NodeId<CheckAssertion> {
+) -> &'a CheckAssertion<'a> {
     let left_id = register_goal_kw_or_expression(registry, unregistered.left);
     let right_id =
         register_question_mark_or_possibly_invalid_expression(registry, unregistered.right);
@@ -513,7 +513,7 @@ pub fn register_invalid_expression(
 pub fn register_symbolically_invalid_expression(
     registry: &mut NodeRegistry,
     unregistered: heavy::SymbolicallyInvalidExpression,
-) -> NodeId<SymbolicallyInvalidExpression> {
+) -> &'a SymbolicallyInvalidExpression<'a> {
     registry.add_and_overwrite_id(SymbolicallyInvalidExpression {
         id: dummy_id(),
         expression: unregistered.expression,
@@ -525,7 +525,7 @@ pub fn register_symbolically_invalid_expression(
 pub fn register_illegal_fun_recursion_expression(
     registry: &mut NodeRegistry,
     unregistered: heavy::IllegalFunRecursionExpression,
-) -> NodeId<IllegalFunRecursionExpression> {
+) -> &'a IllegalFunRecursionExpression<'a> {
     let expression_id = register_expression(registry, unregistered.expression);
     registry.add_and_overwrite_id(IllegalFunRecursionExpression {
         id: dummy_id(),

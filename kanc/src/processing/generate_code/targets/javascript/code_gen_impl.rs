@@ -369,7 +369,7 @@ fn generate_code_for_let_statement(
 fn generate_code_for_expression(
     registry: &NodeRegistry,
     context: &mut Context,
-    id: light::ExpressionId,
+    id: light::ExpressionRef<'a>,
 ) -> Result<Expression, CompileToJavaScriptError> {
     let expression = registry.expression_ref(id);
     match expression {

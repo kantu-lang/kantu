@@ -24,7 +24,7 @@ pub enum ReferenceRestriction {
 #[derive(Clone, Copy, Debug)]
 pub enum IndexOrLabel {
     Index(usize),
-    LabelId(NodeId<Identifier>),
+    LabelId(&'a Identifier<'a>),
 }
 
 impl Context {

@@ -5,7 +5,7 @@ use crate::{
         file_id::*,
         file_tree::*,
         fun_recursion_validation_result::IllegalFunRecursionError,
-        node_registry::ExpressionId,
+        node_registry::ExpressionRef<'a>,
         node_registry::{NodeRegistry, NonEmptyCallArgListId, NonEmptyMatchCaseParamListId},
         text_span::*,
         type_positivity_validation_result::TypePositivityError,
@@ -929,7 +929,7 @@ fn format_optional_span_start(span: Option<TextSpan>, file_path_map: &FilePathMa
 }
 
 fn format_expression_with_one_indent(
-    expression_id: ExpressionId,
+    expression_id: ExpressionRef<'a>,
     options: &CompilerOptions,
     registry: &NodeRegistry,
 ) -> String {

@@ -1,16 +1,16 @@
 use super::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct NormalFormId(ExpressionId);
+pub struct NormalFormId(ExpressionRef<'a>);
 
 impl NormalFormId {
-    pub fn unchecked_new(expression: ExpressionId) -> Self {
+    pub fn unchecked_new(expression: ExpressionRef<'a>) -> Self {
         Self(expression)
     }
 }
 
 impl NormalFormId {
-    pub fn raw(self) -> ExpressionId {
+    pub fn raw(self) -> ExpressionRef<'a> {
         self.0
     }
 }
@@ -25,14 +25,14 @@ pub(super) fn type0_expression(state: &mut State) -> NormalFormId {
         }),
         state.context.type0_dbi(),
     );
-    NormalFormId::unchecked_new(ExpressionId::Name(name_id))
+    NormalFormId::unchecked_new(ExpressionRef<'a>::Name(name_id))
 }
 
 pub fn add_name_expression_and_overwrite_component_ids(
     registry: &mut NodeRegistry,
     components: NonEmptyVec<Identifier>,
     db_index: DbIndex,
-) -> NodeId<NameExpression> {
+) -> &'a NameExpression<'a> {
     let first_span = components.first().span;
     let last_span = components.last().span;
     let span = first_span
@@ -50,9 +50,9 @@ pub fn add_name_expression_and_overwrite_component_ids(
 
 pub fn add_name_expression(
     registry: &mut NodeRegistry,
-    component_ids: NonEmptyVec<NodeId<Identifier>>,
+    component_ids: NonEmptyVec<&'a Identifier<'a>>,
     db_index: DbIndex,
-) -> NodeId<NameExpression> {
+) -> &'a NameExpression<'a> {
     let first_span = registry.get(*component_ids.first()).span;
     let last_span = registry.get(*component_ids.last()).span;
     let span = first_span
@@ -66,20 +66,20 @@ pub fn add_name_expression(
     })
 }
 
-pub fn dummy_id<T>() -> NodeId<T> {
+pub fn dummy_id<T>() -> &'a T<'a> {
     NodeId::new(0)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PossiblyNullaryForall {
-    pub id: NodeId<Self>,
+    pub id: &'a Self<'a>,
     pub span: Option<TextSpan>,
     pub param_list_id: Option<NonEmptyParamListId>,
-    pub output_id: ExpressionId,
+    pub output_id: ExpressionRef<'a>,
 }
 
 impl PossiblyNullaryForall {
-    pub fn into_id(self, registry: &mut NodeRegistry) -> ExpressionId {
+    pub fn into_id(self, registry: &mut NodeRegistry) -> ExpressionRef<'a> {
         if let Some(param_list_id) = self.param_list_id {
             let forall_id = registry.add_and_overwrite_id(Forall {
                 id: dummy_id(),
@@ -87,7 +87,7 @@ impl PossiblyNullaryForall {
                 param_list_id,
                 output_id: self.output_id,
             });
-            ExpressionId::Forall(forall_id)
+            ExpressionRef<'a>::Forall(forall_id)
         } else {
             self.output_id
         }
@@ -95,7 +95,7 @@ impl PossiblyNullaryForall {
 }
 
 pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId) -> bool {
-    if let ExpressionId::Name(name_id) = term.raw() {
+    if let ExpressionRef<'a>::Name(name_id) = term.raw() {
         let name = state.registry.get(name_id);
         let i = name.db_index;
         i == state.context.type0_dbi() || i == state.context.type1_dbi()
@@ -105,7 +105,7 @@ pub(super) fn is_term_equal_to_type0_or_type1(state: &State, term: NormalFormId)
 }
 
 pub(super) fn is_term_equal_to_type1(state: &State, term: NormalFormId) -> bool {
-    if let ExpressionId::Name(name_id) = term.raw() {
+    if let ExpressionRef<'a>::Name(name_id) = term.raw() {
         let name = state.registry.get(name_id);
         let i = name.db_index;
         i == state.context.type1_dbi()
@@ -195,13 +195,13 @@ pub(super) fn normalize_params_and_leave_params_in_context_dirty(
 
 pub(super) fn normalize_unlabeled_params_and_leave_params_in_context_dirty(
     state: &mut State,
-    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
-) -> Result<WithPushWarning<NonEmptyListId<NodeId<UnlabeledParam>>>, Tainted<TypeCheckError>> {
+    param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
+) -> Result<WithPushWarning<NonEmptyListId<&'a UnlabeledParam<'a>>>, Tainted<TypeCheckError>> {
     let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
     let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
-        |&param_id| -> Result<NodeId<UnlabeledParam>, Tainted<TypeCheckError>> {
+        |&param_id| -> Result<&'a UnlabeledParam<'a>, Tainted<TypeCheckError>> {
             type_check_unlabeled_param_dirty(state, param_id)??;
-            let type_id: ExpressionId = state
+            let type_id: ExpressionRef<'a> = state
                 .context
                 .get_type(DbIndex(0), state.registry)
                 .downshift(1, state.registry)
@@ -226,13 +226,13 @@ pub(super) fn normalize_unlabeled_params_and_leave_params_in_context_dirty(
 
 pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
     state: &mut State,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
-) -> Result<WithPushWarning<NonEmptyListId<NodeId<LabeledParam>>>, Tainted<TypeCheckError>> {
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
+) -> Result<WithPushWarning<NonEmptyListId<&'a LabeledParam<'a>>>, Tainted<TypeCheckError>> {
     let param_ids = state.registry.get_list(param_list_id).to_non_empty_vec();
     let normalized_ids = param_ids.as_non_empty_slice().try_to_mapped(
-        |&param_id| -> Result<NodeId<LabeledParam>, Tainted<TypeCheckError>> {
+        |&param_id| -> Result<&'a LabeledParam<'a>, Tainted<TypeCheckError>> {
             type_check_labeled_param_dirty(state, param_id)??;
-            let type_id: ExpressionId = state
+            let type_id: ExpressionRef<'a> = state
                 .context
                 .get_type(DbIndex(0), state.registry)
                 .downshift(1, state.registry)
@@ -258,9 +258,9 @@ pub(super) fn normalize_labeled_params_and_leave_params_in_context_dirty(
 
 pub fn verify_variant_to_case_bijection(
     registry: &mut NodeRegistry,
-    match_id: NodeId<Match>,
-    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
-    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    match_id: &'a Match<'a>,
+    variant_name_list_id: Option<NonEmptyListId<&'a Identifier<'a>>>,
+    case_list_id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
 ) -> Result<(), TypeCheckError> {
     verify_there_are_no_duplicate_cases(registry, case_list_id)?;
     verify_that_every_variant_has_a_case(registry, match_id, variant_name_list_id, case_list_id)?;
@@ -270,9 +270,9 @@ pub fn verify_variant_to_case_bijection(
 
 fn verify_there_are_no_duplicate_cases(
     registry: &NodeRegistry,
-    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    case_list_id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
 ) -> Result<(), TypeCheckError> {
-    let mut visited_cases: Vec<NodeId<MatchCase>> = Vec::with_capacity(case_list_id.len());
+    let mut visited_cases: Vec<&'a MatchCase<'a>> = Vec::with_capacity(case_list_id.len());
 
     let case_ids = registry.get_possibly_empty_list(case_list_id);
 
@@ -303,14 +303,14 @@ fn verify_there_are_no_duplicate_cases(
 
 fn verify_that_every_variant_has_a_case(
     registry: &mut NodeRegistry,
-    match_id: NodeId<Match>,
-    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
-    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    match_id: &'a Match<'a>,
+    variant_name_list_id: Option<NonEmptyListId<&'a Identifier<'a>>>,
+    case_list_id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
 ) -> Result<(), TypeCheckError> {
     let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
     let case_ids = registry.get_possibly_empty_list(case_list_id);
 
-    let missing_variant_name_ids: Vec<NodeId<Identifier>> = variant_name_ids
+    let missing_variant_name_ids: Vec<&'a Identifier<'a>> = variant_name_ids
         .iter()
         .copied()
         .filter_map(|variant_name_id| {
@@ -340,8 +340,8 @@ fn verify_that_every_variant_has_a_case(
 
 fn verify_that_every_case_has_a_variant(
     registry: &NodeRegistry,
-    variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
-    case_list_id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    variant_name_list_id: Option<NonEmptyListId<&'a Identifier<'a>>>,
+    case_list_id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
 ) -> Result<(), TypeCheckError> {
     let variant_name_ids = registry.get_possibly_empty_list(variant_name_list_id);
     let case_ids = registry.get_possibly_empty_list(case_list_id);
@@ -362,7 +362,7 @@ fn verify_that_every_case_has_a_variant(
 pub(super) fn get_db_index_for_adt_variant_of_name(
     state: &mut State,
     adt_expression: NormalFormAdtExpression,
-    target_variant_name_id: NodeId<Identifier>,
+    target_variant_name_id: &'a Identifier<'a>,
 ) -> DbIndex {
     let type_dbi = state.registry.get(adt_expression.type_name_id).db_index;
     let variant_name_list_id = match state.context.get_definition(type_dbi, state.registry) {
@@ -390,23 +390,23 @@ pub struct DynamicSubstitution(pub NormalFormId, pub NormalFormId);
 
 fn is_left_inclusive_subterm_of_right(
     state: &mut State,
-    left: ExpressionId,
-    right: ExpressionId,
+    left: ExpressionRef<'a>,
+    right: ExpressionRef<'a>,
 ) -> bool {
     if state.equality_checker.eq(left, right, state.registry) {
         return true;
     }
 
     match right {
-        ExpressionId::Name(_) => {
+        ExpressionRef<'a>::Name(_) => {
             // This must be false because we already checked for equality.
             false
         }
-        ExpressionId::Todo(_) => {
+        ExpressionRef<'a>::Todo(_) => {
             // This must be false because we already checked for equality.
             false
         }
-        ExpressionId::Call(right_id) => {
+        ExpressionRef<'a>::Call(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_right(state, left, right.callee_id) {
@@ -419,7 +419,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionId::Fun(right_id) => {
+        ExpressionRef<'a>::Fun(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
@@ -444,7 +444,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionId::Match(right_id) => {
+        ExpressionRef<'a>::Match(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_right(state, left, right.matchee_id) {
@@ -475,7 +475,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionId::Forall(right_id) => {
+        ExpressionRef<'a>::Forall(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_subterm_of_any_right_param_type(state, left, right.param_list_id) {
@@ -493,7 +493,7 @@ fn is_left_inclusive_subterm_of_right(
 
             false
         }
-        ExpressionId::Check(right_id) => {
+        ExpressionRef<'a>::Check(right_id) => {
             let right = state.registry.get(right_id).clone();
 
             if is_left_inclusive_subterm_of_any_right_assertion(state, left, right_id) {
@@ -511,7 +511,7 @@ fn is_left_inclusive_subterm_of_right(
 
 fn does_right_call_arg_list_contain_left(
     state: &mut State,
-    left: ExpressionId,
+    left: ExpressionRef<'a>,
     right: NonEmptyCallArgListId,
 ) -> bool {
     match right {
@@ -534,7 +534,7 @@ fn does_right_call_arg_list_contain_left(
 
 fn is_left_subterm_of_any_right_param_type(
     state: &mut State,
-    left: ExpressionId,
+    left: ExpressionRef<'a>,
     right: NonEmptyParamListId,
 ) -> bool {
     match right {
@@ -563,8 +563,8 @@ fn is_left_subterm_of_any_right_param_type(
 
 fn is_left_inclusive_subterm_of_any_right_assertion(
     state: &mut State,
-    left: ExpressionId,
-    right: NodeId<Check>,
+    left: ExpressionRef<'a>,
+    right: &'a Check<'a>,
 ) -> bool {
     let right = state.registry.get(right).clone();
     let right_assertion_ids = state.registry.get_list(right.assertion_list_id).to_vec();
@@ -594,8 +594,8 @@ fn is_left_inclusive_subterm_of_any_right_assertion(
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NormalFormAdtExpression {
-    pub type_name_id: NodeId<NameExpression>,
-    pub variant_name_list_id: Option<NonEmptyListId<NodeId<Identifier>>>,
+    pub type_name_id: &'a NameExpression<'a>,
+    pub variant_name_list_id: Option<NonEmptyListId<&'a Identifier<'a>>>,
     pub arg_list_id: Option<NonEmptyCallArgListId>,
 }
 
@@ -607,7 +607,7 @@ pub(super) fn try_as_normal_form_adt_expression(
     expression_id: NormalFormId,
 ) -> Option<NormalFormAdtExpression> {
     match expression_id.raw() {
-        ExpressionId::Name(name_id) => {
+        ExpressionRef<'a>::Name(name_id) => {
             let db_index = state.registry.get(name_id).db_index;
             let definition = state.context.get_definition(db_index, state.registry);
             match definition {
@@ -622,10 +622,10 @@ pub(super) fn try_as_normal_form_adt_expression(
                 _ => None,
             }
         }
-        ExpressionId::Call(call_id) => {
+        ExpressionRef<'a>::Call(call_id) => {
             let call = state.registry.get(call_id).clone();
             match call.callee_id {
-                ExpressionId::Name(name_id) => {
+                ExpressionRef<'a>::Name(name_id) => {
                     let db_index = state.registry.get(name_id).db_index;
                     let definition = state.context.get_definition(db_index, state.registry);
                     match definition {
@@ -662,8 +662,8 @@ pub(super) fn is_normal_form_adt_expression(
 /// Otherwise, returns `None`.
 pub(super) fn try_as_variant_expression(
     state: &mut State,
-    expression_id: ExpressionId,
-) -> Option<(NodeId<Identifier>, Option<NonEmptyCallArgListId>)> {
+    expression_id: ExpressionRef<'a>,
+) -> Option<(&'a Identifier<'a>, Option<NonEmptyCallArgListId>)> {
     try_as_variant_expression_with_node_registry_and_definition_getter(
         state.registry,
         |db_index, registry| state.context.get_definition(db_index, registry),
@@ -678,10 +678,10 @@ pub(super) fn try_as_variant_expression(
 pub(super) fn try_as_variant_expression_with_node_registry_and_definition_getter(
     registry: &mut NodeRegistry,
     mut get_definition: impl FnMut(DbIndex, &mut NodeRegistry) -> ContextEntryDefinition,
-    expression_id: ExpressionId,
-) -> Option<(NodeId<Identifier>, Option<NonEmptyCallArgListId>)> {
+    expression_id: ExpressionRef<'a>,
+) -> Option<(&'a Identifier<'a>, Option<NonEmptyCallArgListId>)> {
     match expression_id {
-        ExpressionId::Name(name_id) => {
+        ExpressionRef<'a>::Name(name_id) => {
             let db_index = registry.get(name_id).db_index;
             let definition = get_definition(db_index, registry);
             match definition {
@@ -689,10 +689,10 @@ pub(super) fn try_as_variant_expression_with_node_registry_and_definition_getter
                 _ => None,
             }
         }
-        ExpressionId::Call(call_id) => {
+        ExpressionRef<'a>::Call(call_id) => {
             let call = registry.get(call_id).clone();
             match call.callee_id {
-                ExpressionId::Name(name_id) => {
+                ExpressionRef<'a>::Name(name_id) => {
                     let db_index = registry.get(name_id).db_index;
                     let definition = get_definition(db_index, registry);
                     match definition {
@@ -918,8 +918,8 @@ fn expand_dynamic_adt_substitution_shallow(
 
 fn expand_dynamic_normal_form_variant_substitution_shallow(
     state: &mut State,
-    left: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
-    right: (NodeId<Identifier>, Option<NonEmptyCallArgListId>),
+    left: (&'a Identifier<'a>, Option<NonEmptyCallArgListId>),
+    right: (&'a Identifier<'a>, Option<NonEmptyCallArgListId>),
 ) -> DynamicSubstitutionExpansionResult {
     // We only need to compare name (rather than DB index) because
     // `left` and `right` are assumed to have the same type, and
@@ -955,8 +955,8 @@ fn expand_dynamic_normal_form_variant_substitution_shallow(
 
 fn expand_dynamic_normal_form_unlabeled_call_arg_list_substitution_shallow(
     state: &mut State,
-    normalized_left_arg_list_id: NonEmptyListId<ExpressionId>,
-    normalized_right_arg_list_id: NonEmptyListId<ExpressionId>,
+    normalized_left_arg_list_id: NonEmptyListId<ExpressionRef<'a>>,
+    normalized_right_arg_list_id: NonEmptyListId<ExpressionRef<'a>>,
 ) -> DynamicSubstitutionExpansionResult {
     let left_args = state.registry.get_list(normalized_left_arg_list_id);
     let right_args = state.registry.get_list(normalized_right_arg_list_id);
@@ -1089,7 +1089,7 @@ pub(super) trait SubstituteInPlaceAndGetNoOpStatus {
     ) -> WasSyntacticNoOp;
 }
 
-impl SubstituteInPlaceAndGetNoOpStatus for ExpressionId {
+impl SubstituteInPlaceAndGetNoOpStatus for ExpressionRef<'a> {
     fn subst_in_place_and_get_status(
         &mut self,
         substitution: Substitution,
@@ -1363,8 +1363,8 @@ where
 
 pub(super) fn get_unlabeled_param_type_ids(
     state: &State,
-    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
-) -> NonEmptyVec<ExpressionId> {
+    param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
+) -> NonEmptyVec<ExpressionRef<'a>> {
     state
         .registry
         .get_list(param_list_id)
@@ -1377,7 +1377,7 @@ pub(super) fn get_unlabeled_param_type_ids(
 pub(super) fn get_names_and_types_of_params(
     state: &State,
     param_list_id: NonEmptyParamListId,
-) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+) -> (NonEmptyVec<&'a Identifier<'a>>, NonEmptyVec<ExpressionRef<'a>>) {
     match param_list_id {
         NonEmptyParamListId::Unlabeled(id) => get_names_and_types_of_unlabeled_params(state, id),
         NonEmptyParamListId::UniquelyLabeled(id) => {
@@ -1388,8 +1388,8 @@ pub(super) fn get_names_and_types_of_params(
 
 pub(super) fn get_names_and_types_of_unlabeled_params(
     state: &State,
-    param_list_id: NonEmptyListId<NodeId<UnlabeledParam>>,
-) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    param_list_id: NonEmptyListId<&'a UnlabeledParam<'a>>,
+) -> (NonEmptyVec<&'a Identifier<'a>>, NonEmptyVec<ExpressionRef<'a>>) {
     let param_ids = state.registry.get_list(param_list_id);
     param_ids.map_to_unzipped(|param_id| {
         let param = state.registry.get(*param_id);
@@ -1399,8 +1399,8 @@ pub(super) fn get_names_and_types_of_unlabeled_params(
 
 pub(super) fn get_names_and_types_of_labeled_params(
     state: &State,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
-) -> (NonEmptyVec<NodeId<Identifier>>, NonEmptyVec<ExpressionId>) {
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
+) -> (NonEmptyVec<&'a Identifier<'a>>, NonEmptyVec<ExpressionRef<'a>>) {
     let param_ids = state.registry.get_list(param_list_id);
     param_ids.map_to_unzipped(|param_id| {
         let param = state.registry.get(*param_id);
@@ -1410,7 +1410,7 @@ pub(super) fn get_names_and_types_of_labeled_params(
 
 pub(super) fn get_arg_corresponding_to_label(
     state: &State,
-    target_label_id: NodeId<Identifier>,
+    target_label_id: &'a Identifier<'a>,
     arg_ids: &[LabeledCallArgId],
 ) -> Option<(usize, LabeledCallArgId)> {
     let target_label_name = &state.registry.get(target_label_id).name;

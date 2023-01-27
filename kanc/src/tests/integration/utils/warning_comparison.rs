@@ -467,7 +467,7 @@ fn summarize_normal_form_assertion_warning(
 
 fn format_goal_kw_or_expr(
     registry: &NodeRegistry,
-    id: Result<ExpressionId, type_check::LhsIsGoalKw>,
+    id: Result<ExpressionRef<'a>, type_check::LhsIsGoalKw>,
 ) -> String {
     match id {
         Ok(id) => format_expr(registry, id),
@@ -475,7 +475,7 @@ fn format_goal_kw_or_expr(
     }
 }
 
-fn format_expr(registry: &NodeRegistry, id: ExpressionId) -> String {
+fn format_expr(registry: &NodeRegistry, id: ExpressionRef<'a>) -> String {
     format_expression(
         &expand_expression(registry, id),
         0,

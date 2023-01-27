@@ -26,7 +26,7 @@ impl WithoutSpans for NonEmptyParamListId {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<NodeId<UnlabeledParam>> {
+impl WithoutSpans for NonEmptyListId<&'a UnlabeledParam<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -34,7 +34,7 @@ impl WithoutSpans for NonEmptyListId<NodeId<UnlabeledParam>> {
     }
 }
 
-impl WithoutSpans for NodeId<UnlabeledParam> {
+impl WithoutSpans for &'a UnlabeledParam<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let name_id = original.name_id.without_spans(registry);
@@ -49,7 +49,7 @@ impl WithoutSpans for NodeId<UnlabeledParam> {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<NodeId<LabeledParam>> {
+impl WithoutSpans for NonEmptyListId<&'a LabeledParam<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -57,7 +57,7 @@ impl WithoutSpans for NonEmptyListId<NodeId<LabeledParam>> {
     }
 }
 
-impl WithoutSpans for NodeId<LabeledParam> {
+impl WithoutSpans for &'a LabeledParam<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let label_id = original.label_clause.without_spans(registry);
@@ -83,7 +83,7 @@ impl WithoutSpans for ParamLabelId {
     }
 }
 
-impl WithoutSpans for NodeId<Identifier> {
+impl WithoutSpans for &'a Identifier<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         registry.add_and_overwrite_id(Identifier {
@@ -100,21 +100,21 @@ impl WithoutSpans for NormalFormId {
     }
 }
 
-impl WithoutSpans for ExpressionId {
+impl WithoutSpans for ExpressionRef<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         match self {
-            ExpressionId::Name(id) => ExpressionId::Name(id.without_spans(registry)),
-            ExpressionId::Todo(id) => ExpressionId::Todo(id.without_spans(registry)),
-            ExpressionId::Call(id) => ExpressionId::Call(id.without_spans(registry)),
-            ExpressionId::Fun(id) => ExpressionId::Fun(id.without_spans(registry)),
-            ExpressionId::Match(id) => ExpressionId::Match(id.without_spans(registry)),
-            ExpressionId::Forall(id) => ExpressionId::Forall(id.without_spans(registry)),
-            ExpressionId::Check(id) => ExpressionId::Check(id.without_spans(registry)),
+            ExpressionRef<'a>::Name(id) => ExpressionRef<'a>::Name(id.without_spans(registry)),
+            ExpressionRef<'a>::Todo(id) => ExpressionRef<'a>::Todo(id.without_spans(registry)),
+            ExpressionRef<'a>::Call(id) => ExpressionRef<'a>::Call(id.without_spans(registry)),
+            ExpressionRef<'a>::Fun(id) => ExpressionRef<'a>::Fun(id.without_spans(registry)),
+            ExpressionRef<'a>::Match(id) => ExpressionRef<'a>::Match(id.without_spans(registry)),
+            ExpressionRef<'a>::Forall(id) => ExpressionRef<'a>::Forall(id.without_spans(registry)),
+            ExpressionRef<'a>::Check(id) => ExpressionRef<'a>::Check(id.without_spans(registry)),
         }
     }
 }
 
-impl WithoutSpans for NodeId<NameExpression> {
+impl WithoutSpans for &'a NameExpression<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let component_list_id = original.component_list_id.without_spans(registry);
@@ -127,7 +127,7 @@ impl WithoutSpans for NodeId<NameExpression> {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<NodeId<Identifier>> {
+impl WithoutSpans for NonEmptyListId<&'a Identifier<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -135,7 +135,7 @@ impl WithoutSpans for NonEmptyListId<NodeId<Identifier>> {
     }
 }
 
-impl WithoutSpans for NodeId<TodoExpression> {
+impl WithoutSpans for &'a TodoExpression<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         registry.add_and_overwrite_id(TodoExpression {
             id: dummy_id(),
@@ -144,7 +144,7 @@ impl WithoutSpans for NodeId<TodoExpression> {
     }
 }
 
-impl WithoutSpans for NodeId<Call> {
+impl WithoutSpans for &'a Call<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let callee_id = original.callee_id.without_spans(registry);
@@ -171,7 +171,7 @@ impl WithoutSpans for NonEmptyCallArgListId {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<ExpressionId> {
+impl WithoutSpans for NonEmptyListId<ExpressionRef<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -207,7 +207,7 @@ impl WithoutSpans for LabeledCallArgId {
     }
 }
 
-impl WithoutSpans for NodeId<Fun> {
+impl WithoutSpans for &'a Fun<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let name_id = original.name_id.without_spans(registry);
@@ -225,7 +225,7 @@ impl WithoutSpans for NodeId<Fun> {
     }
 }
 
-impl WithoutSpans for NodeId<Match> {
+impl WithoutSpans for &'a Match<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let matchee_id = original.matchee_id.without_spans(registry);
@@ -239,7 +239,7 @@ impl WithoutSpans for NodeId<Match> {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<NodeId<MatchCase>> {
+impl WithoutSpans for NonEmptyListId<&'a MatchCase<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -247,7 +247,7 @@ impl WithoutSpans for NonEmptyListId<NodeId<MatchCase>> {
     }
 }
 
-impl WithoutSpans for NodeId<MatchCase> {
+impl WithoutSpans for &'a MatchCase<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let variant_name_id = original.variant_name_id.without_spans(registry);
@@ -280,7 +280,7 @@ impl WithoutSpans for NonEmptyMatchCaseParamListId {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<NodeId<LabeledMatchCaseParam>> {
+impl WithoutSpans for NonEmptyListId<&'a LabeledMatchCaseParam<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -288,7 +288,7 @@ impl WithoutSpans for NonEmptyListId<NodeId<LabeledMatchCaseParam>> {
     }
 }
 
-impl WithoutSpans for NodeId<LabeledMatchCaseParam> {
+impl WithoutSpans for &'a LabeledMatchCaseParam<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let label_id = original.label_id.without_spans(registry);
@@ -311,7 +311,7 @@ impl WithoutSpans for MatchCaseOutputId {
     }
 }
 
-impl WithoutSpans for NodeId<Forall> {
+impl WithoutSpans for &'a Forall<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let param_list_id = original.param_list_id.without_spans(registry);
@@ -325,7 +325,7 @@ impl WithoutSpans for NodeId<Forall> {
     }
 }
 
-impl WithoutSpans for NodeId<Check> {
+impl WithoutSpans for &'a Check<'a> {
     fn without_spans(self, check: &mut NodeRegistry) -> Self {
         let original = check.get(self).clone();
         let assertion_list_id = original.assertion_list_id.without_spans(check);
@@ -339,7 +339,7 @@ impl WithoutSpans for NodeId<Check> {
     }
 }
 
-impl WithoutSpans for NonEmptyListId<NodeId<CheckAssertion>> {
+impl WithoutSpans for NonEmptyListId<&'a CheckAssertion<'a>> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get_list(self).to_non_empty_vec();
         let new = original.into_mapped(|id| id.without_spans(registry));
@@ -347,7 +347,7 @@ impl WithoutSpans for NonEmptyListId<NodeId<CheckAssertion>> {
     }
 }
 
-impl WithoutSpans for NodeId<CheckAssertion> {
+impl WithoutSpans for &'a CheckAssertion<'a> {
     fn without_spans(self, registry: &mut NodeRegistry) -> Self {
         let original = registry.get(self).clone();
         let left_id = original.left_id.without_spans(registry);

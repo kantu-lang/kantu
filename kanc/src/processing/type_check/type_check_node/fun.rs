@@ -2,7 +2,7 @@ use super::*;
 
 pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     state: &mut State,
-    fun_id: NodeId<Fun>,
+    fun_id: &'a Fun<'a>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     let fun = state.registry.get(fun_id).clone();
     // We call this "param arity" instead of simply "arity"
@@ -25,7 +25,7 @@ pub(in crate::processing::type_check) fn get_type_of_fun_dirty(
     }
     let normalized_return_type_id = evaluate_well_typed_expression(state, fun.return_type_id);
 
-    let fun_type_id = NormalFormId::unchecked_new(ExpressionId::Forall(
+    let fun_type_id = NormalFormId::unchecked_new(ExpressionRef<'a>::Forall(
         state
             .registry
             .add_and_overwrite_id(Forall {

@@ -14,7 +14,7 @@ pub(super) fn type_check_file_item_dirty(
 
 pub(super) fn type_check_type_statement_dirty(
     state: &mut State,
-    type_statement_id: NodeId<TypeStatement>,
+    type_statement_id: &'a TypeStatement<'a>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let type_statement = state.registry.get(type_statement_id).clone();
     state.required_transparency_for_substitution = Some(Transparency(type_statement.visibility.0));
@@ -34,7 +34,7 @@ pub(super) fn type_check_type_statement_dirty(
 
 pub(super) fn type_check_type_constructor_dirty(
     state: &mut State,
-    type_statement_id: NodeId<TypeStatement>,
+    type_statement_id: &'a TypeStatement<'a>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let type_statement = state.registry.get(type_statement_id).clone();
     let arity = type_statement.param_list_id.len();
@@ -75,7 +75,7 @@ pub(super) fn type_check_type_constructor_dirty(
 
 pub(in crate::processing::type_check) fn type_check_unlabeled_param_dirty(
     state: &mut State,
-    param_id: NodeId<UnlabeledParam>,
+    param_id: &'a UnlabeledParam<'a>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let param = state.registry.get(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
@@ -95,7 +95,7 @@ pub(in crate::processing::type_check) fn type_check_unlabeled_param_dirty(
 
 pub(in crate::processing::type_check) fn type_check_labeled_param_dirty(
     state: &mut State,
-    param_id: NodeId<LabeledParam>,
+    param_id: &'a LabeledParam<'a>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let param = state.registry.get(param_id).clone();
     let param_type_type_id = get_type_of_expression_dirty(state, None, param.type_id)?;
@@ -115,7 +115,7 @@ pub(in crate::processing::type_check) fn type_check_labeled_param_dirty(
 
 pub(super) fn type_check_type_variant_dirty(
     state: &mut State,
-    variant_id: NodeId<Variant>,
+    variant_id: &'a Variant<'a>,
     type_statement_visibility: Visibility,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let variant = state.registry.get(variant_id).clone();
@@ -146,7 +146,7 @@ pub(super) fn type_check_type_variant_dirty(
 
 pub(super) fn type_check_let_statement_dirty(
     state: &mut State,
-    let_statement_id: NodeId<LetStatement>,
+    let_statement_id: &'a LetStatement<'a>,
 ) -> Result<PushWarning, Tainted<TypeCheckError>> {
     let let_statement = state.registry.get(let_statement_id).clone();
     state.required_transparency_for_substitution = Some(let_statement.transparency);

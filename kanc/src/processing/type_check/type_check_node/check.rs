@@ -3,7 +3,7 @@ use super::*;
 pub(in crate::processing::type_check) fn get_type_of_check_expression_dirty(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    check_id: NodeId<Check>,
+    check_id: &'a Check<'a>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     add_check_expression_warnings(state, coercion_target_id, check_id).map_err(Tainted::new)?;
     let check = state.registry.get(check_id).clone();
@@ -13,7 +13,7 @@ pub(in crate::processing::type_check) fn get_type_of_check_expression_dirty(
 fn add_check_expression_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    check_id: NodeId<Check>,
+    check_id: &'a Check<'a>,
 ) -> Result<(), TypeCheckError> {
     let warnings = get_check_expression_warnings(state, coercion_target_id, check_id);
     state.warnings.extend(warnings);
@@ -23,7 +23,7 @@ fn add_check_expression_warnings(
 fn get_check_expression_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    check_id: NodeId<Check>,
+    check_id: &'a Check<'a>,
 ) -> Vec<TypeCheckWarning> {
     let assertion_ids = {
         let check = state.registry.get(check_id);
@@ -39,7 +39,7 @@ fn get_check_expression_warnings(
 fn get_check_assertion_warnings(
     state: &mut State,
     coercion_target_id: Option<NormalFormId>,
-    assertion_id: NodeId<CheckAssertion>,
+    assertion_id: &'a CheckAssertion<'a>,
 ) -> Vec<TypeCheckWarning> {
     let assertion = state.registry.get(assertion_id).clone();
     match assertion.kind {
@@ -383,7 +383,7 @@ fn get_non_goal_normal_form_assertion_warnings(
 
 #[derive(Clone, Copy, Debug)]
 struct CorrectlyTyped {
-    expression_id: ExpressionId,
+    expression_id: ExpressionRef<'a>,
     type_id: NormalFormId,
 }
 
@@ -413,7 +413,7 @@ fn get_type_correctness_of_possibly_invalid_expression(
 }
 
 enum QuestionMarkOrPossiblyInvalidExpressionTypeCorrectness {
-    Correct(ExpressionId, NormalFormId),
+    Correct(ExpressionRef<'a>, NormalFormId),
     Incorrect(TypeCheckFailureReason),
     QuestionMark,
 }

@@ -9,7 +9,7 @@ pub struct TrustCache {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TypeParam {
-    pub type_id: NodeId<TypeStatement>,
+    pub type_id: &'a TypeStatement<'a>,
     pub param_index: usize,
 }
 

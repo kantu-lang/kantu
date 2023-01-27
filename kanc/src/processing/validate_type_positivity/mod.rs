@@ -60,7 +60,7 @@ fn validate_type_positivity_in_type_statement(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    type_id: NodeId<TypeStatement>,
+    type_id: &'a TypeStatement<'a>,
 ) -> Result<(), TypePositivityError> {
     context.push(ContextEntryDefinition::Adt(type_id));
 
@@ -79,7 +79,7 @@ fn validate_type_positivity_in_variant(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    variant_id: NodeId<Variant>,
+    variant_id: &'a Variant<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let variant = registry.get(variant_id);
@@ -107,24 +107,24 @@ fn validate_type_positivity_in_expression(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    id: ExpressionId,
+    id: ExpressionRef<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     match id {
-        ExpressionId::Name(_) => Ok(()),
-        ExpressionId::Todo(_) => Ok(()),
-        ExpressionId::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
+        ExpressionRef<'a>::Name(_) => Ok(()),
+        ExpressionRef<'a>::Todo(_) => Ok(()),
+        ExpressionRef<'a>::Fun(fun_id) => Err(TypePositivityError::ExpectedTypeGotFun(fun_id)),
 
-        ExpressionId::Call(call_id) => {
+        ExpressionRef<'a>::Call(call_id) => {
             validate_type_positivity_in_call(context, cache, registry, call_id, target)
         }
-        ExpressionId::Match(match_id) => {
+        ExpressionRef<'a>::Match(match_id) => {
             validate_type_positivity_in_match(context, cache, registry, match_id, target)
         }
-        ExpressionId::Forall(forall_id) => {
+        ExpressionRef<'a>::Forall(forall_id) => {
             validate_type_positivity_in_forall(context, cache, registry, forall_id, target)
         }
-        ExpressionId::Check(check_id) => {
+        ExpressionRef<'a>::Check(check_id) => {
             validate_type_positivity_in_check_expression(context, cache, registry, check_id, target)
         }
     }
@@ -134,16 +134,16 @@ fn validate_type_positivity_in_call(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    call_id: NodeId<Call>,
+    call_id: &'a Call<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
-    if !does_target_appear_in_expression(registry, ExpressionId::Call(call_id), target) {
+    if !does_target_appear_in_expression(registry, ExpressionRef<'a>::Call(call_id), target) {
         return Ok(());
     }
 
     let call = registry.get(call_id);
 
-    let ExpressionId::Name(callee_id) = call.callee_id else {
+    let ExpressionRef<'a>::Name(callee_id) = call.callee_id else {
         return Err(TypePositivityError::NonAdtCallee{
             call_id,
             callee_id: call.callee_id,
@@ -192,7 +192,7 @@ fn validate_type_positivity_in_match(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    id: NodeId<Match>,
+    id: &'a Match<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let match_ = registry.get(id);
@@ -214,7 +214,7 @@ fn validate_type_positivity_in_match_case_outputs(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    id: Option<NonEmptyListId<NodeId<MatchCase>>>,
+    id: Option<NonEmptyListId<&'a MatchCase<'a>>>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let case_ids = registry.get_possibly_empty_list(id).to_vec();
@@ -228,7 +228,7 @@ fn validate_type_positivity_in_match_case(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    id: NodeId<MatchCase>,
+    id: &'a MatchCase<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let case = registry.get(id);
@@ -265,7 +265,7 @@ fn validate_type_positivity_in_forall(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    id: NodeId<Forall>,
+    id: &'a Forall<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let forall = registry.get(id);
@@ -292,7 +292,7 @@ fn validate_type_positivity_in_check_expression(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    id: NodeId<Check>,
+    id: &'a Check<'a>,
     target: DbIndex,
 ) -> Result<(), TypePositivityError> {
     let check = registry.get(id);
@@ -343,7 +343,7 @@ fn verify_type_param_i_is_positive_in_variant(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    variant_id: NodeId<Variant>,
+    variant_id: &'a Variant<'a>,
     i: usize,
     type_param_arity: usize,
 ) -> Result<(), TypePositivityError> {
@@ -365,7 +365,7 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
     context: &mut Context,
     cache: &mut TrustCache,
     registry: &NodeRegistry,
-    variant_id: NodeId<Variant>,
+    variant_id: &'a Variant<'a>,
     i: usize,
     type_param_arity: usize,
 ) -> Result<(), TypePositivityError> {
@@ -374,14 +374,14 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
     let variant_arity = variant.param_list_id.len();
 
     let variant_return_type_id = match variant.return_type_id {
-        ExpressionId::Name(_) => {
+        ExpressionRef<'a>::Name(_) => {
             return Err(TypePositivityError::VariantReturnTypeTypeArgArityMismatch {
                 actual: 0,
                 expected: type_param_arity,
                 return_type_id: variant.return_type_id,
             });
         }
-        ExpressionId::Call(variant_return_type_id) => {
+        ExpressionRef<'a>::Call(variant_return_type_id) => {
             variant_return_type_id
         }
         _ => panic!("Impossible: The variant return type validator should have thrown an error on any return type that was neither a Name nor Call.")
@@ -405,7 +405,7 @@ fn verify_type_param_i_is_positive_in_variant_without_pushing(
         return Ok(());
     }
 
-    let ExpressionId::Name(type_arg_id) = type_arg_id else {
+    let ExpressionRef<'a>::Name(type_arg_id) = type_arg_id else {
         // TODO: Enable "stack trace" (e.g., so we can see the original
         // type that required the variant return type to have a positive
         // type arg).

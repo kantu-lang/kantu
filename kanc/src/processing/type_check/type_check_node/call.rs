@@ -2,7 +2,7 @@ use super::*;
 
 pub(in crate::processing::type_check) fn get_type_of_call_dirty(
     state: &mut State,
-    call_id: NodeId<Call>,
+    call_id: &'a Call<'a>,
 ) -> Result<NormalFormId, Tainted<TypeCheckError>> {
     if let Some(corrected) = correct_call_arg_order_dirty(state, call_id)? {
         // TODO: Emit warning about incorrect arg order.
@@ -11,7 +11,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
 
     let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
-    let callee_type_id = if let ExpressionId::Forall(id) = callee_type_id.raw() {
+    let callee_type_id = if let ExpressionRef<'a>::Forall(id) = callee_type_id.raw() {
         id
     } else {
         return tainted_err(TypeCheckError::IllegalCallee {
@@ -63,7 +63,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
                     let db_index = DbIndex(i - j - 1);
                     let param_name_id = callee_type_param_name_ids[j];
                     Substitution {
-                        from: ExpressionId::Name(add_name_expression(
+                        from: ExpressionRef<'a>::Name(add_name_expression(
                             state.registry,
                             NonEmptyVec::singleton(param_name_id),
                             db_index,
@@ -111,7 +111,7 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
                 let db_index = DbIndex(arity - j - 1);
                 let param_name_id = callee_type_param_name_ids[j];
                 Substitution {
-                    from: ExpressionId::Name(add_name_expression(
+                    from: ExpressionRef<'a>::Name(add_name_expression(
                         state.registry,
                         NonEmptyVec::singleton(param_name_id),
                         db_index,
@@ -137,11 +137,11 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
 /// then it returns `Err(_)`.
 fn correct_call_arg_order_dirty(
     state: &mut State,
-    call_id: NodeId<Call>,
-) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+    call_id: &'a Call<'a>,
+) -> Result<Option<&'a Call<'a>>, Tainted<TypeCheckError>> {
     let call = state.registry.get(call_id).clone();
     let callee_type_id = get_type_of_expression_dirty(state, None, call.callee_id)?;
-    let ExpressionId::Forall(callee_type_id) = callee_type_id.raw() else {
+    let ExpressionRef<'a>::Forall(callee_type_id) = callee_type_id.raw() else {
         return tainted_err(TypeCheckError::IllegalCallee {
             callee_id:call.callee_id,
             callee_type_id,
@@ -181,10 +181,10 @@ fn correct_call_arg_order_dirty(
 
 fn correct_uniquely_labeled_call_arg_order_dirty(
     state: &mut State,
-    call_id: NodeId<Call>,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    call_id: &'a Call<'a>,
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
     arg_list_id: NonEmptyListId<LabeledCallArgId>,
-) -> Result<Option<NodeId<Call>>, Tainted<TypeCheckError>> {
+) -> Result<Option<&'a Call<'a>>, Tainted<TypeCheckError>> {
     verify_every_param_has_a_corresponding_arg(state, call_id, param_list_id, arg_list_id)?;
     verify_every_arg_has_a_corresponding_param(state, call_id, param_list_id, arg_list_id)?;
 
@@ -236,13 +236,13 @@ fn correct_uniquely_labeled_call_arg_order_dirty(
 
 fn verify_every_param_has_a_corresponding_arg(
     state: &mut State,
-    call_id: NodeId<Call>,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    call_id: &'a Call<'a>,
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
     arg_list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> Result<(), Tainted<TypeCheckError>> {
     let param_ids = state.registry.get_list(param_list_id);
     let arg_ids = state.registry.get_list(arg_list_id);
-    let missing_param_label_name_ids: Vec<NodeId<Identifier>> = param_ids
+    let missing_param_label_name_ids: Vec<&'a Identifier<'a>> = param_ids
         .iter()
         .copied()
         .filter_map(|param_id| {
@@ -275,8 +275,8 @@ fn verify_every_param_has_a_corresponding_arg(
 
 fn verify_every_arg_has_a_corresponding_param(
     state: &State,
-    call_id: NodeId<Call>,
-    param_list_id: NonEmptyListId<NodeId<LabeledParam>>,
+    call_id: &'a Call<'a>,
+    param_list_id: NonEmptyListId<&'a LabeledParam<'a>>,
     arg_list_id: NonEmptyListId<LabeledCallArgId>,
 ) -> Result<(), Tainted<TypeCheckError>> {
     let param_ids = state.registry.get_list(param_list_id);

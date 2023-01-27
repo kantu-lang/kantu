@@ -16,4 +16,4 @@ impl<T> VariantReturnTypesValidated<T> {
 }
 
 #[derive(Clone, Debug)]
-pub struct IllegalVariantReturnTypeError(pub ExpressionId);
+pub struct IllegalVariantReturnTypeError(pub ExpressionRef<'a>);
