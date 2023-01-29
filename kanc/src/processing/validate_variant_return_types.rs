@@ -30,76 +30,54 @@ use crate::data::{light_ast::*, variant_return_type_validation_result::*};
 /// ```
 /// This is valid because since `Bool.True` and `Bool.False` both
 /// return a `Bool`, which is the type they are variants of.
-pub fn validate_variant_return_types_in_file_items(
-    registry: &NodeRegistry,
-    file_item_list_id: Option<NonEmptyListId<FileItemNodeId>>,
-) -> Result<
-    VariantReturnTypesValidated<Option<NonEmptyListId<FileItemNodeId>>>,
-    IllegalVariantReturnTypeError,
-> {
-    let item_ids = registry.get_possibly_empty_list(file_item_list_id);
-    for item_id in item_ids {
-        if let FileItemNodeId::Type(type_id) = item_id {
-            let type_statement = registry.get(*type_id);
-            validate_variant_return_types_in_type_statement(registry, type_statement)?;
+pub fn validate_variant_return_types_in_file_items<'a>(
+    items: &'a [FileItemRef<'a>],
+) -> Result<VariantReturnTypesValidated<&[FileItemRef]>, IllegalVariantReturnTypeError> {
+    for item in items {
+        if let FileItemRef::Type(type_) = item {
+            validate_variant_return_types_in_type_statement(type_)?;
         }
     }
-    Ok(VariantReturnTypesValidated::unchecked_new(
-        file_item_list_id,
-    ))
+    Ok(VariantReturnTypesValidated::unchecked_new(items))
 }
 
-fn validate_variant_return_types_in_type_statement(
-    registry: &NodeRegistry,
-    type_statement: &TypeStatement,
+fn validate_variant_return_types_in_type_statement<'a>(
+    type_statement: &'a TypeStatement<'a>,
 ) -> Result<(), IllegalVariantReturnTypeError> {
-    let variant_ids = registry.get_possibly_empty_list(type_statement.variant_list_id);
-    for (variant_index, variant_id) in variant_ids.iter().copied().enumerate() {
-        let variant = registry.get(variant_id);
-        validate_return_type_of_variant(registry, variant, variant_index)?;
+    for (variant_index, variant) in type_statement.variants.iter().copied().enumerate() {
+        validate_return_type_of_variant(variant, variant_index)?;
     }
     Ok(())
 }
 
-fn validate_return_type_of_variant(
-    registry: &NodeRegistry,
-    variant: &Variant,
+fn validate_return_type_of_variant<'a>(
+    variant: &'a Variant<'a>,
     variant_index: usize,
 ) -> Result<(), IllegalVariantReturnTypeError> {
-    fn validate_return_type_name_db_index(
-        return_type_name_id: &'a NameExpression<'a>,
-        (registry, return_type_id, variant, variant_index): (
-            &NodeRegistry,
-            ExpressionRef<'a>,
-            &Variant,
-            usize,
-        ),
-    ) -> Result<(), IllegalVariantReturnTypeError> {
-        let adjusted_type_statement_db_index = DbIndex(variant_index + variant.param_list_id.len());
-        let return_db_index = registry.get(return_type_name_id).db_index;
+    fn validate_return_type_name_db_index<'a>(
+        return_type_name: &'a NameExpression<'a>,
+        (return_type, variant, variant_index): (ExpressionRef<'a>, &'a Variant<'a>, usize),
+    ) -> Result<(), IllegalVariantReturnTypeError<'a>> {
+        let adjusted_type_statement_db_index = DbIndex(variant_index + variant.params.len());
+        let return_db_index = return_type_name.db_index;
         if adjusted_type_statement_db_index == return_db_index {
             Ok(())
         } else {
-            Err(IllegalVariantReturnTypeError(return_type_id))
+            Err(IllegalVariantReturnTypeError(return_type))
         }
     }
 
-    let return_type_id = variant.return_type_id;
-    match return_type_id {
-        ExpressionRef::Name(name_id) => validate_return_type_name_db_index(
-            name_id,
-            (registry, return_type_id, variant, variant_index),
-        ),
-        ExpressionRef::Call(call_id) => {
-            let call = registry.get(call_id);
-            match call.callee_id {
-                ExpressionRef::Name(name_id) => validate_return_type_name_db_index(
-                    name_id,
-                    (registry, return_type_id, variant, variant_index),
-                ),
-                _other_callee => Err(IllegalVariantReturnTypeError(return_type_id)),
-            }
+    let return_type = variant.return_type;
+    match return_type {
+        ExpressionRef::Name(name) => {
+            validate_return_type_name_db_index(name, (return_type, variant, variant_index))
         }
-        _other_variant_return_type => Err(IllegalVariantReturnTypeError(return_type_id)),
+        ExpressionRef::Call(call) => match call.callee {
+            ExpressionRef::Name(name) => {
+                validate_return_type_name_db_index(name, (return_type, variant, variant_index))
+            }
+            _other_callee => Err(IllegalVariantReturnTypeError(return_type)),
+        },
+        _other_variant_return_type => Err(IllegalVariantReturnTypeError(return_type)),
     }
 }
