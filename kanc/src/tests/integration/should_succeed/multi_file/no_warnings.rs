@@ -110,3 +110,13 @@ fn identity_eq_transparent() {
         ),
     });
 }
+
+#[test]
+fn stdlib() {
+    expect_success_with_no_warnings(ProjectPath {
+        callee_file_path: file!(),
+        checked_unadjusted_pack_yscl_path: checked_path!(
+            "../../../sample_code/should_succeed/multi_file/no_warnings/stdlib/pack.yscl"
+        ),
+    });
+}
