@@ -49,3 +49,16 @@ pub let add = fun add(-a: Pos, b: Pos): Pos {
         },
     }
 };
+
+pub let mul = fun mul(-a: Pos, b: Pos): Pos {
+    match a {
+        one => b,
+        extend(a_left, a_right) => match a_right {
+            zero => Pos.extend(mul(a_left, b), Bit.zero),
+            one => add(
+                Pos.extend(mul(a_left, b), Bit.zero),
+                b,
+            ),
+        },
+    }
+};
