@@ -16,16 +16,23 @@ pub let(*) neq = fun _(a: Int, b: Int): Bool {
     not(eq(a, b))
 };
 
-pub let(*) succ = fun succ(a: Int): Int {
+pub let(*) succ = fun _(a: Int): Int {
     match a {
         neg(ap) => nat.neg(pos.pred(ap)),
         nat(an) => Int.nat(nat.succ(an)),
     }
 };
 
-pub let(*) pred = fun pred(a: Int): Int {
+pub let(*) pred = fun _(a: Int): Int {
     match a {
         neg(ap) => Int.neg(pos.succ(ap)),
         nat(an) => nat.pred(an),
+    }
+};
+
+pub let(*) neg = fun _(a: Int): Int {
+    match a {
+        neg(ap) => Int.nat(Nat.pos(ap)),
+        nat(an) => nat.neg(an),
     }
 };
