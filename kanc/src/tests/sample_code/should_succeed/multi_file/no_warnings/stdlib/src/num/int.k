@@ -65,3 +65,22 @@ pub let(*) sub_pos = fun sub_pos(a: Pos, -b: Pos): Int {
         },
     }
 };
+
+pub let(*) add = fun _(a: Int, b: Int): Int {
+    match a {
+        neg(neg_a) => match b {
+            neg(neg_b) => Int.neg(pos.add(neg_a, neg_b)),
+            nat(bn) => match bn {
+                zero => a,
+                pos(bp) => sub_pos(bp, neg_a),
+            },
+        },
+        nat(an) => match an {
+            zero => b,
+            pos(ap) => match b {
+                neg(neg_b) => sub_pos(ap, neg_b),
+                nat(bn) => Int.nat(nat.add(an, bn)),
+            },
+        },
+    }
+};
