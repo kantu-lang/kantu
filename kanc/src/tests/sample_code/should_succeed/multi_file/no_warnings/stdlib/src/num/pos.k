@@ -29,6 +29,19 @@ pub let(*) succ = fun succ(-a: Pos): Pos {
     }
 };
 
+pub let(*) pred = fun pred(-a: Pos): Nat {
+    match a {
+        one => Nat.zero,
+        extend(a_left, a_right) => Nat.pos(match a_right {
+            one => Pos.extend(a_left, Bit.zero),
+            zero => match pred(a_left) {
+                zero => Pos.one,
+                pos(a_left_pred) => Pos.extend(a_left_pred, Bit.one),
+            },
+        }),
+    }
+};
+
 pub let(*) add = fun add(-a: Pos, b: Pos): Pos {
     match a {
         one => succ(b),

@@ -25,6 +25,13 @@ pub let(*) succ = fun succ(a: Nat): Nat {
     }
 };
 
+pub let(*) neg = fun _(a: Nat): Int {
+    match a {
+        zero => Int.nat(Nat.zero),
+        pos(ap) => Int.neg(ap),
+    }
+};
+
 pub let(*) add = fun add(a: Nat, b: Nat): Nat {
     match a {
         zero => b,
