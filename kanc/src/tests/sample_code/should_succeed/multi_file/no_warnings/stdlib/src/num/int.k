@@ -22,3 +22,10 @@ pub let(*) succ = fun succ(a: Int): Int {
         nat(an) => Int.nat(nat.succ(an)),
     }
 };
+
+pub let(*) pred = fun pred(a: Int): Int {
+    match a {
+        neg(ap) => Int.neg(pos.succ(ap)),
+        nat(an) => nat.pred(an),
+    }
+};
