@@ -88,3 +88,16 @@ pub let(*) add = fun _(a: Int, b: Int): Int {
 pub let(*) sub = fun _(a: Int, b: Int): Int {
     add(a, neg(b))
 };
+
+pub let(*) mul = fun _(a: Int, b: Int): Int {
+    match a {
+        neg(neg_a) => match b {
+            neg(neg_b) => Int.nat(Nat.pos(pos.mul(neg_a, neg_b))),
+            nat(bn) => nat.neg(nat.mul(Nat.pos(neg_a), bn)),
+        },
+        nat(an) => match b {
+            neg(neg_b) => nat.neg(nat.mul(an, Nat.pos(neg_b))),
+            nat(bn) => Int.nat(nat.mul(an, bn)),
+        },
+    }
+};
