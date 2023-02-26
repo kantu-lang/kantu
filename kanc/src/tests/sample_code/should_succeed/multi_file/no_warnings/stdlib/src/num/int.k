@@ -36,3 +36,32 @@ pub let(*) neg = fun _(a: Int): Int {
         nat(an) => nat.neg(an),
     }
 };
+
+pub let(*) double = fun _(a: Int): Int {
+    match a {
+        neg(neg_a) => Int.neg(Pos.extend(neg_a, Bit.zero)),
+        nat(an) => match an {
+            zero => a,
+            pos(ap) => Int.nat(Nat.pos(Pos.extend(ap, Bit.zero))),
+        },
+    }
+};
+
+pub let(*) sub_pos = fun sub_pos(a: Pos, -b: Pos): Int {
+    match b {
+        one => Int.nat(pos.pred(a)),
+        extend(b_left, b_right) => match a {
+            one => nat.neg(pos.pred(b)),
+            extend(a_left, a_right) => match b_right {
+                zero => match a_right {
+                    zero => double(sub_pos(a_left, b_left)),
+                    one => succ(double(sub_pos(a_left, b_left))),
+                },
+                one => match a_right {
+                    one => double(sub_pos(a_left, b_left)),
+                    zero => pred(double(sub_pos(a_left, b_left))),
+                },
+            },
+        },
+    }
+};
