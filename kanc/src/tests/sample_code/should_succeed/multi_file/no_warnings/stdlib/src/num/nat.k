@@ -21,7 +21,14 @@ pub let(*) neq = fun _(a: Nat, b: Nat): Bool {
 pub let(*) succ = fun succ(a: Nat): Nat {
     match a {
         zero => one,
-        pos(p) => Nat.pos(pos.succ(p)),
+        pos(ap) => Nat.pos(pos.succ(ap)),
+    }
+};
+
+pub let(*) pred = fun pred(a: Nat): Int {
+    match a {
+        zero => Int.neg(Pos.one),
+        pos(ap) => Int.nat(pos.pred(ap)),
     }
 };
 
