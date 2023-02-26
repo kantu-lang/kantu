@@ -5,4 +5,7 @@ pub type Equal(T: Type, a: T, b: T) {
 pub mod bool;
 use bool.prelude.*;
 
+pub mod pair;
+use pair.Pair;
+
 pub mod num;
