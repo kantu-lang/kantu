@@ -1,3 +1,5 @@
+use super.*;
+
 pub mod bit;
 pub use bit.*;
 
