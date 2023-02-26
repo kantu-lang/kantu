@@ -101,6 +101,13 @@ pub let(*) le = fun le(-a: Pos, b: Pos): Bool {
         },
     }
 };
-pub let(*) lt = fun lt(a: Pos, b: Pos): Bool {
+pub let(*) lt = fun _(a: Pos, b: Pos): Bool {
     and(le(a, b), neq(a, b))
+};
+
+pub let(*) ge = fun _(a: Pos, b: Pos): Bool {
+    le(b, a)
+};
+pub let(*) gt = fun _(a: Pos, b: Pos): Bool {
+    lt(b, a)
 };
