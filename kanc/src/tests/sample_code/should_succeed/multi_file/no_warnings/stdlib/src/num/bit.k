@@ -1,10 +1,5 @@
 use super.*;
 
-pub type Bit {
-    zero: Bit,
-    one: Bit,
-}
-
 pub let(*) is_zero = fun _(a: Bit): Bool {
     match a {
         zero => true,

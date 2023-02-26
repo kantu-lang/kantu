@@ -1,10 +1,5 @@
 use super.*;
 
-pub type Nat {
-    zero: Nat,
-    pos(p: Pos): Nat,
-}
-
 pub let(*) one = Nat.pos(Pos.one);
 
 pub let(*) eq = fun eq(a: Nat, b: Nat): Bool {
