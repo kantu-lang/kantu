@@ -20,3 +20,13 @@ pub let eq = fun eq(-a: Pos, b: Pos): Bool {
         }
     }
 };
+
+pub let succ = fun succ(-a: Pos): Pos {
+    match a {
+        one => Pos.extend(Pos.one, Bit.zero),
+        extend(a_left, a_right) => match a_right {
+            zero => Pos.extend(a_left, Bit.one),
+            one => Pos.extend(succ(a_left), Bit.zero),
+        },
+    }
+};
