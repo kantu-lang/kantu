@@ -5,6 +5,18 @@ pub type Pos {
     extend(left: Pos, right: Bit): Pos,
 }
 
-pub let eq = fun eq(a: Pos, b: Pos): Bool {
-    true
+pub let eq = fun eq(-a: Pos, b: Pos): Bool {
+    match a {
+        one => match b {
+            one => true,
+            extend(_, _) => false,
+        },
+        extend(a_left, a_right) => match b {
+            one => false,
+            extend(b_left, b_right) => and(
+                eq(a_left, b_left),
+                bit.eq(a_right, b_right),
+            ),
+        }
+    }
 };

@@ -1,0 +1,9 @@
+pub use super.Bool;
+pub use Bool.*;
+pub use super.not;
+pub use super.and;
+pub use super.nand;
+pub use super.or;
+pub use super.nor;
+pub use super.xor;
+pub use super.xnor;

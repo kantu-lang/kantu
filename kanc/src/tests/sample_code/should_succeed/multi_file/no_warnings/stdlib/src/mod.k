@@ -1,5 +1,4 @@
 pub mod bool;
-use bool.Bool;
-use Bool.*;
+use bool.prelude.*;
 
 pub mod num;
