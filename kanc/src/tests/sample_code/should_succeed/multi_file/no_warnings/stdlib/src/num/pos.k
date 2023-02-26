@@ -42,6 +42,8 @@ pub let(*) pred = fun pred(-a: Pos): Nat {
     }
 };
 
+pub let(*) neg = Int.neg;
+
 pub let(*) add = fun add(-a: Pos, b: Pos): Pos {
     match a {
         one => succ(b),
