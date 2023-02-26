@@ -5,7 +5,7 @@ pub type Pos {
     extend(left: Pos, right: Bit): Pos,
 }
 
-pub let eq = fun eq(-a: Pos, b: Pos): Bool {
+pub let(*) eq = fun eq(-a: Pos, b: Pos): Bool {
     match a {
         one => match b {
             one => true,
@@ -21,7 +21,7 @@ pub let eq = fun eq(-a: Pos, b: Pos): Bool {
     }
 };
 
-pub let succ = fun succ(-a: Pos): Pos {
+pub let(*) succ = fun succ(-a: Pos): Pos {
     match a {
         one => Pos.extend(Pos.one, Bit.zero),
         extend(a_left, a_right) => match a_right {
@@ -31,7 +31,7 @@ pub let succ = fun succ(-a: Pos): Pos {
     }
 };
 
-pub let add = fun add(-a: Pos, b: Pos): Pos {
+pub let(*) add = fun add(-a: Pos, b: Pos): Pos {
     match a {
         one => succ(b),
         extend(a_left, a_right) => match b {
@@ -50,7 +50,7 @@ pub let add = fun add(-a: Pos, b: Pos): Pos {
     }
 };
 
-pub let mul = fun mul(-a: Pos, b: Pos): Pos {
+pub let(*) mul = fun mul(-a: Pos, b: Pos): Pos {
     match a {
         one => b,
         extend(a_left, a_right) => match a_right {
@@ -63,11 +63,11 @@ pub let mul = fun mul(-a: Pos, b: Pos): Pos {
     }
 };
 
-pub let square = fun _(a: Pos): Pos {
+pub let(*) square = fun _(a: Pos): Pos {
     mul(a, a)
 };
 
-pub let pow = fun pow(a: Pos, -b: Pos): Pos {
+pub let(*) pow = fun pow(a: Pos, -b: Pos): Pos {
     match b {
         one => a,
         extend(b_left, b_right) => match b_right {
