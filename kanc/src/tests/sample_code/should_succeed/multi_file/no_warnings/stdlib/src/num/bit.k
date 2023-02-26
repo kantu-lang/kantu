@@ -25,3 +25,6 @@ pub let(*) eq = fun _(a: Bit, b: Bit): Bool {
         one => is_one(b),
     }
 };
+pub let(*) neq = fun _(a: Bit, b: Bit): Bool {
+    not(eq(a, b))
+};

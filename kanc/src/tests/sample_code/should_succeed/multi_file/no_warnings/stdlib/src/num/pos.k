@@ -20,6 +20,9 @@ pub let(*) eq = fun eq(-a: Pos, b: Pos): Bool {
         }
     }
 };
+pub let(*) neq = fun _(a: Pos, b: Pos): Bool {
+    not(eq(a, b))
+};
 
 pub let(*) succ = fun succ(-a: Pos): Pos {
     match a {
@@ -78,4 +81,26 @@ pub let(*) pow = fun pow(a: Pos, -b: Pos): Pos {
             ),
         },
     }
+};
+
+pub let(*) le = fun le(-a: Pos, b: Pos): Bool {
+    match a {
+        one => true,
+        extend(a_left, a_right) => match b {
+            one => false,
+            extend(b_left, b_right) => match a_right {
+                zero => le(a_left, b_left),
+                one => match b_right {
+                    one => le(a_left, b_left),
+                    zero => and(
+                        le(a_left, b_left),
+                        neq(a_left, b_left),
+                    ),
+                },
+            },
+        },
+    }
+};
+pub let(*) lt = fun lt(a: Pos, b: Pos): Bool {
+    and(le(a, b), neq(a, b))
 };

@@ -43,8 +43,7 @@ pub let(*) xnor = fun _(a: Bool, b: Bool): Bool {
     not(xor(a, b))
 };
 
-pub let(*) eq = fun _(a: Bool, b: Bool): Bool {
-    xnor(a, b)
-};
+pub let(*) eq = xnor;
+pub let(*) neq = xor;
 
 pub mod prelude;
