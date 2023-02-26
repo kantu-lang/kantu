@@ -30,3 +30,22 @@ pub let succ = fun succ(-a: Pos): Pos {
         },
     }
 };
+
+pub let add = fun add(-a: Pos, b: Pos): Pos {
+    match a {
+        one => succ(b),
+        extend(a_left, a_right) => match b {
+            one => succ(a),
+            extend(b_left, b_right) => match a_right {
+                zero => Pos.extend(add(a_left, b_left), b_right),
+                one => match b_right {
+                    zero => Pos.extend(add(a_left, b_left), Bit.one),
+                    one => Pos.extend(
+                        succ(add(a_left, b_left)),
+                        Bit.zero,
+                    ),
+                },
+            },
+        },
+    }
+};
