@@ -62,3 +62,20 @@ pub let mul = fun mul(-a: Pos, b: Pos): Pos {
         },
     }
 };
+
+pub let square = fun _(a: Pos): Pos {
+    mul(a, a)
+};
+
+pub let pow = fun pow(a: Pos, -b: Pos): Pos {
+    match b {
+        one => a,
+        extend(b_left, b_right) => match b_right {
+            zero => square(pow(a, b_left)),
+            one => mul(
+                a,
+                square(pow(a, b_left)),
+            ),
+        },
+    }
+};
