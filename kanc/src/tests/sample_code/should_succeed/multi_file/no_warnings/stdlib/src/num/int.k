@@ -84,3 +84,7 @@ pub let(*) add = fun _(a: Int, b: Int): Int {
         },
     }
 };
+
+pub let(*) sub = fun _(a: Int, b: Int): Int {
+    add(a, neg(b))
+};
