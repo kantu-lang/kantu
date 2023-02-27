@@ -162,3 +162,28 @@ pub let(*) floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): I
         neg => neg(floor_div(a, b_mag)),
     }
 };
+
+/* TODO
+pub let(*) cmp = fun _(a: Int, b: Int): Ord {
+    match lt(a, b) {
+        true => Ord.lt,
+        false => match eq(a, b) {
+            true => Ord.eq,
+            false => Ord.gt,
+        },
+    }
+};
+
+pub let(*) min = fun _(a: Int, b: Int): Pos {
+    match lt(a, b) {
+        true => a,
+        false => b,
+    }
+};
+pub let(*) max = fun _(a: Int, b: Int): Pos {
+    match gt(a, b) {
+        true => a,
+        false => b,
+    }
+};
+*/
