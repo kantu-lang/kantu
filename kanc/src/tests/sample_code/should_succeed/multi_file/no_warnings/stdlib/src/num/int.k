@@ -182,6 +182,10 @@ pub let(*) floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): I
     }
 };
 
+pub let(*) square = fun _(a: Int): Int {
+    mul(a, a)
+};
+
 /// We'll define 0^0 = 1
 pub let(*) pow = fun _(a: Int, b: Nat): Int {
     match b {
