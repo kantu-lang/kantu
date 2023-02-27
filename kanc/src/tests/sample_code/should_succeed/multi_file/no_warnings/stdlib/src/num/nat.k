@@ -32,9 +32,16 @@ pub let(*) pred = fun pred(a: Nat): Int {
     }
 };
 
-pub let(*) extend_right = fun _(a: Nat, right: Bit): Nat {
+pub let(*) from_bit = fun _(a: Bit): Nat {
     match a {
         zero => Nat.zero,
+        one => one,
+    }
+};
+
+pub let(*) extend_right = fun _(a: Nat, right: Bit): Nat {
+    match a {
+        zero => from_bit(right),
         pos(ap) => Nat.pos(Pos.extend(ap, right)),
     }
 };
