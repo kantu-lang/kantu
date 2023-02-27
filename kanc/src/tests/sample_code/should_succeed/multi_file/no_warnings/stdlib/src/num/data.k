@@ -17,3 +17,8 @@ pub type Int {
     neg(n: Pos): Int,
     nat(n: Nat): Int,
 }
+
+pub type Sign {
+    pos: Sign,
+    neg: Sign,
+}

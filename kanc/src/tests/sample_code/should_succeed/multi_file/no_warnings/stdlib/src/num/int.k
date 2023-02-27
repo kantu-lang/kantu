@@ -148,3 +148,17 @@ pub let(*) floor_div_nat = fun _(a: Nat, b: Pos): Nat {
         pos(ap) => floor_div_pos(ap, b),
     }
 };
+
+pub let(*) floor_div = fun _(a: Int, b: Pos): Int {
+    match a {
+        neg(neg_a) => nat.neg(floor_div_pos(neg_a, b)),
+        nat(an) => Int.nat(floor_div_nat(an, b)),
+    }
+};
+
+pub let(*) floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): Int {
+    match b_sign {
+        pos => floor_div(a, b_mag),
+        neg => neg(floor_div(a, b_mag)),
+    }
+};
