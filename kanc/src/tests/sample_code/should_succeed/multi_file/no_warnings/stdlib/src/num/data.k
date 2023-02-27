@@ -22,3 +22,9 @@ pub type Sign {
     pos: Sign,
     neg: Sign,
 }
+
+pub type Ord {
+    lt: Ord,
+    eq: Ord,
+    gt: Ord,
+}

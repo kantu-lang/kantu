@@ -135,3 +135,13 @@ pub let(*) ge = fun _(a: Pos, b: Pos): Bool {
 pub let(*) gt = fun _(a: Pos, b: Pos): Bool {
     lt(b, a)
 };
+
+pub let(*) cmp = fun _(a: Pos, b: Pos): Ord {
+    match lt(a, b) {
+        true => Ord.lt,
+        false => match eq(a, b) {
+            true => Ord.eq,
+            false => Ord.gt,
+        },
+    }
+};
