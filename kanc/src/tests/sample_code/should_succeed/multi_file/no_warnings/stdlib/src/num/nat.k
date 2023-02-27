@@ -114,3 +114,26 @@ pub let(*) ge = fun _(a: Nat, b: Nat): Bool {
 pub let(*) gt = fun _(a: Nat, b: Nat): Bool {
     lt(b, a)
 };
+
+pub let(*) cmp = fun _(a: Nat, b: Nat): Ord {
+    match lt(a, b) {
+        true => Ord.lt,
+        false => match eq(a, b) {
+            true => Ord.eq,
+            false => Ord.gt,
+        },
+    }
+};
+
+pub let(*) min = fun _(a: Nat, b: Nat): Nat {
+    match lt(a, b) {
+        true => a,
+        false => b,
+    }
+};
+pub let(*) max = fun _(a: Nat, b: Nat): Nat {
+    match gt(a, b) {
+        true => a,
+        false => b,
+    }
+};
