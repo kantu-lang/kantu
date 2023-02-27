@@ -141,3 +141,10 @@ pub let(*) floor_div_bitlist = fun floor_div_bitlist(
 pub let(*) floor_div_pos = fun _(a: Pos, b: Pos): Nat {
     nat.from_bitlist(floor_div_bitlist(Nat.zero, pos.minimal_bitlist(a), b))
 };
+
+pub let(*) floor_div_nat = fun _(a: Nat, b: Pos): Nat {
+    match a {
+        zero => Nat.zero,
+        pos(ap) => floor_div_pos(ap, b),
+    }
+};
