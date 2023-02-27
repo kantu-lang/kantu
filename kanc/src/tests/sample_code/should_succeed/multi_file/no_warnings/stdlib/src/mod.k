@@ -8,4 +8,7 @@ use bool.prelude.*;
 pub mod pair;
 use pair.Pair;
 
+pub mod list;
+use list.List;
+
 pub mod num;
