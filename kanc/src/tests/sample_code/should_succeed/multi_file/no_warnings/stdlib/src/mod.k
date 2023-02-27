@@ -11,6 +11,9 @@ use prod.Prod;
 pub mod sum;
 use sum.Sum;
 
+pub mod opt;
+use opt.Opt;
+
 pub mod list;
 use list.List;
 
