@@ -200,7 +200,29 @@ pub let(*) pow = fun _(a: Int, b: Nat): Int {
     }
 };
 
-/* TODO
+pub let(*) le = fun _(a: Int, b: Int): Bool {
+    match a {
+        neg(neg_a) => match b {
+            nat(_) => true,
+            neg(neg_b) => pos.ge(neg_a, neg_b),
+        },
+        nat(an) => match b {
+            neg(_) => false,
+            nat(bn) => nat.le(an, bn),
+        },
+    }
+};
+pub let(*) lt = fun _(a: Int, b: Int): Bool {
+    and(le(a, b), neq(a, b))
+};
+
+pub let(*) ge = fun _(a: Int, b: Int): Bool {
+    le(b, a)
+};
+pub let(*) gt = fun _(a: Int, b: Int): Bool {
+    lt(b, a)
+};
+
 pub let(*) cmp = fun _(a: Int, b: Int): Ord {
     match lt(a, b) {
         true => Ord.lt,
@@ -211,16 +233,15 @@ pub let(*) cmp = fun _(a: Int, b: Int): Ord {
     }
 };
 
-pub let(*) min = fun _(a: Int, b: Int): Pos {
+pub let(*) min = fun _(a: Int, b: Int): Int {
     match lt(a, b) {
         true => a,
         false => b,
     }
 };
-pub let(*) max = fun _(a: Int, b: Int): Pos {
+pub let(*) max = fun _(a: Int, b: Int): Int {
     match gt(a, b) {
         true => a,
         false => b,
     }
 };
-*/
