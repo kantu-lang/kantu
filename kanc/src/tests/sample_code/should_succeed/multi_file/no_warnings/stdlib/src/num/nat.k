@@ -53,6 +53,13 @@ pub let(*) from_bitlist = fun _(bits: List(Bit)): Nat {
     extend_right_with_bits(Nat.zero, bits)
 };
 
+pub let(*) parity = fun _(a: Nat): Bit {
+    match a {
+        zero => Bit.zero,
+        pos(ap) => pos.parity(ap),
+    }
+};
+
 pub let(*) neg = fun _(a: Nat): Int {
     match a {
         zero => Int.nat(Nat.zero),
@@ -85,7 +92,7 @@ pub let(*) square = fun _(a: Nat): Nat {
 };
 
 /// We'll define 0^0 = 1
-pub let(*) pow = fun pow(a: Nat, b: Nat): Nat {
+pub let(*) pow = fun _(a: Nat, b: Nat): Nat {
     match b {
         zero => one,
         pos(bp) => match a {

@@ -1,5 +1,7 @@
 use super.*;
 
+pub let(*) one = Int.nat(Nat.pos(Pos.one));
+
 pub let(*) eq = fun eq(-a: Int, b: Int): Bool {
     match a {
         neg(neg_a) => match b {
@@ -27,6 +29,23 @@ pub let(*) pred = fun _(a: Int): Int {
     match a {
         neg(neg_a) => Int.neg(pos.succ(neg_a)),
         nat(an) => nat.pred(an),
+    }
+};
+
+pub let(*) sign = fun _(a: Int): Opt(Sign) {
+    match a {
+        neg(_) => Opt.some(Sign, Sign.neg),
+        nat(an) => match an {
+            zero => Opt.none(Sign),
+            pos(_) => Opt.some(Sign, Sign.pos),
+        },
+    }
+};
+
+pub let(*) parity = fun _(a: Int): Bit {
+    match a {
+        neg(neg_a) => pos.parity(neg_a),
+        nat(an) => nat.parity(an),
     }
 };
 
@@ -160,6 +179,20 @@ pub let(*) floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): I
     match b_sign {
         pos => floor_div(a, b_mag),
         neg => neg(floor_div(a, b_mag)),
+    }
+};
+
+/// We'll define 0^0 = 1
+pub let(*) pow = fun _(a: Int, b: Nat): Int {
+    match b {
+        zero => one,
+        pos(bp) => match a {
+            neg(neg_a) => match pos.parity(bp) {
+                zero => Int.nat(Nat.pos(pos.pow(neg_a, bp))),
+                one => Int.neg(pos.pow(neg_a, bp)),
+            },
+            nat(an) => Int.nat(nat.pow(an, b)),
+        },
     }
 };
 

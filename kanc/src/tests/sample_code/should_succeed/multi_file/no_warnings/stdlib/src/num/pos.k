@@ -56,6 +56,13 @@ pub let(*) pred = fun pred(-a: Pos): Nat {
     }
 };
 
+pub let(*) parity = fun _(a: Pos): Bit {
+    match a {
+        one => Bit.one,
+        extend(_, right) => right,
+    }
+};
+
 pub let(*) neg = Int.neg;
 
 pub let(*) add = fun add(-a: Pos, b: Pos): Pos {
