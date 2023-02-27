@@ -8,6 +8,9 @@ use bool.prelude.*;
 pub mod prod;
 use prod.Prod;
 
+pub mod sum;
+use sum.Sum;
+
 pub mod list;
 use list.List;
 
