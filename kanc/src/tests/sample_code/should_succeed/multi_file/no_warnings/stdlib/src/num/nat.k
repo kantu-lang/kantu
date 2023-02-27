@@ -32,6 +32,27 @@ pub let(*) pred = fun pred(a: Nat): Int {
     }
 };
 
+pub let(*) extend_right = fun _(a: Nat, right: Bit): Nat {
+    match a {
+        zero => Nat.zero,
+        pos(ap) => Nat.pos(Pos.extend(ap, right)),
+    }
+};
+
+pub let(*) extend_right_with_bits = fun extend_right_with_bits(a: Nat, -right: List(Bit)): Nat {
+    match right {
+        nil(_) => a,
+        cons(_, car, cdr) => extend_right_with_bits(
+            extend_right(a, car),
+            cdr,
+        ),
+    }
+};
+
+pub let(*) from_bitlist = fun _(bits: List(Bit)): Nat {
+    extend_right_with_bits(Nat.zero, bits)
+};
+
 pub let(*) neg = fun _(a: Nat): Int {
     match a {
         zero => Int.nat(Nat.zero),

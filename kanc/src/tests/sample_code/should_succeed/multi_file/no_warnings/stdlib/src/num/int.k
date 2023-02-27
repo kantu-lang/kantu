@@ -101,3 +101,43 @@ pub let(*) mul = fun _(a: Int, b: Int): Int {
         },
     }
 };
+
+pub let(*) floor_div_bitlist = fun floor_div_bitlist(
+    dividend_left: Nat,
+    -dividend_right: List(Bit),
+    divisor: Pos,
+): List(Bit) {
+    match dividend_right {
+        nil(_) => List.nil(Bit),
+        cons(_, car, cdr) => match sub(
+            Int.nat(nat.extend_right(dividend_left, car)),
+            Int.nat(Nat.pos(divisor)),
+        ) {
+            // nat.extend_right(dividend_left, car) < divisor
+            neg(_) => List.cons(
+                Bit,
+                Bit.zero,
+                floor_div_bitlist(
+                    nat.extend_right(dividend_left, car),
+                    cdr,
+                    divisor,
+                ),
+            ),
+
+            // nat.extend_right(dividend_left, car) >= divisor
+            nat(remainder) => List.cons(
+                Bit,
+                Bit.one,
+                floor_div_bitlist(
+                    remainder,
+                    cdr,
+                    divisor,
+                ),
+            ),
+        },
+    }
+};
+
+pub let(*) floor_div_pos = fun _(a: Pos, b: Pos): Nat {
+    nat.from_bitlist(floor_div_bitlist(Nat.zero, pos.minimal_bitlist(a), b))
+};

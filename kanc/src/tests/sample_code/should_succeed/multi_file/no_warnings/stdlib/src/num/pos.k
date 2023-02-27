@@ -19,6 +19,20 @@ pub let(*) neq = fun _(a: Pos, b: Pos): Bool {
     not(eq(a, b))
 };
 
+pub let(*) minimal_bitlist_plus = fun minimal_bitlist_plus(-a: Pos, right_accumulator: List(Bit)): List(Bit) {
+    match a {
+        one => List.cons(Bit, Bit.one, right_accumulator),
+        extend(a_left, a_right) => minimal_bitlist_plus(
+            a_left,
+            List.cons(Bit, a_right, right_accumulator),
+        ),
+    }
+};
+
+pub let(*) minimal_bitlist = fun _(a: Pos): List(Bit) {
+    minimal_bitlist_plus(a, List.nil(Bit))
+};
+
 pub let(*) succ = fun succ(-a: Pos): Pos {
     match a {
         one => Pos.extend(Pos.one, Bit.zero),
@@ -120,18 +134,4 @@ pub let(*) ge = fun _(a: Pos, b: Pos): Bool {
 };
 pub let(*) gt = fun _(a: Pos, b: Pos): Bool {
     lt(b, a)
-};
-
-pub let(*) minimal_bitlist_plus = fun minimal_bitlist_plus(-a: Pos, right_accumulator: List(Bit)): List(Bit) {
-    match a {
-        one => List.cons(Bit, Bit.one, right_accumulator),
-        extend(a_left, a_right) => minimal_bitlist_plus(
-            a_left,
-            List.cons(Bit, a_right, right_accumulator),
-        ),
-    }
-};
-
-pub let(*) minimal_bitlist = fun _(a: Pos): List(Bit) {
-    minimal_bitlist_plus(a, List.nil(Bit))
 };
