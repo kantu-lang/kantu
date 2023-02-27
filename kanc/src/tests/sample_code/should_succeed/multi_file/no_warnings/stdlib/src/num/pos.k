@@ -145,3 +145,16 @@ pub let(*) cmp = fun _(a: Pos, b: Pos): Ord {
         },
     }
 };
+
+pub let(*) min = fun _(a: Pos, b: Pos): Pos {
+    match lt(a, b) {
+        true => a,
+        false => b,
+    }
+};
+pub let(*) max = fun _(a: Pos, b: Pos): Pos {
+    match gt(a, b) {
+        true => a,
+        false => b,
+    }
+};
