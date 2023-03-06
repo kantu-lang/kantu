@@ -1,6 +1,6 @@
 use super.*;
 
-pub mod data;
+mod data;
 pub use data.*;
 
 pub mod bit;
