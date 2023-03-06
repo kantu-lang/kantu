@@ -34,10 +34,12 @@ pub let(*) pos4 = pos.add(pos3, pos1);
 pub let(*) pos8 = pos.pow(pos2, pos3);
 pub let(*) pos64 = pos.mul(pos8, pos8);
 pub let(*) pos65 = pos.add(pos1, pos64);
+pub let(*) pos66 = pos.add(pos1, pos65);
 
 pub let(*) refl_true = Equal.refl(Bool, true);
 
 pub let(*) u8_65 = U8.u8(Nat.pos(pos65), refl_true);
+pub let(*) u8_66 = U8.u8(Nat.pos(pos66), refl_true);
 
 pub let(*) half = Pfrac.pfrac(
     pos1,
@@ -52,11 +54,22 @@ pub let(*) ball_height_factor = Pfrac.pfrac(
     pos1,
     pos64,
 );
+pub let(*) paddle_x_margin = Pfrac.pfrac(
+    pos1,
+    pos64,
+);
 
 pub let(*) background_image_str = String.utf8(
     List.cons(
         U8,
         u8_65,
+        List.nil(U8),
+    ),
+);
+pub let(*) paddle_image_str = String.utf8(
+    List.cons(
+        U8,
+        u8_66,
         List.nil(U8),
     ),
 );
@@ -118,7 +131,13 @@ pub let(*) render_background = fun _(state: State): Entity {
 pub let(*) render_left_paddle = fun _(state: State): Entity {
     match state {
         state(:window, :left_paddle_y, ...) => match window {
-            window(window_w, window_h) => todo,
+            window(window_w, window_h) => Entity.scaled(
+                pfrac_mult(paddle_x_margin, window_w),
+                left_paddle_y,
+                window_w,
+                window_h,
+                paddle_image_str,
+            ),
         },
     }
 };
