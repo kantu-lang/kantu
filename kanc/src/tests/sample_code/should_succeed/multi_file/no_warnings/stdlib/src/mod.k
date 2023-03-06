@@ -20,3 +20,5 @@ use list.List;
 pub mod num;
 
 pub mod time;
+
+pub mod string;
