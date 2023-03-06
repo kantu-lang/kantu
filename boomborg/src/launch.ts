@@ -216,7 +216,7 @@ function toKString(s: string): ktypes.KString {
   const buff = new Uint8Array(s.length * 3);
   const encodedResults = textEncoder.encodeInto(s, buff);
   const utf8 = Array.from(buff.subarray(0, encodedResults.written)).map(toU8);
-  return ["string", toList(utf8)];
+  return ["utf8", toList(utf8)];
 }
 
 function toJsString(s: ktypes.KString): string {

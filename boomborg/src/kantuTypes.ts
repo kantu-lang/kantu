@@ -18,7 +18,7 @@ export type Entity =
   | ["unscaled", Nat, Nat, KString]
   | ["scaled", Nat, Nat, Nat, Nat, KString];
 
-export type KString = ["string", List<U8>];
+export type KString = ["utf8", List<U8>];
 
 export type List<T> = ["nil", unknown] | ["cons", unknown, T, List<T>];
 
