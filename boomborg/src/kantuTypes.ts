@@ -24,6 +24,7 @@ export type List<T> = ["nil", unknown] | ["cons", unknown, T, List<T>];
 
 export type App<S> = [
   "app",
+  unknown,
   RenderFn<S>,
   UpdateFn<S>,
   InitFn<S>,

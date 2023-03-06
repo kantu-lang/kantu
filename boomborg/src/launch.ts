@@ -3,7 +3,7 @@ import type * as ktypes from "./kantuTypes";
 export type ImageDb = { [key: string]: HTMLImageElement };
 
 export function launchBoomborgApp<S>(app: ktypes.App<S>, imageDb: ImageDb) {
-  const [, render, getUpdatedState, init, handleEvent] = app;
+  const [, , render, getUpdatedState, init, handleEvent] = app;
 
   const imageCache = {};
   let state = init(getEWindow(), toTime(Date.now()));
