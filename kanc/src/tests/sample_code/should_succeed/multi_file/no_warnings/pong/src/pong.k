@@ -54,7 +54,11 @@ pub let(*) ball_height_factor = Pfrac.pfrac(
     pos1,
     pos64,
 );
-pub let(*) paddle_x_margin = Pfrac.pfrac(
+pub let(*) paddle_x_margin_factor = Pfrac.pfrac(
+    pos1,
+    pos64,
+);
+pub let(*) paddle_width_factor = Pfrac.pfrac(
     pos1,
     pos64,
 );
@@ -132,10 +136,10 @@ pub let(*) render_left_paddle = fun _(state: State): Entity {
     match state {
         state(:window, :left_paddle_y, ...) => match window {
             window(window_w, window_h) => Entity.scaled(
-                pfrac_mult(paddle_x_margin, window_w),
+                pfrac_mult(paddle_x_margin_factor, window_w),
                 left_paddle_y,
-                window_w,
-                window_h,
+                pfrac_mult(paddle_width_factor, window_w),
+                pfrac_mult(paddle_height_factor, window_h),
                 paddle_image_str,
             ),
         },
@@ -145,7 +149,19 @@ pub let(*) render_left_paddle = fun _(state: State): Entity {
 pub let(*) render_right_paddle = fun _(state: State): Entity {
     match state {
         state(:window, :right_paddle_y, ...) => match window {
-            window(window_w, window_h) => todo,
+            window(window_w, window_h) => Entity.scaled(
+                relu(int.sub(
+                    int.sub(
+                        Int.nat(window_w),
+                        Int.nat(pfrac_mult(paddle_x_margin_factor, window_w)),
+                    ),
+                    Int.nat(pfrac_mult(paddle_width_factor, window_w)),
+                )),
+                right_paddle_y,
+                pfrac_mult(paddle_width_factor, window_w),
+                pfrac_mult(paddle_height_factor, window_h),
+                paddle_image_str,
+            ),
         },
     }
 };
