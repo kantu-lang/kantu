@@ -2,6 +2,7 @@ use pack.boomborg.*;
 use pack.std;
 use std.num.*;
 use std.time.Time;
+use std.list.List;
 
 pub type Pfrac {
     pfrac(num: Pos, div: Pos): Pfrac,
@@ -83,3 +84,23 @@ pub let(*) init = fun _(window: Window, time: Time): State {
         )
     }
 };
+
+pub let(*) render = fun _(state: State): List(Entity) {
+    List.nil(Entity)
+};
+
+pub let(*) tick = fun _(state: State, time: Time): State {
+    state
+};
+
+pub let(*) handle = fun _(state: State, event: Event): State {
+    state
+};
+
+pub let(*) app = App.app(
+    State,
+    render,
+    tick,
+    init,
+    handle,
+);
