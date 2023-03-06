@@ -46,4 +46,11 @@ pub let(*) xnor = fun _(a: Bool, b: Bool): Bool {
 pub let(*) eq = xnor;
 pub let(*) neq = xor;
 
+pub let(*) Trueb = fun _(a: Bool): Type {
+    Equal(Bool, true, a)
+};
+pub let(*) Falseb = fun _(a: Bool): Type {
+    Equal(Bool, false, a)
+};
+
 pub mod prelude;

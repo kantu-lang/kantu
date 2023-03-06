@@ -7,3 +7,5 @@ pub use super.or;
 pub use super.nor;
 pub use super.xor;
 pub use super.xnor;
+pub use super.Trueb;
+pub use super.Falseb;

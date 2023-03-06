@@ -1,7 +1,4 @@
-pub type Bit {
-    zero: Bit,
-    one: Bit,
-}
+use super.*;
 
 pub type Pos {
     one: Pos,
