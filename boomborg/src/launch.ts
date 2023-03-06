@@ -195,10 +195,13 @@ function numToNat(n: number): ktypes.Nat {
 }
 
 function numToPos(n: number): ktypes.Pos {
+  if (!Number.isInteger(n) || n < 0) {
+    throw { cannotConvertNonNumToPos: n };
+  }
   if (n === 1) {
     return ["one"];
   }
-  return ["extend", numToPos(n >> 1), numToBit(n & 1)];
+  return ["extend", numToPos(Math.floor(n / 2)), numToBit(n % 2)];
 }
 
 function numToBit(n: number): ktypes.Bit {
