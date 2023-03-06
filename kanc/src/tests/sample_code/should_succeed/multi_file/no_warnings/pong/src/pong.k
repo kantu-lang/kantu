@@ -35,11 +35,13 @@ pub let(*) pos8 = pos.pow(pos2, pos3);
 pub let(*) pos64 = pos.mul(pos8, pos8);
 pub let(*) pos65 = pos.add(pos1, pos64);
 pub let(*) pos66 = pos.add(pos1, pos65);
+pub let(*) pos67 = pos.add(pos1, pos66);
 
 pub let(*) refl_true = Equal.refl(Bool, true);
 
 pub let(*) u8_65 = U8.u8(Nat.pos(pos65), refl_true);
 pub let(*) u8_66 = U8.u8(Nat.pos(pos66), refl_true);
+pub let(*) u8_67 = U8.u8(Nat.pos(pos67), refl_true);
 
 pub let(*) half = Pfrac.pfrac(
     pos1,
@@ -63,6 +65,7 @@ pub let(*) paddle_width_factor = Pfrac.pfrac(
     pos64,
 );
 
+// 'A'
 pub let(*) background_image_str = String.utf8(
     List.cons(
         U8,
@@ -70,10 +73,19 @@ pub let(*) background_image_str = String.utf8(
         List.nil(U8),
     ),
 );
+// 'B'
 pub let(*) paddle_image_str = String.utf8(
     List.cons(
         U8,
         u8_66,
+        List.nil(U8),
+    ),
+);
+// 'C'
+pub let(*) ball_image_str = String.utf8(
+    List.cons(
+        U8,
+        u8_67,
         List.nil(U8),
     ),
 );
@@ -169,7 +181,13 @@ pub let(*) render_right_paddle = fun _(state: State): Entity {
 pub let(*) render_ball = fun _(state: State): Entity {
     match state {
         state(:window, :ball_x, :ball_y, ...) => match window {
-            window(window_w, window_h) => todo,
+            window(window_w, window_h) => Entity.scaled(
+                ball_x,
+                ball_y,
+                pfrac_mult(ball_height_factor, window_h),
+                pfrac_mult(ball_height_factor, window_h),
+                ball_image_str,
+            ),
         },
     }
 };
@@ -195,10 +213,12 @@ pub let(*) render = fun _(state: State): List(Entity) {
 };
 
 pub let(*) tick = fun _(state: State, time: Time): State {
+    // TODO
     state
 };
 
 pub let(*) handle = fun _(state: State, event: Event): State {
+    // TODO
     state
 };
 
