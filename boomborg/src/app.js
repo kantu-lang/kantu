@@ -1664,10 +1664,6 @@ const tick = function _(state, new_time) {
         elapsed_millis: elapsed_millis,
         ball_vx_mag: ball_vx_mag,
       }) {
-        console.log({
-          elapsedMillis: posToNum(elapsed_millis),
-          vx_mag: natToNum(ball_vx_mag),
-        });
         return State_state({
           time: new_time,
           window: window,

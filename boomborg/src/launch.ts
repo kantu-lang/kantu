@@ -92,7 +92,6 @@ function drawEntity(
     const [, xRaw, yRaw, widthRaw, heightRaw, imageKeyRaw] = entity;
     const x = natToNum(xRaw);
     const y = natToNum(yRaw);
-    console.log({ x });
     const imageKey = toJsString(imageKeyRaw);
     const width = natToNum(widthRaw);
     const height = natToNum(heightRaw);
