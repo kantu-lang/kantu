@@ -40,6 +40,16 @@ pub let str_eq = fun _(s1: String, s2: String): Bool {
     }
 };
 
+pub let str_list_contains = fun str_list_contains(-strs: List(String), str: String): Bool {
+    match strs {
+        nil(_) => false,
+        cons(_, car, cdr) => match str_eq(car, str) {
+            true => true,
+            false => str_list_contains(cdr, str),
+        },
+    }
+};
+
 pub let(*) relu = fun _(n: Int): Nat {
     match n {
         neg(_) => Nat.zero,
@@ -507,12 +517,88 @@ pub let(*) tick = fun _(state: State, new_time: Time): State {
     }
 };
 
-pub let(*) handle_keyup = fun _(state: State, key: String): State {
-    // TODO
-    state
+pub let(*) handle_keydown = fun _(state: State, key: String): State {
+    match state {
+        state(
+            :time,
+            :window,
+            :left_paddle_y,
+            :right_paddle_y,
+            :ball_x,
+            :ball_y,
+            :ball_vx_sign,
+            :ball_vy_sign,
+            :left_paddle_vy_sign,
+            :right_paddle_vy_sign,
+        ) => match str_list_contains(left_paddle_up_strs, key) {
+            true => State.state(
+                left_paddle_vy_sign: Opt.some(Sign, Sign.neg),
+
+                :time,
+                :window,
+                :left_paddle_y,
+                :right_paddle_y,
+                :ball_x,
+                :ball_y,
+                :ball_vx_sign,
+                :ball_vy_sign,
+                :right_paddle_vy_sign,
+            ),
+
+            false => match str_list_contains(left_paddle_down_strs, key) {
+                true => State.state(
+                    left_paddle_vy_sign: Opt.some(Sign, Sign.pos),
+
+                    :time,
+                    :window,
+                    :left_paddle_y,
+                    :right_paddle_y,
+                    :ball_x,
+                    :ball_y,
+                    :ball_vx_sign,
+                    :ball_vy_sign,
+                    :right_paddle_vy_sign,
+                ),
+
+                false => match str_list_contains(right_paddle_up_strs, key) {
+                    true => State.state(
+                        right_paddle_vy_sign: Opt.some(Sign, Sign.neg),
+
+                        :time,
+                        :window,
+                        :left_paddle_y,
+                        :right_paddle_y,
+                        :ball_x,
+                        :ball_y,
+                        :ball_vx_sign,
+                        :ball_vy_sign,
+                        :left_paddle_vy_sign,
+                    ),
+
+                    false => match str_list_contains(right_paddle_down_strs, key) {
+                        true => State.state(
+                            right_paddle_vy_sign: Opt.some(Sign, Sign.pos),
+
+                            :time,
+                            :window,
+                            :left_paddle_y,
+                            :right_paddle_y,
+                            :ball_x,
+                            :ball_y,
+                            :ball_vx_sign,
+                            :ball_vy_sign,
+                            :left_paddle_vy_sign,
+                        ),
+
+                        false => state,
+                    },
+                },
+            },
+        },
+    }
 };
 
-pub let(*) handle_keydown = fun _(state: State, key: String): State {
+pub let(*) handle_keyup = fun _(state: State, key: String): State {
     // TODO
     state
 };
