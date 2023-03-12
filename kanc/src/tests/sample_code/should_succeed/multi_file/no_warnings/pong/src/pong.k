@@ -8,6 +8,12 @@ use std.bool.prelude.*;
 use std.string.String;
 use std.opt.Opt;
 
+pub let(*) identity = fun _(T: Type, t: T): T {
+    t
+};
+
+pub let(*) ascribe = identity;
+
 pub let u8_eq = fun _(a: U8, b: U8): Bool {
     match a {
         u8(an, _) => match b {
@@ -599,8 +605,108 @@ pub let(*) handle_keydown = fun _(state: State, key: String): State {
 };
 
 pub let(*) handle_keyup = fun _(state: State, key: String): State {
-    // TODO
-    state
+    match state {
+        state(
+            :time,
+            :window,
+            :left_paddle_y,
+            :right_paddle_y,
+            :ball_x,
+            :ball_y,
+            :ball_vx_sign,
+            :ball_vy_sign,
+            :left_paddle_vy_sign,
+            :right_paddle_vy_sign,
+        ) => match str_list_contains(left_paddle_up_strs, key) {
+            true => State.state(
+                left_paddle_vy_sign: match left_paddle_vy_sign {
+                    none(_) => left_paddle_vy_sign,
+                    some(_, some_left_paddle_vy_sign) => match ascribe(Sign, some_left_paddle_vy_sign) {
+                        neg => Opt.none(Sign),
+                        pos => left_paddle_vy_sign,
+                    }
+                },
+
+                :time,
+                :window,
+                :left_paddle_y,
+                :right_paddle_y,
+                :ball_x,
+                :ball_y,
+                :ball_vx_sign,
+                :ball_vy_sign,
+                :right_paddle_vy_sign,
+            ),
+
+            false => match str_list_contains(left_paddle_down_strs, key) {
+                true => State.state(
+                    left_paddle_vy_sign: match left_paddle_vy_sign {
+                        none(_) => left_paddle_vy_sign,
+                        some(_, some_left_paddle_vy_sign) => match ascribe(Sign, some_left_paddle_vy_sign) {
+                            pos => Opt.none(Sign),
+                            neg => left_paddle_vy_sign,
+                        }
+                    },
+
+                    :time,
+                    :window,
+                    :left_paddle_y,
+                    :right_paddle_y,
+                    :ball_x,
+                    :ball_y,
+                    :ball_vx_sign,
+                    :ball_vy_sign,
+                    :right_paddle_vy_sign,
+                ),
+
+                false => match str_list_contains(right_paddle_up_strs, key) {
+                    true => State.state(
+                        right_paddle_vy_sign: match right_paddle_vy_sign {
+                            none(_) => right_paddle_vy_sign,
+                            some(_, some_right_paddle_vy_sign) => match ascribe(Sign, some_right_paddle_vy_sign) {
+                                neg => Opt.none(Sign),
+                                pos => right_paddle_vy_sign,
+                            }
+                        },
+
+                        :time,
+                        :window,
+                        :left_paddle_y,
+                        :right_paddle_y,
+                        :ball_x,
+                        :ball_y,
+                        :ball_vx_sign,
+                        :ball_vy_sign,
+                        :left_paddle_vy_sign,
+                    ),
+
+                    false => match str_list_contains(right_paddle_down_strs, key) {
+                        true => State.state(
+                            right_paddle_vy_sign: match right_paddle_vy_sign {
+                                none(_) => right_paddle_vy_sign,
+                                some(_, some_right_paddle_vy_sign) => match ascribe(Sign, some_right_paddle_vy_sign) {
+                                    pos => Opt.none(Sign),
+                                    neg => right_paddle_vy_sign,
+                                }
+                            },
+
+                            :time,
+                            :window,
+                            :left_paddle_y,
+                            :right_paddle_y,
+                            :ball_x,
+                            :ball_y,
+                            :ball_vx_sign,
+                            :ball_vy_sign,
+                            :left_paddle_vy_sign,
+                        ),
+
+                        false => state,
+                    },
+                },
+            },
+        },
+    }
 };
 
 pub let(*) handle = fun _(state: State, event: Event): State {
