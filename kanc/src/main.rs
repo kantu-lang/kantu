@@ -24,8 +24,21 @@ use kanc::{
 };
 
 use std::path::PathBuf;
+use std::time::Instant;
 
 fn main() -> Result<(), ()> {
+    let start = Instant::now();
+    let result = main_();
+    let duration = start.elapsed();
+    println!(
+        "Completed in {}.{:<3} seconds.",
+        duration.as_millis() / 1000,
+        duration.as_millis() % 1000,
+    );
+    result
+}
+
+fn main_() -> Result<(), ()> {
     let args: Vec<String> = std::env::args().collect();
     let options = parse_args(&args).print_err(())?;
     let options = read_compiler_options(&options).print_err(())?;
