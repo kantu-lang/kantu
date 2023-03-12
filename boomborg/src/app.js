@@ -1613,42 +1613,6 @@ const sign_nat = function _(s, n) {
   })(s);
 };
 
-function natToNum(nat) {
-  if (nat[0] === "zero") {
-    return 0;
-  }
-  if (nat[0] === "pos") {
-    return posToNum(nat[1]);
-  }
-  throw { badNat: nat };
-}
-
-function posToNum(pos) {
-  return parseInt(posToBitString(pos), 2);
-}
-
-function posToBitString(pos) {
-  if (pos[0] === "one") {
-    return "1";
-  }
-  if (pos[0] === "extend") {
-    const left = posToBitString(pos[1]);
-    const right = "" + bitToNum(pos[2]);
-    return left + right;
-  }
-  throw { badPos: pos };
-}
-
-function bitToNum(bit) {
-  if (bit[0] === "zero") {
-    return 0;
-  }
-  if (bit[0] === "one") {
-    return 1;
-  }
-  throw { badBit: bit };
-}
-
 const tick = function _(state, new_time) {
   return (function temp_df(temp_de) {
     if (temp_de[0] === "state") {

@@ -79,7 +79,7 @@ pub let(*) paddle_width_factor = Pfrac.pfrac(
 
 pub let(*) ball_vx_mag_factor = Pfrac.pfrac(
     pos1,
-    pos64,
+    pos3,
 );
 
 // 'A'
