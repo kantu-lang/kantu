@@ -82,6 +82,11 @@ pub let(*) ball_vx_mag_factor = Pfrac.pfrac(
     pos3,
 );
 
+pub let(*) ball_vy_mag_factor = Pfrac.pfrac(
+    pos2,
+    pos3,
+);
+
 // 'A'
 pub let(*) background_image_str = String.utf8(
     List.cons(
@@ -251,10 +256,10 @@ pub let(*) tick = fun _(state: State, new_time: Time): State {
             :left_paddle_y,
             :right_paddle_y,
             ball_x: old_ball_x,
-            :ball_y,
+            ball_y: old_ball_y,
             :ball_vx_sign,
             :ball_vy_sign,
-        ) => fun _(~elapsed_millis: Pos, ~ball_vx_mag: Nat): State {
+        ) => fun _(~elapsed_millis: Pos, ~ball_vx_mag: Nat, ~ball_vy_mag: Nat): State {
             State.state(
                 time: new_time,
                 :window,
@@ -270,7 +275,16 @@ pub let(*) tick = fun _(state: State, new_time: Time): State {
                         ),
                     ),
                 )),
-                :ball_y,
+                ball_y: relu(int.add(
+                    Int.nat(old_ball_y),
+                    sign_nat(
+                        ball_vy_sign,
+                        pfrac_mult(
+                            Pfrac.pfrac(elapsed_millis, pos1000),
+                            ball_vy_mag,
+                        ),
+                    ),
+                )),
                 :ball_vx_sign,
                 :ball_vy_sign,
             )
@@ -281,6 +295,8 @@ pub let(*) tick = fun _(state: State, new_time: Time): State {
             )),
 
             ball_vx_mag: pfrac_mult(ball_vx_mag_factor, match window { window(w, _) => w }),
+
+            ball_vy_mag: pfrac_mult(ball_vy_mag_factor, match window { window(_, h) => h }),
         ),
     }
 };

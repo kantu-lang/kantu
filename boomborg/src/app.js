@@ -1405,6 +1405,8 @@ const paddle_width_factor = Pfrac_pfrac(pos1, pos64);
 
 const ball_vx_mag_factor = Pfrac_pfrac(pos1, pos3);
 
+const ball_vy_mag_factor = Pfrac_pfrac(pos2, pos3);
+
 const background_image_str = String_utf8(List_cons(U8, u8_65, List_nil(U8)));
 
 const paddle_image_str = String_utf8(List_cons(U8, u8_66, List_nil(U8)));
@@ -1621,12 +1623,13 @@ const tick = function _(state, new_time) {
       const left_paddle_y = temp_de[1].left_paddle_y;
       const right_paddle_y = temp_de[1].right_paddle_y;
       const old_ball_x = temp_de[1].ball_x;
-      const ball_y = temp_de[1].ball_y;
+      const old_ball_y = temp_de[1].ball_y;
       const ball_vx_sign = temp_de[1].ball_vx_sign;
       const ball_vy_sign = temp_de[1].ball_vy_sign;
       return (function _2({
         elapsed_millis: elapsed_millis,
         ball_vx_mag: ball_vx_mag,
+        ball_vy_mag: ball_vy_mag,
       }) {
         return State_state({
           time: new_time,
@@ -1642,7 +1645,15 @@ const tick = function _(state, new_time) {
               )
             )
           ),
-          ball_y: ball_y,
+          ball_y: relu(
+            add3(
+              Int_nat(old_ball_y),
+              sign_nat(
+                ball_vy_sign,
+                pfrac_mult(Pfrac_pfrac(elapsed_millis, pos1000), ball_vy_mag)
+              )
+            )
+          ),
           ball_vx_sign: ball_vx_sign,
           ball_vy_sign: ball_vy_sign,
         });
@@ -1657,6 +1668,16 @@ const tick = function _(state, new_time) {
               const w = temp_e0[1];
               const _2 = temp_e0[2];
               return w;
+            }
+          })(window)
+        ),
+        ball_vy_mag: pfrac_mult(
+          ball_vy_mag_factor,
+          (function temp_e3(temp_e2) {
+            if (temp_e2[0] === "window") {
+              const _2 = temp_e2[1];
+              const h = temp_e2[2];
+              return h;
             }
           })(window)
         ),
