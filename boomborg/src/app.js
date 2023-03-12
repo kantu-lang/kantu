@@ -1403,7 +1403,7 @@ const paddle_x_margin_factor = Pfrac_pfrac(pos1, pos64);
 
 const paddle_width_factor = Pfrac_pfrac(pos1, pos64);
 
-const ball_vx_mag_factor = Pfrac_pfrac(pos1, pos64);
+const ball_vx_mag_factor = Pfrac_pfrac(pos1, pos3);
 
 const background_image_str = String_utf8(List_cons(U8, u8_65, List_nil(U8)));
 
