@@ -1326,6 +1326,27 @@ const relu = function _(n) {
   })(n);
 };
 
+const max1_int = function _(n) {
+  return (function temp_c3(temp_c2) {
+    if (temp_c2[0] === "neg") {
+      const _2 = temp_c2[1];
+      return Pos_one;
+    }
+    if (temp_c2[0] === "nat") {
+      const nn = temp_c2[1];
+      return (function temp_c5(temp_c4) {
+        if (temp_c4[0] === "zero") {
+          return Pos_one;
+        }
+        if (temp_c4[0] === "pos") {
+          const np = temp_c4[1];
+          return np;
+        }
+      })(nn);
+    }
+  })(n);
+};
+
 const Pfrac = { type_species: "Pfrac", type_args: [] };
 
 const Pfrac_pfrac = function Pfrac_pfrac(num, div) {
@@ -1333,10 +1354,10 @@ const Pfrac_pfrac = function Pfrac_pfrac(num, div) {
 };
 
 const pfrac_mult = function _(pf, right) {
-  return (function temp_c3(temp_c2) {
-    if (temp_c2[0] === "pfrac") {
-      const num = temp_c2[1];
-      const div = temp_c2[2];
+  return (function temp_c7(temp_c6) {
+    if (temp_c6[0] === "pfrac") {
+      const num = temp_c6[1];
+      const div = temp_c6[2];
       return floor_div_nat(mul2(Nat_pos(num), right), div);
     }
   })(pf);
@@ -1352,6 +1373,8 @@ const pos4 = add(pos3, pos1);
 
 const pos8 = pow(pos2, pos3);
 
+const pos10 = add(pos2, pos8);
+
 const pos64 = mul(pos8, pos8);
 
 const pos65 = add(pos1, pos64);
@@ -1359,6 +1382,8 @@ const pos65 = add(pos1, pos64);
 const pos66 = add(pos1, pos65);
 
 const pos67 = add(pos1, pos66);
+
+const pos1000 = pow(pos10, pos3);
 
 const refl_true = Equal_refl(Bool, Bool_true_);
 
@@ -1378,6 +1403,8 @@ const paddle_x_margin_factor = Pfrac_pfrac(pos1, pos64);
 
 const paddle_width_factor = Pfrac_pfrac(pos1, pos64);
 
+const ball_vx_mag_factor = Pfrac_pfrac(pos1, pos64);
+
 const background_image_str = String_utf8(List_cons(U8, u8_65, List_nil(U8)));
 
 const paddle_image_str = String_utf8(List_cons(U8, u8_66, List_nil(U8)));
@@ -1393,8 +1420,8 @@ const State_state = function State_state({
   right_paddle_y: right_paddle_y,
   ball_x: ball_x,
   ball_y: ball_y,
-  ball_vx: ball_vx,
-  ball_vy: ball_vy,
+  ball_vx_sign: ball_vx_sign,
+  ball_vy_sign: ball_vy_sign,
 }) {
   return [
     "state",
@@ -1405,17 +1432,17 @@ const State_state = function State_state({
       right_paddle_y: right_paddle_y,
       ball_x: ball_x,
       ball_y: ball_y,
-      ball_vx: ball_vx,
-      ball_vy: ball_vy,
+      ball_vx_sign: ball_vx_sign,
+      ball_vy_sign: ball_vy_sign,
     },
   ];
 };
 
 const init = function _(window, time) {
-  return (function temp_c5(temp_c4) {
-    if (temp_c4[0] === "window") {
-      const window_w = temp_c4[1];
-      const window_h = temp_c4[2];
+  return (function temp_c9(temp_c8) {
+    if (temp_c8[0] === "window") {
+      const window_w = temp_c8[1];
+      const window_h = temp_c8[2];
       return State_state({
         time: time,
         window: window,
@@ -1447,21 +1474,21 @@ const init = function _(window, time) {
             Int_nat(pfrac_mult(half, pfrac_mult(ball_height_factor, window_h)))
           )
         ),
-        ball_vx: Sign_pos,
-        ball_vy: Sign_neg,
+        ball_vx_sign: Sign_pos,
+        ball_vy_sign: Sign_neg,
       });
     }
   })(window);
 };
 
 const render_background = function _(state) {
-  return (function temp_c7(temp_c6) {
-    if (temp_c6[0] === "state") {
-      const window = temp_c6[1].window;
-      return (function temp_c9(temp_c8) {
-        if (temp_c8[0] === "window") {
-          const window_w = temp_c8[1];
-          const window_h = temp_c8[2];
+  return (function temp_cb(temp_ca) {
+    if (temp_ca[0] === "state") {
+      const window = temp_ca[1].window;
+      return (function temp_cd(temp_cc) {
+        if (temp_cc[0] === "window") {
+          const window_w = temp_cc[1];
+          const window_h = temp_cc[2];
           return Entity_scaled(
             Nat_zero,
             Nat_zero,
@@ -1476,14 +1503,14 @@ const render_background = function _(state) {
 };
 
 const render_left_paddle = function _(state) {
-  return (function temp_cb(temp_ca) {
-    if (temp_ca[0] === "state") {
-      const window = temp_ca[1].window;
-      const left_paddle_y = temp_ca[1].left_paddle_y;
-      return (function temp_cd(temp_cc) {
-        if (temp_cc[0] === "window") {
-          const window_w = temp_cc[1];
-          const window_h = temp_cc[2];
+  return (function temp_cf(temp_ce) {
+    if (temp_ce[0] === "state") {
+      const window = temp_ce[1].window;
+      const left_paddle_y = temp_ce[1].left_paddle_y;
+      return (function temp_d1(temp_d0) {
+        if (temp_d0[0] === "window") {
+          const window_w = temp_d0[1];
+          const window_h = temp_d0[2];
           return Entity_scaled(
             pfrac_mult(paddle_x_margin_factor, window_w),
             left_paddle_y,
@@ -1498,14 +1525,14 @@ const render_left_paddle = function _(state) {
 };
 
 const render_right_paddle = function _(state) {
-  return (function temp_cf(temp_ce) {
-    if (temp_ce[0] === "state") {
-      const window = temp_ce[1].window;
-      const right_paddle_y = temp_ce[1].right_paddle_y;
-      return (function temp_d1(temp_d0) {
-        if (temp_d0[0] === "window") {
-          const window_w = temp_d0[1];
-          const window_h = temp_d0[2];
+  return (function temp_d3(temp_d2) {
+    if (temp_d2[0] === "state") {
+      const window = temp_d2[1].window;
+      const right_paddle_y = temp_d2[1].right_paddle_y;
+      return (function temp_d5(temp_d4) {
+        if (temp_d4[0] === "window") {
+          const window_w = temp_d4[1];
+          const window_h = temp_d4[2];
           return Entity_scaled(
             relu(
               sub(
@@ -1528,15 +1555,15 @@ const render_right_paddle = function _(state) {
 };
 
 const render_ball = function _(state) {
-  return (function temp_d3(temp_d2) {
-    if (temp_d2[0] === "state") {
-      const window = temp_d2[1].window;
-      const ball_x = temp_d2[1].ball_x;
-      const ball_y = temp_d2[1].ball_y;
-      return (function temp_d5(temp_d4) {
-        if (temp_d4[0] === "window") {
-          const window_w = temp_d4[1];
-          const window_h = temp_d4[2];
+  return (function temp_d7(temp_d6) {
+    if (temp_d6[0] === "state") {
+      const window = temp_d6[1].window;
+      const ball_x = temp_d6[1].ball_x;
+      const ball_y = temp_d6[1].ball_y;
+      return (function temp_d9(temp_d8) {
+        if (temp_d8[0] === "window") {
+          const window_w = temp_d8[1];
+          const window_h = temp_d8[2];
           return Entity_scaled(
             ball_x,
             ball_y,
@@ -1566,8 +1593,116 @@ const render = function _(state) {
   );
 };
 
-const tick = function _(state, time) {
-  return state;
+const time_millis = function _(t) {
+  return (function temp_db(temp_da) {
+    if (temp_da[0] === "time") {
+      const millis = temp_da[1];
+      return millis;
+    }
+  })(t);
+};
+
+const sign_nat = function _(s, n) {
+  return (function temp_dd(temp_dc) {
+    if (temp_dc[0] === "pos") {
+      return Int_nat(n);
+    }
+    if (temp_dc[0] === "neg") {
+      return neg2(n);
+    }
+  })(s);
+};
+
+function natToNum(nat) {
+  if (nat[0] === "zero") {
+    return 0;
+  }
+  if (nat[0] === "pos") {
+    return posToNum(nat[1]);
+  }
+  throw { badNat: nat };
+}
+
+function posToNum(pos) {
+  return parseInt(posToBitString(pos), 2);
+}
+
+function posToBitString(pos) {
+  if (pos[0] === "one") {
+    return "1";
+  }
+  if (pos[0] === "extend") {
+    const left = posToBitString(pos[1]);
+    const right = "" + bitToNum(pos[2]);
+    return left + right;
+  }
+  throw { badPos: pos };
+}
+
+function bitToNum(bit) {
+  if (bit[0] === "zero") {
+    return 0;
+  }
+  if (bit[0] === "one") {
+    return 1;
+  }
+  throw { badBit: bit };
+}
+
+const tick = function _(state, new_time) {
+  return (function temp_df(temp_de) {
+    if (temp_de[0] === "state") {
+      const old_time = temp_de[1].time;
+      const window = temp_de[1].window;
+      const left_paddle_y = temp_de[1].left_paddle_y;
+      const right_paddle_y = temp_de[1].right_paddle_y;
+      const old_ball_x = temp_de[1].ball_x;
+      const ball_y = temp_de[1].ball_y;
+      const ball_vx_sign = temp_de[1].ball_vx_sign;
+      const ball_vy_sign = temp_de[1].ball_vy_sign;
+      return (function _2({
+        elapsed_millis: elapsed_millis,
+        ball_vx_mag: ball_vx_mag,
+      }) {
+        console.log({
+          elapsedMillis: posToNum(elapsed_millis),
+          vx_mag: natToNum(ball_vx_mag),
+        });
+        return State_state({
+          time: new_time,
+          window: window,
+          left_paddle_y: left_paddle_y,
+          right_paddle_y: right_paddle_y,
+          ball_x: relu(
+            add3(
+              Int_nat(old_ball_x),
+              sign_nat(
+                ball_vx_sign,
+                pfrac_mult(Pfrac_pfrac(elapsed_millis, pos1000), ball_vx_mag)
+              )
+            )
+          ),
+          ball_y: ball_y,
+          ball_vx_sign: ball_vx_sign,
+          ball_vy_sign: ball_vy_sign,
+        });
+      })({
+        elapsed_millis: max1_int(
+          sub(Int_nat(time_millis(new_time)), Int_nat(time_millis(old_time)))
+        ),
+        ball_vx_mag: pfrac_mult(
+          ball_vx_mag_factor,
+          (function temp_e1(temp_e0) {
+            if (temp_e0[0] === "window") {
+              const w = temp_e0[1];
+              const _2 = temp_e0[2];
+              return w;
+            }
+          })(window)
+        ),
+      });
+    }
+  })(state);
 };
 
 const handle = function _(state, event) {

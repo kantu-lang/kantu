@@ -14,6 +14,16 @@ pub let(*) relu = fun _(n: Int): Nat {
     }
 };
 
+pub let(*) max1_int = fun _(n: Int): Pos {
+    match n {
+        neg(_) => Pos.one,
+        nat(nn) => match nn {
+            zero => Pos.one,
+            pos(np) => np,
+        },
+    }
+};
+
 pub type Pfrac {
     pfrac(num: Pos, div: Pos): Pfrac,
 }
@@ -32,10 +42,12 @@ pub let(*) pos2 = pos.add(pos1, pos1);
 pub let(*) pos3 = pos.add(pos2, pos1);
 pub let(*) pos4 = pos.add(pos3, pos1);
 pub let(*) pos8 = pos.pow(pos2, pos3);
+pub let(*) pos10 = pos.add(pos2, pos8);
 pub let(*) pos64 = pos.mul(pos8, pos8);
 pub let(*) pos65 = pos.add(pos1, pos64);
 pub let(*) pos66 = pos.add(pos1, pos65);
 pub let(*) pos67 = pos.add(pos1, pos66);
+pub let(*) pos1000 = pos.pow(pos10, pos3);
 
 pub let(*) refl_true = Equal.refl(Bool, true);
 
@@ -61,6 +73,11 @@ pub let(*) paddle_x_margin_factor = Pfrac.pfrac(
     pos64,
 );
 pub let(*) paddle_width_factor = Pfrac.pfrac(
+    pos1,
+    pos64,
+);
+
+pub let(*) ball_vx_mag_factor = Pfrac.pfrac(
     pos1,
     pos64,
 );
@@ -98,8 +115,8 @@ pub type State {
         ~right_paddle_y: Nat,
         ~ball_x: Nat,
         ~ball_y: Nat,
-        ~ball_vx: Sign,
-        ~ball_vy: Sign,
+        ~ball_vx_sign: Sign,
+        ~ball_vy_sign: Sign,
     ): State,
 }
 
@@ -124,8 +141,8 @@ pub let(*) init = fun _(window: Window, time: Time): State {
                 Int.nat(pfrac_mult(half, window_h)),
                 Int.nat(pfrac_mult(half, pfrac_mult(ball_height_factor, window_h))),
             )),
-            ball_vx: Sign.pos,
-            ball_vy: Sign.neg,
+            ball_vx_sign: Sign.pos,
+            ball_vy_sign: Sign.neg,
         )
     }
 };
@@ -212,9 +229,60 @@ pub let(*) render = fun _(state: State): List(Entity) {
     )
 };
 
-pub let(*) tick = fun _(state: State, time: Time): State {
+pub let(*) time_millis = fun _(t: Time): Nat {
+    match t {
+        time(millis) => millis,
+    }
+};
+
+pub let sign_nat = fun _(s: Sign, n: Nat): Int {
+    match s {
+        pos => Int.nat(n),
+        neg => nat.neg(n),
+    }
+};
+
+pub let(*) tick = fun _(state: State, new_time: Time): State {
     // TODO
-    state
+    match state {
+        state(
+            time: old_time,
+            :window,
+            :left_paddle_y,
+            :right_paddle_y,
+            ball_x: old_ball_x,
+            :ball_y,
+            :ball_vx_sign,
+            :ball_vy_sign,
+        ) => fun _(~elapsed_millis: Pos, ~ball_vx_mag: Nat): State {
+            State.state(
+                time: new_time,
+                :window,
+                :left_paddle_y,
+                :right_paddle_y,
+                ball_x: relu(int.add(
+                    Int.nat(old_ball_x),
+                    sign_nat(
+                        ball_vx_sign,
+                        pfrac_mult(
+                            Pfrac.pfrac(elapsed_millis, pos1000),
+                            ball_vx_mag,
+                        ),
+                    ),
+                )),
+                :ball_y,
+                :ball_vx_sign,
+                :ball_vy_sign,
+            )
+        }(
+            elapsed_millis: max1_int(int.sub(
+                Int.nat(time_millis(new_time)),
+                Int.nat(time_millis(old_time)),
+            )),
+
+            ball_vx_mag: pfrac_mult(ball_vx_mag_factor, match window { window(w, _) => w }),
+        ),
+    }
 };
 
 pub let(*) handle = fun _(state: State, event: Event): State {
