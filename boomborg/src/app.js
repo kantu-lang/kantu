@@ -1295,26 +1295,23 @@ const max3 = function _(a, b) {
   })(gt3(a, b));
 };
 
-const max0 = function _(i) {
-  return (function temp_c9(temp_c8) {
-    if (temp_c8[0] === "neg") {
-      const _2 = temp_c8[1];
-      return Nat_zero;
-    }
-    if (temp_c8[0] === "nat") {
-      const in_ = temp_c8[1];
-      return in_;
-    }
-  })(i);
-};
+const pos_2 = add(Pos_one, Pos_one);
 
-const nat_2 = add2(one, one);
+const pos_3 = add(pos_2, Pos_one);
 
-const nat_3 = add2(nat_2, one);
+const pos_5 = add(pos_2, pos_3);
 
-const nat_8 = pow2(nat_2, nat_3);
+const pos_10 = add(pos_5, pos_5);
 
-const nat_255 = max0(sub(Int_nat(pow2(nat_2, nat_8)), one2));
+const pos_50 = mul(pos_5, pos_10);
+
+const pos_100 = mul(pos_10, pos_10);
+
+const pos_200 = mul(pos_100, pos_2);
+
+const pos_255 = add(pos_200, add(pos_50, pos_5));
+
+const nat_255 = Nat_pos(pos_255);
 
 const U8 = { type_species: "U8", type_args: [] };
 
@@ -1323,14 +1320,14 @@ const U8_u8 = function U8_u8(n, upper) {
 };
 
 const eq7 = function _(a, b) {
-  return (function temp_cb(temp_ca) {
-    if (temp_ca[0] === "u8") {
-      const an = temp_ca[1];
-      const _2 = temp_ca[2];
-      return (function temp_cd(temp_cc) {
-        if (temp_cc[0] === "u8") {
-          const bn = temp_cc[1];
-          const _3 = temp_cc[2];
+  return (function temp_c9(temp_c8) {
+    if (temp_c8[0] === "u8") {
+      const an = temp_c8[1];
+      const _2 = temp_c8[2];
+      return (function temp_cb(temp_ca) {
+        if (temp_ca[0] === "u8") {
+          const bn = temp_ca[1];
+          const _3 = temp_ca[2];
           return eq5(an, bn);
         }
       })(b);
@@ -1351,12 +1348,12 @@ const String_utf8 = function String_utf8(bytes) {
 };
 
 const eq8 = function _(s1, s2) {
-  return (function temp_cf(temp_ce) {
-    if (temp_ce[0] === "utf8") {
-      const s1_bytes = temp_ce[1];
-      return (function temp_d1(temp_d0) {
-        if (temp_d0[0] === "utf8") {
-          const s2_bytes = temp_d0[1];
+  return (function temp_cd(temp_cc) {
+    if (temp_cc[0] === "utf8") {
+      const s1_bytes = temp_cc[1];
+      return (function temp_cf(temp_ce) {
+        if (temp_ce[0] === "utf8") {
+          const s2_bytes = temp_ce[1];
           return eq2(U8, s1_bytes, s2_bytes, eq7);
         }
       })(s2);
@@ -1413,18 +1410,18 @@ const LocalY_locy = function LocalY_locy(y) {
 };
 
 const locx_raw = function _(lx) {
-  return (function temp_d3(temp_d2) {
-    if (temp_d2[0] === "locx") {
-      const x = temp_d2[1];
+  return (function temp_d1(temp_d0) {
+    if (temp_d0[0] === "locx") {
+      const x = temp_d0[1];
       return x;
     }
   })(lx);
 };
 
 const locy_raw = function _(ly) {
-  return (function temp_d5(temp_d4) {
-    if (temp_d4[0] === "locy") {
-      const y = temp_d4[1];
+  return (function temp_d3(temp_d2) {
+    if (temp_d2[0] === "locy") {
+      const y = temp_d2[1];
       return y;
     }
   })(ly);
@@ -1443,18 +1440,18 @@ const IntLocalY_ilocy = function IntLocalY_ilocy(y) {
 };
 
 const ilocx_raw = function _(lx) {
-  return (function temp_d7(temp_d6) {
-    if (temp_d6[0] === "ilocx") {
-      const x = temp_d6[1];
+  return (function temp_d5(temp_d4) {
+    if (temp_d4[0] === "ilocx") {
+      const x = temp_d4[1];
       return x;
     }
   })(lx);
 };
 
 const ilocy_raw = function _(ly) {
-  return (function temp_d9(temp_d8) {
-    if (temp_d8[0] === "ilocy") {
-      const y = temp_d8[1];
+  return (function temp_d7(temp_d6) {
+    if (temp_d6[0] === "ilocy") {
+      const y = temp_d6[1];
       return y;
     }
   })(ly);
@@ -1469,20 +1466,20 @@ const identity = function _(T, t) {
 const ascribe = identity;
 
 const str_list_contains = function str_list_contains(strs, str) {
-  return (function temp_db(temp_da) {
-    if (temp_da[0] === "nil") {
-      const _ = temp_da[1];
+  return (function temp_d9(temp_d8) {
+    if (temp_d8[0] === "nil") {
+      const _ = temp_d8[1];
       return Bool_false_;
     }
-    if (temp_da[0] === "cons") {
-      const _ = temp_da[1];
-      const car = temp_da[2];
-      const cdr = temp_da[3];
-      return (function temp_dd(temp_dc) {
-        if (temp_dc[0] === "true_") {
+    if (temp_d8[0] === "cons") {
+      const _ = temp_d8[1];
+      const car = temp_d8[2];
+      const cdr = temp_d8[3];
+      return (function temp_db(temp_da) {
+        if (temp_da[0] === "true_") {
           return Bool_true_;
         }
-        if (temp_dc[0] === "false_") {
+        if (temp_da[0] === "false_") {
           return str_list_contains(cdr, str);
         }
       })(eq8(car, str));
@@ -1491,23 +1488,23 @@ const str_list_contains = function str_list_contains(strs, str) {
 };
 
 const sign_eq = function _(a, b) {
-  return (function temp_df(temp_de) {
-    if (temp_de[0] === "pos") {
-      return (function temp_e1(temp_e0) {
-        if (temp_e0[0] === "pos") {
+  return (function temp_dd(temp_dc) {
+    if (temp_dc[0] === "pos") {
+      return (function temp_df(temp_de) {
+        if (temp_de[0] === "pos") {
           return Bool_true_;
         }
-        if (temp_e0[0] === "neg") {
+        if (temp_de[0] === "neg") {
           return Bool_false_;
         }
       })(b);
     }
-    if (temp_de[0] === "neg") {
-      return (function temp_e3(temp_e2) {
-        if (temp_e2[0] === "pos") {
+    if (temp_dc[0] === "neg") {
+      return (function temp_e1(temp_e0) {
+        if (temp_e0[0] === "pos") {
           return Bool_false_;
         }
-        if (temp_e2[0] === "neg") {
+        if (temp_e0[0] === "neg") {
           return Bool_true_;
         }
       })(b);
@@ -1516,57 +1513,57 @@ const sign_eq = function _(a, b) {
 };
 
 const opt_sign_eq_some = function _(opt_sign, sign2) {
-  return (function temp_e5(temp_e4) {
-    if (temp_e4[0] === "none") {
-      const _2 = temp_e4[1];
+  return (function temp_e3(temp_e2) {
+    if (temp_e2[0] === "none") {
+      const _2 = temp_e2[1];
       return Bool_false_;
     }
-    if (temp_e4[0] === "some") {
-      const _2 = temp_e4[1];
-      const sign22 = temp_e4[2];
+    if (temp_e2[0] === "some") {
+      const _2 = temp_e2[1];
+      const sign22 = temp_e2[2];
       return sign_eq(sign2, sign22);
     }
   })(opt_sign);
 };
 
 const sign_int = function _(sign2, i) {
-  return (function temp_e7(temp_e6) {
-    if (temp_e6[0] === "pos") {
+  return (function temp_e5(temp_e4) {
+    if (temp_e4[0] === "pos") {
       return i;
     }
-    if (temp_e6[0] === "neg") {
+    if (temp_e4[0] === "neg") {
       return neg3(i);
     }
   })(sign2);
 };
 
 const relu = function _(n) {
-  return (function temp_e9(temp_e8) {
-    if (temp_e8[0] === "neg") {
-      const _2 = temp_e8[1];
+  return (function temp_e7(temp_e6) {
+    if (temp_e6[0] === "neg") {
+      const _2 = temp_e6[1];
       return Nat_zero;
     }
-    if (temp_e8[0] === "nat") {
-      const nn = temp_e8[1];
+    if (temp_e6[0] === "nat") {
+      const nn = temp_e6[1];
       return nn;
     }
   })(n);
 };
 
 const int_to_pos = function _(n) {
-  return (function temp_eb(temp_ea) {
-    if (temp_ea[0] === "neg") {
-      const _2 = temp_ea[1];
+  return (function temp_e9(temp_e8) {
+    if (temp_e8[0] === "neg") {
+      const _2 = temp_e8[1];
       return Pos_one;
     }
-    if (temp_ea[0] === "nat") {
-      const nn = temp_ea[1];
-      return (function temp_ed(temp_ec) {
-        if (temp_ec[0] === "zero") {
+    if (temp_e8[0] === "nat") {
+      const nn = temp_e8[1];
+      return (function temp_eb(temp_ea) {
+        if (temp_ea[0] === "zero") {
           return Pos_one;
         }
-        if (temp_ec[0] === "pos") {
-          const np = temp_ec[1];
+        if (temp_ea[0] === "pos") {
+          const np = temp_ea[1];
           return np;
         }
       })(nn);
@@ -1579,11 +1576,11 @@ const nat_sub = function _(min4, sub2) {
 };
 
 const sign_nat = function _(s, n) {
-  return (function temp_ef(temp_ee) {
-    if (temp_ee[0] === "pos") {
+  return (function temp_ed(temp_ec) {
+    if (temp_ec[0] === "pos") {
       return Int_nat(n);
     }
-    if (temp_ee[0] === "neg") {
+    if (temp_ec[0] === "neg") {
       return neg2(n);
     }
   })(s);
@@ -1599,32 +1596,32 @@ const nat_mod = function _(n, divisor) {
 };
 
 const int_abs = function _(i) {
-  return (function temp_f1(temp_f0) {
-    if (temp_f0[0] === "neg") {
-      const neg_i = temp_f0[1];
+  return (function temp_ef(temp_ee) {
+    if (temp_ee[0] === "neg") {
+      const neg_i = temp_ee[1];
       return Nat_pos(neg_i);
     }
-    if (temp_f0[0] === "nat") {
-      const in_ = temp_f0[1];
+    if (temp_ee[0] === "nat") {
+      const in_ = temp_ee[1];
       return in_;
     }
   })(i);
 };
 
 const window_width = function _(window) {
-  return (function temp_f3(temp_f2) {
-    if (temp_f2[0] === "window") {
-      const w = temp_f2[1];
-      const _2 = temp_f2[2];
+  return (function temp_f1(temp_f0) {
+    if (temp_f0[0] === "window") {
+      const w = temp_f0[1];
+      const _2 = temp_f0[2];
       return w;
     }
   })(window);
 };
 
 const time_millis = function _(t) {
-  return (function temp_f5(temp_f4) {
-    if (temp_f4[0] === "time") {
-      const millis = temp_f4[1];
+  return (function temp_f3(temp_f2) {
+    if (temp_f2[0] === "time") {
+      const millis = temp_f2[1];
       return millis;
     }
   })(t);
@@ -1875,16 +1872,16 @@ const ball_initial_vy = IntLocalY_ilocy(floor_div(Int_nat(nat10k), pos3));
 const paddle_max_y = LocalY_locy(nat_sub(nat10k, locy_raw(paddle_height)));
 
 const clamp_paddle_y = function _(yi) {
-  return (function temp_f7(temp_f6) {
-    if (temp_f6[0] === "true_") {
+  return (function temp_f5(temp_f4) {
+    if (temp_f4[0] === "true_") {
       return LocalY_locy(Nat_zero);
     }
-    if (temp_f6[0] === "false_") {
-      return (function temp_f9(temp_f8) {
-        if (temp_f8[0] === "true_") {
+    if (temp_f4[0] === "false_") {
+      return (function temp_f7(temp_f6) {
+        if (temp_f6[0] === "true_") {
           return paddle_max_y;
         }
-        if (temp_f8[0] === "false_") {
+        if (temp_f6[0] === "false_") {
           return LocalY_locy(relu(yi));
         }
       })(gt3(yi, Int_nat(locy_raw(paddle_max_y))));
@@ -1893,20 +1890,20 @@ const clamp_paddle_y = function _(yi) {
 };
 
 const to_real_x = function _(x, window) {
-  return (function temp_fb(temp_fa) {
-    if (temp_fa[0] === "window") {
-      const window_w = temp_fa[1];
-      const _2 = temp_fa[2];
+  return (function temp_f9(temp_f8) {
+    if (temp_f8[0] === "window") {
+      const window_w = temp_f8[1];
+      const _2 = temp_f8[2];
       return floor_div_nat(mul2(locx_raw(x), window_w), pos10k);
     }
   })(window);
 };
 
 const to_real_y = function _(y, window) {
-  return (function temp_fd(temp_fc) {
-    if (temp_fc[0] === "window") {
-      const _2 = temp_fc[1];
-      const window_h = temp_fc[2];
+  return (function temp_fb(temp_fa) {
+    if (temp_fa[0] === "window") {
+      const _2 = temp_fa[1];
+      const window_h = temp_fa[2];
       return floor_div_nat(mul2(locy_raw(y), window_h), pos10k);
     }
   })(window);
@@ -1944,10 +1941,10 @@ const State_state = function State_state({
 };
 
 const init = function _(window, time) {
-  return (function temp_ff(temp_fe) {
-    if (temp_fe[0] === "window") {
-      const window_w = temp_fe[1];
-      const window_h = temp_fe[2];
+  return (function temp_fd(temp_fc) {
+    if (temp_fc[0] === "window") {
+      const window_w = temp_fc[1];
+      const window_h = temp_fc[2];
       return State_state({
         time: time,
         window: window,
@@ -1969,13 +1966,13 @@ const init = function _(window, time) {
 };
 
 const render_background = function _(state) {
-  return (function temp_101(temp_100) {
-    if (temp_100[0] === "state") {
-      const window = temp_100[1].window;
-      return (function temp_103(temp_102) {
-        if (temp_102[0] === "window") {
-          const window_w = temp_102[1];
-          const window_h = temp_102[2];
+  return (function temp_ff(temp_fe) {
+    if (temp_fe[0] === "state") {
+      const window = temp_fe[1].window;
+      return (function temp_101(temp_100) {
+        if (temp_100[0] === "window") {
+          const window_w = temp_100[1];
+          const window_h = temp_100[2];
           return Entity_scaled(
             Nat_zero,
             Nat_zero,
@@ -1990,10 +1987,10 @@ const render_background = function _(state) {
 };
 
 const render_left_paddle = function _(state) {
-  return (function temp_105(temp_104) {
-    if (temp_104[0] === "state") {
-      const window = temp_104[1].window;
-      const left_paddle_y = temp_104[1].left_paddle_y;
+  return (function temp_103(temp_102) {
+    if (temp_102[0] === "state") {
+      const window = temp_102[1].window;
+      const left_paddle_y = temp_102[1].left_paddle_y;
       return Entity_scaled(
         to_real_x(paddle_x_margin, window),
         to_real_y(left_paddle_y, window),
@@ -2006,10 +2003,10 @@ const render_left_paddle = function _(state) {
 };
 
 const render_right_paddle = function _(state) {
-  return (function temp_107(temp_106) {
-    if (temp_106[0] === "state") {
-      const window = temp_106[1].window;
-      const right_paddle_y = temp_106[1].right_paddle_y;
+  return (function temp_105(temp_104) {
+    if (temp_104[0] === "state") {
+      const window = temp_104[1].window;
+      const right_paddle_y = temp_104[1].right_paddle_y;
       return Entity_scaled(
         nat_sub(
           nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
@@ -2025,11 +2022,11 @@ const render_right_paddle = function _(state) {
 };
 
 const render_ball = function _(state) {
-  return (function temp_109(temp_108) {
-    if (temp_108[0] === "state") {
-      const window = temp_108[1].window;
-      const ball_center_x = temp_108[1].ball_center_x;
-      const ball_center_y = temp_108[1].ball_center_y;
+  return (function temp_107(temp_106) {
+    if (temp_106[0] === "state") {
+      const window = temp_106[1].window;
+      const ball_center_x = temp_106[1].ball_center_x;
+      const ball_center_y = temp_106[1].ball_center_y;
       return (function _2(ball_radius) {
         return Entity_scaled(
           nat_sub(to_real_x(ball_center_x, window), ball_radius),
@@ -2083,21 +2080,21 @@ const ball_bounce_y = function _(old_y, delta_y) {
 };
 
 const ball_bounce_vy_sign_top = function _(raw) {
-  return (function temp_10b(temp_10a) {
-    if (temp_10a[0] === "zero") {
+  return (function temp_109(temp_108) {
+    if (temp_108[0] === "zero") {
       return Sign_pos;
     }
-    if (temp_10a[0] === "one") {
+    if (temp_108[0] === "one") {
       return Sign_neg;
     }
   })(
     parity3(
-      (function temp_10d(temp_10c) {
-        if (temp_10c[0] === "zero") {
+      (function temp_10b(temp_10a) {
+        if (temp_10a[0] === "zero") {
           return int0;
         }
-        if (temp_10c[0] === "pos") {
-          const p = temp_10c[1];
+        if (temp_10a[0] === "pos") {
+          const p = temp_10a[1];
           return Int_nat(floor_div_nat(nat_sub(Nat_pos(p), nat1), pos10k));
         }
       })(int_abs(raw))
@@ -2115,18 +2112,18 @@ const ball_bounce_vy_sign = function _(old_y, delta_y) {
 };
 
 const tick = function _(state, new_time) {
-  return (function temp_10f(temp_10e) {
-    if (temp_10e[0] === "state") {
-      const window = temp_10e[1].window;
-      const left_paddle_vy_sign = temp_10e[1].left_paddle_vy_sign;
-      const right_paddle_vy_sign = temp_10e[1].right_paddle_vy_sign;
-      const old_time = temp_10e[1].time;
-      const old_left_paddle_y = temp_10e[1].left_paddle_y;
-      const old_right_paddle_y = temp_10e[1].right_paddle_y;
-      const old_ball_center_x = temp_10e[1].ball_center_x;
-      const old_ball_center_y = temp_10e[1].ball_center_y;
-      const old_ball_vx = temp_10e[1].ball_vx;
-      const old_ball_vy = temp_10e[1].ball_vy;
+  return (function temp_10d(temp_10c) {
+    if (temp_10c[0] === "state") {
+      const window = temp_10c[1].window;
+      const left_paddle_vy_sign = temp_10c[1].left_paddle_vy_sign;
+      const right_paddle_vy_sign = temp_10c[1].right_paddle_vy_sign;
+      const old_time = temp_10c[1].time;
+      const old_left_paddle_y = temp_10c[1].left_paddle_y;
+      const old_right_paddle_y = temp_10c[1].right_paddle_y;
+      const old_ball_center_x = temp_10c[1].ball_center_x;
+      const old_ball_center_y = temp_10c[1].ball_center_y;
+      const old_ball_vx = temp_10c[1].ball_vx;
+      const old_ball_vy = temp_10c[1].ball_vy;
       return (function _2({ elapsed_millis: elapsed_millis }) {
         return State_state({
           window: window,
@@ -2179,27 +2176,27 @@ const tick = function _(state, new_time) {
 };
 
 const handle_keydown = function _(state, key) {
-  return (function temp_111(temp_110) {
-    if (temp_110[0] === "state") {
-      const time = temp_110[1].time;
-      const window = temp_110[1].window;
-      const old_left_paddle_y = temp_110[1].left_paddle_y;
-      const old_right_paddle_y = temp_110[1].right_paddle_y;
-      const ball_center_x = temp_110[1].ball_center_x;
-      const ball_center_y = temp_110[1].ball_center_y;
-      const ball_vx = temp_110[1].ball_vx;
-      const ball_vy = temp_110[1].ball_vy;
-      const old_left_paddle_vy_sign = temp_110[1].left_paddle_vy_sign;
-      const old_right_paddle_vy_sign = temp_110[1].right_paddle_vy_sign;
-      return (function temp_113(temp_112) {
-        if (temp_112[0] === "true_") {
+  return (function temp_10f(temp_10e) {
+    if (temp_10e[0] === "state") {
+      const time = temp_10e[1].time;
+      const window = temp_10e[1].window;
+      const old_left_paddle_y = temp_10e[1].left_paddle_y;
+      const old_right_paddle_y = temp_10e[1].right_paddle_y;
+      const ball_center_x = temp_10e[1].ball_center_x;
+      const ball_center_y = temp_10e[1].ball_center_y;
+      const ball_vx = temp_10e[1].ball_vx;
+      const ball_vy = temp_10e[1].ball_vy;
+      const old_left_paddle_vy_sign = temp_10e[1].left_paddle_vy_sign;
+      const old_right_paddle_vy_sign = temp_10e[1].right_paddle_vy_sign;
+      return (function temp_111(temp_110) {
+        if (temp_110[0] === "true_") {
           return State_state({
             left_paddle_vy_sign: Opt_some(Sign, Sign_neg),
-            left_paddle_y: (function temp_115(temp_114) {
-              if (temp_114[0] === "true_") {
+            left_paddle_y: (function temp_113(temp_112) {
+              if (temp_112[0] === "true_") {
                 return old_left_paddle_y;
               }
-              if (temp_114[0] === "false_") {
+              if (temp_112[0] === "false_") {
                 return clamp_paddle_y(
                   sub(
                     Int_nat(locy_raw(old_left_paddle_y)),
@@ -2218,16 +2215,16 @@ const handle_keydown = function _(state, key) {
             right_paddle_vy_sign: old_right_paddle_vy_sign,
           });
         }
-        if (temp_112[0] === "false_") {
-          return (function temp_117(temp_116) {
-            if (temp_116[0] === "true_") {
+        if (temp_110[0] === "false_") {
+          return (function temp_115(temp_114) {
+            if (temp_114[0] === "true_") {
               return State_state({
                 left_paddle_vy_sign: Opt_some(Sign, Sign_pos),
-                left_paddle_y: (function temp_119(temp_118) {
-                  if (temp_118[0] === "true_") {
+                left_paddle_y: (function temp_117(temp_116) {
+                  if (temp_116[0] === "true_") {
                     return old_left_paddle_y;
                   }
-                  if (temp_118[0] === "false_") {
+                  if (temp_116[0] === "false_") {
                     return clamp_paddle_y(
                       add3(
                         Int_nat(locy_raw(old_left_paddle_y)),
@@ -2246,16 +2243,16 @@ const handle_keydown = function _(state, key) {
                 right_paddle_vy_sign: old_right_paddle_vy_sign,
               });
             }
-            if (temp_116[0] === "false_") {
-              return (function temp_11b(temp_11a) {
-                if (temp_11a[0] === "true_") {
+            if (temp_114[0] === "false_") {
+              return (function temp_119(temp_118) {
+                if (temp_118[0] === "true_") {
                   return State_state({
                     right_paddle_vy_sign: Opt_some(Sign, Sign_neg),
-                    right_paddle_y: (function temp_11d(temp_11c) {
-                      if (temp_11c[0] === "true_") {
+                    right_paddle_y: (function temp_11b(temp_11a) {
+                      if (temp_11a[0] === "true_") {
                         return old_right_paddle_y;
                       }
-                      if (temp_11c[0] === "false_") {
+                      if (temp_11a[0] === "false_") {
                         return clamp_paddle_y(
                           sub(
                             Int_nat(locy_raw(old_right_paddle_y)),
@@ -2274,16 +2271,16 @@ const handle_keydown = function _(state, key) {
                     left_paddle_vy_sign: old_left_paddle_vy_sign,
                   });
                 }
-                if (temp_11a[0] === "false_") {
-                  return (function temp_11f(temp_11e) {
-                    if (temp_11e[0] === "true_") {
+                if (temp_118[0] === "false_") {
+                  return (function temp_11d(temp_11c) {
+                    if (temp_11c[0] === "true_") {
                       return State_state({
                         right_paddle_vy_sign: Opt_some(Sign, Sign_pos),
-                        right_paddle_y: (function temp_121(temp_120) {
-                          if (temp_120[0] === "true_") {
+                        right_paddle_y: (function temp_11f(temp_11e) {
+                          if (temp_11e[0] === "true_") {
                             return old_right_paddle_y;
                           }
-                          if (temp_120[0] === "false_") {
+                          if (temp_11e[0] === "false_") {
                             return clamp_paddle_y(
                               add3(
                                 Int_nat(locy_raw(old_right_paddle_y)),
@@ -2304,7 +2301,7 @@ const handle_keydown = function _(state, key) {
                         left_paddle_vy_sign: old_left_paddle_vy_sign,
                       });
                     }
-                    if (temp_11e[0] === "false_") {
+                    if (temp_11c[0] === "false_") {
                       return state;
                     }
                   })(str_list_contains(right_paddle_down_strs, key));
@@ -2319,34 +2316,34 @@ const handle_keydown = function _(state, key) {
 };
 
 const handle_keyup = function _(state, key) {
-  return (function temp_123(temp_122) {
-    if (temp_122[0] === "state") {
-      const time = temp_122[1].time;
-      const window = temp_122[1].window;
-      const left_paddle_y = temp_122[1].left_paddle_y;
-      const right_paddle_y = temp_122[1].right_paddle_y;
-      const ball_center_x = temp_122[1].ball_center_x;
-      const ball_center_y = temp_122[1].ball_center_y;
-      const ball_vx = temp_122[1].ball_vx;
-      const ball_vy = temp_122[1].ball_vy;
-      const left_paddle_vy_sign = temp_122[1].left_paddle_vy_sign;
-      const right_paddle_vy_sign = temp_122[1].right_paddle_vy_sign;
-      return (function temp_125(temp_124) {
-        if (temp_124[0] === "true_") {
+  return (function temp_121(temp_120) {
+    if (temp_120[0] === "state") {
+      const time = temp_120[1].time;
+      const window = temp_120[1].window;
+      const left_paddle_y = temp_120[1].left_paddle_y;
+      const right_paddle_y = temp_120[1].right_paddle_y;
+      const ball_center_x = temp_120[1].ball_center_x;
+      const ball_center_y = temp_120[1].ball_center_y;
+      const ball_vx = temp_120[1].ball_vx;
+      const ball_vy = temp_120[1].ball_vy;
+      const left_paddle_vy_sign = temp_120[1].left_paddle_vy_sign;
+      const right_paddle_vy_sign = temp_120[1].right_paddle_vy_sign;
+      return (function temp_123(temp_122) {
+        if (temp_122[0] === "true_") {
           return State_state({
-            left_paddle_vy_sign: (function temp_127(temp_126) {
-              if (temp_126[0] === "none") {
-                const _2 = temp_126[1];
+            left_paddle_vy_sign: (function temp_125(temp_124) {
+              if (temp_124[0] === "none") {
+                const _2 = temp_124[1];
                 return left_paddle_vy_sign;
               }
-              if (temp_126[0] === "some") {
-                const _2 = temp_126[1];
-                const some_left_paddle_vy_sign = temp_126[2];
-                return (function temp_129(temp_128) {
-                  if (temp_128[0] === "neg") {
+              if (temp_124[0] === "some") {
+                const _2 = temp_124[1];
+                const some_left_paddle_vy_sign = temp_124[2];
+                return (function temp_127(temp_126) {
+                  if (temp_126[0] === "neg") {
                     return Opt_none(Sign);
                   }
-                  if (temp_128[0] === "pos") {
+                  if (temp_126[0] === "pos") {
                     return left_paddle_vy_sign;
                   }
                 })(ascribe(Sign, some_left_paddle_vy_sign));
@@ -2363,23 +2360,23 @@ const handle_keyup = function _(state, key) {
             right_paddle_vy_sign: right_paddle_vy_sign,
           });
         }
-        if (temp_124[0] === "false_") {
-          return (function temp_12b(temp_12a) {
-            if (temp_12a[0] === "true_") {
+        if (temp_122[0] === "false_") {
+          return (function temp_129(temp_128) {
+            if (temp_128[0] === "true_") {
               return State_state({
-                left_paddle_vy_sign: (function temp_12d(temp_12c) {
-                  if (temp_12c[0] === "none") {
-                    const _2 = temp_12c[1];
+                left_paddle_vy_sign: (function temp_12b(temp_12a) {
+                  if (temp_12a[0] === "none") {
+                    const _2 = temp_12a[1];
                     return left_paddle_vy_sign;
                   }
-                  if (temp_12c[0] === "some") {
-                    const _2 = temp_12c[1];
-                    const some_left_paddle_vy_sign = temp_12c[2];
-                    return (function temp_12f(temp_12e) {
-                      if (temp_12e[0] === "pos") {
+                  if (temp_12a[0] === "some") {
+                    const _2 = temp_12a[1];
+                    const some_left_paddle_vy_sign = temp_12a[2];
+                    return (function temp_12d(temp_12c) {
+                      if (temp_12c[0] === "pos") {
                         return Opt_none(Sign);
                       }
-                      if (temp_12e[0] === "neg") {
+                      if (temp_12c[0] === "neg") {
                         return left_paddle_vy_sign;
                       }
                     })(ascribe(Sign, some_left_paddle_vy_sign));
@@ -2396,23 +2393,23 @@ const handle_keyup = function _(state, key) {
                 right_paddle_vy_sign: right_paddle_vy_sign,
               });
             }
-            if (temp_12a[0] === "false_") {
-              return (function temp_131(temp_130) {
-                if (temp_130[0] === "true_") {
+            if (temp_128[0] === "false_") {
+              return (function temp_12f(temp_12e) {
+                if (temp_12e[0] === "true_") {
                   return State_state({
-                    right_paddle_vy_sign: (function temp_133(temp_132) {
-                      if (temp_132[0] === "none") {
-                        const _2 = temp_132[1];
+                    right_paddle_vy_sign: (function temp_131(temp_130) {
+                      if (temp_130[0] === "none") {
+                        const _2 = temp_130[1];
                         return right_paddle_vy_sign;
                       }
-                      if (temp_132[0] === "some") {
-                        const _2 = temp_132[1];
-                        const some_right_paddle_vy_sign = temp_132[2];
-                        return (function temp_135(temp_134) {
-                          if (temp_134[0] === "neg") {
+                      if (temp_130[0] === "some") {
+                        const _2 = temp_130[1];
+                        const some_right_paddle_vy_sign = temp_130[2];
+                        return (function temp_133(temp_132) {
+                          if (temp_132[0] === "neg") {
                             return Opt_none(Sign);
                           }
-                          if (temp_134[0] === "pos") {
+                          if (temp_132[0] === "pos") {
                             return right_paddle_vy_sign;
                           }
                         })(ascribe(Sign, some_right_paddle_vy_sign));
@@ -2429,23 +2426,23 @@ const handle_keyup = function _(state, key) {
                     left_paddle_vy_sign: left_paddle_vy_sign,
                   });
                 }
-                if (temp_130[0] === "false_") {
-                  return (function temp_137(temp_136) {
-                    if (temp_136[0] === "true_") {
+                if (temp_12e[0] === "false_") {
+                  return (function temp_135(temp_134) {
+                    if (temp_134[0] === "true_") {
                       return State_state({
-                        right_paddle_vy_sign: (function temp_139(temp_138) {
-                          if (temp_138[0] === "none") {
-                            const _2 = temp_138[1];
+                        right_paddle_vy_sign: (function temp_137(temp_136) {
+                          if (temp_136[0] === "none") {
+                            const _2 = temp_136[1];
                             return right_paddle_vy_sign;
                           }
-                          if (temp_138[0] === "some") {
-                            const _2 = temp_138[1];
-                            const some_right_paddle_vy_sign = temp_138[2];
-                            return (function temp_13b(temp_13a) {
-                              if (temp_13a[0] === "pos") {
+                          if (temp_136[0] === "some") {
+                            const _2 = temp_136[1];
+                            const some_right_paddle_vy_sign = temp_136[2];
+                            return (function temp_139(temp_138) {
+                              if (temp_138[0] === "pos") {
                                 return Opt_none(Sign);
                               }
-                              if (temp_13a[0] === "neg") {
+                              if (temp_138[0] === "neg") {
                                 return right_paddle_vy_sign;
                               }
                             })(ascribe(Sign, some_right_paddle_vy_sign));
@@ -2462,7 +2459,7 @@ const handle_keyup = function _(state, key) {
                         left_paddle_vy_sign: left_paddle_vy_sign,
                       });
                     }
-                    if (temp_136[0] === "false_") {
+                    if (temp_134[0] === "false_") {
                       return state;
                     }
                   })(str_list_contains(right_paddle_down_strs, key));
@@ -2477,17 +2474,17 @@ const handle_keyup = function _(state, key) {
 };
 
 const handle = function _(state, event) {
-  return (function temp_13d(temp_13c) {
-    if (temp_13c[0] === "window_resize") {
-      const _2 = temp_13c[1];
+  return (function temp_13b(temp_13a) {
+    if (temp_13a[0] === "window_resize") {
+      const _2 = temp_13a[1];
       return state;
     }
-    if (temp_13c[0] === "keyup") {
-      const key = temp_13c[1];
+    if (temp_13a[0] === "keyup") {
+      const key = temp_13a[1];
       return handle_keyup(state, key);
     }
-    if (temp_13c[0] === "keydown") {
-      const key = temp_13c[1];
+    if (temp_13a[0] === "keydown") {
+      const key = temp_13a[1];
       return handle_keydown(state, key);
     }
   })(event);

@@ -1,8 +1,8 @@
 use super.*;
 
-pub let(*) one = Nat.pos(Pos.one);
+pub let one = Nat.pos(Pos.one);
 
-pub let(*) eq = fun eq(a: Nat, b: Nat): Bool {
+pub let eq = fun eq(a: Nat, b: Nat): Bool {
     match a {
         zero => match b {
             zero => true,
@@ -14,39 +14,39 @@ pub let(*) eq = fun eq(a: Nat, b: Nat): Bool {
         },
     }
 };
-pub let(*) neq = fun _(a: Nat, b: Nat): Bool {
+pub let neq = fun _(a: Nat, b: Nat): Bool {
     not(eq(a, b))
 };
 
-pub let(*) succ = fun succ(a: Nat): Nat {
+pub let succ = fun succ(a: Nat): Nat {
     match a {
         zero => one,
         pos(ap) => Nat.pos(pos.succ(ap)),
     }
 };
 
-pub let(*) pred = fun pred(a: Nat): Int {
+pub let pred = fun pred(a: Nat): Int {
     match a {
         zero => Int.neg(Pos.one),
         pos(ap) => Int.nat(pos.pred(ap)),
     }
 };
 
-pub let(*) from_bit = fun _(a: Bit): Nat {
+pub let from_bit = fun _(a: Bit): Nat {
     match a {
         zero => Nat.zero,
         one => one,
     }
 };
 
-pub let(*) extend_right = fun _(a: Nat, right: Bit): Nat {
+pub let extend_right = fun _(a: Nat, right: Bit): Nat {
     match a {
         zero => from_bit(right),
         pos(ap) => Nat.pos(Pos.extend(ap, right)),
     }
 };
 
-pub let(*) extend_right_with_bits = fun extend_right_with_bits(a: Nat, -right: List(Bit)): Nat {
+pub let extend_right_with_bits = fun extend_right_with_bits(a: Nat, -right: List(Bit)): Nat {
     match right {
         nil(_) => a,
         cons(_, car, cdr) => extend_right_with_bits(
@@ -56,25 +56,25 @@ pub let(*) extend_right_with_bits = fun extend_right_with_bits(a: Nat, -right: L
     }
 };
 
-pub let(*) from_bitlist = fun _(bits: List(Bit)): Nat {
+pub let from_bitlist = fun _(bits: List(Bit)): Nat {
     extend_right_with_bits(Nat.zero, bits)
 };
 
-pub let(*) parity = fun _(a: Nat): Bit {
+pub let parity = fun _(a: Nat): Bit {
     match a {
         zero => Bit.zero,
         pos(ap) => pos.parity(ap),
     }
 };
 
-pub let(*) neg = fun _(a: Nat): Int {
+pub let neg = fun _(a: Nat): Int {
     match a {
         zero => Int.nat(Nat.zero),
         pos(ap) => Int.neg(ap),
     }
 };
 
-pub let(*) add = fun add(a: Nat, b: Nat): Nat {
+pub let add = fun add(a: Nat, b: Nat): Nat {
     match a {
         zero => b,
         pos(ap) => match b {
@@ -84,7 +84,7 @@ pub let(*) add = fun add(a: Nat, b: Nat): Nat {
     }
 };
 
-pub let(*) mul = fun mul(a: Nat, b: Nat): Nat {
+pub let mul = fun mul(a: Nat, b: Nat): Nat {
     match a {
         zero => Nat.zero,
         pos(ap) => match b {
@@ -94,12 +94,12 @@ pub let(*) mul = fun mul(a: Nat, b: Nat): Nat {
     }
 };
 
-pub let(*) square = fun _(a: Nat): Nat {
+pub let square = fun _(a: Nat): Nat {
     mul(a, a)
 };
 
 /// We'll define 0^0 = 1
-pub let(*) pow = fun _(a: Nat, b: Nat): Nat {
+pub let pow = fun _(a: Nat, b: Nat): Nat {
     match b {
         zero => one,
         pos(bp) => match a {
@@ -109,6 +109,9 @@ pub let(*) pow = fun _(a: Nat, b: Nat): Nat {
     }
 };
 
+// Most variables have `mod`-level transparency,
+// but since we use `(std.num.nat.)le` to create
+// `U8`s, we need this to be globally transparent.
 pub let(*) le = fun le(a: Nat, b: Nat): Bool {
     match a {
         zero => true,
@@ -118,18 +121,18 @@ pub let(*) le = fun le(a: Nat, b: Nat): Bool {
         },
     }
 };
-pub let(*) lt = fun _(a: Nat, b: Nat): Bool {
+pub let lt = fun _(a: Nat, b: Nat): Bool {
     and(le(a, b), neq(a, b))
 };
 
-pub let(*) ge = fun _(a: Nat, b: Nat): Bool {
+pub let ge = fun _(a: Nat, b: Nat): Bool {
     le(b, a)
 };
-pub let(*) gt = fun _(a: Nat, b: Nat): Bool {
+pub let gt = fun _(a: Nat, b: Nat): Bool {
     lt(b, a)
 };
 
-pub let(*) cmp = fun _(a: Nat, b: Nat): Ord {
+pub let cmp = fun _(a: Nat, b: Nat): Ord {
     match lt(a, b) {
         true => Ord.lt,
         false => match eq(a, b) {
@@ -139,13 +142,13 @@ pub let(*) cmp = fun _(a: Nat, b: Nat): Ord {
     }
 };
 
-pub let(*) min = fun _(a: Nat, b: Nat): Nat {
+pub let min = fun _(a: Nat, b: Nat): Nat {
     match lt(a, b) {
         true => a,
         false => b,
     }
 };
-pub let(*) max = fun _(a: Nat, b: Nat): Nat {
+pub let max = fun _(a: Nat, b: Nat): Nat {
     match gt(a, b) {
         true => a,
         false => b,

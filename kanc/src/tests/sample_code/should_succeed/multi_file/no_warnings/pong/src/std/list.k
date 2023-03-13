@@ -5,7 +5,7 @@ pub type List(T: Type) {
     cons(T: Type, car: T, cdr: List(T)): List(T),
 }
 
-pub let(*) eq = fun eq(T: Type, -a: List(T), b: List(T), eqf: forall(ax: T, bx: T) { Bool }): Bool {
+pub let eq = fun eq(T: Type, -a: List(T), b: List(T), eqf: forall(ax: T, bx: T) { Bool }): Bool {
     match a {
         nil(_) => match b {
             nil(_) => true,

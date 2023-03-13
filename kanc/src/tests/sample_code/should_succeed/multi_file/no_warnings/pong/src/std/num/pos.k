@@ -1,6 +1,6 @@
 use super.*;
 
-pub let(*) eq = fun eq(-a: Pos, b: Pos): Bool {
+pub let eq = fun eq(-a: Pos, b: Pos): Bool {
     match a {
         one => match b {
             one => true,
@@ -15,11 +15,11 @@ pub let(*) eq = fun eq(-a: Pos, b: Pos): Bool {
         }
     }
 };
-pub let(*) neq = fun _(a: Pos, b: Pos): Bool {
+pub let neq = fun _(a: Pos, b: Pos): Bool {
     not(eq(a, b))
 };
 
-pub let(*) minimal_bitlist_plus = fun minimal_bitlist_plus(-a: Pos, right_accumulator: List(Bit)): List(Bit) {
+pub let minimal_bitlist_plus = fun minimal_bitlist_plus(-a: Pos, right_accumulator: List(Bit)): List(Bit) {
     match a {
         one => List.cons(Bit, Bit.one, right_accumulator),
         extend(a_left, a_right) => minimal_bitlist_plus(
@@ -29,7 +29,7 @@ pub let(*) minimal_bitlist_plus = fun minimal_bitlist_plus(-a: Pos, right_accumu
     }
 };
 
-pub let(*) minimal_bitlist = fun _(a: Pos): List(Bit) {
+pub let minimal_bitlist = fun _(a: Pos): List(Bit) {
     minimal_bitlist_plus(a, List.nil(Bit))
 };
 
@@ -43,7 +43,7 @@ pub let(*) succ = fun succ(-a: Pos): Pos {
     }
 };
 
-pub let(*) pred = fun pred(-a: Pos): Nat {
+pub let pred = fun pred(-a: Pos): Nat {
     match a {
         one => Nat.zero,
         extend(a_left, a_right) => Nat.pos(match a_right {
@@ -56,14 +56,14 @@ pub let(*) pred = fun pred(-a: Pos): Nat {
     }
 };
 
-pub let(*) parity = fun _(a: Pos): Bit {
+pub let parity = fun _(a: Pos): Bit {
     match a {
         one => Bit.one,
         extend(_, right) => right,
     }
 };
 
-pub let(*) neg = Int.neg;
+pub let neg = Int.neg;
 
 pub let(*) add = fun add(-a: Pos, b: Pos): Pos {
     match a {
@@ -132,18 +132,18 @@ pub let(*) le = fun le(-a: Pos, b: Pos): Bool {
         },
     }
 };
-pub let(*) lt = fun _(a: Pos, b: Pos): Bool {
+pub let lt = fun _(a: Pos, b: Pos): Bool {
     and(le(a, b), neq(a, b))
 };
 
-pub let(*) ge = fun _(a: Pos, b: Pos): Bool {
+pub let ge = fun _(a: Pos, b: Pos): Bool {
     le(b, a)
 };
-pub let(*) gt = fun _(a: Pos, b: Pos): Bool {
+pub let gt = fun _(a: Pos, b: Pos): Bool {
     lt(b, a)
 };
 
-pub let(*) cmp = fun _(a: Pos, b: Pos): Ord {
+pub let cmp = fun _(a: Pos, b: Pos): Ord {
     match lt(a, b) {
         true => Ord.lt,
         false => match eq(a, b) {
@@ -153,13 +153,13 @@ pub let(*) cmp = fun _(a: Pos, b: Pos): Ord {
     }
 };
 
-pub let(*) min = fun _(a: Pos, b: Pos): Pos {
+pub let min = fun _(a: Pos, b: Pos): Pos {
     match lt(a, b) {
         true => a,
         false => b,
     }
 };
-pub let(*) max = fun _(a: Pos, b: Pos): Pos {
+pub let max = fun _(a: Pos, b: Pos): Pos {
     match gt(a, b) {
         true => a,
         false => b,

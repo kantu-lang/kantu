@@ -1,8 +1,8 @@
 use super.*;
 
-pub let(*) one = Int.nat(Nat.pos(Pos.one));
+pub let one = Int.nat(Nat.pos(Pos.one));
 
-pub let(*) eq = fun eq(-a: Int, b: Int): Bool {
+pub let eq = fun eq(-a: Int, b: Int): Bool {
     match a {
         neg(neg_a) => match b {
             neg(neg_b) => pos.eq(neg_a, neg_b),
@@ -14,25 +14,25 @@ pub let(*) eq = fun eq(-a: Int, b: Int): Bool {
         },
     }
 };
-pub let(*) neq = fun _(a: Int, b: Int): Bool {
+pub let neq = fun _(a: Int, b: Int): Bool {
     not(eq(a, b))
 };
 
-pub let(*) succ = fun _(a: Int): Int {
+pub let succ = fun _(a: Int): Int {
     match a {
         neg(neg_a) => nat.neg(pos.pred(neg_a)),
         nat(an) => Int.nat(nat.succ(an)),
     }
 };
 
-pub let(*) pred = fun _(a: Int): Int {
+pub let pred = fun _(a: Int): Int {
     match a {
         neg(neg_a) => Int.neg(pos.succ(neg_a)),
         nat(an) => nat.pred(an),
     }
 };
 
-pub let(*) sign = fun _(a: Int): Opt(Sign) {
+pub let sign = fun _(a: Int): Opt(Sign) {
     match a {
         neg(_) => Opt.some(Sign, Sign.neg),
         nat(an) => match an {
@@ -42,21 +42,21 @@ pub let(*) sign = fun _(a: Int): Opt(Sign) {
     }
 };
 
-pub let(*) parity = fun _(a: Int): Bit {
+pub let parity = fun _(a: Int): Bit {
     match a {
         neg(neg_a) => pos.parity(neg_a),
         nat(an) => nat.parity(an),
     }
 };
 
-pub let(*) neg = fun _(a: Int): Int {
+pub let neg = fun _(a: Int): Int {
     match a {
         neg(neg_a) => Int.nat(Nat.pos(neg_a)),
         nat(an) => nat.neg(an),
     }
 };
 
-pub let(*) double = fun _(a: Int): Int {
+pub let double = fun _(a: Int): Int {
     match a {
         neg(neg_a) => Int.neg(Pos.extend(neg_a, Bit.zero)),
         nat(an) => match an {
@@ -66,7 +66,7 @@ pub let(*) double = fun _(a: Int): Int {
     }
 };
 
-pub let(*) sub_pos = fun sub_pos(a: Pos, -b: Pos): Int {
+pub let sub_pos = fun sub_pos(a: Pos, -b: Pos): Int {
     match b {
         one => Int.nat(pos.pred(a)),
         extend(b_left, b_right) => match a {
@@ -85,7 +85,7 @@ pub let(*) sub_pos = fun sub_pos(a: Pos, -b: Pos): Int {
     }
 };
 
-pub let(*) add = fun _(a: Int, b: Int): Int {
+pub let add = fun _(a: Int, b: Int): Int {
     match a {
         neg(neg_a) => match b {
             neg(neg_b) => Int.neg(pos.add(neg_a, neg_b)),
@@ -104,11 +104,11 @@ pub let(*) add = fun _(a: Int, b: Int): Int {
     }
 };
 
-pub let(*) sub = fun _(a: Int, b: Int): Int {
+pub let sub = fun _(a: Int, b: Int): Int {
     add(a, neg(b))
 };
 
-pub let(*) mul = fun _(a: Int, b: Int): Int {
+pub let mul = fun _(a: Int, b: Int): Int {
     match a {
         neg(neg_a) => match b {
             neg(neg_b) => Int.nat(Nat.pos(pos.mul(neg_a, neg_b))),
@@ -121,7 +121,7 @@ pub let(*) mul = fun _(a: Int, b: Int): Int {
     }
 };
 
-pub let(*) floor_div_bitlist = fun floor_div_bitlist(
+pub let floor_div_bitlist = fun floor_div_bitlist(
     dividend_left: Nat,
     -dividend_right: List(Bit),
     divisor: Pos,
@@ -157,37 +157,37 @@ pub let(*) floor_div_bitlist = fun floor_div_bitlist(
     }
 };
 
-pub let(*) floor_div_pos = fun _(a: Pos, b: Pos): Nat {
+pub let floor_div_pos = fun _(a: Pos, b: Pos): Nat {
     nat.from_bitlist(floor_div_bitlist(Nat.zero, pos.minimal_bitlist(a), b))
 };
 
-pub let(*) floor_div_nat = fun _(a: Nat, b: Pos): Nat {
+pub let floor_div_nat = fun _(a: Nat, b: Pos): Nat {
     match a {
         zero => Nat.zero,
         pos(ap) => floor_div_pos(ap, b),
     }
 };
 
-pub let(*) floor_div = fun _(a: Int, b: Pos): Int {
+pub let floor_div = fun _(a: Int, b: Pos): Int {
     match a {
         neg(neg_a) => nat.neg(floor_div_pos(neg_a, b)),
         nat(an) => Int.nat(floor_div_nat(an, b)),
     }
 };
 
-pub let(*) floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): Int {
+pub let floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): Int {
     match b_sign {
         pos => floor_div(a, b_mag),
         neg => neg(floor_div(a, b_mag)),
     }
 };
 
-pub let(*) square = fun _(a: Int): Int {
+pub let square = fun _(a: Int): Int {
     mul(a, a)
 };
 
 /// We'll define 0^0 = 1
-pub let(*) pow = fun _(a: Int, b: Nat): Int {
+pub let pow = fun _(a: Int, b: Nat): Int {
     match b {
         zero => one,
         pos(bp) => match a {
@@ -200,7 +200,7 @@ pub let(*) pow = fun _(a: Int, b: Nat): Int {
     }
 };
 
-pub let(*) le = fun _(a: Int, b: Int): Bool {
+pub let le = fun _(a: Int, b: Int): Bool {
     match a {
         neg(neg_a) => match b {
             nat(_) => true,
@@ -212,18 +212,18 @@ pub let(*) le = fun _(a: Int, b: Int): Bool {
         },
     }
 };
-pub let(*) lt = fun _(a: Int, b: Int): Bool {
+pub let lt = fun _(a: Int, b: Int): Bool {
     and(le(a, b), neq(a, b))
 };
 
-pub let(*) ge = fun _(a: Int, b: Int): Bool {
+pub let ge = fun _(a: Int, b: Int): Bool {
     le(b, a)
 };
-pub let(*) gt = fun _(a: Int, b: Int): Bool {
+pub let gt = fun _(a: Int, b: Int): Bool {
     lt(b, a)
 };
 
-pub let(*) cmp = fun _(a: Int, b: Int): Ord {
+pub let cmp = fun _(a: Int, b: Int): Ord {
     match lt(a, b) {
         true => Ord.lt,
         false => match eq(a, b) {
@@ -233,13 +233,13 @@ pub let(*) cmp = fun _(a: Int, b: Int): Ord {
     }
 };
 
-pub let(*) min = fun _(a: Int, b: Int): Int {
+pub let min = fun _(a: Int, b: Int): Int {
     match lt(a, b) {
         true => a,
         false => b,
     }
 };
-pub let(*) max = fun _(a: Int, b: Int): Int {
+pub let max = fun _(a: Int, b: Int): Int {
     match gt(a, b) {
         true => a,
         false => b,
