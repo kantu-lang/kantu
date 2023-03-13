@@ -156,8 +156,11 @@ pub let init = fun _(window: Window, time: Time): State {
         window(window_w, window_h) => State.state(
             :time,
             :window,
+
+            // PROBLEM: paddle_height is LocY, not Nat.
             left_paddle_y: nat_sub(nat5000, int.floor_div_nat(paddle_height, pos2)),
             right_paddle_y: nat_sub(nat5000, int.floor_div_nat(paddle_height, pos2)),
+            
             ball_center_x: nat5000,
             ball_center_y: nat5000,
             ball_vx: ball_initial_vx,
