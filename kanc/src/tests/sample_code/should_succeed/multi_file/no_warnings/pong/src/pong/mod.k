@@ -440,7 +440,7 @@ pub let handle_keydown = fun _(state: State, key: String): State {
     }
 };
 
-/*pub let handle_keyup = fun _(state: State, key: String): State {
+pub let handle_keyup = fun _(state: State, key: String): State {
     match state {
         state(
             :time,
@@ -543,12 +543,12 @@ pub let handle_keydown = fun _(state: State, key: String): State {
             },
         },
     }
-};*/
+};
 
 pub let handle = fun _(state: State, event: Event): State {
     match event {
         window_resize(_) => /* TODO */ state,
-        keyup(key) => state,
+        keyup(key) => handle_keyup(state, key),
         keydown(key) => handle_keydown(state, key),
     }
 };
