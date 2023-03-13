@@ -30,6 +30,28 @@ pub let(*) locy_raw = fun _(ly: LocalY): Nat {
     }
 };
 
+pub type IntLocalX {
+    ilocx(x: Int): IntLocalX,
+}
+use IntLocalX.ilocx;
+
+pub type IntLocalY {
+    ilocy(y: Int): IntLocalY,
+}
+use IntLocalY.ilocy;
+
+pub let(*) ilocx_raw = fun _(lx: IntLocalX): Int {
+    match lx {
+        ilocx(x) => x,
+    }
+};
+
+pub let(*) ilocy_raw = fun _(ly: IntLocalY): Int {
+    match ly {
+        ilocy(y) => y,
+    }
+};
+
 pub let(*) refl_true = Equal.refl(Bool, true);
 
 pub let(*) identity = fun _(T: Type, t: T): T {
@@ -94,7 +116,7 @@ pub let(*) window_width = fun _(window: Window): Nat {
 pub mod literals;
 use literals.*;
 
-pub let paddle_height = locx(int.floor_div_nat(
+pub let paddle_height = locy(int.floor_div_nat(
     nat10k,
     pos8,
 ));
@@ -110,12 +132,12 @@ pub let paddle_width = locx(int.floor_div_nat(
     nat10k,
     pos64,
 ));
-pub let ball_initial_vx = locx(int.floor_div_nat(
-    nat10k,
+pub let ball_initial_vx = ilocx(int.floor_div(
+    Int.nat(nat10k),
     pos3,
 ));
-pub let ball_initial_vy = locy(int.floor_div_nat(
-    nat10k,
+pub let ball_initial_vy = ilocy(int.floor_div(
+    Int.nat(nat10k),
     pos3,
 ));
 
@@ -144,8 +166,8 @@ pub type State {
         ~right_paddle_y: LocalY,
         ~ball_center_x: LocalX,
         ~ball_center_y: LocalY,
-        ~ball_vx: LocalY,
-        ~ball_vy: LocalY,
+        ~ball_vx: IntLocalX,
+        ~ball_vy: IntLocalY,
         ~left_paddle_vy_sign: Opt(Sign),
         ~right_paddle_vy_sign: Opt(Sign),
     ): State,
@@ -156,13 +178,10 @@ pub let init = fun _(window: Window, time: Time): State {
         window(window_w, window_h) => State.state(
             :time,
             :window,
-
-            // PROBLEM: paddle_height is LocY, not Nat.
-            left_paddle_y: nat_sub(nat5000, int.floor_div_nat(paddle_height, pos2)),
-            right_paddle_y: nat_sub(nat5000, int.floor_div_nat(paddle_height, pos2)),
-            
-            ball_center_x: nat5000,
-            ball_center_y: nat5000,
+            left_paddle_y: locy(nat_sub(nat5000, int.floor_div_nat(locy_raw(paddle_height), pos2))),
+            right_paddle_y: locy(nat_sub(nat5000, int.floor_div_nat(locy_raw(paddle_height), pos2))),
+            ball_center_x: locx(nat5000),
+            ball_center_y: locy(nat5000),
             ball_vx: ball_initial_vx,
             ball_vy: ball_initial_vy,
             left_paddle_vy_sign: Opt.none(Sign),
@@ -213,14 +232,14 @@ pub let render_ball = fun _(state: State): Entity {
     match state {
         state(:window, :ball_center_x, :ball_center_y, ...) => fun _(ball_radius: Nat): Entity {
             Entity.scaled(
-                nat_sub(ball_center_x, ball_radius),
-                nat_sub(ball_center_y, ball_radius),
+                nat_sub(to_real_x(ball_center_x, window), ball_radius),
+                nat_sub(to_real_y(ball_center_y, window), ball_radius),
                 nat.mul(nat2, ball_radius),
                 nat.mul(nat2, ball_radius),
                 ball_image_str,
             )
         }(int.floor_div_nat(
-            to_real_x(ball_height, window),
+            to_real_y(ball_height, window),
             pos2,
         ))
     }
@@ -276,11 +295,11 @@ pub let tick = fun _(state: State, new_time: Time): State {
 
                 ball_center_x: locx(relu(int.add(
                     Int.nat(locx_raw(old_ball_center_x)),
-                    old_ball_vx,
+                    ilocx_raw(old_ball_vx),
                 ))),
                 ball_center_y: locy(relu(int.add(
                     Int.nat(locy_raw(old_ball_center_y)),
-                    old_ball_vy,
+                    ilocy_raw(old_ball_vy),
                 ))),
 
                 // TODO: Collision detection
