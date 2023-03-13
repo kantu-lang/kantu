@@ -31,6 +31,9 @@ pub(in crate::processing::type_check) fn get_type_of_call_dirty(
     let normalized_arg_ids: Vec<NormalFormId> = arg_ids
         .iter()
         .copied()
+        // TODO: Delete comment
+        // BUG CAUSE: We call `evaluate_well_typed_expression` before
+        // we check that the arguments are well-typed.
         .map(|arg_id| evaluate_well_typed_expression(state, arg_id))
         .collect();
 
