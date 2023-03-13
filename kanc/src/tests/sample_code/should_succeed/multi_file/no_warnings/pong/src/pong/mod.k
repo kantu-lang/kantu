@@ -294,6 +294,8 @@ pub let ball_bounce_y_top = fun _(raw: Int): Int {
     )
 };
 
+// TODO: Refactor?
+// Do we really need two params?
 pub let(super) ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
     locy(relu(int.add(
         ball_bounce_y_top(int.sub(
@@ -302,6 +304,35 @@ pub let(super) ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY 
         )),
         Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
     )))
+};
+
+pub let sign_int = fun _(sign: Sign, i: Int): Int {
+    match sign {
+        pos => i,
+        neg => int.neg(i),
+    }
+};
+
+pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
+    match int.parity(match int_abs(raw) {
+        zero => int0,
+        pos(p) => Int.nat(int.floor_div_nat(
+            nat_sub(Nat.pos(p), nat1),
+            pos10k,
+        )),
+    }) {
+        zero => Sign.pos,
+        one => Sign.neg,
+    }
+};
+
+// TODO: Refactor
+// Do we really need two params?
+pub let(super) ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
+    ball_bounce_vy_sign_top(int.sub(
+        int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
+        Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+    ))
 };
 
 pub let(*) tick = fun _(state: State, new_time: Time): State {
@@ -349,7 +380,16 @@ pub let(*) tick = fun _(state: State, new_time: Time): State {
 
                 // TODO: Collision detection
                 ball_vx: old_ball_vx,
-                ball_vy: old_ball_vy,
+                ball_vy: ilocy(sign_int(
+                    ball_bounce_vy_sign(
+                        old_ball_center_y,
+                        ilocy(int.floor_div(
+                            int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
+                            pos1000,
+                        )),
+                    ),
+                    ilocy_raw(old_ball_vy),
+                )),
                 
             )
         }(

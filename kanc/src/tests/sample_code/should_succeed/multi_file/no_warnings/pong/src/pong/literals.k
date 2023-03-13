@@ -42,10 +42,12 @@ pub let pos5000 = pos.mul(pos5, pos1000);
 pub let pos10k = pos.mul(pos10, pos1000);
 pub let pos20k = pos.mul(pos20, pos1000);
 
+pub let nat1 = Nat.pos(Pos.one);
 pub let nat2 = Nat.pos(pos2);
 pub let nat5000 = Nat.pos(pos5000);
 pub let nat10k = Nat.pos(pos10k);
 
+pub let int1 = Int.nat(nat1);
 pub let int0 = Int.nat(Nat.zero);
 pub let int10k = Int.nat(nat10k);
 
