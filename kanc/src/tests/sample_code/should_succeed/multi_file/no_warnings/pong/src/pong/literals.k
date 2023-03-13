@@ -45,6 +45,8 @@ pub let nat2 = Nat.pos(pos2);
 pub let nat5000 = Nat.pos(pos5000);
 pub let nat10k = Nat.pos(pos10k);
 
+pub let int0 = Int.nat(Nat.zero);
+
 pub let u8_65 = U8.u8(Nat.pos(pos65), refl_true);
 pub let u8_66 = U8.u8(Nat.pos(pos66), refl_true);
 pub let u8_67 = U8.u8(Nat.pos(pos67), refl_true);
