@@ -1977,12 +1977,24 @@ const tick = function _(state, new_time) {
           right_paddle_y: old_right_paddle_y,
           ball_center_x: LocalX_locx(
             relu(
-              add3(Int_nat(locx_raw(old_ball_center_x)), ilocx_raw(old_ball_vx))
+              add3(
+                Int_nat(locx_raw(old_ball_center_x)),
+                floor_div(
+                  mul3(ilocx_raw(old_ball_vx), Int_nat(elapsed_millis)),
+                  pos1000
+                )
+              )
             )
           ),
           ball_center_y: LocalY_locy(
             relu(
-              add3(Int_nat(locy_raw(old_ball_center_y)), ilocy_raw(old_ball_vy))
+              add3(
+                Int_nat(locy_raw(old_ball_center_y)),
+                floor_div(
+                  mul3(ilocy_raw(old_ball_vy), Int_nat(elapsed_millis)),
+                  pos1000
+                )
+              )
             )
           ),
           ball_vx: old_ball_vx,

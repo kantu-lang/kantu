@@ -295,11 +295,17 @@ pub let tick = fun _(state: State, new_time: Time): State {
 
                 ball_center_x: locx(relu(int.add(
                     Int.nat(locx_raw(old_ball_center_x)),
-                    ilocx_raw(old_ball_vx),
+                    int.floor_div(
+                        int.mul(ilocx_raw(old_ball_vx), Int.nat(elapsed_millis)),
+                        pos1000,
+                    ),
                 ))),
                 ball_center_y: locy(relu(int.add(
                     Int.nat(locy_raw(old_ball_center_y)),
-                    ilocy_raw(old_ball_vy),
+                    int.floor_div(
+                        int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
+                        pos1000,
+                    ),
                 ))),
 
                 // TODO: Collision detection
