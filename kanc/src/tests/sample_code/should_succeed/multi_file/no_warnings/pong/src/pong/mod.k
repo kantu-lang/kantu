@@ -390,10 +390,18 @@ pub let handle_keydown = fun _(state: State, key: String): State {
             false => match str_list_contains(left_paddle_down_strs, key) {
                 true => State.state(
                     left_paddle_vy_sign: Opt.some(Sign, Sign.pos),
+                    left_paddle_y: match opt_sign_eq_some(old_left_paddle_vy_sign, Sign.pos) {
+                        true => old_left_paddle_y,
+                        false => clamp_paddle_y(
+                            int.add(
+                                Int.nat(locy_raw(old_left_paddle_y)),
+                                Int.nat(locy_raw(paddle_height)),
+                            ),
+                        ),
+                    },
 
                     :time,
                     :window,
-                    left_paddle_y: old_left_paddle_y,
                     right_paddle_y: old_right_paddle_y,
                     :ball_center_x,
                     :ball_center_y,
@@ -405,11 +413,19 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                 false => match str_list_contains(right_paddle_up_strs, key) {
                     true => State.state(
                         right_paddle_vy_sign: Opt.some(Sign, Sign.neg),
+                        right_paddle_y: match opt_sign_eq_some(old_right_paddle_vy_sign, Sign.neg) {
+                            true => old_right_paddle_y,
+                            false => clamp_paddle_y(
+                                int.sub(
+                                    Int.nat(locy_raw(old_right_paddle_y)),
+                                    Int.nat(locy_raw(paddle_height)),
+                                ),
+                            ),
+                        },
 
                         :time,
                         :window,
                         left_paddle_y: old_left_paddle_y,
-                        right_paddle_y: old_right_paddle_y,
                         :ball_center_x,
                         :ball_center_y,
                         :ball_vx,
@@ -420,11 +436,19 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                     false => match str_list_contains(right_paddle_down_strs, key) {
                         true => State.state(
                             right_paddle_vy_sign: Opt.some(Sign, Sign.pos),
+                            right_paddle_y: match opt_sign_eq_some(old_right_paddle_vy_sign, Sign.pos) {
+                                true => old_right_paddle_y,
+                                false => clamp_paddle_y(
+                                    int.add(
+                                        Int.nat(locy_raw(old_right_paddle_y)),
+                                        Int.nat(locy_raw(paddle_height)),
+                                    ),
+                                ),
+                            },
 
                             :time,
                             :window,
                             left_paddle_y: old_left_paddle_y,
-                            right_paddle_y: old_right_paddle_y,
                             :ball_center_x,
                             :ball_center_y,
                             :ball_vx,
