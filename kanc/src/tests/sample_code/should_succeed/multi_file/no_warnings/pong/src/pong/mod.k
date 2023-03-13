@@ -295,18 +295,6 @@ pub let ball_bounce_y_top = fun _(raw: Int): Int {
 };
 
 pub let(super) ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
-    // TODO: Delete
-    /*fun _(~ball_top: Int, ~ball_radius: Int): LocalY {
-        
-    }(
-        ball_top: int.sub(
-            Int.nat(locy_raw(old_y)),
-            Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
-        ),
-
-        ball_radius: Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
-    )*/
-
     locy(relu(int.add(
         ball_bounce_y_top(int.sub(
             int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
