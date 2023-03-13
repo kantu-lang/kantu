@@ -265,6 +265,13 @@ pub let render = fun _(state: State): List(Entity) {
     )
 };
 
+pub let ball_bounce_y = fun _(old_ball_center_y: LocalY, delta_y: IntLocalY): LocalY {
+    locy(relu(int.add(
+        Int.nat(locy_raw(old_ball_center_y)),
+        ilocy_raw(delta_y),
+    )))
+};
+
 pub let tick = fun _(state: State, new_time: Time): State {
     // TODO
     match state {
@@ -300,13 +307,13 @@ pub let tick = fun _(state: State, new_time: Time): State {
                         pos1000,
                     ),
                 ))),
-                ball_center_y: locy(relu(int.add(
-                    Int.nat(locy_raw(old_ball_center_y)),
-                    int.floor_div(
+                ball_center_y: ball_bounce_y(
+                    old_ball_center_y,
+                    ilocy(int.floor_div(
                         int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
                         pos1000,
-                    ),
-                ))),
+                    )),
+                ),
 
                 // TODO: Collision detection
                 ball_vx: old_ball_vx,
