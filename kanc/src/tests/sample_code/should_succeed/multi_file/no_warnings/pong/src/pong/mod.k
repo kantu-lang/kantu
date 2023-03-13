@@ -9,6 +9,27 @@ use std.string;
 use std.string.String;
 use std.opt.Opt;
 
+pub type LocalX {
+    locx(x: Nat): LocalX,
+}
+use LocalX.locx;
+
+pub type LocalY {
+    locy(y: Nat): LocalY,
+}
+use LocalY.locy;
+
+pub let(*) locx_raw = fun _(lx: LocalX): Nat {
+    match lx {
+        locx(x) => x,
+    }
+};
+pub let(*) locy_raw = fun _(ly: LocalY): Nat {
+    match ly {
+        locy(y) => y,
+    }
+};
+
 pub let(*) refl_true = Equal.refl(Bool, true);
 
 pub let(*) identity = fun _(T: Type, t: T): T {
@@ -34,7 +55,7 @@ pub let(*) relu = fun _(n: Int): Nat {
     }
 };
 
-pub let(*) max1_int = fun _(n: Int): Pos {
+pub let(*) int_to_pos = fun _(n: Int): Pos {
     match n {
         neg(_) => Pos.one,
         nat(nn) => match nn {
@@ -44,64 +65,87 @@ pub let(*) max1_int = fun _(n: Int): Pos {
     }
 };
 
-pub type Pfrac {
-    pfrac(num: Pos, div: Pos): Pfrac,
-}
+pub let(*) nat_sub = fun _(min: Nat, sub: Nat): Nat {
+    relu(int.sub(
+        Int.nat(min),
+        Int.nat(sub),
+    ))
+};
 
-pub let(*) pfrac_mult = fun _(pf: Pfrac, right: Nat): Nat {
-    match pf {
-        pfrac(num, div) => int.floor_div_nat(
-            nat.mul(Nat.pos(num), right),
-            div,
-        ),
+pub let(*) time_millis = fun _(t: Time): Nat {
+    match t {
+        time(millis) => millis,
+    }
+};
+
+pub let(*) sign_nat = fun _(s: Sign, n: Nat): Int {
+    match s {
+        pos => Int.nat(n),
+        neg => nat.neg(n),
+    }
+};
+
+pub let(*) window_width = fun _(window: Window): Nat {
+    match window {
+        window(w, _) => w,
     }
 };
 
 pub mod literals;
 use literals.*;
 
-pub let half = Pfrac.pfrac(
-    pos1,
-    pos2,
-);
-
-pub let paddle_height_factor = Pfrac.pfrac(
-    pos1,
+pub let paddle_height = locx(int.floor_div_nat(
+    nat10k,
     pos8,
-);
-pub let ball_height_factor = Pfrac.pfrac(
-    pos1,
+));
+pub let ball_height = locy(int.floor_div_nat(
+    nat10k,
     pos64,
-);
-pub let paddle_x_margin_factor = Pfrac.pfrac(
-    pos1,
+));
+pub let paddle_x_margin = locx(int.floor_div_nat(
+    nat10k,
     pos64,
-);
-pub let paddle_width_factor = Pfrac.pfrac(
-    pos1,
+));
+pub let paddle_width = locx(int.floor_div_nat(
+    nat10k,
     pos64,
-);
-
-pub let ball_vx_mag_factor = Pfrac.pfrac(
-    pos1,
+));
+pub let ball_initial_vx = locx(int.floor_div_nat(
+    nat10k,
     pos3,
-);
-
-pub let ball_vy_mag_factor = Pfrac.pfrac(
-    pos2,
+));
+pub let ball_initial_vy = locy(int.floor_div_nat(
+    nat10k,
     pos3,
-);
+));
+
+pub let to_real_x = fun _(x: LocalX, window: Window): Nat {
+    match window {
+        window(window_w, _) => int.floor_div_nat(
+            nat.mul(locx_raw(x), window_w),
+            pos10k,
+        ),
+    }
+};
+pub let to_real_y = fun _(y: LocalY, window: Window): Nat {
+    match window {
+        window(_, window_h) => int.floor_div_nat(
+            nat.mul(locy_raw(y), window_h),
+            pos10k,
+        ),
+    }
+};
 
 pub type State {
     state(
         ~time: Time,
         ~window: Window,
-        ~left_paddle_y: Nat,
-        ~right_paddle_y: Nat,
-        ~ball_x: Nat,
-        ~ball_y: Nat,
-        ~ball_vx_sign: Sign,
-        ~ball_vy_sign: Sign,
+        ~left_paddle_y: LocalY,
+        ~right_paddle_y: LocalY,
+        ~ball_center_x: LocalX,
+        ~ball_center_y: LocalY,
+        ~ball_vx: LocalY,
+        ~ball_vy: LocalY,
         ~left_paddle_vy_sign: Opt(Sign),
         ~right_paddle_vy_sign: Opt(Sign),
     ): State,
@@ -112,24 +156,12 @@ pub let init = fun _(window: Window, time: Time): State {
         window(window_w, window_h) => State.state(
             :time,
             :window,
-            left_paddle_y: relu(int.sub(
-                Int.nat(pfrac_mult(half, window_h)),
-                Int.nat(pfrac_mult(half, pfrac_mult(paddle_height_factor, window_h))),
-            )),
-            right_paddle_y: relu(int.sub(
-                Int.nat(pfrac_mult(half, window_h)),
-                Int.nat(pfrac_mult(half, pfrac_mult(paddle_height_factor, window_h))),
-            )),
-            ball_x: relu(int.sub(
-                Int.nat(pfrac_mult(half, window_w)),
-                Int.nat(pfrac_mult(half, pfrac_mult(ball_height_factor, window_h))),
-            )),
-            ball_y: relu(int.sub(
-                Int.nat(pfrac_mult(half, window_h)),
-                Int.nat(pfrac_mult(half, pfrac_mult(ball_height_factor, window_h))),
-            )),
-            ball_vx_sign: Sign.pos,
-            ball_vy_sign: Sign.neg,
+            left_paddle_y: nat_sub(nat5000, int.floor_div_nat(paddle_height, pos2)),
+            right_paddle_y: nat_sub(nat5000, int.floor_div_nat(paddle_height, pos2)),
+            ball_center_x: nat5000,
+            ball_center_y: nat5000,
+            ball_vx: ball_initial_vx,
+            ball_vy: ball_initial_vy,
             left_paddle_vy_sign: Opt.none(Sign),
             right_paddle_vy_sign: Opt.none(Sign),
         )
@@ -152,49 +184,42 @@ pub let render_background = fun _(state: State): Entity {
 
 pub let render_left_paddle = fun _(state: State): Entity {
     match state {
-        state(:window, :left_paddle_y, ...) => match window {
-            window(window_w, window_h) => Entity.scaled(
-                pfrac_mult(paddle_x_margin_factor, window_w),
-                left_paddle_y,
-                pfrac_mult(paddle_width_factor, window_w),
-                pfrac_mult(paddle_height_factor, window_h),
-                paddle_image_str,
-            ),
-        },
+        state(:window, :left_paddle_y, ...) => Entity.scaled(
+            to_real_x(paddle_x_margin, window),
+            to_real_y(left_paddle_y, window),
+            to_real_x(paddle_width, window),
+            to_real_y(paddle_height, window),
+            paddle_image_str,
+        ),
     }
 };
 
 pub let render_right_paddle = fun _(state: State): Entity {
     match state {
-        state(:window, :right_paddle_y, ...) => match window {
-            window(window_w, window_h) => Entity.scaled(
-                relu(int.sub(
-                    int.sub(
-                        Int.nat(window_w),
-                        Int.nat(pfrac_mult(paddle_x_margin_factor, window_w)),
-                    ),
-                    Int.nat(pfrac_mult(paddle_width_factor, window_w)),
-                )),
-                right_paddle_y,
-                pfrac_mult(paddle_width_factor, window_w),
-                pfrac_mult(paddle_height_factor, window_h),
-                paddle_image_str,
-            ),
-        },
+        state(:window, :right_paddle_y, ...) => Entity.scaled(
+            nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
+            to_real_y(right_paddle_y, window),
+            to_real_x(paddle_width, window),
+            to_real_y(paddle_height, window),
+            paddle_image_str,
+        ),
     }
 };
 
 pub let render_ball = fun _(state: State): Entity {
     match state {
-        state(:window, :ball_x, :ball_y, ...) => match window {
-            window(window_w, window_h) => Entity.scaled(
-                ball_x,
-                ball_y,
-                pfrac_mult(ball_height_factor, window_h),
-                pfrac_mult(ball_height_factor, window_h),
+        state(:window, :ball_center_x, :ball_center_y, ...) => fun _(ball_radius: Nat): Entity {
+            Entity.scaled(
+                nat_sub(ball_center_x, ball_radius),
+                nat_sub(ball_center_y, ball_radius),
+                nat.mul(nat2, ball_radius),
+                nat.mul(nat2, ball_radius),
                 ball_image_str,
-            ),
-        },
+            )
+        }(int.floor_div_nat(
+            to_real_x(ball_height, window),
+            pos2,
+        ))
     }
 };
 
@@ -218,73 +243,50 @@ pub let render = fun _(state: State): List(Entity) {
     )
 };
 
-pub let(*) time_millis = fun _(t: Time): Nat {
-    match t {
-        time(millis) => millis,
-    }
-};
-
-pub let(*) sign_nat = fun _(s: Sign, n: Nat): Int {
-    match s {
-        pos => Int.nat(n),
-        neg => nat.neg(n),
-    }
-};
-
 pub let tick = fun _(state: State, new_time: Time): State {
     // TODO
     match state {
         state(
-            time: old_time,
             :window,
-            :left_paddle_y,
-            :right_paddle_y,
-            ball_x: old_ball_x,
-            ball_y: old_ball_y,
-            :ball_vx_sign,
-            :ball_vy_sign,
             :left_paddle_vy_sign,
             :right_paddle_vy_sign,
-        ) => fun _(~elapsed_millis: Pos, ~ball_vx_mag: Nat, ~ball_vy_mag: Nat): State {
+
+            time: old_time,
+            left_paddle_y: old_left_paddle_y,
+            right_paddle_y: old_right_paddle_y,
+            ball_center_x: old_ball_center_x,
+            ball_center_y: old_ball_center_y,
+            ball_vx: old_ball_vx,
+            ball_vy: old_ball_vy,
+            
+        ) => fun _(~elapsed_millis: Nat): State {
             State.state(
-                time: new_time,
                 :window,
-                :left_paddle_y,
-                :right_paddle_y,
-                ball_x: relu(int.add(
-                    Int.nat(old_ball_x),
-                    sign_nat(
-                        ball_vx_sign,
-                        pfrac_mult(
-                            Pfrac.pfrac(elapsed_millis, pos1000),
-                            ball_vx_mag,
-                        ),
-                    ),
-                )),
-                ball_y: relu(int.add(
-                    Int.nat(old_ball_y),
-                    sign_nat(
-                        ball_vy_sign,
-                        pfrac_mult(
-                            Pfrac.pfrac(elapsed_millis, pos1000),
-                            ball_vy_mag,
-                        ),
-                    ),
-                )),
-                :ball_vx_sign,
-                :ball_vy_sign,
                 :left_paddle_vy_sign,
                 :right_paddle_vy_sign,
+
+                time: new_time,
+
+                // TODO: Respond to keyboard input
+                left_paddle_y: old_left_paddle_y,
+                right_paddle_y: old_right_paddle_y,
+
+                ball_center_x: locx(relu(int.add(
+                    Int.nat(locx_raw(old_ball_center_x)),
+                    old_ball_vx,
+                ))),
+                ball_center_y: locy(relu(int.add(
+                    Int.nat(locy_raw(old_ball_center_y)),
+                    old_ball_vy,
+                ))),
+
+                // TODO: Collision detection
+                ball_vx: old_ball_vx,
+                ball_vy: old_ball_vy,
+                
             )
         }(
-            elapsed_millis: max1_int(int.sub(
-                Int.nat(time_millis(new_time)),
-                Int.nat(time_millis(old_time)),
-            )),
-
-            ball_vx_mag: pfrac_mult(ball_vx_mag_factor, match window { window(w, _) => w }),
-
-            ball_vy_mag: pfrac_mult(ball_vy_mag_factor, match window { window(_, h) => h }),
+            elapsed_millis: nat_sub(time_millis(new_time), time_millis(old_time)),
         ),
     }
 };
@@ -296,10 +298,10 @@ pub let handle_keydown = fun _(state: State, key: String): State {
             :window,
             :left_paddle_y,
             :right_paddle_y,
-            :ball_x,
-            :ball_y,
-            :ball_vx_sign,
-            :ball_vy_sign,
+            :ball_center_x,
+            :ball_center_y,
+            :ball_vx,
+            :ball_vy,
             :left_paddle_vy_sign,
             :right_paddle_vy_sign,
         ) => match str_list_contains(left_paddle_up_strs, key) {
@@ -310,10 +312,10 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                 :window,
                 :left_paddle_y,
                 :right_paddle_y,
-                :ball_x,
-                :ball_y,
-                :ball_vx_sign,
-                :ball_vy_sign,
+                :ball_center_x,
+                :ball_center_y,
+                :ball_vx,
+                :ball_vy,
                 :right_paddle_vy_sign,
             ),
 
@@ -325,10 +327,10 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                     :window,
                     :left_paddle_y,
                     :right_paddle_y,
-                    :ball_x,
-                    :ball_y,
-                    :ball_vx_sign,
-                    :ball_vy_sign,
+                    :ball_center_x,
+                    :ball_center_y,
+                    :ball_vx,
+                    :ball_vy,
                     :right_paddle_vy_sign,
                 ),
 
@@ -340,10 +342,10 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                         :window,
                         :left_paddle_y,
                         :right_paddle_y,
-                        :ball_x,
-                        :ball_y,
-                        :ball_vx_sign,
-                        :ball_vy_sign,
+                        :ball_center_x,
+                        :ball_center_y,
+                        :ball_vx,
+                        :ball_vy,
                         :left_paddle_vy_sign,
                     ),
 
@@ -355,10 +357,10 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                             :window,
                             :left_paddle_y,
                             :right_paddle_y,
-                            :ball_x,
-                            :ball_y,
-                            :ball_vx_sign,
-                            :ball_vy_sign,
+                            :ball_center_x,
+                            :ball_center_y,
+                            :ball_vx,
+                            :ball_vy,
                             :left_paddle_vy_sign,
                         ),
 
@@ -377,10 +379,10 @@ pub let handle_keyup = fun _(state: State, key: String): State {
             :window,
             :left_paddle_y,
             :right_paddle_y,
-            :ball_x,
-            :ball_y,
-            :ball_vx_sign,
-            :ball_vy_sign,
+            :ball_center_x,
+            :ball_center_y,
+            :ball_vx,
+            :ball_vy,
             :left_paddle_vy_sign,
             :right_paddle_vy_sign,
         ) => match str_list_contains(left_paddle_up_strs, key) {
@@ -397,10 +399,10 @@ pub let handle_keyup = fun _(state: State, key: String): State {
                 :window,
                 :left_paddle_y,
                 :right_paddle_y,
-                :ball_x,
-                :ball_y,
-                :ball_vx_sign,
-                :ball_vy_sign,
+                :ball_center_x,
+                :ball_center_y,
+                :ball_vx,
+                :ball_vy,
                 :right_paddle_vy_sign,
             ),
 
@@ -418,10 +420,10 @@ pub let handle_keyup = fun _(state: State, key: String): State {
                     :window,
                     :left_paddle_y,
                     :right_paddle_y,
-                    :ball_x,
-                    :ball_y,
-                    :ball_vx_sign,
-                    :ball_vy_sign,
+                    :ball_center_x,
+                    :ball_center_y,
+                    :ball_vx,
+                    :ball_vy,
                     :right_paddle_vy_sign,
                 ),
 
@@ -439,10 +441,10 @@ pub let handle_keyup = fun _(state: State, key: String): State {
                         :window,
                         :left_paddle_y,
                         :right_paddle_y,
-                        :ball_x,
-                        :ball_y,
-                        :ball_vx_sign,
-                        :ball_vy_sign,
+                        :ball_center_x,
+                        :ball_center_y,
+                        :ball_vx,
+                        :ball_vy,
                         :left_paddle_vy_sign,
                     ),
 
@@ -460,10 +462,10 @@ pub let handle_keyup = fun _(state: State, key: String): State {
                             :window,
                             :left_paddle_y,
                             :right_paddle_y,
-                            :ball_x,
-                            :ball_y,
-                            :ball_vx_sign,
-                            :ball_vy_sign,
+                            :ball_center_x,
+                            :ball_center_y,
+                            :ball_vx,
+                            :ball_vy,
                             :left_paddle_vy_sign,
                         ),
 
