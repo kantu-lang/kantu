@@ -1919,7 +1919,10 @@ const render_right_paddle = function _(state) {
       const window = temp_f6[1].window;
       const right_paddle_y = temp_f6[1].right_paddle_y;
       return Entity_scaled(
-        nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
+        nat_sub(
+          nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
+          to_real_x(paddle_width, window)
+        ),
         to_real_y(right_paddle_y, window),
         to_real_x(paddle_width, window),
         to_real_y(paddle_height, window),

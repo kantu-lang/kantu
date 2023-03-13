@@ -219,7 +219,10 @@ pub let render_left_paddle = fun _(state: State): Entity {
 pub let render_right_paddle = fun _(state: State): Entity {
     match state {
         state(:window, :right_paddle_y, ...) => Entity.scaled(
-            nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
+            nat_sub(
+                nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
+                to_real_x(paddle_width, window),
+            ),
             to_real_y(right_paddle_y, window),
             to_real_x(paddle_width, window),
             to_real_y(paddle_height, window),
