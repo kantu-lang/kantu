@@ -649,17 +649,7 @@ fn evaluate_match(state: &mut EvalState, match_id: NodeId<Match>) -> NormalFormI
     let case_id = match case_id {
         Some(id) => id,
         None => {
-            // TODO: Delete
-            use crate::processing::test_utils::{
-                expand_lightened::expand_expression, format::format_expression_with_default_options,
-            };
-            panic!(
-                "Impossible: Cannot find matching MatchCase in well-typed Match expression. Match expression:\n{}", 
-                format_expression_with_default_options(&expand_expression(
-                    state.raw.registry,
-                    ExpressionId::Match(match_.id),
-                )),
-            )
+            panic!("Impossible: Cannot find matching MatchCase in well-typed Match expression.")
         }
     };
 
