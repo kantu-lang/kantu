@@ -40,12 +40,14 @@ pub let pos119 = pos.add(pos9, pos.add(pos10, pos100));
 pub let pos1000 = pos.pow(pos10, pos3);
 pub let pos5000 = pos.mul(pos5, pos1000);
 pub let pos10k = pos.mul(pos10, pos1000);
+pub let pos20k = pos.mul(pos20, pos1000);
 
 pub let nat2 = Nat.pos(pos2);
 pub let nat5000 = Nat.pos(pos5000);
 pub let nat10k = Nat.pos(pos10k);
 
 pub let int0 = Int.nat(Nat.zero);
+pub let int10k = Int.nat(nat10k);
 
 pub let u8_65 = U8.u8(Nat.pos(pos65), refl_true);
 pub let u8_66 = U8.u8(Nat.pos(pos66), refl_true);

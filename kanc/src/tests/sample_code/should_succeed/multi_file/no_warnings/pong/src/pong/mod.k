@@ -134,7 +134,7 @@ pub let paddle_width = locx(int.floor_div_nat(
 ));
 pub let ball_initial_vx = ilocx(int.floor_div(
     Int.nat(nat10k),
-    pos3,
+    pos4,
 ));
 pub let ball_initial_vy = ilocy(int.floor_div(
     Int.nat(nat10k),
@@ -265,14 +265,58 @@ pub let render = fun _(state: State): List(Entity) {
     )
 };
 
-pub let ball_bounce_y = fun _(old_ball_center_y: LocalY, delta_y: IntLocalY): LocalY {
+pub let nat_mod = fun _(n: Nat, divisor: Pos): Nat {
+    relu(int.sub(
+        Int.nat(n),
+        int.mul(
+            int.floor_div(Int.nat(n), divisor),
+            Int.nat(Nat.pos(divisor)),
+        ),
+    ))
+};
+
+pub let int_abs = fun _(i: Int): Nat {
+    match i {
+        neg(neg_i) => Nat.pos(neg_i),
+        nat(in) => in,
+    }
+};
+
+pub let ball_bounce_y_top = fun _(raw: Int): Int {
+    int.sub(
+        int10k,
+        Int.nat(int_abs(
+            int.sub(
+                Int.nat(nat_mod(int_abs(raw), pos20k)),
+                int10k
+            )
+        ))
+    )
+};
+
+pub let(super) ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
+    // TODO: Delete
+    /*fun _(~ball_top: Int, ~ball_radius: Int): LocalY {
+        
+    }(
+        ball_top: int.sub(
+            Int.nat(locy_raw(old_y)),
+            Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+        ),
+
+        ball_radius: Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+    )*/
+
     locy(relu(int.add(
-        Int.nat(locy_raw(old_ball_center_y)),
-        ilocy_raw(delta_y),
+        ball_bounce_y_top(int.sub(
+            int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
+            Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+        )),
+        Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
     )))
 };
 
-pub let tick = fun _(state: State, new_time: Time): State {
+pub let(*) tick = fun _(state: State, new_time: Time): State {
     // TODO
     match state {
         state(
