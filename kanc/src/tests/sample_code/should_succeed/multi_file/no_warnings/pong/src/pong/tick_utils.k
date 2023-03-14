@@ -46,12 +46,40 @@ pub let ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
     ))
 };
 
-pub let is_ball_touching_left_paddle = fun _(state: State): Bool {
+type HitBox {
+    new(x: LocalX, y: LocalY, w: LocalX, h: LocalY): HitBox,
+}
+
+let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
     // TODO
     true
 };
 
-pub let is_ball_touching_right_paddle = fun _(state: State): Bool {
+let ball_hitbox = fun _(state: State): HitBox {
     // TODO
-    true
+    HitBox.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero))
+};
+
+let left_paddle_hitbox = fun _(state: State): HitBox {
+    // TODO
+    HitBox.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero))
+};
+
+let right_paddle_hitbox = fun _(state: State): HitBox {
+    // TODO
+    HitBox.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero))
+};
+
+pub let is_ball_touching_left_paddle = fun _(state: State): Bool {
+    does_intersect(
+        ball_hitbox(state),
+        left_paddle_hitbox(state),
+    )
+};
+
+pub let is_ball_touching_right_paddle = fun _(state: State): Bool {
+    does_intersect(
+        ball_hitbox(state),
+        right_paddle_hitbox(state),
+    )
 };
