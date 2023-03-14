@@ -205,8 +205,13 @@ pub let tick = fun _(state: State, new_time: Time): State {
                     )),
                 ),
 
-                // TODO: Collision detection
-                ball_vx: old_ball_vx,
+                ball_vx: match is_ball_touching_left_paddle(state) {
+                    true => ilocx(Int.nat(int_abs(ilocx_raw(old_ball_vx)))),
+                    false => match is_ball_touching_right_paddle(state) {
+                        true => ilocx(int.neg(Int.nat(int_abs(ilocx_raw(old_ball_vx))))),
+                        false => old_ball_vx,
+                    },
+                },
                 ball_vy: ilocy(sign_int(
                     ball_bounce_vy_sign(
                         old_ball_center_y,

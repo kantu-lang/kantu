@@ -14,7 +14,7 @@ pub let ball_bounce_y_top = fun _(raw: Int): Int {
 
 // TODO: Refactor?
 // Do we really need two params?
-pub let(super) ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
+pub let ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
     locy(relu(int.add(
         ball_bounce_y_top(int.sub(
             int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
@@ -39,9 +39,19 @@ pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
 
 // TODO: Refactor
 // Do we really need two params?
-pub let(super) ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
+pub let ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
     ball_bounce_vy_sign_top(int.sub(
         int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
         Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
     ))
+};
+
+pub let is_ball_touching_left_paddle = fun _(state: State): Bool {
+    // TODO
+    true
+};
+
+pub let is_ball_touching_right_paddle = fun _(state: State): Bool {
+    // TODO
+    true
 };
