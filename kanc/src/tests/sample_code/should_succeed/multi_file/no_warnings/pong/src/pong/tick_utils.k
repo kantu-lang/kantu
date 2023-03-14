@@ -52,7 +52,7 @@ type HitBox {
 
 let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
     // TODO
-    true
+    false
 };
 
 let ball_hitbox = fun _(state: State): HitBox {
@@ -61,8 +61,14 @@ let ball_hitbox = fun _(state: State): HitBox {
 };
 
 let left_paddle_hitbox = fun _(state: State): HitBox {
-    // TODO
-    HitBox.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero))
+    match state {
+        state(:left_paddle_y, ...) => HitBox.new(
+            left_paddle_x,
+            left_paddle_y,
+            paddle_width,
+            paddle_height,
+        ),
+    }
 };
 
 let right_paddle_hitbox = fun _(state: State): HitBox {

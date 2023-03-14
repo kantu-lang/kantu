@@ -64,6 +64,14 @@ pub let paddle_width = locx(int.floor_div_nat(
     nat10k,
     pos64,
 ));
+pub let left_paddle_x = paddle_x_margin;
+pub let right_paddle_x = locx(nat_sub(
+    nat_sub(
+        nat10k,
+        locx_raw(paddle_x_margin),
+    ),
+    locx_raw(paddle_width),
+));
 pub let ball_initial_vx = ilocx(int.floor_div(
     Int.nat(nat10k),
     pos4,

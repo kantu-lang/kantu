@@ -17,7 +17,7 @@ pub let render_background = fun _(state: State): Entity {
 pub let render_left_paddle = fun _(state: State): Entity {
     match state {
         state(:window, :left_paddle_y, ...) => Entity.scaled(
-            to_real_x(paddle_x_margin, window),
+            to_real_x(left_paddle_x, window),
             to_real_y(left_paddle_y, window),
             to_real_x(paddle_width, window),
             to_real_y(paddle_height, window),
@@ -29,10 +29,7 @@ pub let render_left_paddle = fun _(state: State): Entity {
 pub let render_right_paddle = fun _(state: State): Entity {
     match state {
         state(:window, :right_paddle_y, ...) => Entity.scaled(
-            nat_sub(
-                nat_sub(window_width(window), to_real_x(paddle_x_margin, window)),
-                to_real_x(paddle_width, window),
-            ),
+            to_real_x(right_paddle_x, window),
             to_real_y(right_paddle_y, window),
             to_real_x(paddle_width, window),
             to_real_y(paddle_height, window),
