@@ -46,34 +46,66 @@ pub let ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
     ))
 };
 
-type HitBox {
-    new(x: LocalX, y: LocalY, w: LocalX, h: LocalY): HitBox,
+type Rect {
+    new(x: LocalX, y: LocalY, w: LocalX, h: LocalY): Rect,
 }
 
-let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
+type Circ {
+    new(x: LocalX, y: LocalY, r: LocalX): Circ,
+}
+
+type HitBox {
+    rect(r: Rect): HitBox,
+    circ(c: Circ): HitBox,
+}
+
+let do_rects_itersect = fun _(a: Rect, b: Rect): Bool {
     // TODO
     false
 };
 
+let do_rect_circ_intersect = fun _(rect: Rect, circ: Circ): Bool {
+    // TODO
+    false
+};
+
+let do_circs_intersect = fun _(a: Circ, b: Circ): Bool {
+    // TODO
+    false
+};
+
+let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
+    match a {
+        rect(ar) => match b {
+            rect(br) => do_rects_itersect(ar, br),
+            circ(bc) => do_rect_circ_intersect(ar, bc),
+        },
+        circ(ac) => match b {
+            rect(br) => do_rect_circ_intersect(br, ac),
+            circ(bc) => do_circs_intersect(ac, bc),
+        },
+    }
+};
+
 let ball_hitbox = fun _(state: State): HitBox {
     // TODO
-    HitBox.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero))
+    HitBox.rect(Rect.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero)))
 };
 
 let left_paddle_hitbox = fun _(state: State): HitBox {
     match state {
-        state(:left_paddle_y, ...) => HitBox.new(
+        state(:left_paddle_y, ...) => HitBox.rect(Rect.new(
             left_paddle_x,
             left_paddle_y,
             paddle_width,
             paddle_height,
-        ),
+        )),
     }
 };
 
 let right_paddle_hitbox = fun _(state: State): HitBox {
     // TODO
-    HitBox.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero))
+    HitBox.rect(Rect.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero)))
 };
 
 pub let is_ball_touching_left_paddle = fun _(state: State): Bool {
