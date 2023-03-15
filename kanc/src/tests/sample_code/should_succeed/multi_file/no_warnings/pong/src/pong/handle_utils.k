@@ -135,7 +135,10 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                             left_paddle_vy_sign: old_left_paddle_vy_sign,
                         ),
 
-                        false => state,
+                        false => match str_list_contains(launch_ball_strs, key) {
+                            true => /* TODO */ state,
+                            false => state,
+                        },
                     },
                 },
             },

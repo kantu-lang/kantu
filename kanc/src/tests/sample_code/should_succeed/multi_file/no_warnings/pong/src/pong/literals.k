@@ -30,6 +30,9 @@ pub let pos68 = pos.add(pos1, pos67);
 pub let pos83 = pos.add(pos3, pos80);
 pub let pos85 = pos.add(pos5, pos80);
 pub let pos87 = pos.add(pos7, pos80);
+pub let pos97 = pos.add(pos7, pos90);
+pub let pos99 = pos.add(pos9, pos90);
+pub let pos101 = pos.add(pos1, pos100);
 pub let pos110 = pos.add(pos10, pos100);
 pub let pos111 = pos.add(pos1, pos110);
 pub let pos112 = pos.add(pos1, pos111);
@@ -58,6 +61,9 @@ pub let u8_68 = U8.u8(Nat.pos(pos68), refl_true);
 pub let u8_83 = U8.u8(Nat.pos(pos83), refl_true);
 pub let u8_85 = U8.u8(Nat.pos(pos85), refl_true);
 pub let u8_87 = U8.u8(Nat.pos(pos87), refl_true);
+pub let u8_97 = U8.u8(Nat.pos(pos97), refl_true);
+pub let u8_99 = U8.u8(Nat.pos(pos99), refl_true);
+pub let u8_101 = U8.u8(Nat.pos(pos101), refl_true);
 pub let u8_110 = U8.u8(Nat.pos(pos110), refl_true);
 pub let u8_111 = U8.u8(Nat.pos(pos111), refl_true);
 pub let u8_112 = U8.u8(Nat.pos(pos112), refl_true);
@@ -73,6 +79,9 @@ pub let ch_S = u8_83;
 pub let ch_U = u8_85;
 pub let ch_W = u8_87;
 
+pub let ch_a = u8_97;
+pub let ch_c = u8_99;
+pub let ch_e = u8_101;
 pub let ch_n = u8_110;
 pub let ch_o = u8_111;
 pub let ch_p = u8_112;
@@ -216,4 +225,33 @@ pub let left_paddle_down_strs = List.cons(
         ),
         List.nil(String),
     )
+);
+
+// ["Space"]
+pub let launch_ball_strs = List.cons(
+    String,
+    String.utf8(
+        List.cons(
+            U8,
+            ch_S,
+            List.cons(
+                U8,
+                ch_p,
+                List.cons(
+                    U8,
+                    ch_a,
+                    List.cons(
+                        U8,
+                        ch_c,
+                        List.cons(
+                            U8,
+                            ch_e,
+                            List.nil(U8),
+                        )
+                    )
+                )
+            )
+        )
+    ),
+    List.nil(String),
 );
