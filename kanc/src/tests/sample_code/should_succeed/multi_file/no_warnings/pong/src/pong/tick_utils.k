@@ -281,9 +281,33 @@ pub let tick_assuming_ball_not_reset = fun _(state: State, new_time: Time): Stat
     }
 };
 
-pub let will_ball_go_out_of_x_bounds = fun _(state: State): Bool {
-    // TODO
-    true
+pub let get_elapsed_millis = fun _(state: State, new_time: Time): Nat {
+    match state {
+        state(time: old_time, ...) => nat_sub(
+            time_millis(new_time),
+            time_millis(old_time),
+        ),
+    }
+};
+
+pub let will_ball_go_out_of_x_bounds = fun _(state: State, new_time: Time): Bool {
+    match state {
+        state(:ball_center_x, :ball_vx, ...) => fun _(ball_x: IntLocalX): Bool {
+            or(
+                int.lt(ilocx_raw(ball_x), int0),
+                int.gt(ilocx_raw(ball_x), int10k),
+            )
+        }(ilocx(int.add(
+            Int.nat(locx_raw(ball_center_x)),
+            int.trunc_div(
+                int.mul(
+                    ilocx_raw(ball_vx),
+                    Int.nat(get_elapsed_millis(state, new_time)),
+                ),
+                pos1000,
+            ),
+        ))),
+    }
 };
 
 pub let reset_ball = fun _(state: State): State {

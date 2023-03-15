@@ -177,7 +177,7 @@ mod tick_utils;
 use tick_utils.*;
 
 pub let tick = fun _(state: State, new_time: Time): State {
-    match will_ball_go_out_of_x_bounds(state) {
+    match will_ball_go_out_of_x_bounds(state, new_time) {
         true => reset_ball(state),
         false => tick_assuming_ball_not_reset(state, new_time),
     }
