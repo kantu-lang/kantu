@@ -59,15 +59,36 @@ type HitBox {
     circ(c: Circ): HitBox,
 }
 
-let do_rects_itersect = fun _(a: Rect, b: Rect): Bool {
-    // TODO
-    false
+let do_rects_intersect = fun _(a: Rect, b: Rect): Bool {
+    /*
+    noOverlap = r1.x1 > r2.x2 or
+                     r2.x1 > r1.x2 or
+                     r1.y1 > r2.y2 or
+                     r2.y1 > r1.y2
+
+    return !noOverlap
+    */
+
+    match a {
+        new(ax, ay, aw, ah) => match b {
+            new(bx, by, bw, bh) => not(or(
+                nat.gt(locx_raw(ax), nat.add(locx_raw(bx), locx_raw(bw))),
+                or(
+                    nat.gt(locx_raw(bx), nat.add(locx_raw(ax), locx_raw(aw))),
+                    or(
+                        nat.gt(locy_raw(ay), nat.add(locy_raw(by), locy_raw(bh))),
+                        nat.gt(locy_raw(by), nat.add(locy_raw(ay), locy_raw(ah))),
+                    ),
+                ),
+            )),
+        },
+    }
 };
 
 let do_rect_circ_intersect = fun _(rect: Rect, circ: Circ): Bool {
     /*
     // https://stackoverflow.com/a/1879223/7215455
-    
+
     // clamp(value, min, max) - limits value to the range min..max
 
     // Find the closest point to the circle within the rectangle
@@ -118,7 +139,7 @@ let do_circs_intersect = fun _(a: Circ, b: Circ): Bool {
 let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
     match a {
         rect(ar) => match b {
-            rect(br) => do_rects_itersect(ar, br),
+            rect(br) => do_rects_intersect(ar, br),
             circ(bc) => do_rect_circ_intersect(ar, bc),
         },
         circ(ac) => match b {
