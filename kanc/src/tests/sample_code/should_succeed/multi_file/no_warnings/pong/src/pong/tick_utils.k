@@ -287,6 +287,30 @@ pub let will_ball_go_out_of_x_bounds = fun _(state: State): Bool {
 };
 
 pub let reset_ball = fun _(state: State): State {
-    // TODO
-    state
+    match state {
+        state(
+            :window,
+            :time,
+            :left_paddle_y,
+            :right_paddle_y,
+            :ball_center_x,
+            :ball_center_y,
+            :ball_vx,
+            :ball_vy,
+            :left_paddle_vy_sign,
+            :right_paddle_vy_sign,
+        ) => State.state(
+            ball_vx: ilocx(int0),
+            ball_vy: ilocy(int0),
+            ball_center_x: locx(nat5000),
+            ball_center_y: locy(nat5000),
+
+            :window,
+            :time,
+            :left_paddle_y,
+            :right_paddle_y,
+            :left_paddle_vy_sign,
+            :right_paddle_vy_sign,
+        ),
+    }
 };
