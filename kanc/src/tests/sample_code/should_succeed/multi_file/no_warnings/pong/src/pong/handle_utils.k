@@ -30,6 +30,27 @@ pub let handle_window_resize = fun _(state: State, new_window: Window): State {
     }
 };
 
+pub let is_ball_stationary_at_center = fun _(state: State): Bool {
+    match state {
+        state(
+            :ball_center_x,
+            :ball_center_y,
+            :ball_vx,
+            :ball_vy,
+            ...
+        ) => and(
+            int.eq(int0, ilocx_raw(ball_vx)),
+            and(
+                int.eq(int0, ilocy_raw(ball_vy)),
+                and(
+                    nat.eq(nat5000, locx_raw(ball_center_x)),
+                    nat.eq(nat5000, locy_raw(ball_center_y)),
+                ),
+            ),
+        ),
+    }
+};
+
 pub let handle_keydown = fun _(state: State, key: String): State {
     match state {
         state(
@@ -136,7 +157,22 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                         ),
 
                         false => match str_list_contains(launch_ball_strs, key) {
-                            true => /* TODO */ state,
+                            true => match is_ball_stationary_at_center(state) {
+                                true => State.state(
+                                    ball_vx: ball_initial_vx,
+                                    ball_vy: ball_initial_vy,
+
+                                    :window,
+                                    :time,
+                                    :ball_center_x,
+                                    :ball_center_y,
+                                    left_paddle_y: old_left_paddle_y,
+                                    right_paddle_y: old_right_paddle_y,
+                                    left_paddle_vy_sign: old_left_paddle_vy_sign,
+                                    right_paddle_vy_sign: old_right_paddle_vy_sign,
+                                ),
+                                false => state,
+                            },
                             false => state,
                         },
                     },
