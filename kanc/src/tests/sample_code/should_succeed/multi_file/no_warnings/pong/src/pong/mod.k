@@ -177,70 +177,9 @@ mod tick_utils;
 use tick_utils.*;
 
 pub let tick = fun _(state: State, new_time: Time): State {
-    // TODO
-    match state {
-        state(
-            :window,
-            :left_paddle_vy_sign,
-            :right_paddle_vy_sign,
-
-            time: old_time,
-            left_paddle_y: old_left_paddle_y,
-            right_paddle_y: old_right_paddle_y,
-            ball_center_x: old_ball_center_x,
-            ball_center_y: old_ball_center_y,
-            ball_vx: old_ball_vx,
-            ball_vy: old_ball_vy,
-            
-        ) => fun _(~elapsed_millis: Nat): State {
-            State.state(
-                :window,
-                :left_paddle_vy_sign,
-                :right_paddle_vy_sign,
-
-                time: new_time,
-
-                // TODO: Respond to keyboard input
-                left_paddle_y: old_left_paddle_y,
-                right_paddle_y: old_right_paddle_y,
-
-                ball_center_x: locx(relu(int.add(
-                    Int.nat(locx_raw(old_ball_center_x)),
-                    int.trunc_div(
-                        int.mul(ilocx_raw(old_ball_vx), Int.nat(elapsed_millis)),
-                        pos1000,
-                    ),
-                ))),
-                ball_center_y: ball_bounce_y(
-                    old_ball_center_y,
-                    ilocy(int.trunc_div(
-                        int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
-                        pos1000,
-                    )),
-                ),
-
-                ball_vx: match is_ball_touching_left_paddle(state) {
-                    true => ilocx(Int.nat(int_abs(ilocx_raw(old_ball_vx)))),
-                    false => match is_ball_touching_right_paddle(state) {
-                        true => ilocx(int.neg(Int.nat(int_abs(ilocx_raw(old_ball_vx))))),
-                        false => old_ball_vx,
-                    },
-                },
-                ball_vy: ilocy(sign_int(
-                    ball_bounce_vy_sign(
-                        old_ball_center_y,
-                        ilocy(int.trunc_div(
-                            int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
-                            pos1000,
-                        )),
-                    ),
-                    ilocy_raw(old_ball_vy),
-                )),
-                
-            )
-        }(
-            elapsed_millis: nat_sub(time_millis(new_time), time_millis(old_time)),
-        ),
+    match will_ball_go_out_of_x_bounds(state) {
+        true => reset_ball(state),
+        false => tick_assuming_ball_not_reset(state, new_time),
     }
 };
 
