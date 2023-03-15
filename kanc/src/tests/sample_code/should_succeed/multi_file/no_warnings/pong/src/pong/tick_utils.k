@@ -40,20 +40,6 @@ pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
     })
 };
 
-// TODO: Delete
-/*pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
-    match int.parity(match int_abs(raw) {
-        zero => int0,
-        pos(p) => Int.nat(int.trunc_div_nat(
-            nat_sub(Nat.pos(p), nat1),
-            pos10k,
-        )),
-    }) {
-        zero => Sign.pos,
-        one => Sign.neg,
-    }
-};*/
-
 // TODO: Refactor
 // Do we really need two params?
 pub let ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
