@@ -74,3 +74,17 @@ pub let int_abs = fun _(i: Int): Nat {
         nat(in) => in,
     }
 };
+
+pub let nat_dist = fun _(a: Nat, b: Nat): Nat {
+    int_abs(int.sub(Int.nat(a), Int.nat(b)))
+};
+
+pub let clamp = fun _(~clampee: Nat, ~min: Nat, ~max: Nat): Nat {
+    match nat.le(clampee, min) {
+        true => min,
+        false => match nat.ge(clampee, max) {
+            true => max,
+            false => clampee,
+        },
+    }
+};

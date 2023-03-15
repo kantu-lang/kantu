@@ -65,8 +65,49 @@ let do_rects_itersect = fun _(a: Rect, b: Rect): Bool {
 };
 
 let do_rect_circ_intersect = fun _(rect: Rect, circ: Circ): Bool {
-    // TODO
-    false
+    /*
+    // https://stackoverflow.com/a/1879223/7215455
+    
+    // clamp(value, min, max) - limits value to the range min..max
+
+    // Find the closest point to the circle within the rectangle
+    float closestX = clamp(circle.X, rectangle.Left, rectangle.Right);
+    float closestY = clamp(circle.Y, rectangle.Top, rectangle.Bottom);
+
+    // Calculate the distance between the circle's center and this closest point
+    float distanceX = circle.X - closestX;
+    float distanceY = circle.Y - closestY;
+
+    // If the distance is less than the circle's radius, an intersection occurs
+    float distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+    return distanceSquared < (circle.Radius * circle.Radius);
+    */
+
+    match rect {
+        new(rx, ry, rw, rh) => match circ {
+            new(cx, cy, cr) => nat.le(
+                nat.add(
+                    nat.square(nat_dist(
+                        locx_raw(cx),
+                        clamp(
+                            clampee: locx_raw(cx),
+                            min: locx_raw(rx),
+                            max: nat.add(locx_raw(rx), locx_raw(rw)),
+                        ),
+                    )),
+                    nat.square(nat_dist(
+                        locy_raw(cy),
+                        clamp(
+                            clampee: locy_raw(cy),
+                            min: locy_raw(ry),
+                            max: nat.add(locy_raw(ry), locy_raw(rh)),
+                        ),
+                    )),
+                ),
+                nat.square(locx_raw(cr)),
+            ),
+        },
+    }
 };
 
 let do_circs_intersect = fun _(a: Circ, b: Circ): Bool {
