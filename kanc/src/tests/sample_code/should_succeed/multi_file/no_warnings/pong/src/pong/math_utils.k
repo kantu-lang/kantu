@@ -44,6 +44,13 @@ pub let int_to_pos = fun _(n: Int): Pos {
     }
 };
 
+pub let nat_to_pos = fun _(n: Nat): Pos {
+    match n {
+        zero => Pos.one,
+        pos(p) => p,
+    }
+};
+
 pub let nat_sub = fun _(min: Nat, sub: Nat): Nat {
     relu(int.sub(
         Int.nat(min),

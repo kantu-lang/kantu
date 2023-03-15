@@ -159,8 +159,12 @@ let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
 };
 
 let ball_hitbox = fun _(state: State): HitBox {
-    // TODO
-    HitBox.rect(Rect.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero)))
+    HitBox.rect(Rect.new(
+        locx(Nat.zero),
+        locy(Nat.zero),
+        locx(Nat.zero),
+        locy(Nat.zero),
+    ))
 };
 
 let left_paddle_hitbox = fun _(state: State): HitBox {
@@ -175,8 +179,14 @@ let left_paddle_hitbox = fun _(state: State): HitBox {
 };
 
 let right_paddle_hitbox = fun _(state: State): HitBox {
-    // TODO
-    HitBox.rect(Rect.new(locx(Nat.zero), locy(Nat.zero), locx(Nat.zero), locy(Nat.zero)))
+    match state {
+        state(:right_paddle_y, ...) => HitBox.rect(Rect.new(
+            right_paddle_x,
+            right_paddle_y,
+            paddle_width,
+            paddle_height,
+        )),
+    }
 };
 
 pub let is_ball_touching_left_paddle = fun _(state: State): Bool {

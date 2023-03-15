@@ -39,6 +39,12 @@ pub let window_width = fun _(window: Window): Nat {
     }
 };
 
+pub let window_height = fun _(window: Window): Nat {
+    match window {
+        window(_, h) => h,
+    }
+};
+
 pub let time_millis = fun _(t: Time): Nat {
     match t {
         time(millis) => millis,
