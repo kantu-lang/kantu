@@ -2574,7 +2574,7 @@ const will_ball_go_out_of_x_bounds = function _(state, new_time) {
   })(state);
 };
 
-const reset_ball = function _(state) {
+const recenter_ball_and_pause = function _(state) {
   return (function temp_13f(temp_13e) {
     if (temp_13e[0] === "state") {
       const window = temp_13e[1].window;
@@ -2606,7 +2606,7 @@ const reset_ball = function _(state) {
 const tick = function _(state, new_time) {
   return (function temp_141(temp_140) {
     if (temp_140[0] === "true_") {
-      return reset_ball(state);
+      return recenter_ball_and_pause(state);
     }
     if (temp_140[0] === "false_") {
       return tick_assuming_ball_not_reset(state, new_time);
@@ -2796,8 +2796,18 @@ const handle_keydown = function _(state, key) {
                           return (function temp_15b(temp_15a) {
                             if (temp_15a[0] === "true_") {
                               return State_state({
-                                ball_vx: ball_initial_vx,
-                                ball_vy: ball_initial_vy,
+                                ball_vx: IntLocalX_ilocx(
+                                  negate_on_1_bit({
+                                    negatee: ilocx_raw(ball_initial_vx),
+                                    negator: time_millis(time),
+                                  })
+                                ),
+                                ball_vy: IntLocalY_ilocy(
+                                  negate_on_2_bit({
+                                    negatee: ilocy_raw(ball_initial_vy),
+                                    negator: time_millis(time),
+                                  })
+                                ),
                                 window: window,
                                 time: time,
                                 ball_center_x: ball_center_x,

@@ -159,8 +159,14 @@ pub let handle_keydown = fun _(state: State, key: String): State {
                         false => match str_list_contains(launch_ball_strs, key) {
                             true => match is_ball_stationary_at_center(state) {
                                 true => State.state(
-                                    ball_vx: ball_initial_vx,
-                                    ball_vy: ball_initial_vy,
+                                    ball_vx: ilocx(negate_on_1_bit(
+                                        negatee: ilocx_raw(ball_initial_vx),
+                                        negator: time_millis(time),
+                                    )),
+                                    ball_vy: ilocy(negate_on_2_bit(
+                                        negatee: ilocy_raw(ball_initial_vy),
+                                        negator: time_millis(time),
+                                    )),
 
                                     :window,
                                     :time,

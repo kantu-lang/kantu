@@ -310,7 +310,7 @@ pub let will_ball_go_out_of_x_bounds = fun _(state: State, new_time: Time): Bool
     }
 };
 
-pub let reset_ball = fun _(state: State): State {
+pub let recenter_ball_and_pause = fun _(state: State): State {
     match state {
         state(
             :window,
