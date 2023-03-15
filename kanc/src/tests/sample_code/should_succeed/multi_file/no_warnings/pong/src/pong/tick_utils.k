@@ -132,8 +132,17 @@ let do_rect_circ_intersect = fun _(rect: Rect, circ: Circ): Bool {
 };
 
 let do_circs_intersect = fun _(a: Circ, b: Circ): Bool {
-    // TODO
-    false
+    match a {
+        new(ax, ay, ar) => match b {
+            new(bx, by, br) => nat.le(
+                nat.add(
+                    nat.square(nat_dist(locx_raw(ax), locx_raw(bx))),
+                    nat.square(nat_dist(locy_raw(ay), locy_raw(by))),
+                ),
+                nat.square(nat.add(locx_raw(ar), locx_raw(br))),
+            ),
+        },
+    }
 };
 
 let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
