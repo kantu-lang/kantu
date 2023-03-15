@@ -159,12 +159,20 @@ let does_intersect = fun _(a: HitBox, b: HitBox): Bool {
 };
 
 let ball_hitbox = fun _(state: State): HitBox {
-    HitBox.rect(Rect.new(
-        locx(Nat.zero),
-        locy(Nat.zero),
-        locx(Nat.zero),
-        locy(Nat.zero),
-    ))
+    match state {
+        state(:ball_center_x, :ball_center_y, ...) => HitBox.rect(Rect.new(
+            locx(nat_sub(
+                locx_raw(ball_center_x),
+                int.floor_div_nat(locx_raw(get_ball_width(state)), pos2),
+            )),
+            locy(nat_sub(
+                locy_raw(ball_center_y),
+                int.floor_div_nat(locy_raw(ball_height), pos2),
+            )),
+            get_ball_width(state),
+            ball_height,
+        )),
+    }
 };
 
 let left_paddle_hitbox = fun _(state: State): HitBox {
