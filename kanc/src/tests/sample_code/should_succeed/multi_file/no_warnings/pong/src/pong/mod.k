@@ -30,9 +30,6 @@ pub let str_list_contains = fun str_list_contains(-strs: List(String), str: Stri
     }
 };
 
-mod math_utils;
-use math_utils.*;
-
 pub let window_width = fun _(window: Window): Nat {
     match window {
         window(w, _) => w,
@@ -53,6 +50,9 @@ pub let time_millis = fun _(t: Time): Nat {
 
 pub mod literals;
 use literals.*;
+
+mod math_utils;
+use math_utils.*;
 
 pub let paddle_height = locy(int.trunc_div_nat(
     nat10k,
@@ -142,8 +142,14 @@ pub let init = fun _(window: Window, time: Time): State {
             right_paddle_y: locy(nat_sub(nat5000, int.trunc_div_nat(locy_raw(paddle_height), pos2))),
             ball_center_x: locx(nat5000),
             ball_center_y: locy(nat5000),
-            ball_vx: ball_initial_vx,
-            ball_vy: ball_initial_vy,
+            ball_vx: ilocx(negate_on_1_bit(
+                negatee: ilocx_raw(ball_initial_vx),
+                negator: time_millis(time),
+            )),
+            ball_vy: ilocy(negate_on_2_bit(
+                negatee: ilocy_raw(ball_initial_vy),
+                negator: time_millis(time),
+            )),
             left_paddle_vy_sign: Opt.none(Sign),
             right_paddle_vy_sign: Opt.none(Sign),
         )

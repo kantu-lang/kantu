@@ -103,3 +103,17 @@ pub let sign_neg_one_exp = fun _(n: Nat): Sign {
         one => Sign.neg,
     }
 };
+
+pub let negate_on_1_bit = fun _(~negatee: Int, ~negator: Nat): Int {
+    match nat.parity(negator) {
+        zero => negatee,
+        one => int.neg(negatee),
+    }
+};
+
+pub let negate_on_2_bit = fun _(~negatee: Int, ~negator: Nat): Int {
+    match nat.parity(int.trunc_div_nat(negator, pos2)) {
+        zero => negatee,
+        one => int.neg(negatee),
+    }
+};
