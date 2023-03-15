@@ -95,3 +95,11 @@ pub let clamp = fun _(~clampee: Nat, ~min: Nat, ~max: Nat): Nat {
         },
     }
 };
+
+// Returns `sign((-1) ^ n)`.
+pub let sign_neg_one_exp = fun _(n: Nat): Sign {
+    match nat.parity(n) {
+        zero => Sign.pos,
+        one => Sign.neg,
+    }
+};

@@ -25,6 +25,23 @@ pub let ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
 };
 
 pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
+    sign_neg_one_exp(match int_abs(raw) {
+        zero => Nat.zero,
+        pos(p) => nat.add(
+            int.trunc_div_nat(
+                nat_sub(Nat.pos(p), nat1),
+                pos10k,
+            ),
+            match raw {
+                neg(_) => nat.one,
+                nat(_) => Nat.zero,
+            },
+        ),
+    })
+};
+
+// TODO: Delete
+/*pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
     match int.parity(match int_abs(raw) {
         zero => int0,
         pos(p) => Int.nat(int.trunc_div_nat(
@@ -35,7 +52,7 @@ pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
         zero => Sign.pos,
         one => Sign.neg,
     }
-};
+};*/
 
 // TODO: Refactor
 // Do we really need two params?
