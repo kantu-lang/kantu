@@ -1720,15 +1720,17 @@ const pos90 = mul(pos9, pos10);
 
 const pos100 = mul(pos10, pos10);
 
-const pos64 = mul(pos8, pos8);
+const pos32 = add(pos2, pos30);
 
-const pos65 = add(pos1, pos64);
+const pos64 = add(pos4, pos60);
 
-const pos66 = add(pos1, pos65);
+const pos65 = add(pos5, pos60);
 
-const pos67 = add(pos1, pos66);
+const pos66 = add(pos6, pos60);
 
-const pos68 = add(pos1, pos67);
+const pos67 = add(pos7, pos60);
+
+const pos68 = add(pos8, pos60);
 
 const pos83 = add(pos3, pos80);
 
@@ -1775,6 +1777,8 @@ const int1 = Int_nat(nat1);
 const int0 = Int_nat(Nat_zero);
 
 const int10k = Int_nat(nat10k);
+
+const u8_32 = U8_u8(Nat_pos(pos32), refl_true);
 
 const u8_65 = U8_u8(Nat_pos(pos65), refl_true);
 
@@ -1839,6 +1843,8 @@ const ch_r = u8_114;
 const ch_s = u8_115;
 
 const ch_w = u8_119;
+
+const ch_space = u8_32;
 
 const background_image_str = String_utf8(List_cons(U8, ch_A, List_nil(U8)));
 
@@ -1932,21 +1938,7 @@ const left_paddle_down_strs = List_cons(
 
 const launch_ball_strs = List_cons(
   String,
-  String_utf8(
-    List_cons(
-      U8,
-      ch_S,
-      List_cons(
-        U8,
-        ch_p,
-        List_cons(
-          U8,
-          ch_a,
-          List_cons(U8, ch_c, List_cons(U8, ch_e, List_nil(U8)))
-        )
-      )
-    )
-  ),
+  String_utf8(List_cons(U8, ch_space, List_nil(U8))),
   List_nil(String)
 );
 

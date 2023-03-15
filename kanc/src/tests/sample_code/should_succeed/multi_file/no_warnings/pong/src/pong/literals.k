@@ -21,11 +21,13 @@ pub let pos80 = pos.mul(pos8, pos10);
 pub let pos90 = pos.mul(pos9, pos10);
 pub let pos100 = pos.mul(pos10, pos10);
 
-pub let pos64 = pos.mul(pos8, pos8);
-pub let pos65 = pos.add(pos1, pos64);
-pub let pos66 = pos.add(pos1, pos65);
-pub let pos67 = pos.add(pos1, pos66);
-pub let pos68 = pos.add(pos1, pos67);
+pub let pos32 = pos.add(pos2, pos30);
+
+pub let pos64 = pos.add(pos4, pos60);
+pub let pos65 = pos.add(pos5, pos60);
+pub let pos66 = pos.add(pos6, pos60);
+pub let pos67 = pos.add(pos7, pos60);
+pub let pos68 = pos.add(pos8, pos60);
 
 pub let pos83 = pos.add(pos3, pos80);
 pub let pos85 = pos.add(pos5, pos80);
@@ -54,6 +56,7 @@ pub let int1 = Int.nat(nat1);
 pub let int0 = Int.nat(Nat.zero);
 pub let int10k = Int.nat(nat10k);
 
+pub let u8_32 = U8.u8(Nat.pos(pos32), refl_true);
 pub let u8_65 = U8.u8(Nat.pos(pos65), refl_true);
 pub let u8_66 = U8.u8(Nat.pos(pos66), refl_true);
 pub let u8_67 = U8.u8(Nat.pos(pos67), refl_true);
@@ -88,6 +91,8 @@ pub let ch_p = u8_112;
 pub let ch_r = u8_114;
 pub let ch_s = u8_115;
 pub let ch_w = u8_119;
+
+pub let ch_space = u8_32;
 
 // "A"
 pub let background_image_str = String.utf8(
@@ -227,30 +232,14 @@ pub let left_paddle_down_strs = List.cons(
     )
 );
 
-// ["Space"]
+// [" "]
 pub let launch_ball_strs = List.cons(
     String,
     String.utf8(
         List.cons(
             U8,
-            ch_S,
-            List.cons(
-                U8,
-                ch_p,
-                List.cons(
-                    U8,
-                    ch_a,
-                    List.cons(
-                        U8,
-                        ch_c,
-                        List.cons(
-                            U8,
-                            ch_e,
-                            List.nil(U8),
-                        )
-                    )
-                )
-            )
+            ch_space,
+            List.nil(U8),
         )
     ),
     List.nil(String),
