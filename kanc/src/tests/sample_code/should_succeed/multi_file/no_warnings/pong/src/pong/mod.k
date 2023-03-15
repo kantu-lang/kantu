@@ -249,7 +249,7 @@ use handle_utils.*;
 
 pub let handle = fun _(state: State, event: Event): State {
     match event {
-        window_resize(_) => /* TODO */ state,
+        window_resize(new_window) => handle_window_resize(state, new_window),
         keyup(key) => handle_keyup(state, key),
         keydown(key) => handle_keydown(state, key),
     }

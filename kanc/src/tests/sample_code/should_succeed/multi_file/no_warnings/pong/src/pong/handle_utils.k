@@ -1,5 +1,35 @@
 use super.*;
 
+pub let handle_window_resize = fun _(state: State, new_window: Window): State {
+    match state {
+        state(
+            window: old_window,
+
+            :time,
+            :left_paddle_y,
+            :right_paddle_y,
+            :ball_center_x,
+            :ball_center_y,
+            :ball_vx,
+            :ball_vy,
+            :left_paddle_vy_sign,
+            :right_paddle_vy_sign,
+        ) => State.state(
+            window: new_window,
+
+            :time,
+            :left_paddle_y,
+            :right_paddle_y,
+            :ball_center_x,
+            :ball_center_y,
+            :ball_vx,
+            :ball_vy,
+            :left_paddle_vy_sign,
+            :right_paddle_vy_sign,
+        ),
+    }
+};
+
 pub let handle_keydown = fun _(state: State, key: String): State {
     match state {
         state(
