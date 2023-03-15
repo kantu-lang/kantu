@@ -40,7 +40,7 @@ pub let render_right_paddle = fun _(state: State): Entity {
 
 pub let get_ball_width = fun _(state: State): LocalX {
     match state {
-        state(:window, ...) => locx(int.floor_div_nat(
+        state(:window, ...) => locx(int.trunc_div_nat(
             nat.mul(locy_raw(ball_height), window_height(window)),
             nat_to_pos(window_width(window)),
         )),
@@ -52,14 +52,14 @@ pub let render_ball = fun _(state: State): Entity {
         state(:window, :ball_center_x, :ball_center_y, ...) => Entity.scaled(
             nat_sub(
                 to_real_x(ball_center_x, window),
-                int.floor_div_nat(
+                int.trunc_div_nat(
                     to_real_x(get_ball_width(state), window),
                     pos2,
                 ),
             ),
             nat_sub(
                 to_real_y(ball_center_y, window),
-                int.floor_div_nat(
+                int.trunc_div_nat(
                     to_real_y(ball_height, window),
                     pos2,
                 ),

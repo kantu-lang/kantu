@@ -18,16 +18,16 @@ pub let ball_bounce_y = fun _(old_y: LocalY, delta_y: IntLocalY): LocalY {
     locy(relu(int.add(
         ball_bounce_y_top(int.sub(
             int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
-            Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+            Int.nat(int.trunc_div_nat(locy_raw(ball_height), pos2)),
         )),
-        Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+        Int.nat(int.trunc_div_nat(locy_raw(ball_height), pos2)),
     )))
 };
 
 pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
     match int.parity(match int_abs(raw) {
         zero => int0,
-        pos(p) => Int.nat(int.floor_div_nat(
+        pos(p) => Int.nat(int.trunc_div_nat(
             nat_sub(Nat.pos(p), nat1),
             pos10k,
         )),
@@ -42,7 +42,7 @@ pub let ball_bounce_vy_sign_top = fun _(raw: Int): Sign {
 pub let ball_bounce_vy_sign = fun _(old_y: LocalY, delta_y: IntLocalY): Sign {
     ball_bounce_vy_sign_top(int.sub(
         int.add(Int.nat(locy_raw(old_y)), ilocy_raw(delta_y)),
-        Int.nat(int.floor_div_nat(locy_raw(ball_height), pos2)),
+        Int.nat(int.trunc_div_nat(locy_raw(ball_height), pos2)),
     ))
 };
 
@@ -163,11 +163,11 @@ let ball_hitbox = fun _(state: State): HitBox {
         state(:ball_center_x, :ball_center_y, ...) => HitBox.rect(Rect.new(
             locx(nat_sub(
                 locx_raw(ball_center_x),
-                int.floor_div_nat(locx_raw(get_ball_width(state)), pos2),
+                int.trunc_div_nat(locx_raw(get_ball_width(state)), pos2),
             )),
             locy(nat_sub(
                 locy_raw(ball_center_y),
-                int.floor_div_nat(locy_raw(ball_height), pos2),
+                int.trunc_div_nat(locy_raw(ball_height), pos2),
             )),
             get_ball_width(state),
             ball_height,

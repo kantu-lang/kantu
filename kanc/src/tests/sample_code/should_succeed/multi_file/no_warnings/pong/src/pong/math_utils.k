@@ -69,7 +69,7 @@ pub let nat_mod = fun _(n: Nat, divisor: Pos): Nat {
     relu(int.sub(
         Int.nat(n),
         int.mul(
-            int.floor_div(Int.nat(n), divisor),
+            int.trunc_div(Int.nat(n), divisor),
             Int.nat(Nat.pos(divisor)),
         ),
     ))

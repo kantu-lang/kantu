@@ -54,19 +54,19 @@ pub let time_millis = fun _(t: Time): Nat {
 pub mod literals;
 use literals.*;
 
-pub let paddle_height = locy(int.floor_div_nat(
+pub let paddle_height = locy(int.trunc_div_nat(
     nat10k,
     pos7,
 ));
-pub let ball_height = locy(int.floor_div_nat(
+pub let ball_height = locy(int.trunc_div_nat(
     nat10k,
     pos64,
 ));
-pub let paddle_x_margin = locx(int.floor_div_nat(
+pub let paddle_x_margin = locx(int.trunc_div_nat(
     nat10k,
     pos64,
 ));
-pub let paddle_width = locx(int.floor_div_nat(
+pub let paddle_width = locx(int.trunc_div_nat(
     nat10k,
     pos64,
 ));
@@ -78,11 +78,11 @@ pub let right_paddle_x = locx(nat_sub(
     ),
     locx_raw(paddle_width),
 ));
-pub let ball_initial_vx = ilocx(int.floor_div(
+pub let ball_initial_vx = ilocx(int.trunc_div(
     Int.nat(nat10k),
     pos4,
 ));
-pub let ball_initial_vy = ilocy(int.floor_div(
+pub let ball_initial_vy = ilocy(int.trunc_div(
     Int.nat(nat10k),
     pos3,
 ));
@@ -103,7 +103,7 @@ pub let clamp_paddle_y = fun _(yi: Int): LocalY {
 
 pub let to_real_x = fun _(x: LocalX, window: Window): Nat {
     match window {
-        window(window_w, _) => int.floor_div_nat(
+        window(window_w, _) => int.trunc_div_nat(
             nat.mul(locx_raw(x), window_w),
             pos10k,
         ),
@@ -111,7 +111,7 @@ pub let to_real_x = fun _(x: LocalX, window: Window): Nat {
 };
 pub let to_real_y = fun _(y: LocalY, window: Window): Nat {
     match window {
-        window(_, window_h) => int.floor_div_nat(
+        window(_, window_h) => int.trunc_div_nat(
             nat.mul(locy_raw(y), window_h),
             pos10k,
         ),
@@ -138,8 +138,8 @@ pub let init = fun _(window: Window, time: Time): State {
         window(window_w, window_h) => State.state(
             :time,
             :window,
-            left_paddle_y: locy(nat_sub(nat5000, int.floor_div_nat(locy_raw(paddle_height), pos2))),
-            right_paddle_y: locy(nat_sub(nat5000, int.floor_div_nat(locy_raw(paddle_height), pos2))),
+            left_paddle_y: locy(nat_sub(nat5000, int.trunc_div_nat(locy_raw(paddle_height), pos2))),
+            right_paddle_y: locy(nat_sub(nat5000, int.trunc_div_nat(locy_raw(paddle_height), pos2))),
             ball_center_x: locx(nat5000),
             ball_center_y: locy(nat5000),
             ball_vx: ball_initial_vx,
@@ -206,14 +206,14 @@ pub let tick = fun _(state: State, new_time: Time): State {
 
                 ball_center_x: locx(relu(int.add(
                     Int.nat(locx_raw(old_ball_center_x)),
-                    int.floor_div(
+                    int.trunc_div(
                         int.mul(ilocx_raw(old_ball_vx), Int.nat(elapsed_millis)),
                         pos1000,
                     ),
                 ))),
                 ball_center_y: ball_bounce_y(
                     old_ball_center_y,
-                    ilocy(int.floor_div(
+                    ilocy(int.trunc_div(
                         int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
                         pos1000,
                     )),
@@ -229,7 +229,7 @@ pub let tick = fun _(state: State, new_time: Time): State {
                 ball_vy: ilocy(sign_int(
                     ball_bounce_vy_sign(
                         old_ball_center_y,
-                        ilocy(int.floor_div(
+                        ilocy(int.trunc_div(
                             int.mul(ilocy_raw(old_ball_vy), Int.nat(elapsed_millis)),
                             pos1000,
                         )),

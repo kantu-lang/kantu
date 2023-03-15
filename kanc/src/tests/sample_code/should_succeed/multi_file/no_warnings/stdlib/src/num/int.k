@@ -121,7 +121,7 @@ pub let(*) mul = fun _(a: Int, b: Int): Int {
     }
 };
 
-pub let(*) floor_div_bitlist = fun floor_div_bitlist(
+pub let(*) trunc_div_bitlist = fun trunc_div_bitlist(
     dividend_left: Nat,
     -dividend_right: List(Bit),
     divisor: Pos,
@@ -136,7 +136,7 @@ pub let(*) floor_div_bitlist = fun floor_div_bitlist(
             neg(_) => List.cons(
                 Bit,
                 Bit.zero,
-                floor_div_bitlist(
+                trunc_div_bitlist(
                     nat.extend_right(dividend_left, car),
                     cdr,
                     divisor,
@@ -147,7 +147,7 @@ pub let(*) floor_div_bitlist = fun floor_div_bitlist(
             nat(remainder) => List.cons(
                 Bit,
                 Bit.one,
-                floor_div_bitlist(
+                trunc_div_bitlist(
                     remainder,
                     cdr,
                     divisor,
@@ -157,28 +157,28 @@ pub let(*) floor_div_bitlist = fun floor_div_bitlist(
     }
 };
 
-pub let(*) floor_div_pos = fun _(a: Pos, b: Pos): Nat {
-    nat.from_bitlist(floor_div_bitlist(Nat.zero, pos.minimal_bitlist(a), b))
+pub let(*) trunc_div_pos = fun _(a: Pos, b: Pos): Nat {
+    nat.from_bitlist(trunc_div_bitlist(Nat.zero, pos.minimal_bitlist(a), b))
 };
 
-pub let(*) floor_div_nat = fun _(a: Nat, b: Pos): Nat {
+pub let(*) trunc_div_nat = fun _(a: Nat, b: Pos): Nat {
     match a {
         zero => Nat.zero,
-        pos(ap) => floor_div_pos(ap, b),
+        pos(ap) => trunc_div_pos(ap, b),
     }
 };
 
-pub let(*) floor_div = fun _(a: Int, b: Pos): Int {
+pub let(*) trunc_div = fun _(a: Int, b: Pos): Int {
     match a {
-        neg(neg_a) => nat.neg(floor_div_pos(neg_a, b)),
-        nat(an) => Int.nat(floor_div_nat(an, b)),
+        neg(neg_a) => nat.neg(trunc_div_pos(neg_a, b)),
+        nat(an) => Int.nat(trunc_div_nat(an, b)),
     }
 };
 
-pub let(*) floor_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): Int {
+pub let(*) trunc_div_signed_divisor = fun _(a: Int, b_mag: Pos, b_sign: Sign): Int {
     match b_sign {
-        pos => floor_div(a, b_mag),
-        neg => neg(floor_div(a, b_mag)),
+        pos => trunc_div(a, b_mag),
+        neg => neg(trunc_div(a, b_mag)),
     }
 };
 
