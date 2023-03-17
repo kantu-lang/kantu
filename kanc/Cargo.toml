@@ -10,6 +10,11 @@ unicode-general-category = "0.5.1"
 rustc-hash = "1.1.0"
 path-clean = "0.1.0"
 yscl = "1.2.0"
+lalrpop-util = {version = "0.19", features = ["lexer"]}
+regex = "1"
 
 [dev-dependencies]
 insta = "1.26.0"
+
+[build-dependencies] # <-- We added this and everything after!
+lalrpop = "0.19.7"

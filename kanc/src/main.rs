@@ -26,7 +26,13 @@ use kanc::{
 use std::path::PathBuf;
 use std::time::Instant;
 
-fn main() -> Result<(), ()> {
+#[macro_use]
+extern crate lalrpop_util;
+fn main() {
+    kanc::processing::xparse::main();
+}
+
+fn xmain() -> Result<(), ()> {
     let start = Instant::now();
     let result = main_();
     let duration = start.elapsed();
