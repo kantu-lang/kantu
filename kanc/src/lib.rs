@@ -3,6 +3,10 @@ extern crate lalrpop_util;
 
 lalrpop_mod!(pub calc1);
 
+pub mod data;
+
+mod internal_prelude;
+
 #[cfg(test)]
 mod tests {
     use super::*;
