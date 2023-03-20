@@ -1,4 +1,4 @@
-use kanc::{
+use kanc_pamoi::{
     data::node_registry::NodeRegistry,
     processing::{
         bind_type_independent::bind_files,
