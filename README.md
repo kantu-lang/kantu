@@ -8,8 +8,6 @@
 > and is almost certainly not up to date.
 > Of course, if you want to take a look (at your own risk!), we can't stop you.
 >
-> However, we _strongly recommend_ checking back in April 2023.
->
 > Thank you for your patience and understanding!
 
 ## Introduction
