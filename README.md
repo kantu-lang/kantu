@@ -1,14 +1,9 @@
 # Kantu
 
-> ## 🚧🏗🚧 NOTICE: Kantu is currently under heavy construction 🚧🏗🚧
+> ## 🚧 The Kantu project has been discontinued. 🚧
 >
-> Consequently, it does not yet have any high-quality documentation.
->
-> The current documentation was created for internal use only,
-> and is almost certainly not up to date.
-> Of course, if you want to take a look (at your own risk!), we can't stop you.
->
-> Thank you for your patience and understanding!
+> Both the code and the documentation are incomplete.
+> Proceed at your own risk.
 
 ## Introduction
 
